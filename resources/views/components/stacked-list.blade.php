@@ -39,18 +39,31 @@
         @endif
     </div>
 
-    <!-- Controls Bar -->
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <!-- Enhanced Controls Bar -->
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between 
+                p-4 bg-zinc-50/50 dark:bg-zinc-900/50 
+                rounded-xl border border-zinc-200/60 dark:border-zinc-700/60">
         <!-- Search and Filters -->
         <div class="flex flex-col gap-4 md:flex-row md:items-center">
             <!-- Search -->
             @if(!empty($config['searchable']))
-                <flux:input 
-                    wire:model.live.debounce.300ms="stackedListSearch" 
-                    type="search" 
-                    placeholder="{{ data_get($config, 'search_placeholder', 'Search...') }}"
-                    class="w-full md:w-96"
-                />
+                <div class="relative">
+                    <flux:input 
+                        wire:model.live.debounce.300ms="stackedListSearch" 
+                        type="search" 
+                        placeholder="{{ data_get($config, 'search_placeholder', 'Search...') }}"
+                        class="w-full md:w-96 pl-10
+                               bg-white dark:bg-zinc-800 
+                               border-zinc-300 dark:border-zinc-600
+                               focus:border-blue-500 dark:focus:border-blue-400
+                               focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10
+                               shadow-sm focus:shadow-md
+                               transition-all duration-200"
+                    />
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <flux:icon name="magnifying-glass" class="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                    </div>
+                </div>
             @endif
             
             <!-- Filters -->
@@ -61,7 +74,13 @@
                             <flux:select 
                                 wire:model.live="stackedListFilters.{{ $key }}" 
                                 placeholder="{{ $filter['placeholder'] ?? 'Filter by ' . $filter['label'] }}"
-                                class="w-full md:w-48"
+                                class="w-full md:w-48
+                                       bg-white dark:bg-zinc-800 
+                                       border-zinc-300 dark:border-zinc-600
+                                       focus:border-blue-500 dark:focus:border-blue-400
+                                       focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10
+                                       shadow-sm focus:shadow-md
+                                       transition-all duration-200"
                             >
                                 <flux:select.option value="">All {{ $filter['label'] }}</flux:select.option>
                                 @foreach($filter['options'] ?? [] as $value => $label)
@@ -75,14 +94,21 @@
 
             <!-- Parent Products Only Toggle -->
             @if(isset($parentProductsOnly))
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 px-3 py-2 
+                            bg-white dark:bg-zinc-800 
+                            rounded-lg border border-zinc-300 dark:border-zinc-600
+                            shadow-sm">
                     <input 
                         type="checkbox" 
                         wire:model.live="parentProductsOnly" 
                         id="parentProductsOnly"
-                        class="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                        class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 
+                               text-blue-600 dark:text-blue-500
+                               focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                               bg-white dark:bg-zinc-800
+                               transition-colors duration-150"
                     />
-                    <label for="parentProductsOnly" class="text-sm text-zinc-600 dark:text-zinc-400">
+                    <label for="parentProductsOnly" class="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                         Parent products only
                     </label>
                 </div>
@@ -92,9 +118,15 @@
         <!-- Per Page and Actions -->
         <div class="flex items-center gap-4">
             <!-- Per Page Selector -->
-            <div class="flex items-center gap-2">
-                <span class="text-sm text-zinc-600 dark:text-zinc-400">Show:</span>
-                <flux:select wire:model.live="stackedListPerPage" class="w-32">
+            <div class="flex items-center gap-3 px-3 py-2 
+                        bg-white dark:bg-zinc-800 
+                        rounded-lg border border-zinc-300 dark:border-zinc-600
+                        shadow-sm">
+                <span class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Show:</span>
+                <flux:select wire:model.live="stackedListPerPage" 
+                           class="w-20 border-0 bg-transparent 
+                                  focus:ring-0 focus:border-0
+                                  text-sm font-medium">
                     @foreach([15 => '15', 25 => '25', 50 => '50', 100 => '100'] as $value => $label)
                         <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
                     @endforeach
@@ -104,10 +136,26 @@
             <!-- Export Options -->
             @if(data_get($config, 'export', false))
                 <div class="flex items-center gap-2">
-                    <flux:button variant="outline" wire:click="exportStackedListData('csv')" size="sm" icon="download">
+                    <flux:button variant="outline" 
+                               wire:click="exportStackedListData('csv')" 
+                               size="sm" 
+                               icon="download"
+                               class="shadow-sm hover:shadow-md 
+                                      bg-white dark:bg-zinc-800 
+                                      border-zinc-300 dark:border-zinc-600
+                                      hover:bg-zinc-50 dark:hover:bg-zinc-700
+                                      transition-all duration-200">
                         CSV
                     </flux:button>
-                    <flux:button variant="outline" wire:click="showStackedListExportModal" size="sm" icon="download">
+                    <flux:button variant="outline" 
+                               wire:click="showStackedListExportModal" 
+                               size="sm" 
+                               icon="download"
+                               class="shadow-sm hover:shadow-md 
+                                      bg-white dark:bg-zinc-800 
+                                      border-zinc-300 dark:border-zinc-600
+                                      hover:bg-zinc-50 dark:hover:bg-zinc-700
+                                      transition-all duration-200">
                         Export
                     </flux:button>
                 </div>
@@ -115,7 +163,14 @@
 
             <!-- Clear Filters Button -->
             @if($search || collect($filters)->filter()->isNotEmpty() || !empty($sortStack))
-                <flux:button variant="ghost" wire:click="clearStackedListFilters" size="sm" icon="x">
+                <flux:button variant="ghost" 
+                           wire:click="clearStackedListFilters" 
+                           size="sm" 
+                           icon="x"
+                           class="text-zinc-600 dark:text-zinc-400 
+                                  hover:text-red-600 dark:hover:text-red-400
+                                  hover:bg-red-50 dark:hover:bg-red-900/20
+                                  transition-all duration-200">
                     Clear All
                 </flux:button>
             @endif
@@ -144,17 +199,54 @@
         </div>
     @endif
 
-    <!-- Beautiful Floating Bulk Actions Bar -->
-    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto max-w-6xl mx-auto px-4 transition-all duration-300 ease-out {{ !empty($selectedItems) && !empty($config['bulk_actions']) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none' }}">
-        <div class="flex items-center justify-between p-4 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-lg backdrop-blur-sm whitespace-nowrap">
+    <!-- Premium Floating Bulk Actions Bar -->
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-auto max-w-7xl mx-auto px-4 transition-all duration-300 ease-out {{ !empty($selectedItems) && !empty($config['bulk_actions']) ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none' }}"
+         role="toolbar" aria-label="Bulk actions">
+        <!-- Enhanced floating bar with premium styling -->
+        <div class="relative flex items-center justify-between min-w-96 
+                    bg-white/95 dark:bg-zinc-900/95 
+                    backdrop-blur-xl backdrop-saturate-150 
+                    rounded-2xl 
+                    border border-zinc-200/80 dark:border-zinc-700/80
+                    shadow-xl shadow-zinc-900/10 dark:shadow-black/20
+                    ring-1 ring-zinc-950/5 dark:ring-white/10
+                    px-6 py-4
+                    before:absolute before:inset-0 before:rounded-2xl 
+                    before:bg-gradient-to-r before:from-white/40 before:via-transparent before:to-white/40 
+                    dark:before:from-zinc-800/40 dark:before:via-transparent dark:before:to-zinc-800/40
+                    before:pointer-events-none">
+            
+            <!-- Selection Status with Visual Connection -->
             <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <flux:icon name="check-circle" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <span class="text-sm text-zinc-700 dark:text-zinc-300 font-medium">
-                        {{ count($selectedItems) }} {{ count($selectedItems) === 1 ? 'item' : 'items' }} selected
-                    </span>
+                <!-- Selection indicator with animated pulse -->
+                <div class="flex items-center gap-3">
+                    <div class="relative flex items-center justify-center w-8 h-8 
+                                bg-blue-100 dark:bg-blue-900/50 
+                                rounded-full 
+                                ring-2 ring-blue-200 dark:ring-blue-800">
+                        <flux:icon name="check-circle" class="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <!-- Subtle pulse animation for selected state -->
+                        <div class="absolute inset-0 rounded-full bg-blue-400/20 animate-pulse"></div>
+                    </div>
+                    
+                    <!-- Selection text with hierarchy -->
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-50 leading-tight">
+                            {{ count($selectedItems) }} {{ count($selectedItems) === 1 ? 'item' : 'items' }} selected
+                        </span>
+                        @if(count($selectedItems) > 1)
+                            <span class="text-xs text-zinc-500 dark:text-zinc-400 leading-tight">
+                                Ready for bulk operations
+                            </span>
+                        @endif
+                    </div>
                 </div>
+                
+                <!-- Visual separator -->
+                <div class="h-8 w-px bg-gradient-to-b from-transparent via-zinc-300 dark:via-zinc-600 to-transparent"></div>
             </div>
+            
+            <!-- Action Buttons with Enhanced Styling -->
             <div class="flex items-center gap-2">
                 @foreach($config['bulk_actions'] ?? [] as $action)
                     <flux:button 
@@ -163,28 +255,108 @@
                         size="sm"
                         icon="{{ $action['icon'] ?? '' }}"
                         wire:key="bulk-action-{{ $action['key'] }}"
+                        class="shadow-sm hover:shadow-md transition-shadow duration-150
+                               {{ ($action['variant'] ?? 'outline') === 'primary' ? 
+                                  'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 hover:shadow-blue-600/30' : 
+                                  'bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300' }}"
                     >
                         {{ $action['label'] }}
                     </flux:button>
                 @endforeach
-                <flux:button variant="ghost" wire:click="clearStackedListSelection" size="sm">
-                    Clear Selection
-                </flux:button>
+                
+                <!-- Clear selection with subtle styling -->
+                <button wire:click="clearStackedListSelection" 
+                        class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg
+                               text-zinc-600 dark:text-zinc-400 
+                               hover:text-zinc-900 dark:hover:text-zinc-100
+                               hover:bg-zinc-100 dark:hover:bg-zinc-800
+                               focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:focus:ring-zinc-400/20
+                               transition-all duration-150"
+                        title="Clear selection">
+                    <flux:icon name="x" class="w-4 h-4" />
+                    <span class="ml-1.5 hidden sm:inline">Clear</span>
+                </button>
+            </div>
+            
+            <!-- Subtle connection line to selected items -->
+            <div class="absolute -top-2 left-1/2 transform -translate-x-1/2 w-1 h-2 
+                        bg-gradient-to-t from-blue-400/30 to-transparent rounded-full"></div>
+        </div>
+        
+        <!-- Mobile-optimized compact version -->
+        <div class="sm:hidden relative flex items-center justify-between w-full max-w-sm
+                    bg-white/95 dark:bg-zinc-900/95 
+                    backdrop-blur-xl backdrop-saturate-150 
+                    rounded-2xl 
+                    border border-zinc-200/80 dark:border-zinc-700/80
+                    shadow-xl shadow-zinc-900/10 dark:shadow-black/20
+                    ring-1 ring-zinc-950/5 dark:ring-white/10
+                    px-4 py-3">
+            
+            <!-- Compact selection indicator -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center w-7 h-7 
+                            bg-blue-100 dark:bg-blue-900/50 
+                            rounded-full 
+                            ring-2 ring-blue-200 dark:ring-blue-800">
+                    <flux:icon name="check-circle" class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <span class="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                    {{ count($selectedItems) }}
+                </span>
+            </div>
+            
+            <!-- Compact actions -->
+            <div class="flex items-center gap-1">
+                @foreach($config['bulk_actions'] ?? [] as $action)
+                    <button wire:click="executeStackedListBulkAction('{{ $action['key'] }}')"
+                            wire:key="bulk-action-mobile-{{ $action['key'] }}"
+                            class="inline-flex items-center justify-center w-9 h-9 
+                                   text-sm font-medium rounded-xl
+                                   {{ ($action['variant'] ?? 'outline') === 'primary' ? 
+                                      'bg-blue-600 hover:bg-blue-700 text-white' : 
+                                      'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300' }}
+                                   transition-colors duration-150"
+                            title="{{ $action['label'] }}">
+                        @if($action['icon'] ?? null)
+                            <flux:icon name="{{ $action['icon'] }}" class="w-4 h-4" />
+                        @else
+                            {{ substr($action['label'], 0, 1) }}
+                        @endif
+                    </button>
+                @endforeach
+                
+                <button wire:click="clearStackedListSelection" 
+                        class="inline-flex items-center justify-center w-9 h-9 
+                               text-zinc-600 dark:text-zinc-400 
+                               hover:text-zinc-900 dark:hover:text-zinc-100
+                               hover:bg-zinc-100 dark:hover:bg-zinc-800
+                               rounded-xl transition-colors duration-150"
+                        title="Clear selection">
+                    <flux:icon name="x" class="w-4 h-4" />
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Data List -->
     @if($data->isNotEmpty())
-        <!-- Headers -->
-        <div class="hidden md:flex items-center gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-700">
+        <!-- Enhanced Headers -->
+        <div class="hidden md:flex items-center gap-4 px-4 py-3 
+                    bg-zinc-50/80 dark:bg-zinc-900/80 
+                    border-b border-zinc-200/80 dark:border-zinc-700/80
+                    backdrop-blur-sm">
             <!-- Bulk Selection Header -->
             @if(!empty($config['bulk_actions']))
-                <div class="flex items-center">
+                <div class="flex items-center justify-center w-10">
                     <input 
                         type="checkbox" 
                         wire:model.live="stackedListSelectAll"
-                        class="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                        class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 
+                               text-blue-600 dark:text-blue-500
+                               focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                               bg-white dark:bg-zinc-800
+                               transition-colors duration-150"
                     />
                 </div>
             @endif
@@ -196,7 +368,13 @@
                             wire:click="stackedListSortColumn('{{ $column['key'] }}')"
                             wire:click.ctrl="stackedListSortColumn('{{ $column['key'] }}', true)"
                             wire:click.meta="stackedListSortColumn('{{ $column['key'] }}', true)"
-                            class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 flex items-center gap-1"
+                            class="group inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md
+                                   text-xs font-semibold uppercase tracking-wider 
+                                   text-zinc-600 dark:text-zinc-400 
+                                   hover:text-zinc-900 dark:hover:text-zinc-100
+                                   hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60
+                                   focus:outline-none focus:bg-zinc-100 dark:focus:bg-zinc-800
+                                   transition-all duration-150"
                             title="Click to sort, Ctrl/Cmd+Click for multi-sort"
                         >
                             {{ $column['label'] }}
@@ -224,7 +402,8 @@
                             @endif
                         </button>
                     @else
-                        <span class="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        <span class="px-2 py-1 text-xs font-semibold uppercase tracking-wider 
+                                   text-zinc-600 dark:text-zinc-400">
                             {{ $column['label'] }}
                         </span>
                     @endif
@@ -232,30 +411,47 @@
             @endforeach
         </div>
         
-        <!-- Data Rows -->
-        <div class="space-y-6">
+        <!-- Premium Data Rows -->
+        <div class="divide-y divide-zinc-100 dark:divide-zinc-800 
+                    bg-white dark:bg-zinc-900 
+                    rounded-lg border border-zinc-200 dark:border-zinc-700 
+                    shadow-sm overflow-hidden">
             @foreach($data as $item)
-                <div class="flex flex-col md:flex-row md:items-center gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-6" wire:key="item-{{ $item->getKey() }}">
+                <div class="group relative flex flex-col md:flex-row md:items-center gap-3 px-4 py-4 
+                           transition-all duration-200 ease-out
+                           hover:bg-gradient-to-r hover:from-zinc-50/80 hover:to-zinc-25/50 
+                           dark:hover:from-zinc-800/50 dark:hover:to-zinc-900/80
+                           hover:shadow-sm hover:-translate-y-px
+                           focus-within:bg-blue-50/30 dark:focus-within:bg-blue-950/30
+                           focus-within:ring-2 focus-within:ring-blue-500/10 dark:focus-within:ring-blue-400/10
+                           focus-within:border-blue-200 dark:focus-within:border-blue-800" 
+                     wire:key="item-{{ $item->getKey() }}">
                     
                     <!-- Bulk Selection Checkbox -->
                     @if(!empty($config['bulk_actions']))
-                        <div class="flex items-center">
+                        <div class="flex items-center justify-center w-5 h-5 shrink-0">
                             <input 
                                 type="checkbox" 
                                 wire:model.live="stackedListSelectedItems"
                                 value="{{ $item->getKey() }}"
-                                class="rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                                class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-600 
+                                       bg-white dark:bg-zinc-800 
+                                       text-blue-600 dark:text-blue-500
+                                       focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                                       focus:border-blue-500 dark:focus:border-blue-400
+                                       transition-all duration-150"
                             />
                         </div>
                     @endif
 
                     <!-- Columns -->
-                    <div class="flex flex-col md:flex-row md:items-center gap-4 flex-1">
+                    <div class="flex flex-col md:flex-row md:items-center gap-3 flex-1 min-w-0">
                         @foreach($config['columns'] ?? [] as $column)
-                            <div class="flex items-center gap-3 min-w-0 flex-1 {{ $column['class'] ?? '' }}" wire:key="cell-{{ $item->getKey() }}-{{ $column['key'] }}">
+                            <div class="flex items-center gap-2 min-w-0 flex-1 {{ $column['class'] ?? '' }}" wire:key="cell-{{ $item->getKey() }}-{{ $column['key'] }}">
                             @switch($column['type'] ?? 'text')
                                 @case('text')
-                                    <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100 {{ $column['font'] ?? '' }}">
+                                    <div class="text-sm font-medium text-zinc-900 dark:text-zinc-50 
+                                              truncate {{ $column['font'] ?? '' }}">
                                         {{ data_get($item, $column['key']) }}
                                     </div>
                                     @break
@@ -265,53 +461,70 @@
                                         $value = data_get($item, $column['key']);
                                         $badgeConfig = data_get($column, "badges.{$value}", $column['badges']['default'] ?? []);
                                     @endphp
-                                    <flux:badge 
-                                        variant="outline" 
-                                        class="text-xs {{ $badgeConfig['class'] ?? '' }}"
-                                    >
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium
+                                               border transition-colors duration-150
+                                               {{ $badgeConfig['class'] ?? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700' }}">
                                         @if($icon = $badgeConfig['icon'] ?? null)
-                                            <flux:icon name="{{ $icon }}" class="w-3 h-3 mr-1" />
+                                            <flux:icon name="{{ $icon }}" class="w-3 h-3 mr-1 shrink-0" />
                                         @endif
                                         {{ $badgeConfig['label'] ?? ucfirst($value) }}
-                                    </flux:badge>
+                                    </span>
                                     @break
                                     
                                 @case('actions')
                                     @if(isset($column['actions']) && is_array($column['actions']))
-                                        <div class="flex items-center gap-1">
+                                        <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity duration-150">
                                             @foreach($column['actions'] as $action)
                                                 @if(isset($action['method']))
-                                                    <flux:button 
-                                                        size="sm" 
-                                                        variant="{{ $action['variant'] ?? 'ghost' }}" 
-                                                        icon="{{ $action['icon'] ?? '' }}"
+                                                    <button 
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md
+                                                               text-zinc-600 dark:text-zinc-400 
+                                                               hover:text-zinc-900 dark:hover:text-zinc-100
+                                                               hover:bg-zinc-100 dark:hover:bg-zinc-800
+                                                               focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                                                               transition-all duration-150 {{ $action['class'] ?? '' }}"
                                                         wire:click="{{ $action['method'] }}({{ $item->id }})"
                                                         title="{{ $action['title'] ?? $action['label'] ?? '' }}"
                                                     >
+                                                        @if($action['icon'] ?? null)
+                                                            <flux:icon name="{{ $action['icon'] }}" class="w-4 h-4 {{ $action['label'] ? 'mr-1' : '' }}" />
+                                                        @endif
                                                         {{ $action['label'] ?? '' }}
-                                                    </flux:button>
+                                                    </button>
                                                 @elseif(isset($action['route']))
-                                                    <flux:button 
-                                                        size="sm" 
-                                                        variant="{{ $action['variant'] ?? 'ghost' }}" 
-                                                        icon="{{ $action['icon'] ?? '' }}"
+                                                    <a 
                                                         href="{{ route($action['route'], $item) }}"
-                                                        wire:navigate="{{ $action['navigate'] ?? true }}"
+                                                        @if($action['navigate'] ?? true) wire:navigate @endif
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md
+                                                               text-zinc-600 dark:text-zinc-400 
+                                                               hover:text-zinc-900 dark:hover:text-zinc-100
+                                                               hover:bg-zinc-100 dark:hover:bg-zinc-800
+                                                               focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                                                               transition-all duration-150 {{ $action['class'] ?? '' }}"
                                                         title="{{ $action['title'] ?? $action['label'] ?? '' }}"
                                                     >
+                                                        @if($action['icon'] ?? null)
+                                                            <flux:icon name="{{ $action['icon'] }}" class="w-4 h-4 {{ $action['label'] ? 'mr-1' : '' }}" />
+                                                        @endif
                                                         {{ $action['label'] ?? '' }}
-                                                    </flux:button>
+                                                    </a>
                                                 @elseif(isset($action['href']))
-                                                    <flux:button 
-                                                        size="sm" 
-                                                        variant="{{ $action['variant'] ?? 'ghost' }}" 
-                                                        icon="{{ $action['icon'] ?? '' }}"
+                                                    <a 
                                                         href="{{ $action['href'] }}"
-                                                        wire:navigate="{{ $action['navigate'] ?? true }}"
+                                                        @if($action['navigate'] ?? true) wire:navigate @endif
+                                                        class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md
+                                                               text-zinc-600 dark:text-zinc-400 
+                                                               hover:text-zinc-900 dark:hover:text-zinc-100
+                                                               hover:bg-zinc-100 dark:hover:bg-zinc-800
+                                                               focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:focus:ring-blue-400/20
+                                                               transition-all duration-150 {{ $action['class'] ?? '' }}"
                                                         title="{{ $action['title'] ?? $action['label'] ?? '' }}"
                                                     >
+                                                        @if($action['icon'] ?? null)
+                                                            <flux:icon name="{{ $action['icon'] }}" class="w-4 h-4 {{ $action['label'] ? 'mr-1' : '' }}" />
+                                                        @endif
                                                         {{ $action['label'] ?? '' }}
-                                                    </flux:button>
+                                                    </a>
                                                 @endif
                                             @endforeach
                                         </div>
@@ -319,7 +532,7 @@
                                     @break
                                     
                                 @default
-                                    <div class="text-sm text-zinc-600 dark:text-zinc-400">
+                                    <div class="text-sm text-zinc-600 dark:text-zinc-400 truncate">
                                         {{ data_get($item, $column['key']) }}
                                     </div>
                             @endswitch

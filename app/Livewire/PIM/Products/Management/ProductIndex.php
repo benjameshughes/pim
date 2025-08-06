@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Products;
+namespace App\Livewire\PIM\Products\Management;
 
 use App\Models\Product;
 use App\Contracts\HasStackedList;
@@ -159,6 +159,6 @@ class ProductIndex extends Component implements HasStackedList
 
     public function render()
     {
-        return view('livewire.products.product-index');
+        return view('livewire.pim.products.management.product-index');
     }
 }

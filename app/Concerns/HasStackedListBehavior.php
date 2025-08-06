@@ -6,6 +6,7 @@ use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Illuminate\Database\Eloquent\Builder;
+use App\Actions\StackedList\ExportStackedListDataAction;
 
 /**
  * Trait for adding StackedList functionality to Livewire components.
@@ -127,7 +128,11 @@ trait HasStackedListBehavior
     protected function applyStackedListBaseFilters(Builder $query): void
     {
         foreach ($this->stackedListConfig['baseFilters'] ?? [] as $field => $value) {
-            $query->where($field, $value);
+            if (is_callable($value)) {
+                $value($query);
+            } else {
+                $query->where($field, $value);
+            }
         }
     }
 
@@ -407,45 +412,31 @@ trait HasStackedListBehavior
 
     protected function defaultStackedListExport(string $format, $data): void
     {
-        // Basic CSV export
-        if ($format === 'csv') {
-            $filename = $this->stackedListConfig['title'] ?? 'export';
-            $filename = \Illuminate\Support\Str::slug($filename) . '-' . date('Y-m-d-H-i-s') . '.csv';
+        try {
+            $exportAction = app(ExportStackedListDataAction::class);
             
-            $headers = [
-                'Content-Type' => 'text/csv',
-                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            // Get columns for export
+            $columns = collect($this->stackedListConfig['columns'] ?? [])
+                ->where('type', '!=', 'actions')
+                ->pluck('label', 'key')
+                ->toArray();
+            
+            $metadata = [
+                'title' => $this->stackedListConfig['title'] ?? 'Export',
+                'search' => $this->stackedListSearch,
+                'filters' => $this->stackedListFilters,
+                'sortBy' => $this->stackedListSortBy,
+                'sortDirection' => $this->stackedListSortDirection,
             ];
+
+            $response = $exportAction->execute($format, $data, $columns, $metadata);
+            $response->send();
             
-            $callback = function() use ($data) {
-                $file = fopen('php://output', 'w');
-                
-                // Get columns for export
-                $columns = collect($this->stackedListConfig['columns'] ?? [])
-                    ->where('type', '!=', 'actions')
-                    ->pluck('label', 'key')
-                    ->toArray();
-                
-                // Header row
-                fputcsv($file, array_values($columns));
-                
-                // Data rows
-                foreach ($data as $item) {
-                    $row = [];
-                    foreach (array_keys($columns) as $key) {
-                        $row[] = data_get($item, $key);
-                    }
-                    fputcsv($file, $row);
-                }
-                
-                fclose($file);
-            };
-            
-            response()->stream($callback, 200, $headers)->send();
-            return;
+        } catch (\InvalidArgumentException $e) {
+            session()->flash('error', $e->getMessage());
+        } catch (\RuntimeException $e) {
+            session()->flash('error', $e->getMessage());
         }
-        
-        session()->flash('message', "Export format '{$format}' not supported.");
     }
 
     protected function getStackedListModelKeyName(): string

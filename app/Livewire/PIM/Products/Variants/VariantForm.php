@@ -272,7 +272,7 @@ class VariantForm extends Component
             ->orderBy('name')
             ->get();
         
-        return view('livewire.products.variant-form', [
+        return view('livewire.pim.products.variants.variant-form', [
             'products' => $products,
             'barcodeTypes' => Barcode::BARCODE_TYPES,
             'poolStats' => BarcodePool::getStats(),

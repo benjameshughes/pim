@@ -1,30 +1,30 @@
 <?php
 
 use App\Livewire\Dashboard;
-use App\Livewire\Products\ProductIndex;
-use App\Livewire\Products\ProductForm;
-use App\Livewire\Products\VariantIndex;
-use App\Livewire\Products\VariantForm;
-use App\Livewire\Products\VariantView;
-use App\Livewire\Products\VariantEdit;
+use App\Livewire\PIM\Products\Management\ProductIndex;
+use App\Livewire\PIM\Products\Management\ProductForm;
+use App\Livewire\PIM\Products\Variants\VariantIndex;
+use App\Livewire\PIM\Products\Variants\VariantForm;
+use App\Livewire\PIM\Products\Variants\VariantView;
+use App\Livewire\PIM\Products\Variants\VariantEdit;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Livewire\Products\ImportData;
-use App\Livewire\Products\ImportDataRefactored;
-use App\Livewire\Products\BulkOperations;
-use App\Livewire\Products\BarcodeIndex;
-use App\Livewire\Products\BarcodePoolManager;
-use App\Livewire\Products\BarcodePoolImport;
-use App\Livewire\Products\PricingManager;
-use App\Livewire\Products\ImageManager;
-use App\Livewire\Products\AttributeDefinitionsManager;
-use App\Livewire\Products\ShopifyExport;
-use App\Livewire\Products\DeleteProduct;
-use App\Livewire\Products\DeleteVariant;
-use App\Livewire\Products\DeletedProductsArchive;
-use App\Livewire\Products\MiraklSync;
-use App\Livewire\Products\ShopifySync;
-use App\Livewire\Products\EbaySync;
+use App\Livewire\DataExchange\Import\ImportData;
+use App\Livewire\DataExchange\Import\ImportDataRefactored;
+use App\Livewire\DataExchange\Import\BulkOperations;
+use App\Livewire\PIM\Barcodes\BarcodeIndex;
+use App\Livewire\PIM\Barcodes\Pool\PoolManager;
+use App\Livewire\PIM\Barcodes\Pool\BarcodePoolImport;
+use App\Livewire\PIM\Pricing\PricingManager;
+use App\Livewire\PIM\Media\ImageManager;
+use App\Livewire\PIM\Attributes\AttributeDefinitionsManager;
+use App\Livewire\DataExchange\Export\ShopifyExport;
+use App\Livewire\PIM\Products\Management\DeleteProduct;
+use App\Livewire\PIM\Products\Variants\DeleteVariant;
+use App\Livewire\Archive\DeletedProductsArchive;
+use App\Livewire\DataExchange\Sync\MiraklSync;
+use App\Livewire\DataExchange\Sync\ShopifySync;
+use App\Livewire\DataExchange\Sync\EbaySync;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
@@ -51,8 +51,8 @@ Route::middleware(['auth'])->group(function () {
         
         // Pool management routes
         Route::prefix('pool')->name('pool.')->group(function () {
-            Route::get('/', \App\Livewire\Products\BarcodePoolManagerLite::class)->name('index');
-            Route::get('/full', BarcodePoolManager::class)->name('full');
+            Route::get('/', \App\Livewire\PIM\Barcodes\Pool\PoolManagerLite::class)->name('index');
+            Route::get('/full', PoolManager::class)->name('full');
             Route::get('/import', BarcodePoolImport::class)->name('import');
         });
     });
@@ -110,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('products')->name('products.')->group(function () {
         // Specific routes MUST come before wildcard routes
         Route::get('/', ProductIndex::class)->name('index');
-        Route::get('create', \App\Livewire\Products\ProductWizard::class)->name('create');
+        Route::get('create', \App\Livewire\PIM\Products\Management\ProductWizard::class)->name('create');
         
         // Variants
         Route::get('variants', VariantIndex::class)->name('variants.index');
@@ -141,16 +141,16 @@ Route::middleware(['auth'])->group(function () {
         
         // Product view routes - organized like bulk operations
         Route::prefix('{product}')->name('product.')->group(function () {
-            Route::get('/overview', \App\Livewire\Products\ProductView::class)->name('overview');
-            Route::get('/variants', \App\Livewire\Products\ProductView::class)->name('variants');
-            Route::get('/images', \App\Livewire\Products\ProductView::class)->name('images');
-            Route::get('/attributes', \App\Livewire\Products\ProductView::class)->name('attributes');
-            Route::get('/sync', \App\Livewire\Products\ProductView::class)->name('sync');
+            Route::get('/overview', \App\Livewire\PIM\Products\Management\ProductView::class)->name('overview');
+            Route::get('/variants', \App\Livewire\PIM\Products\Management\ProductView::class)->name('variants');
+            Route::get('/images', \App\Livewire\PIM\Products\Management\ProductView::class)->name('images');
+            Route::get('/attributes', \App\Livewire\PIM\Products\Management\ProductView::class)->name('attributes');
+            Route::get('/sync', \App\Livewire\PIM\Products\Management\ProductView::class)->name('sync');
             Route::get('/edit', function(Product $product) { return view('products.products.edit', compact('product')); })->name('edit');
         });
         
         // Wildcard routes MUST come last
-        Route::get('{product}', \App\Livewire\Products\ProductView::class)->name('view');
+        Route::get('{product}', \App\Livewire\PIM\Products\Management\ProductView::class)->name('view');
     });
 
     // Admin Routes

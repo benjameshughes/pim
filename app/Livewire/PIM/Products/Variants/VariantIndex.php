@@ -1,41 +1,47 @@
 <?php
 
-namespace App\Livewire\Products;
+namespace App\Livewire\PIM\Products\Variants;
 
-use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Contracts\HasStackedList;
 use App\Concerns\HasStackedListBehavior;
-use App\StackedList\Concerns\HasStackedListActions;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class ProductIndex extends Component implements HasStackedList
+class VariantIndex extends Component implements HasStackedList
 {
     use HasStackedListBehavior;
-    use HasStackedListActions;
 
-    // FilamentPHP-style: No property conflicts!
+    public $showDeleteModal = false;
+    public $variantToDelete = null;
+
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
 
     public function mount()
     {
-        $this->initializeStackedList(Product::class, $this->getStackedListConfig());
+        $this->initializeStackedList(ProductVariant::class, $this->getStackedListConfig());
     }
 
     public function getStackedListConfig(): array
     {
         return [
-            'title' => 'Products',
-            'subtitle' => 'Manage your product catalog',
-            'search_placeholder' => 'Search products by name, SKU, or description...',
+            'title' => 'Product Variants',
+            'subtitle' => 'Manage individual product variants',
+            'search_placeholder' => 'Search variants by SKU, color, size...',
             'export' => true,
-            'per_page_options' => [5, 10, 25, 50, 100],
-            'searchable' => ['name', 'description', 'parent_sku'],
-            'sortable_columns' => ['name', 'parent_sku', 'status', 'variants_count'],
+            'per_page_options' => [10, 25, 50, 100],
+            'searchable' => ['sku', 'color', 'size', 'product.name'],
+            'sortable_columns' => ['sku', 'color', 'size', 'status', 'barcodes_count'],
             'filters' => [
+                'product_id' => [
+                    'type' => 'select',
+                    'label' => 'Product',
+                    'column' => 'product_id',
+                    'options' => \App\Models\Product::orderBy('name')->pluck('name', 'id')->toArray()
+                ],
                 'status' => [
                     'type' => 'select',
                     'label' => 'Status',
@@ -49,22 +55,34 @@ class ProductIndex extends Component implements HasStackedList
             ],
             'columns' => [
                 [
-                    'key' => 'name',
-                    'label' => 'Name',
-                    'type' => 'text',
-                    'font' => 'font-medium',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'parent_sku',
+                    'key' => 'sku',
                     'label' => 'SKU',
                     'type' => 'text',
                     'font' => 'font-mono text-sm',
                     'sortable' => true
                 ],
                 [
-                    'key' => 'variants_count',
-                    'label' => 'Variants',
+                    'key' => 'product.name',
+                    'label' => 'Product',
+                    'type' => 'text',
+                    'font' => 'font-medium',
+                    'sortable' => false
+                ],
+                [
+                    'key' => 'color',
+                    'label' => 'Color',
+                    'type' => 'text',
+                    'sortable' => true
+                ],
+                [
+                    'key' => 'size',
+                    'label' => 'Size',
+                    'type' => 'text',
+                    'sortable' => true
+                ],
+                [
+                    'key' => 'barcodes_count',
+                    'label' => 'Barcodes',
                     'type' => 'text',
                     'sortable' => true
                 ],
@@ -98,12 +116,12 @@ class ProductIndex extends Component implements HasStackedList
                     'actions' => [
                         [
                             'label' => 'View',
-                            'route' => 'products.view',
+                            'route' => 'products.variants.view',
                             'icon' => 'eye'
                         ],
                         [
                             'label' => 'Edit',
-                            'route' => 'products.product.edit',
+                            'route' => 'products.variants.edit',
                             'icon' => 'pencil'
                         ]
                     ]
@@ -123,19 +141,24 @@ class ProductIndex extends Component implements HasStackedList
                     'icon' => 'check-circle'
                 ]
             ],
-            'withCount' => ['variants'],
+            'with' => ['product'],
+            'withCount' => ['barcodes'],
+            'default_sort' => [
+                'column' => 'created_at',
+                'direction' => 'desc'
+            ],
             'header_actions' => [
                 [
-                    'label' => 'Create Product',
-                    'href' => route('products.create'),
+                    'label' => 'Create Variant',
+                    'href' => route('products.variants.create'),
                     'icon' => 'plus'
                 ]
             ],
-            'empty_title' => 'No products found',
-            'empty_description' => 'Create your first product to get started.',
+            'empty_title' => 'No variants found',
+            'empty_description' => 'Create your first variant to get started.',
             'empty_action' => [
-                'label' => 'Create Product',
-                'href' => route('products.create'),
+                'label' => 'Create Variant',
+                'href' => route('products.variants.create'),
                 'icon' => 'plus'
             ]
         ];
@@ -143,22 +166,46 @@ class ProductIndex extends Component implements HasStackedList
 
     public function handleBulkAction(string $action, array $selectedIds): void
     {
-        // Use the trait's common implementations
-        if (!$this->handleCommonBulkActions($action, $selectedIds, Product::class)) {
-            // Handle any custom actions here
-            match($action) {
-                default => session()->flash('error', "Unknown action: {$action}")
-            };
-        }
+        match($action) {
+            'delete' => $this->deleteVariants($selectedIds),
+            'activate' => $this->updateVariantStatus($selectedIds, 'active'),
+            default => null
+        };
     }
 
-    public function viewProduct($productId)
+    private function deleteVariants(array $ids): void
     {
-        return $this->redirect(route('products.view', $productId));
+        ProductVariant::whereIn('id', $ids)->delete();
+        session()->flash('message', count($ids) . ' variants deleted.');
+    }
+
+    private function updateVariantStatus(array $ids, string $status): void
+    {
+        ProductVariant::whereIn('id', $ids)->update(['status' => $status]);
+        session()->flash('message', count($ids) . ' variants updated.');
+    }
+
+    public function confirmDelete($variantId)
+    {
+        $this->variantToDelete = $variantId;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteVariant()
+    {
+        $variant = ProductVariant::find($this->variantToDelete);
+        
+        if ($variant) {
+            $variant->delete();
+            session()->flash('message', 'Variant deleted successfully.');
+        }
+
+        $this->showDeleteModal = false;
+        $this->variantToDelete = null;
     }
 
     public function render()
     {
-        return view('livewire.products.product-index');
+        return view('livewire.pim.products.variants.variant-index');
     }
 }
