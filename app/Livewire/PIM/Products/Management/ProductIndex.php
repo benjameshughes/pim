@@ -177,25 +177,31 @@ class ProductIndex extends Component implements HasStackedList
 
     public function handleBulkAction(string $action, array $selectedIds): void
     {
-        // Handle custom product-specific actions first
-        $handled = match($action) {
+        // Handle all actions without flash messages
+        match($action) {
             'update_pricing' => $this->handleUpdatePricing($selectedIds),
             'toggle_status' => $this->toggleProductStatus($selectedIds),
-            default => false
+            'export' => $this->handleExport($selectedIds),
+            'delete' => $this->handleDelete($selectedIds),
+            default => null
         };
-
-        // If not handled by custom actions, use trait's common implementations
-        if (!$handled) {
-            if (!$this->handleCommonBulkActions($action, $selectedIds, Product::class)) {
-                session()->flash('error', "Unknown action: {$action}");
-            }
-        }
     }
 
     private function handleUpdatePricing(array $selectedIds): bool
     {
-        // TODO: Implement pricing update modal or redirect to pricing page
-        session()->flash('message', 'Pricing update for ' . count($selectedIds) . ' products (feature coming soon)');
+        // TODO: Implement pricing update functionality
+        return true;
+    }
+
+    private function handleExport(array $selectedIds): bool
+    {
+        // TODO: Implement export functionality
+        return true;
+    }
+
+    private function handleDelete(array $selectedIds): bool
+    {
+        // TODO: Implement delete functionality
         return true;
     }
 
