@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Variants;
+namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\ProductVariant;
 use App\Contracts\HasStackedList;
@@ -28,13 +28,36 @@ class VariantIndex extends Component implements HasStackedList
     public function getStackedListConfig(): array
     {
         return [
-            'title' => 'Product Variants',
-            'subtitle' => 'Manage individual product variants',
+            // Header Configuration
+            'title' => 'Variant Management',
+            'subtitle' => 'Manage individual product variants across your catalog',
+            
+            // Search & Filter Configuration
             'search_placeholder' => 'Search variants by SKU, color, size...',
-            'export' => true,
-            'per_page_options' => [10, 25, 50, 100],
             'searchable' => ['sku', 'color', 'size', 'product.name'],
             'sortable_columns' => ['sku', 'color', 'size', 'status', 'barcodes_count'],
+            
+            // Data Configuration
+            'with' => ['product'],
+            'withCount' => ['barcodes'],
+            'per_page_options' => [10, 25, 50, 100],
+            'export' => true,
+            'default_sort' => [
+                'column' => 'created_at',
+                'direction' => 'desc'
+            ],
+            
+            // Header Actions
+            'header_actions' => [
+                [
+                    'label' => 'Create Variant',
+                    'href' => route('products.variants.create'),
+                    'icon' => 'plus',
+                    'variant' => 'primary'
+                ]
+            ],
+            
+            // Filters
             'filters' => [
                 'product_id' => [
                     'type' => 'select',
@@ -53,17 +76,19 @@ class VariantIndex extends Component implements HasStackedList
                     ]
                 ]
             ],
+            
+            // Table Columns
             'columns' => [
                 [
                     'key' => 'sku',
-                    'label' => 'SKU',
+                    'label' => 'Variant SKU',
                     'type' => 'text',
                     'font' => 'font-mono text-sm',
                     'sortable' => true
                 ],
                 [
                     'key' => 'product.name',
-                    'label' => 'Product',
+                    'label' => 'Product Name',
                     'type' => 'text',
                     'font' => 'font-medium',
                     'sortable' => false
@@ -82,7 +107,7 @@ class VariantIndex extends Component implements HasStackedList
                 ],
                 [
                     'key' => 'barcodes_count',
-                    'label' => 'Barcodes',
+                    'label' => '# Barcodes',
                     'type' => 'text',
                     'sortable' => true
                 ],
@@ -117,16 +142,20 @@ class VariantIndex extends Component implements HasStackedList
                         [
                             'label' => 'View',
                             'route' => 'products.variants.view',
-                            'icon' => 'eye'
+                            'icon' => 'eye',
+                            'navigate' => true
                         ],
                         [
                             'label' => 'Edit',
                             'route' => 'products.variants.edit',
-                            'icon' => 'pencil'
+                            'icon' => 'pencil',
+                            'navigate' => true
                         ]
                     ]
                 ]
             ],
+            
+            // Bulk Actions
             'bulk_actions' => [
                 [
                     'key' => 'delete',
@@ -141,25 +170,15 @@ class VariantIndex extends Component implements HasStackedList
                     'icon' => 'check-circle'
                 ]
             ],
-            'with' => ['product'],
-            'withCount' => ['barcodes'],
-            'default_sort' => [
-                'column' => 'created_at',
-                'direction' => 'desc'
-            ],
-            'header_actions' => [
-                [
-                    'label' => 'Create Variant',
-                    'href' => route('products.variants.create'),
-                    'icon' => 'plus'
-                ]
-            ],
+            
+            // Empty State Configuration
             'empty_title' => 'No variants found',
             'empty_description' => 'Create your first variant to get started.',
             'empty_action' => [
                 'label' => 'Create Variant',
                 'href' => route('products.variants.create'),
-                'icon' => 'plus'
+                'icon' => 'plus',
+                'variant' => 'primary'
             ]
         ];
     }

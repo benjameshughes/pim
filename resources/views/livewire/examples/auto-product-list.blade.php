@@ -1,28 +1,24 @@
-{{-- Example of using the auto-stacked-list component --}}
+@if (session()->has('message'))
+    <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">
+        {{ session('message') }}
+    </div>
+@endif
 
-{{-- Method 1: Using the auto-stacked-list component with model auto-generation --}}
-<x-auto-stacked-list 
-    model="{{ App\Models\Product::class }}"
-    :data="$products"
-    :hide-columns="['description', 'features', 'slug', 'metadata']"
-    :badge-columns="['featured', 'is_active']"
-    title="Auto-Generated Products"
-    subtitle="This list was automatically generated from the Product model"
+@if (session()->has('success'))
+    <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">
+        {{ session('success') }}
+    </div>
+@endif
+
+<x-stacked-list
+    :config="$this->getStackedListConfig()"
+    :data="$this->stackedListData"
+    :selected-items="$this->stackedListSelectedItems"
+    :search="$this->stackedListSearch"
+    :filters="$this->stackedListFilters"
+    :per-page="$this->stackedListPerPage"
+    :sort-by="$this->stackedListSortBy"
+    :sort-direction="$this->stackedListSortDirection"
+    :sort-stack="$this->stackedListSortStack"
+    :select-all="$this->stackedListSelectAll"
 />
-
-{{-- 
-Method 2: You could also use the trait in your component and pass the config:
-
-<x-stacked-list 
-    :config="$config"
-    :data="$products"
-    :selected-items="[]"
-    :search="''"
-    :filters="[]"
-    :per-page="15"
-    :sort-by="null"
-    :sort-direction="'asc'"
-    :sort-stack="[]"
-    :select-all="false"
-/>
---}}

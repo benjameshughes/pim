@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Management;
+namespace App\Livewire\Pim\Products\Management;
 
 use App\Models\Product;
 use App\Contracts\HasStackedList;
@@ -28,13 +28,31 @@ class ProductIndex extends Component implements HasStackedList
     public function getStackedListConfig(): array
     {
         return [
-            'title' => 'Products',
-            'subtitle' => 'Manage your product catalog',
+            // Header Configuration
+            'title' => 'Product Catalog',
+            'subtitle' => 'Manage your product catalog with advanced filtering and bulk operations',
+            
+            // Search & Filter Configuration
             'search_placeholder' => 'Search products by name, SKU, or description...',
-            'export' => true,
-            'per_page_options' => [5, 10, 25, 50, 100],
             'searchable' => ['name', 'description', 'parent_sku'],
             'sortable_columns' => ['name', 'parent_sku', 'status', 'variants_count'],
+            
+            // Data Configuration
+            'withCount' => ['variants'],
+            'per_page_options' => [5, 10, 25, 50, 100],
+            'export' => true,
+            
+            // Header Actions
+            'header_actions' => [
+                [
+                    'label' => 'Create Product',
+                    'href' => route('products.create'),
+                    'icon' => 'plus',
+                    'variant' => 'primary'
+                ]
+            ],
+            
+            // Filters
             'filters' => [
                 'status' => [
                     'type' => 'select',
@@ -47,10 +65,12 @@ class ProductIndex extends Component implements HasStackedList
                     ]
                 ]
             ],
+            
+            // Table Columns
             'columns' => [
                 [
                     'key' => 'name',
-                    'label' => 'Name',
+                    'label' => 'Product Name',
                     'type' => 'text',
                     'font' => 'font-medium',
                     'sortable' => true
@@ -64,7 +84,7 @@ class ProductIndex extends Component implements HasStackedList
                 ],
                 [
                     'key' => 'variants_count',
-                    'label' => 'Variants',
+                    'label' => '# Variants',
                     'type' => 'text',
                     'sortable' => true
                 ],
@@ -99,16 +119,20 @@ class ProductIndex extends Component implements HasStackedList
                         [
                             'label' => 'View',
                             'route' => 'products.view',
-                            'icon' => 'eye'
+                            'icon' => 'eye',
+                            'navigate' => true
                         ],
                         [
                             'label' => 'Edit',
                             'route' => 'products.product.edit',
-                            'icon' => 'pencil'
+                            'icon' => 'pencil',
+                            'navigate' => true
                         ]
                     ]
                 ]
             ],
+            
+            // Bulk Actions
             'bulk_actions' => [
                 [
                     'key' => 'delete',
@@ -123,20 +147,15 @@ class ProductIndex extends Component implements HasStackedList
                     'icon' => 'check-circle'
                 ]
             ],
-            'withCount' => ['variants'],
-            'header_actions' => [
-                [
-                    'label' => 'Create Product',
-                    'href' => route('products.create'),
-                    'icon' => 'plus'
-                ]
-            ],
+            
+            // Empty State Configuration
             'empty_title' => 'No products found',
-            'empty_description' => 'Create your first product to get started.',
+            'empty_description' => 'Create your first product to get started with your catalog.',
             'empty_action' => [
                 'label' => 'Create Product',
                 'href' => route('products.create'),
-                'icon' => 'plus'
+                'icon' => 'plus',
+                'variant' => 'primary'
             ]
         ];
     }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Barcodes;
+namespace App\Livewire\Pim\Barcodes;
 
 use App\Models\Barcode;
 use App\Models\ProductVariant;
@@ -28,13 +28,35 @@ class BarcodeIndex extends Component implements HasStackedList
     public function getStackedListConfig(): array
     {
         return [
-            'title' => 'Barcodes',
-            'subtitle' => 'Manage product barcodes and identifiers',
+            // Header Configuration
+            'title' => 'Barcode Registry',
+            'subtitle' => 'Manage product barcodes and identifiers across your catalog',
+            
+            // Search & Filter Configuration
             'search_placeholder' => 'Search barcodes...',
-            'export' => true,
-            'per_page_options' => [25, 50, 100, 150, 200],
             'searchable' => ['barcode'],
             'sortable_columns' => ['barcode', 'barcode_type', 'is_primary', 'created_at'],
+            
+            // Data Configuration
+            'with' => ['productVariant.product'],
+            'per_page_options' => [25, 50, 100, 150, 200],
+            'export' => true,
+            'default_sort' => [
+                'column' => 'created_at',
+                'direction' => 'desc'
+            ],
+            
+            // Header Actions
+            'header_actions' => [
+                [
+                    'label' => 'Generate Barcodes',
+                    'href' => '#',
+                    'icon' => 'plus',
+                    'variant' => 'primary'
+                ]
+            ],
+            
+            // Filters
             'filters' => [
                 'product_id' => [
                     'type' => 'select',
@@ -50,6 +72,8 @@ class BarcodeIndex extends Component implements HasStackedList
                     'options' => Barcode::BARCODE_TYPES
                 ]
             ],
+            
+            // Table Columns
             'columns' => [
                 [
                     'key' => 'barcode',
@@ -140,6 +164,8 @@ class BarcodeIndex extends Component implements HasStackedList
                     ]
                 ]
             ],
+            
+            // Bulk Actions
             'bulk_actions' => [
                 [
                     'key' => 'delete',
@@ -148,24 +174,15 @@ class BarcodeIndex extends Component implements HasStackedList
                     'icon' => 'trash-2'
                 ]
             ],
-            'with' => ['productVariant.product'],
-            'default_sort' => [
-                'column' => 'created_at',
-                'direction' => 'desc'
-            ],
-            'header_actions' => [
-                [
-                    'label' => 'Generate Barcodes',
-                    'href' => '#',
-                    'icon' => 'plus'
-                ]
-            ],
+            
+            // Empty State Configuration
             'empty_title' => 'No barcodes found',
             'empty_description' => 'Generate your first barcode to get started.',
             'empty_action' => [
                 'label' => 'Generate Barcode',
                 'href' => '#',
-                'icon' => 'plus'
+                'icon' => 'plus',
+                'variant' => 'primary'
             ]
         ];
     }
