@@ -1,0 +1,3 @@
+variant_sku,color,size,price,image_url
+TEST-001,Red,M,25.00,https://picsum.photos/400/400
+TEST-002,Blue,L,27.00,"https://picsum.photos/400/401,https://picsum.photos/400/402"
