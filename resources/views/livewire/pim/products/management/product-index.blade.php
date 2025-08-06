@@ -16,3 +16,4 @@
     :sort-stack="$this->stackedListSortStack"
     :select-all="$this->stackedListSelectAll"
 />
+

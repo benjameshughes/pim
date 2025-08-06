@@ -6,7 +6,9 @@ use App\Models\Product;
 use App\Contracts\HasStackedList;
 use App\Concerns\HasStackedListBehavior;
 use App\StackedList\Concerns\HasStackedListActions;
+use App\StackedList\Actions\BulkAction;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
@@ -15,7 +17,6 @@ class ProductIndex extends Component implements HasStackedList
     use HasStackedListBehavior;
     use HasStackedListActions;
 
-    // FilamentPHP-style: No property conflicts!
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
@@ -24,6 +25,7 @@ class ProductIndex extends Component implements HasStackedList
     {
         $this->initializeStackedList(Product::class, $this->getStackedListConfig());
     }
+
 
     public function getStackedListConfig(): array
     {
@@ -133,20 +135,18 @@ class ProductIndex extends Component implements HasStackedList
             ],
             
             // Bulk Actions
-            'bulk_actions' => [
-                [
-                    'key' => 'delete',
-                    'label' => 'Delete Selected',
-                    'variant' => 'danger',
-                    'icon' => 'trash-2'
-                ],
-                [
-                    'key' => 'activate',
-                    'label' => 'Activate',
-                    'variant' => 'outline',
-                    'icon' => 'check-circle'
-                ]
-            ],
+            'bulk_actions' => collect([
+                BulkAction::make('update_pricing')
+                    ->label('Update Pricing')
+                    ->icon('dollar-sign')
+                    ->outline(),
+                BulkAction::export(),
+                BulkAction::make('toggle_status')
+                    ->label('Toggle Status')
+                    ->icon('refresh-cw')
+                    ->outline(),
+                BulkAction::delete()
+            ])->map(fn($action) => $action->toArray())->toArray(),
             
             // Empty State Configuration
             'empty_title' => 'No products found',
@@ -160,16 +160,45 @@ class ProductIndex extends Component implements HasStackedList
         ];
     }
 
+    private function toggleProductStatus(array $selectedIds): bool
+    {
+        foreach ($selectedIds as $id) {
+            $product = Product::find($id);
+            if ($product) {
+                $product->status = $product->status === 'active' ? 'inactive' : 'active';
+                $product->save();
+            }
+        }
+        
+        // No flash message - user can see the status change immediately
+        
+        return true;
+    }
+
     public function handleBulkAction(string $action, array $selectedIds): void
     {
-        // Use the trait's common implementations
-        if (!$this->handleCommonBulkActions($action, $selectedIds, Product::class)) {
-            // Handle any custom actions here
-            match($action) {
-                default => session()->flash('error', "Unknown action: {$action}")
-            };
+        // Handle custom product-specific actions first
+        $handled = match($action) {
+            'update_pricing' => $this->handleUpdatePricing($selectedIds),
+            'toggle_status' => $this->toggleProductStatus($selectedIds),
+            default => false
+        };
+
+        // If not handled by custom actions, use trait's common implementations
+        if (!$handled) {
+            if (!$this->handleCommonBulkActions($action, $selectedIds, Product::class)) {
+                session()->flash('error', "Unknown action: {$action}");
+            }
         }
     }
+
+    private function handleUpdatePricing(array $selectedIds): bool
+    {
+        // TODO: Implement pricing update modal or redirect to pricing page
+        session()->flash('message', 'Pricing update for ' . count($selectedIds) . ' products (feature coming soon)');
+        return true;
+    }
+
 
     public function viewProduct($productId)
     {
