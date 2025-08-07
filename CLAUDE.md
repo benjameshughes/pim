@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `php artisan serve` - Start Laravel development server
 - `php artisan test` - Run tests using Pest framework
 - `php artisan pail` - View application logs in real-time
-- `php artisan queue:listen` - Start queue worker
+- `php artisan queue:listen images` - Start image processing queue worker
 - `php artisan migrate` - Run database migrations
 - `php artisan pint` - Format code using Laravel Pint
 
@@ -286,3 +286,159 @@ SHOPIFY_API_VERSION=2024-07
 
 ### Flux UI Memories
 - Flux UI select dropdown is flux::select.option not flux::option
+
+## Design Patterns & Architecture
+
+### Builder Pattern / Fluent API
+When creating services or utilities that require configuration, use the **Builder Pattern with Fluent API**:
+
+```php
+// Example: Toast notification system
+Toast::success('Title', 'Message')
+    ->position('top-right')
+    ->duration(5000)
+    ->persist()      // Method chaining
+    ->persistent()   // Each method returns $this
+    ->action(ToastAction::make('Undo')->url('/undo'))
+    ->send();
+```
+
+**Key Principles:**
+- Each configuration method returns `$this` for chaining
+- Use descriptive method names that read naturally
+- Provide sensible defaults in constructor
+- Terminal methods (like `send()`) execute the action
+- Static factory methods for common presets (`::success()`, `::error()`)
+
+### Alpine.js Integration with Livewire
+
+**Alpine Store Pattern for Global State:**
+```javascript
+Alpine.store('storeName', {
+    items: [],
+    get computed() { return this.items.filter(...) },
+    add(item) { ... },
+    remove(id) { ... }
+});
+```
+
+**Key Principles:**
+- Use Alpine stores for client-side state that needs to be shared across components
+- Access stores in templates with `$store.storeName`
+- Use computed properties (getters) for derived state
+- Handle Livewire events to sync server/client state
+- Keep Alpine logic in Blade templates, not external JS files
+
+**Livewire + Alpine Data Flow:**
+1. Livewire manages server state (session, database)
+2. Alpine store manages client state (UI interactions, animations)
+3. Use browser events to communicate: `livewire:navigate`, custom events
+4. Pass data from Livewire to Alpine using `@js()` directive: `x-data="{ data: @js($this->data) }"`
+
+### Livewire Component Patterns
+
+**Computed Properties:**
+```php
+#[Computed]
+public function items(): Collection
+{
+    return $this->query()->get();
+}
+```
+- Use for expensive operations that should be cached during request
+- Access in Blade with `$this->items`
+- Automatically refreshes when component re-renders
+
+**Event Communication:**
+```php
+// Dispatch from Livewire
+$this->dispatch('event-name', ['data' => $value]);
+
+// Listen in Alpine
+window.addEventListener('event-name', (event) => {
+    // Handle event.detail.data
+});
+```
+
+### Navigation Persistence (wire:navigate)
+
+For elements that should persist across SPA navigation:
+```blade
+@persist('unique-name')
+    <!-- Element that survives page changes -->
+@endpersist
+```
+
+**Toast Persistence Pattern:**
+- Use `->persist()` for navigation persistence
+- Use `->persistent()` for auto-dismiss control
+- Listen for `livewire:navigate` events to filter non-persistent items
+- Wrap container in `@persist` directive
+
+### Testing with Pest
+
+**Test Structure:**
+```php
+beforeEach(function () {
+    // Setup for each test
+});
+
+it('describes what it tests', function () {
+    // Arrange
+    $model = Model::factory()->create();
+    
+    // Act
+    $result = $model->doSomething();
+    
+    // Assert
+    expect($result)->toBe($expected);
+});
+
+describe('Feature Group', function () {
+    it('tests specific feature', function () {
+        // Grouped related tests
+    });
+});
+```
+
+**Key Principles:**
+- Use descriptive test names that explain the behavior
+- Group related tests with `describe()`
+- Use `beforeEach()` for common setup
+- Prefer `expect()` syntax over traditional assertions
+- Test uses in-memory SQLite database (`:memory:`)
+- Tests are non-destructive to development database
+
+### State Management Best Practices
+
+**Session State (Server):**
+- Use for data that must persist across requests
+- Store minimal data (IDs, not full objects)
+- Reconstruct objects from session data when needed
+
+**Alpine State (Client):**
+- Use for UI state (open/closed, animations, timers)
+- Keep reactive data in Alpine stores for sharing
+- Use component `x-data` for isolated state
+
+**Livewire State (Hybrid):**
+- Public properties are reactive and persist across requests
+- Use computed properties for derived state
+- Don't store Eloquent Collections as public properties
+- Use `->values()->toArray()` to convert Collections for Alpine
+
+### Component Communication Patterns
+
+1. **Parent → Child:** Props/attributes
+2. **Child → Parent:** Events (`$dispatch`, `$emit`)
+3. **Sibling → Sibling:** Alpine store or browser events
+4. **Cross-Page (SPA):** Navigation persistence with `@persist`
+
+### File Organization
+
+- **Livewire Components:** `app/Livewire/` organized by feature
+- **Blade Views:** Mirror Livewire structure in `resources/views/livewire/`
+- **Alpine Stores:** Inline in Blade components or partials
+- **Services:** `app/Services/` for business logic
+- **Traits:** `app/Traits/` or `app/Concerns/` for reusable component behavior
+- **Tests:** `tests/Feature/` with descriptive names matching features
