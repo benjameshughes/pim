@@ -38,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Testing**: Pest PHP framework
 - **Build Tool**: Vite
 - **Database**: SQLite (development)
+- **Custom Framework**: Atom Framework (`App\Atom\`)
 
 ### Core Structure
 - **Livewire Components**: Primary UI interaction layer using Livewire components for auth, settings, and actions
@@ -47,6 +48,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Testing**: Comprehensive test suite covering authentication flows and features
 
 ### Key Directories
+- `app/Atom/` - **Atom Framework** (ResourceManager, NavigationManager, Tables, Forms)
+  - `app/Atom/Resources/` - Resource definitions and management
+  - `app/Atom/Navigation/` - Unified navigation system
+  - `app/Atom/Tables/` - Dynamic table generation
+  - `app/Atom/Adapters/` - Livewire/API/Blade adapters
+  - `app/Atom/Providers/` - AtomServiceProvider
 - `app/Livewire/` - Livewire components organized by feature (Auth, Settings, Actions)
 - `resources/views/livewire/` - Corresponding Blade views for Livewire components
 - `resources/views/components/` - Reusable Blade components including layouts
@@ -65,6 +72,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Uses SQLite for development with in-memory testing
 - Standard Laravel user authentication schema
 - Includes caching and job queue tables
+
+## Atom Framework
+
+### Overview
+The Atom Framework is a custom FilamentPHP-inspired resource management system built specifically for this Laravel application. It provides automatic CRUD operations, navigation generation, and a unified interface for managing resources across different presentation layers.
+
+### Core Components
+- **ResourceManager** (`App\Atom\Resources\ResourceManager`) - Central hub for resource discovery and management
+- **NavigationManager** (`App\Atom\Navigation\NavigationManager`) - Unified navigation system
+- **LivewireResourceAdapter** (`App\Atom\Adapters\LivewireResourceAdapter`) - Dynamic Livewire component adapter
+- **AtomServiceProvider** (`App\Atom\Providers\AtomServiceProvider`) - Framework service provider
+
+### Usage Examples
+
+#### Creating a New Resource
+```bash
+# Generate resource class
+php artisan make:resource OrderResource
+```
+
+```php
+// app/Atom/Resources/OrderResource.php
+class OrderResource extends Resource
+{
+    protected static ?string $model = Order::class;
+    
+    public static function table(Table $table): Table
+    {
+        return $table->columns([
+            TextColumn::make('order_number')->sortable(),
+            TextColumn::make('customer.name'),
+            TextColumn::make('total')->money('GBP'),
+        ]);
+    }
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Sales';
+    }
+}
+```
+
+#### Adding Custom Navigation
+```php
+// In AppServiceProvider::boot()
+Navigation::make()
+    ->label('Analytics')
+    ->route('analytics.dashboard')
+    ->icon('chart-bar')
+    ->group('Reports')
+    ->register();
+```
+
+### Auto-Generated Features
+- **Routes**: Automatically registers CRUD routes for all resources
+- **Navigation**: Dynamic sidebar navigation based on resources and custom items
+- **Tables**: Interactive tables with sorting, searching, and actions
+- **Forms**: Dynamic form generation (planned feature)
+
+### Framework Benefits
+- **Zero Boilerplate**: No need to create controllers, views, or routes manually
+- **Consistent UI**: All resources use the same design patterns
+- **Extensible**: Easy to customize and extend functionality
+- **Type-Safe**: Full PHP type safety with IDE support
 
 ## PIM System Architecture
 
@@ -286,6 +357,61 @@ SHOPIFY_API_VERSION=2024-07
 
 ### Flux UI Memories
 - Flux UI select dropdown is flux::select.option not flux::option
+
+## Atom Framework - Universal Laravel UI Toolkit
+
+The Atom framework is now a complete, universal Laravel UI toolkit that works with any Laravel project out of the box. It provides a drop-in resource management system with intelligent layout and CSS framework detection.
+
+### Universal Element System 🚀
+
+The framework provides magic `{{ $this->element }}` properties that work in any Blade template:
+
+```blade
+{{-- Drop into ANY Laravel project --}}
+<div>
+    {{ $this->navigation }}      {{-- Auto-detects layout & styling --}}
+    {{ $this->breadcrumbs }}     {{-- Smart breadcrumbs --}}
+    {{ $this->search }}          {{-- Global search --}}
+    {{ $this->actions }}         {{-- Context buttons --}}
+    {{ $this->filters }}         {{-- Table filters --}}
+    {{ $this->table }}           {{-- Resource table --}}
+    {{ $this->pagination }}      {{-- Smart pagination --}}
+    {{ $this->stats }}           {{-- Stats cards --}}
+    {{ $this->subNavigation }}   {{-- Tabs/sub menus --}}
+    {{ $this->userMenu }}        {{-- Profile dropdown --}}
+    {{ $this->notifications }}   {{-- Toast notifications --}}
+</div>
+```
+
+### Smart Auto-Detection
+
+Each element automatically:
+- **Detects Layout**: Tries common Laravel layouts (`components.layouts.app`, `layouts.app`, `app`, etc.)
+- **Detects CSS Framework**: Auto-detects Tailwind, Bootstrap, or falls back to minimal HTML
+- **Graceful Fallbacks**: Multiple view layers ensure compatibility
+- **Zero Configuration**: Works immediately after installation
+
+### Element Rendering Chain
+
+1. `atom.elements.navigation.main` (user's custom view)
+2. `atom::elements.navigation.main` (framework default)
+3. `atom::elements.tailwind.navigation.main` (framework + detected CSS)
+4. Simple HTML fallback
+
+### Framework Architecture
+
+- **`App\Atom\Adapters\LivewireResourceAdapter`** - Core dynamic component that handles all resource pages
+- **`App\Atom\Resources\`** - Resource definitions and table configurations
+- **`App\Atom\Navigation\`** - Auto-discovery navigation system
+- **`App\Atom\Tables\`** - Intelligent table rendering system
+
+### Drop-In Compatibility
+
+The framework works with:
+- ✅ Any Laravel version (11+, 10+, etc.)
+- ✅ Any starter kit (Breeze, Jetstream, custom)
+- ✅ Any CSS framework (Tailwind, Bootstrap, custom)
+- ✅ Any UI library (Flux, Blade UI, Livewire UI, custom)
 
 ## Design Patterns & Architecture
 

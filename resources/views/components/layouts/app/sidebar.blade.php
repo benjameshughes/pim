@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-flux-appearance
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-flux-appearance>
     <head>
         @include('partials.head')
     </head>
@@ -11,49 +11,49 @@
                 <x-app-logo />
             </a>
 
-            <flux:navlist variant="outline">
-                <flux:navlist.group :heading="__('Platform')" class="grid">
-                    <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                <flux:navlist.group :heading="__('Product Management')" class="grid">
-                    <flux:navlist.item icon="cube" :href="route('products.index')" :current="request()->routeIs('products.index')" wire:navigate>{{ __('Products') }}</flux:navlist.item>
-                    <flux:navlist.item icon="swatch" :href="route('products.variants.index')" :current="request()->routeIs('products.variants.*')" wire:navigate>{{ __('Variants') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                <flux:navlist.group :heading="__('Data Management')" class="grid">
-                    <flux:navlist.item icon="qr-code" :href="route('barcodes.index')" :current="request()->routeIs('barcodes.*')" wire:navigate>{{ __('Barcodes') }}</flux:navlist.item>
-                    <flux:navlist.item icon="currency-dollar" :href="route('pricing.index')" :current="request()->routeIs('pricing.*')" wire:navigate>{{ __('Pricing') }}</flux:navlist.item>
-                    <flux:navlist.item icon="photo" :href="route('images.index')" :current="request()->routeIs('images.*')" wire:navigate>{{ __('Images') }}</flux:navlist.item>
-                </flux:navlist.group>
-                
-                <flux:navlist.group :heading="__('Automation')" class="grid">
-                    <flux:navlist.item icon="zap" :href="route('operations.bulk')" :current="request()->routeIs('operations.*')" wire:navigate>{{ __('Bulk Operations') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                <flux:navlist.group :heading="__('Import/Export')" class="grid">
-                    <flux:navlist.item icon="arrow-down-tray" :href="route('import')" :current="request()->routeIs('import*')" wire:navigate>{{ __('Import Data') }}</flux:navlist.item>
-                    <flux:navlist.item icon="arrow-up-tray" :href="route('export')" :current="request()->routeIs('export*')" wire:navigate>{{ __('Export Data') }}</flux:navlist.item>
-                </flux:navlist.group>
-                
-                <flux:navlist.group :heading="__('Marketplace Sync')" class="grid">
-                    <flux:navlist.item icon="refresh-cw" :href="route('sync.mirakl')" :current="request()->routeIs('sync.mirakl')" wire:navigate>{{ __('Mirakl Connect') }}</flux:navlist.item>
-                    <flux:navlist.item icon="shopping-bag" :href="route('sync.shopify')" :current="request()->routeIs('sync.shopify')" wire:navigate>{{ __('Shopify') }}</flux:navlist.item>
-                    <flux:navlist.item icon="building-storefront" :href="route('sync.ebay')" :current="request()->routeIs('sync.ebay')" wire:navigate>{{ __('eBay') }}</flux:navlist.item>
-                </flux:navlist.group>
-                
-                <flux:navlist.group :heading="__('Configuration')" class="grid">
-                    <flux:navlist.item icon="settings" :href="route('attributes.definitions')" :current="request()->routeIs('attributes.*')" wire:navigate>{{ __('Attribute Definitions') }}</flux:navlist.item>
-                    <flux:navlist.item icon="archive-box" :href="route('archive')" :current="request()->routeIs('archive')" wire:navigate>{{ __('Deleted Products Archive') }}</flux:navlist.item>
-                </flux:navlist.group>
-
-                @if(auth()->user()->hasRole('admin') || auth()->user()->hasRole('manager'))
-                <flux:navlist.group :heading="__('Administration')" class="grid">
-                    <flux:navlist.item icon="users" :href="route('admin.users.index')" :current="request()->routeIs('admin.users.*')" wire:navigate>{{ __('Users') }}</flux:navlist.item>
-                    <flux:navlist.item icon="shield-check" :href="route('admin.roles.index')" :current="request()->routeIs('admin.roles.*')" wire:navigate>{{ __('Roles') }}</flux:navlist.item>
-                </flux:navlist.group>
-                @endif
-            </flux:navlist>
+            {{-- 🚀 Universal Navigation Element - Auto-detects everything! --}}
+            @if(isset($this) && method_exists($this, 'getNavigationProperty'))
+                {{ $this->navigation }}
+            @else
+                {{-- Fallback navigation for non-Livewire contexts --}}
+                <flux:navlist variant="outline">
+                    @php
+                        try {
+                            $navigationGroups = \App\Atom\Navigation\NavigationManager::getGroupedItems();
+                        } catch (\Exception $e) {
+                            $navigationGroups = collect();
+                        }
+                    @endphp
+                    
+                    @foreach($navigationGroups as $groupName => $group)
+                        @if($groupName === '_ungrouped')
+                            @foreach($group->getItems() as $item)
+                                <flux:navlist.item 
+                                    icon="{{ $item->getIcon() ?? 'circle' }}" 
+                                    href="{{ $item->getUrl() }}" 
+                                    current="{{ \App\Atom\Navigation\NavigationManager::isNavigationActive($item) }}" 
+                                    wire:navigate
+                                >
+                                    {{ $item->getLabel() }}
+                                </flux:navlist.item>
+                            @endforeach
+                        @else
+                            <flux:navlist.group heading="{{ $groupName }}" class="grid">
+                                @foreach($group->getItems() as $item)
+                                    <flux:navlist.item 
+                                        icon="{{ $item->getIcon() ?? 'circle' }}" 
+                                        href="{{ $item->getUrl() }}" 
+                                        current="{{ \App\Atom\Navigation\NavigationManager::isNavigationActive($item) }}" 
+                                        wire:navigate
+                                    >
+                                        {{ $item->getLabel() }}
+                                    </flux:navlist.item>
+                                @endforeach
+                            </flux:navlist.group>
+                        @endif
+                    @endforeach
+                </flux:navlist>
+            @endif
 
             <flux:spacer />
 
@@ -70,9 +70,9 @@
             <!-- Desktop User Menu -->
             <flux:dropdown class="hidden lg:block" position="bottom" align="start">
                 <flux:profile
-                    :name="auth()->user()->name"
-                    :initials="auth()->user()->initials()"
-                    icon:trailing="chevrons-up-down"
+                    name="{{ auth()->user()->name }}"
+                    initials="{{ auth()->user()->initials() }}"
+                    icon-trailing="chevrons-up-down"
                 />
 
                 <flux:menu class="w-[220px]">
@@ -98,7 +98,7 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
+                        <flux:menu.item href="{{ route('settings.profile') }}" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
@@ -121,7 +121,7 @@
 
             <flux:dropdown position="top" align="end">
                 <flux:profile
-                    :initials="auth()->user()->initials()"
+                    initials="{{ auth()->user()->initials() }}"
                     icon-trailing="chevron-down"
                 />
 
@@ -148,7 +148,7 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
-                        <flux:menu.item :href="route('settings.profile')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
+                        <flux:menu.item href="{{ route('settings.profile') }}" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
                     </flux:menu.radio.group>
 
                     <flux:menu.separator />
@@ -165,10 +165,10 @@
 
         {{ $slot }}
 
-        {{-- Toast Container with integrated Alpine Store --}}
-        <x-toast-container />
-
         @fluxScripts
         @livewireScripts
+        
+        {{-- Alpine Toast Integration (ResourceManager Pattern) - Temporarily disabled for debugging --}}
+        {{-- @include('partials.alpine-toast-integration') --}}
     </body>
 </html>

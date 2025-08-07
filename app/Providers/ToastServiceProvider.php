@@ -40,8 +40,8 @@ class ToastServiceProvider extends ServiceProvider
         // Register Blade directives
         $this->registerBladeDirectives();
 
-        // Register helper functions
-        $this->registerHelperFunctions();
+        // Register helper functions (temporarily disabled to prevent circular dependency)
+        // $this->registerHelperFunctions();
     }
 
     /**

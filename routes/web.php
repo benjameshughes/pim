@@ -1,7 +1,8 @@
 <?php
 
 use App\Livewire\Dashboard;
-use App\Livewire\Pim\Products\Management\ProductIndex;
+use App\Navigation\NavigationManager;
+// use App\Livewire\Pim\Products\Management\ProductIndex; // Replaced by ResourceManager
 use App\Livewire\Pim\Products\Management\ProductForm;
 use App\Livewire\Pim\Products\Variants\VariantIndex;
 use App\Livewire\Pim\Products\Variants\VariantForm;
@@ -33,6 +34,15 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 })->name('home');
+
+// Test navigation route
+Route::get('/test-navigation', function () {
+    $resourceNavigation = NavigationManager::getGroupedItems();
+    $navigationBreadcrumbs = NavigationManager::generateBreadcrumbs();
+    $resourceStats = \App\Resources\ResourceManager::getStatistics();
+    
+    return view('test-navigation', compact('resourceNavigation', 'navigationBreadcrumbs', 'resourceStats'));
+})->name('test.navigation');
 
 Route::get('dashboard', Dashboard::class)
     ->middleware(['auth', 'verified'])
@@ -107,12 +117,15 @@ Route::middleware(['auth'])->group(function () {
     // Archive route
     Route::get('/archive', DeletedProductsArchive::class)->name('archive');
 
-    // Product Management Routes
+    // Product Management Routes - Now handled by ResourceManager auto-registration
+    // The following routes have been migrated to ResourceManager:
+    // - products/ (index) -> resources.products.index  
+    // - products/create -> resources.products.create
+    // - products/{record} (view) -> resources.products.view
+    // - products/{record}/edit -> resources.products.edit
+    
+    // Legacy routes that still need manual registration
     Route::prefix('products')->name('products.')->group(function () {
-        // Direct Livewire component route (will be updated to new Table system)
-        Route::get('/', ProductIndex::class)->name('index');
-        Route::get('create', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('create');
-        
         // Variants
         Route::get('variants', VariantIndex::class)->name('variants.index');
         Route::get('variants/create', function() { return 'Variant Create - Coming Soon'; })->name('variants.create');
@@ -127,14 +140,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('variants/{variant}', VariantView::class)->name('variants.view');
         Route::get('variants/{variant}/edit', VariantEdit::class)->name('variants.edit');
 
-
-
-
         Route::get('export/shopify', ShopifyExport::class)->name('export.shopify');
-        
-        
-        
-        
         
         // Deletion routes (keep under products as they're product-specific)
         Route::get('{product}/delete', DeleteProduct::class)->name('delete');

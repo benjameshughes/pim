@@ -40,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->registerEventListeners();
         $this->configureUrlGeneration();
+        $this->registerCustomNavigation();
     }
 
     /**
@@ -85,5 +86,113 @@ class AppServiceProvider extends ServiceProvider
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
+    }
+
+    /**
+     * Register custom navigation items.
+     * 
+     * This demonstrates the new Navigation system that works alongside ResourceManager.
+     * Gradually migrate web.php routes here for unified navigation management.
+     */
+    protected function registerCustomNavigation(): void
+    {
+        // Import/Export Navigation Group
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Import Data')
+            ->route('import')
+            ->icon('upload')
+            ->group('Data Management')
+            ->sort(10)
+            ->register();
+
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Import Data v2')
+            ->route('import.v2')
+            ->icon('upload')
+            ->group('Data Management')
+            ->sort(11)
+            ->register();
+
+        // Archive
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Archive')
+            ->route('archive')
+            ->icon('archive')
+            ->group('Data Management')
+            ->sort(20)
+            ->register();
+
+        // Example external links
+        \App\Atom\Navigation\Navigation::external('Documentation', 'https://laravel.com/docs')
+            ->group('External Links')
+            ->sort(100)
+            ->register();
+
+        // Dashboard (could be migrated from web.php)
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Dashboard')
+            ->route('dashboard')
+            ->icon('chart-bar')
+            ->sort(1)
+            ->register();
+
+        // PIM System Navigation Group
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Barcodes')
+            ->route('barcodes.index')
+            ->group('PIM System')
+            ->icon('scan-barcode')
+            ->sort(10)
+            ->register();
+
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Pricing Manager')
+            ->route('pricing.index')
+            ->group('PIM System')
+            ->icon('dollar-sign')
+            ->sort(11)
+            ->register();
+
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Image Manager')
+            ->route('images.index')
+            ->group('PIM System')
+            ->icon('image')
+            ->sort(12)
+            ->register();
+
+        // Operations Navigation Group
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Bulk Operations')
+            ->route('operations.bulk')
+            ->group('Operations')
+            ->icon('settings')
+            ->sort(10)
+            ->register();
+
+        // Marketplace Sync Navigation Group
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Mirakl Sync')
+            ->route('sync.mirakl')
+            ->group('Marketplace Sync')
+            ->icon('refresh-cw')
+            ->sort(10)
+            ->register();
+
+        \App\Atom\Navigation\Navigation::make()
+            ->label('Shopify Sync')
+            ->route('sync.shopify')
+            ->group('Marketplace Sync')
+            ->icon('shopping-bag')
+            ->sort(11)
+            ->register();
+
+        \App\Atom\Navigation\Navigation::make()
+            ->label('eBay Sync')
+            ->route('sync.ebay')
+            ->group('Marketplace Sync')
+            ->icon('globe')
+            ->sort(12)
+            ->register();
     }
 }
