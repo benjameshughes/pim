@@ -4,48 +4,57 @@ namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\ProductVariant;
 use App\Models\Product;
+use App\Table\Table;
+use App\Table\Column;
+use App\Table\Filter;
+use App\Table\SelectFilter;
+use App\Table\Action;
+use App\Table\HeaderAction;
+use App\Table\BulkAction;
+use App\Table\Concerns\InteractsWithTable;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 class VariantIndex extends Component
 {
+    use InteractsWithTable, WithPagination;
 
-    public $showDeleteModal = false;
-    public $variantToDelete = null;
+    public ?Product $product = null;
 
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
 
-    public function mount()
+    /**
+     * Configure the table (FilamentPHP-style).
+     */
+    public function table(Table $table): Table
     {
-        $this->initializeStackedList(ProductVariant::class, $this->getList());
-    }
+        $query = ProductVariant::query();
+        
+        // If we have a product, filter variants to only that product
+        if ($this->product) {
+            $query->where('product_id', $this->product->id);
+        }
 
-    public function getList(): StackedListBuilder
-    {
-        return $this->stackedList()
-            ->model(ProductVariant::class)
-            ->title('Variant Management')
-            ->subtitle('Manage individual product variants across your catalog')
-            ->searchPlaceholder('Search variants by SKU, color, size...')
+        return $table
+            ->query($query)
+            ->title($this->product ? 'Product Variants' : 'Variant Management')
+            ->subtitle($this->product ? 'Manage variants for ' . $this->product->name : 'Manage individual product variants across your catalog')
             ->searchable(['sku', 'color', 'size', 'product.name'])
-            ->sortableColumns(['sku', 'color', 'size', 'status', 'barcodes_count'])
             ->with(['product'])
             ->withCount(['barcodes'])
-            ->perPageOptions([10, 25, 50, 100])
-            ->export()
-            ->defaultSort('created_at', 'desc')
             ->columns([
                 Column::make('sku')
                     ->label('Variant SKU')
-                    ->font('font-mono text-sm')
-                    ->sortable(),
+                    ->sortable()
+                    ->font('font-mono'),
 
                 Column::make('product.name')
                     ->label('Product Name')
-                    ->font('font-medium'),
+                    ->sortable(),
 
                 Column::make('color')
                     ->label('Color')
@@ -61,99 +70,142 @@ class VariantIndex extends Component
 
                 Column::make('status')
                     ->label('Status')
-                    ->badge()
-                    ->sortable()
-                    ->addBadge('active', Badge::make()
-                        ->class('bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800')
-                        ->icon('check-circle')
-                    )
-                    ->addBadge('inactive', Badge::make()
-                        ->class('bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600')
-                        ->icon('pause-circle')
-                    )
-                    ->addBadge('discontinued', Badge::make()
-                        ->class('bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800')
-                        ->icon('x-circle')
-                    ),
+                    ->badge([
+                        'active' => 'bg-green-100 text-green-800',
+                        'inactive' => 'bg-gray-100 text-gray-800',
+                        'discontinued' => 'bg-red-100 text-red-800',
+                    ])
+                    ->sortable(),
+                    
+                Column::make('created_at')
+                    ->label('Created')
+                    ->sortable(),
+            ])
+            ->filters(array_filter([
+                // Only show product filter if we're not viewing a specific product
+                !$this->product ? SelectFilter::make('product_id')
+                    ->label('Product')
+                    ->options(Product::pluck('name', 'id')->toArray())
+                    ->placeholder('All Products') : null,
+
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'active' => 'Active',
+                        'inactive' => 'Inactive',
+                        'discontinued' => 'Discontinued',
+                    ])
+                    ->placeholder('All Statuses'),
+
+                Filter::make('has_barcodes')
+                    ->label('With Barcodes Only')
+                    ->toggle()
+                    ->query(function ($query, $value) {
+                        if ($value) {
+                            $query->has('barcodes');
+                        }
+                    }),
+
+                Filter::make('recent')
+                    ->label('Created Recently')
+                    ->toggle()
+                    ->query(function ($query, $value) {
+                        if ($value) {
+                            $query->where('created_at', '>=', now()->subDays(7));
+                        }
+                    }),
+            ]))
+            ->headerActions([
+                HeaderAction::make('create')
+                    ->label('Create Variant')
+                    ->icon('plus')
+                    ->color('primary')
+                    ->route('products.variants.create' . ($this->product ? '?product=' . $this->product->id : '')),
+
+                HeaderAction::make('bulk_import')
+                    ->label('Bulk Import')
+                    ->icon('upload')
+                    ->color('secondary')
+                    ->route('products.variants.import'),
+            ])
+            ->actions([
+                Action::make('view')
+                    ->label('View')
+                    ->icon('eye')
+                    ->route('products.variants.show'),
+
+                Action::make('edit')
+                    ->label('Edit')
+                    ->icon('pencil')
+                    ->route('products.variants.edit'),
+
+                Action::make('duplicate')
+                    ->label('Duplicate')
+                    ->icon('copy')
+                    ->color('secondary')
+                    ->action(function (ProductVariant $record) {
+                        $newVariant = $record->replicate();
+                        $newVariant->sku = $record->sku . '-copy-' . time();
+                        $newVariant->save();
+                        session()->flash('success', 'Variant duplicated successfully.');
+                    }),
+
+                Action::make('delete')
+                    ->label('Delete')
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function (ProductVariant $record) {
+                        $record->delete();
+                        session()->flash('success', 'Variant deleted successfully.');
+                    }),
             ])
             ->bulkActions([
                 BulkAction::make('delete')
                     ->label('Delete Selected')
-                    ->icon('trash-2')
-                    ->danger()
-                    ->action(fn($selectedIds) => $this->deleteVariants($selectedIds)),
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $this->deleteVariants($records);
+                    }),
 
                 BulkAction::make('activate')
-                    ->label('Activate')
-                    ->icon('check-circle')
-                    ->outline()
-                    ->action(fn($selectedIds) => $this->updateVariantStatus($selectedIds, 'active')),
-            ])
-            ->actions([
-                Action::view()->route('products.variants.view'),
-                Action::edit()->route('products.variants.edit'),
-            ])
-            ->filters([
-                Filter::select('product_id')
-                    ->label('Product')
-                    ->column('product_id')
-                    ->optionsFromModel(Product::class, 'name', 'id', ['name']),
+                    ->label('Activate Selected')
+                    ->icon('check')
+                    ->color('success')
+                    ->action(function ($records) {
+                        $this->updateVariantStatus($records, 'active');
+                    }),
 
-                Filter::select('status')
-                    ->option('active', 'Active')
-                    ->option('inactive', 'Inactive')
-                    ->option('discontinued', 'Discontinued'),
-            ])
-            ->headerActions([
-                HeaderAction::make('create')
-                    ->label('Create Variant')
-                    ->route('products.variants.create')
-                    ->primary(),
-            ])
-            ->emptyState(
-                'No variants found',
-                'Create your first variant to get started.',
-                EmptyStateAction::make('Create Variant')
-                    ->href(route('products.variants.create'))
-                    ->primary()
-            );
-    }
+                BulkAction::make('deactivate')
+                    ->label('Deactivate Selected')
+                    ->icon('x')
+                    ->color('warning')
+                    ->action(function ($records) {
+                        $this->updateVariantStatus($records, 'inactive');
+                    }),
 
-    public function handleBulkAction(string $action, array $selectedIds): void
-    {
-        // Actions are now self-contained via closures - this method is no longer needed
-        // but required by HasStackedList interface for backward compatibility
+                BulkAction::make('discontinue')
+                    ->label('Discontinue Selected')
+                    ->icon('ban')
+                    ->color('danger')
+                    ->action(function ($records) {
+                        $this->updateVariantStatus($records, 'discontinued');
+                    }),
+            ]);
     }
 
     private function deleteVariants(array $ids): void
     {
         ProductVariant::whereIn('id', $ids)->delete();
-        session()->flash('message', count($ids) . ' variants deleted.');
+        session()->flash('success', count($ids) . ' variants deleted successfully.');
     }
 
     private function updateVariantStatus(array $ids, string $status): void
     {
         ProductVariant::whereIn('id', $ids)->update(['status' => $status]);
-        session()->flash('message', count($ids) . ' variants updated.');
-    }
-
-    public function confirmDelete($variantId)
-    {
-        $this->variantToDelete = $variantId;
-        $this->showDeleteModal = true;
-    }
-
-    public function deleteVariant()
-    {
-        $variant = ProductVariant::find($this->variantToDelete);
-        
-        if ($variant) {
-            $variant->delete();
-            session()->flash('message', 'Variant deleted successfully.');
-        }
-
-        $this->showDeleteModal = false;
-        $this->variantToDelete = null;
+        session()->flash('success', count($ids) . ' variants updated to ' . $status . '.');
     }
 
     public function render()

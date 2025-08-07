@@ -25,6 +25,7 @@ class Action
     protected ?string $confirmationText = null;
     protected bool $openUrlInNewTab = false;
     protected string $size = 'sm';
+    protected Closure|bool $visible = true;
     
     public function __construct(string $key)
     {
@@ -153,6 +154,24 @@ class Action
     }
     
     /**
+     * Set visibility condition
+     */
+    public function visible(Closure|bool $condition): static
+    {
+        $this->visible = $condition;
+        return $this;
+    }
+    
+    /**
+     * Hide the action
+     */
+    public function hidden(): static
+    {
+        $this->visible = false;
+        return $this;
+    }
+    
+    /**
      * Create a common "Edit" action
      */
     public static function edit(): static
@@ -203,6 +222,18 @@ class Action
     }
     
     /**
+     * Check if action is visible for given record
+     */
+    public function isVisible($record = null): bool
+    {
+        if ($this->visible instanceof Closure) {
+            return ($this->visible)($record);
+        }
+        
+        return $this->visible;
+    }
+    
+    /**
      * Convert action to array for rendering
      */
     public function toArray(): array
@@ -221,6 +252,7 @@ class Action
             'openUrlInNewTab' => $this->openUrlInNewTab,
             'size' => $this->size,
             'hasAction' => $this->action !== null,
+            'visible' => $this->visible,
         ];
     }
 }

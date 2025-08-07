@@ -21,7 +21,18 @@
             @if(!empty($config['headerActions']))
                 <div class="flex items-center space-x-3">
                     @foreach($config['headerActions'] as $action)
-                        @if($action['route'])
+                        @php
+                            // Check visibility for header actions
+                            $isVisible = true;
+                            if (isset($action['visible'])) {
+                                if ($action['visible'] instanceof Closure) {
+                                    $isVisible = $action['visible']();
+                                } else {
+                                    $isVisible = $action['visible'];
+                                }
+                            }
+                        @endphp
+                        @if($isVisible && $action['route'])
                             <a 
                                 href="{{ route($action['route']) }}"
                                 @if($action['openUrlInNewTab']) target="_blank" @endif
@@ -38,7 +49,7 @@
                                 @endif
                                 {{ $action['label'] }}
                             </a>
-                        @elseif($action['hasAction'])
+                        @elseif($isVisible && $action['hasAction'])
                             <button 
                                 wire:click="executeTableHeaderAction('{{ $action['key'] }}')"
                                 @if($action['requiresConfirmation'])
@@ -312,7 +323,18 @@
                                 <div class="w-20 text-right">
                                     <div class="flex items-center justify-end space-x-1">
                                         @foreach($config['actions'] as $action)
-                                            @if($action['route'])
+                                            @php
+                                                // Check visibility if it's a closure
+                                                $isVisible = true;
+                                                if (isset($action['visible'])) {
+                                                    if ($action['visible'] instanceof Closure) {
+                                                        $isVisible = $action['visible']($item);
+                                                    } else {
+                                                        $isVisible = $action['visible'];
+                                                    }
+                                                }
+                                            @endphp
+                                            @if($isVisible && $action['route'])
                                                 <a 
                                                     href="{{ route($action['route'], $item) }}"
                                                     @if($action['openUrlInNewTab']) target="_blank" @endif
@@ -330,7 +352,7 @@
                                                         @endif
                                                     </svg>
                                                 </a>
-                                            @elseif($action['hasAction'])
+                                            @elseif($isVisible && $action['hasAction'])
                                                 <button 
                                                     wire:click="executeTableAction('{{ $action['key'] }}', {{ $item->getKey() }})"
                                                     @if($action['requiresConfirmation'])

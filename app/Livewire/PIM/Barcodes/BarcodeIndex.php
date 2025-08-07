@@ -6,17 +6,21 @@ use App\Models\Barcode;
 use App\Models\ProductVariant;
 use App\Table\Table;
 use App\Table\Column;
+use App\Table\Filter;
+use App\Table\SelectFilter;
+use App\Table\Action;
+use App\Table\HeaderAction;
+use App\Table\BulkAction;
 use App\Table\Concerns\InteractsWithTable;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 class BarcodeIndex extends Component
 {
-    use InteractsWithTable;
+    use InteractsWithTable, WithPagination;
     
-    public $parentProductsOnly = false;
-
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
@@ -30,6 +34,7 @@ class BarcodeIndex extends Component
             ->model(Barcode::class)
             ->title('Barcode Manager')
             ->subtitle('Manage product barcodes and generate new ones')
+            ->searchable(['barcode', 'productVariant.product.name', 'productVariant.sku'])
             ->with(['productVariant.product'])
             ->columns([
                 Column::make('barcode')
@@ -41,6 +46,11 @@ class BarcodeIndex extends Component
                     ->label('Product')
                     ->sortable(),
 
+                Column::make('productVariant.sku')
+                    ->label('Variant SKU')
+                    ->sortable()
+                    ->font('font-mono'),
+
                 Column::make('barcode_type')
                     ->label('Type')
                     ->badge([
@@ -49,12 +59,108 @@ class BarcodeIndex extends Component
                         'UPC' => 'bg-purple-100 text-purple-800',
                     ])
                     ->sortable(),
-            ]);
-    }
 
-    public function updatingParentProductsOnly()
-    {
-        $this->resetPage();
+                Column::make('is_primary')
+                    ->label('Primary')
+                    ->badge([
+                        true => 'bg-green-100 text-green-800',
+                        false => 'bg-gray-100 text-gray-800',
+                    ]),
+                    
+                Column::make('created_at')
+                    ->label('Created')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('barcode_type')
+                    ->label('Barcode Type')
+                    ->options([
+                        'EAN13' => 'EAN13',
+                        'CODE128' => 'CODE128',
+                        'UPC' => 'UPC',
+                    ])
+                    ->placeholder('All Types'),
+                    
+                Filter::make('is_primary')
+                    ->label('Primary Only')
+                    ->toggle()
+                    ->query(function ($query, $value) {
+                        if ($value) {
+                            $query->where('is_primary', true);
+                        }
+                    }),
+                    
+                Filter::make('has_variant')
+                    ->label('With Variants Only')
+                    ->toggle()
+                    ->query(function ($query, $value) {
+                        if ($value) {
+                            $query->whereNotNull('product_variant_id');
+                        }
+                    }),
+            ])
+            ->headerActions([
+                HeaderAction::make('generate_bulk')
+                    ->label('Generate Barcodes')
+                    ->icon('plus')
+                    ->color('primary')
+                    ->action(function () {
+                        // Open barcode generation modal
+                        $this->dispatch('open-barcode-generator');
+                    }),
+                    
+                HeaderAction::make('import')
+                    ->label('Import Barcodes')
+                    ->icon('upload')
+                    ->color('secondary')
+                    ->route('barcodes.import'),
+            ])
+            ->actions([
+                Action::make('set_primary')
+                    ->label('Set Primary')
+                    ->icon('star')
+                    ->color('warning')
+                    ->visible(fn ($record) => !$record->is_primary)
+                    ->action(function (Barcode $record) {
+                        $this->setPrimary($record->id);
+                    }),
+                    
+                Action::make('generate_new')
+                    ->label('Generate New')
+                    ->icon('plus')
+                    ->color('success')
+                    ->action(function (Barcode $record) {
+                        $this->generateBarcode($record->product_variant_id, $record->barcode_type);
+                    }),
+                    
+                Action::make('delete')
+                    ->label('Delete')
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function (Barcode $record) {
+                        $this->deleteBarcode($record->id);
+                    }),
+            ])
+            ->bulkActions([
+                BulkAction::make('delete')
+                    ->label('Delete Selected')
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        $this->bulkDeleteBarcodes($records);
+                    }),
+                    
+                BulkAction::make('set_type')
+                    ->label('Change Type')
+                    ->icon('edit')
+                    ->color('warning')
+                    ->action(function ($records) {
+                        // This could open a modal to select new barcode type
+                        session()->flash('info', 'Type change feature coming soon.');
+                    }),
+            ]);
     }
 
     public function generateBarcode($variantId, $type = 'CODE128')
@@ -114,30 +220,12 @@ class BarcodeIndex extends Component
     public function bulkDeleteBarcodes($barcodeIds)
     {
         Barcode::whereIn('id', $barcodeIds)->delete();
-        session()->flash('message', 'Selected barcodes have been deleted.');
-    }
-
-    public function handleBulkAction(string $action, array $selectedIds): void
-    {
-        match($action) {
-            'delete' => $this->bulkDeleteBarcodes($selectedIds),
-            default => null
-        };
+        session()->flash('success', 'Selected barcodes have been deleted.');
     }
 
     public function render()
     {
-        // Load variants for generation section when needed
-        $variants = collect();
-        if (!$this->stackedListSearch && empty($this->stackedListFilters)) {
-            $variants = ProductVariant::with('product')
-                ->limit(100)
-                ->orderBy('created_at', 'desc')
-                ->get();
-        }
-
         return view('livewire.pim.barcodes.barcode-index', [
-            'variants' => $variants,
             'barcodeTypes' => Barcode::BARCODE_TYPES,
         ]);
     }
