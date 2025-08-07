@@ -30,6 +30,12 @@ class Table implements Htmlable
     protected array $with = [];
     protected array $withCount = [];
     protected int $recordsPerPage = 10;
+    protected array $paginationPageOptions = [10, 25, 50, 100];
+    
+    // Empty state configuration
+    protected string $emptyStateHeading = 'No items found';
+    protected string $emptyStateDescription = 'No items to display.';
+    protected string $emptyStateIcon = '📋';
     
     /**
      * Create a new table instance.
@@ -164,20 +170,176 @@ class Table implements Htmlable
     }
     
     /**
+     * Set pagination page options.
+     */
+    public function paginated(array $options = [10, 25, 50, 100]): static
+    {
+        $this->paginationPageOptions = $options;
+        return $this;
+    }
+    
+    /**
+     * Set default pagination page option.
+     */
+    public function defaultPaginationPageOption(int $count): static
+    {
+        $this->recordsPerPage = $count;
+        return $this;
+    }
+    
+    /**
+     * Set empty state heading.
+     */
+    public function emptyStateHeading(string $heading): static
+    {
+        $this->emptyStateHeading = $heading;
+        return $this;
+    }
+    
+    /**
+     * Set empty state description.
+     */
+    public function emptyStateDescription(string $description): static
+    {
+        $this->emptyStateDescription = $description;
+        return $this;
+    }
+    
+    /**
+     * Set empty state icon.
+     */
+    public function emptyStateIcon(string $icon): static
+    {
+        $this->emptyStateIcon = $icon;
+        return $this;
+    }
+    
+    /**
+     * Get the base query for the table
+     */
+    protected function getBaseQuery(): Builder
+    {
+        if ($this->query) {
+            return clone $this->query;
+        } elseif ($this->model) {
+            return (new $this->model)->newQuery();
+        } else {
+            throw new \Exception('Table must have either a model or query set');
+        }
+    }
+    
+    /**
      * Get the table query with all applied filters, search, etc.
      */
     public function getQuery(): Builder
     {
-        // Start with the base query or model
-        if ($this->query) {
-            $query = clone $this->query;
-        } elseif ($this->model) {
-            $query = (new $this->model)->newQuery();
-        } else {
-            throw new \Exception('Table must have either a model or query set');
-        }
+        $query = $this->getBaseQuery();
+        
+        // Apply search
+        $this->applySearchToTableQuery($query);
+        
+        // Apply filters
+        $this->applyFiltersToTableQuery($query);
+        
+        // Apply sorting
+        $this->applySortingToTableQuery($query);
         
         // Apply relationships
+        $this->applyRelationshipsToTableQuery($query);
+        
+        return $query;
+    }
+    
+    /**
+     * Apply search to the query
+     */
+    protected function applySearchToTableQuery(Builder $query): void
+    {
+        if (!$this->livewire) {
+            return;
+        }
+        
+        $search = $this->livewire->getTableSearch();
+        
+        if (empty($search) || empty($this->searchableColumns)) {
+            return;
+        }
+        
+        $query->where(function (Builder $subQuery) use ($search) {
+            foreach ($this->searchableColumns as $field) {
+                if (str_contains($field, '.')) {
+                    // Relationship search
+                    [$relation, $column] = explode('.', $field, 2);
+                    $subQuery->orWhereHas($relation, function (Builder $relationQuery) use ($column, $search) {
+                        $relationQuery->where($column, 'like', "%{$search}%");
+                    });
+                } else {
+                    // Direct column search
+                    $subQuery->orWhere($field, 'like', "%{$search}%");
+                }
+            }
+        });
+    }
+    
+    /**
+     * Apply filters to the query
+     */
+    protected function applyFiltersToTableQuery(Builder $query): void
+    {
+        if (!$this->livewire) {
+            return;
+        }
+        
+        $filters = $this->livewire->getTableFilters();
+        
+        foreach ($filters as $key => $value) {
+            if (empty($value) && $value !== '0' && $value !== 0 && $value !== false) {
+                continue;
+            }
+            
+            $filterConfig = $this->filters[$key] ?? null;
+            if (!$filterConfig) {
+                continue;
+            }
+            
+            // Apply filter based on its configuration
+            if (isset($filterConfig['query']) && is_callable($filterConfig['query'])) {
+                $filterConfig['query']($query, $value);
+            }
+        }
+    }
+    
+    /**
+     * Apply sorting to the query
+     */
+    protected function applySortingToTableQuery(Builder $query): void
+    {
+        if (!$this->livewire) {
+            return;
+        }
+        
+        $sortColumn = $this->livewire->getTableSortColumn();
+        $sortDirection = $this->livewire->getTableSortDirection();
+        
+        if (empty($sortColumn)) {
+            return;
+        }
+        
+        if (str_contains($sortColumn, '.')) {
+            // Relationship sorting
+            [$relation, $column] = explode('.', $sortColumn, 2);
+            $query->orderBy($relation . '.' . $column, $sortDirection);
+        } else {
+            // Direct column sorting
+            $query->orderBy($sortColumn, $sortDirection);
+        }
+    }
+    
+    /**
+     * Apply relationships to the query
+     */
+    protected function applyRelationshipsToTableQuery(Builder $query): void
+    {
         if (!empty($this->with)) {
             $query->with($this->with);
         }
@@ -185,8 +347,6 @@ class Table implements Htmlable
         if (!empty($this->withCount)) {
             $query->withCount($this->withCount);
         }
-        
-        return $query;
     }
     
     /**
@@ -196,9 +356,19 @@ class Table implements Htmlable
     {
         $query = $this->getQuery();
         
-        // For now, just return paginated data
-        // TODO: Add search, filters, sorting
-        return $query->paginate($this->recordsPerPage);
+        $perPage = $this->livewire 
+            ? $this->livewire->getTableRecordsPerPage() 
+            : $this->recordsPerPage;
+            
+        return $query->paginate($perPage);
+    }
+    
+    /**
+     * Get pagination page options.
+     */
+    public function getPaginationPageOptions(): array
+    {
+        return $this->paginationPageOptions;
     }
     
     /**
@@ -207,20 +377,56 @@ class Table implements Htmlable
     public function toArray(): array
     {
         return [
+            // Basic configuration
             'title' => $this->title,
             'subtitle' => $this->subtitle,
+            
+            // Data structure
             'columns' => array_map(function ($column) {
                 return is_object($column) && method_exists($column, 'toArray') 
                     ? $column->toArray() 
                     : $column;
             }, $this->columns),
+            
+            // Search and filtering
             'searchable' => $this->searchableColumns,
-            'filters' => $this->filters,
-            'actions' => $this->actions,
-            'bulkActions' => $this->bulkActions,
+            'filters' => array_map(function ($filter) {
+                return is_object($filter) && method_exists($filter, 'toArray') 
+                    ? $filter->toArray() 
+                    : $filter;
+            }, $this->filters),
+            
+            // Actions
+            'actions' => array_map(function ($action) {
+                return is_object($action) && method_exists($action, 'toArray') 
+                    ? $action->toArray() 
+                    : $action;
+            }, $this->actions),
+            'bulkActions' => array_map(function ($action) {
+                return is_object($action) && method_exists($action, 'toArray') 
+                    ? $action->toArray() 
+                    : $action;
+            }, $this->bulkActions),
+            
+            // Pagination
+            'recordsPerPage' => $this->recordsPerPage,
+            'paginationPageOptions' => $this->paginationPageOptions,
+            
+            // Empty state
+            'emptyStateHeading' => $this->emptyStateHeading,
+            'emptyStateDescription' => $this->emptyStateDescription,
+            'emptyStateIcon' => $this->emptyStateIcon,
+            
+            // Relationships
             'with' => $this->with,
             'withCount' => $this->withCount,
-            'recordsPerPage' => $this->recordsPerPage,
+            
+            // Current state (if Livewire is available)
+            'currentSearch' => $this->livewire ? $this->livewire->getTableSearch() : '',
+            'currentFilters' => $this->livewire ? $this->livewire->getTableFilters() : [],
+            'currentSortColumn' => $this->livewire ? $this->livewire->getTableSortColumn() : '',
+            'currentSortDirection' => $this->livewire ? $this->livewire->getTableSortDirection() : 'asc',
+            'selectedRecords' => $this->livewire ? $this->livewire->selectedTableRecords : [],
         ];
     }
     
