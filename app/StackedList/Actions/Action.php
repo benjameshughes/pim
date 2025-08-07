@@ -127,7 +127,7 @@ class Action implements ActionContract
     /**
      * Require confirmation before executing the action.
      */
-    public function requiresConfirmation(string $title = null, string $text = null): static
+    public function requiresConfirmation(?string $title = null, ?string $text = null): static
     {
         $this->requiresConfirmation = true;
         $this->confirmationTitle = $title;
@@ -160,6 +160,43 @@ class Action implements ActionContract
     }
 
     /**
+     * Create a view action.
+     */
+    public static function view(): static
+    {
+        return static::make('view')
+            ->label('View')
+            ->icon('eye')
+            ->variant('ghost');
+    }
+
+    /**
+     * Create an edit action.
+     */
+    public static function edit(): static
+    {
+        return static::make('edit')
+            ->label('Edit')
+            ->icon('pencil')
+            ->variant('ghost');
+    }
+
+    /**
+     * Create a delete action with confirmation.
+     */
+    public static function delete(): static
+    {
+        return static::make('delete')
+            ->label('Delete')
+            ->icon('trash-2')
+            ->variant('ghost')
+            ->requiresConfirmation(
+                'Delete Item',
+                'Are you sure you want to delete this item? This action cannot be undone.'
+            );
+    }
+
+    /**
      * Convert the action to array format.
      */
     public function toArray(): array
@@ -175,7 +212,7 @@ class Action implements ActionContract
             'key' => $this->key ?? $this->name,
             'title' => $this->title,
             'navigate' => $this->navigate,
-            'requires_confirmation' => $this->requiresConfirmation,
+            'requiresConfirmation' => $this->requiresConfirmation,
             'confirmation_title' => $this->confirmationTitle,
             'confirmation_text' => $this->confirmationText,
         ], fn($value) => $value !== null && $value !== false);

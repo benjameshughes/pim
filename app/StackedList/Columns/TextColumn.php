@@ -7,6 +7,14 @@ class TextColumn extends Column
     protected string $type = 'text';
 
     /**
+     * Create a new text column instance.
+     */
+    public static function make(string $name): static
+    {
+        return (new static())->name($name);
+    }
+
+    /**
      * Set the column as monospace font (useful for SKUs, codes, etc.).
      */
     public function monospace(): static

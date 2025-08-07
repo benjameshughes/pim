@@ -4,11 +4,11 @@ namespace App\StackedList\Columns;
 
 use App\StackedList\Contracts\ColumnContract;
 
-abstract class Column implements ColumnContract
+class Column implements ColumnContract
 {
     protected string $name;
     protected string $label;
-    protected string $type;
+    protected string $type = 'text'; // Default to text column
     protected bool $sortable = false;
     protected bool $searchable = false;
     protected ?string $class = null;
@@ -80,6 +80,56 @@ abstract class Column implements ColumnContract
     {
         $this->font = $font;
         return $this;
+    }
+
+    /**
+     * Create a text column.
+     */
+    public static function text(string $name): TextColumn
+    {
+        return TextColumn::make($name);
+    }
+
+    /**
+     * Convert this column to a badge column.
+     */
+    public function badge(): BadgeColumn
+    {
+        $badgeColumn = BadgeColumn::make($this->name);
+        
+        // Copy all properties from this column to the badge column
+        $badgeColumn->label($this->label ?? $this->generateLabelFromName($this->name));
+        if ($this->sortable) $badgeColumn->sortable();
+        if ($this->searchable) $badgeColumn->searchable();
+        if ($this->class) $badgeColumn->class($this->class);
+        if ($this->font) $badgeColumn->font($this->font);
+        
+        return $badgeColumn;
+    }
+
+
+    /**
+     * Get the column name.
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Check if the column is sortable.
+     */
+    public function isSortable(): bool
+    {
+        return $this->sortable;
+    }
+
+    /**
+     * Check if the column is searchable.
+     */
+    public function isSearchable(): bool
+    {
+        return $this->searchable;
     }
 
     /**

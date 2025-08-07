@@ -53,6 +53,32 @@ abstract class Filter implements FilterContract
     }
 
     /**
+     * Create a select filter.
+     */
+    public static function select(string $name): SelectFilter
+    {
+        return SelectFilter::make($name);
+    }
+
+    /**
+     * Create a multiselect filter.
+     */
+    public static function multiselect(string $name): SelectFilter
+    {
+        $filter = SelectFilter::make($name);
+        $filter->type = 'multiselect';
+        return $filter;
+    }
+
+    /**
+     * Get the filter key.
+     */
+    public function getKey(): string
+    {
+        return $this->name;
+    }
+
+    /**
      * Convert the filter to array format.
      */
     public function toArray(): array
