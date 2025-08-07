@@ -9,7 +9,7 @@ use App\Atom\Tables\Column;
 use App\Atom\Tables\Filter;
 use App\Atom\Tables\HeaderAction;
 use App\Atom\Tables\Table;
-use App\Models\Product;
+use \App\Models\Product;
 
 /**
  * Product Resource
@@ -21,7 +21,7 @@ class ProductResource extends Resource
     /**
      * The resource's associated Eloquent model.
      */
-    protected static ?string $model = App\Models\Product::class;
+    protected static ?string $model = \App\Models\Product::class;
     
     /**
      * The resource navigation label.
@@ -105,7 +105,7 @@ class ProductResource extends Resource
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function ($records) {
-                        App\Models\Product::whereIn('id', $records)->delete();
+                        \App\Models\Product::whereIn('id', $records)->delete();
                         session()->flash('success', count($records) . ' products deleted successfully.');
                     }),
             ]);

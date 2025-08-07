@@ -71,7 +71,7 @@ class MakeResourceCommand extends GeneratorCommand implements PromptsForMissingI
 
         $stub = str_replace(
             ['{{ model }}', '{{ modelClass }}', '{{ modelVariable }}'],
-            [$modelName, $modelClass, Str::camel($modelName)],
+            [$modelName, '\\' . $modelClass, Str::camel($modelName)],
             $stub
         );
 
