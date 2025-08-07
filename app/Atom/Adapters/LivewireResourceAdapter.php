@@ -277,14 +277,7 @@ class LivewireResourceAdapter extends Component
      */
     protected function detectLayout(): string
     {
-        // Common Laravel layout paths in order of preference
-        $layouts = [
-            'components.layouts.app',     // Laravel 11+ component layout
-            'layouts.app',                // Traditional Laravel layout  
-            'app',                        // Simple app layout
-            'components.layout',          // Alternative component layout
-            'layout',                     // Minimal layout
-        ];
+        $layouts = \App\Atom\Config\AtomConfig::getDefaultLayouts();
         
         foreach ($layouts as $layout) {
             if (view()->exists($layout)) {
@@ -475,16 +468,14 @@ class LivewireResourceAdapter extends Component
      */
     protected function renderElement(string $elementType, array $data = []): string
     {
-        // Try user's custom view first
-        $customView = "atom.elements.{$elementType}";
-        if (view()->exists($customView)) {
-            return view($customView, $data)->render();
-        }
+        $viewPrefixes = \App\Atom\Config\AtomConfig::getViewPrefixes();
         
-        // Try framework default
-        $defaultView = "atom::elements.{$elementType}";
-        if (view()->exists($defaultView)) {
-            return view($defaultView, $data)->render();
+        // Try configured view prefixes
+        foreach ($viewPrefixes as $prefix) {
+            $viewName = "{$prefix}.{$elementType}";
+            if (view()->exists($viewName)) {
+                return view($viewName, $data)->render();
+            }
         }
         
         // Auto-detect CSS framework and use appropriate template
@@ -534,13 +525,8 @@ class LivewireResourceAdapter extends Component
      */
     protected function renderFallbackElement(string $elementType, array $data): string
     {
-        return match($elementType) {
-            'navigation.main' => '<nav class="navigation"><!-- Navigation items would go here --></nav>',
-            'navigation.breadcrumbs' => '<div class="breadcrumbs"><!-- Breadcrumbs --></div>',
-            'actions.buttons' => '<div class="actions"><!-- Action buttons --></div>',
-            'table.filters' => '<div class="filters"><!-- Table filters --></div>',
-            'notifications.container' => '<div class="notifications"><!-- Notifications --></div>',
-            default => '<div class="atom-element"><!-- ' . $elementType . ' --></div>',
-        };
+        $fallbacks = \App\Atom\Config\AtomConfig::getElementFallbacks();
+        
+        return $fallbacks[$elementType] ?? '<div class="atom-element"><!-- ' . $elementType . ' --></div>';
     }
 }
