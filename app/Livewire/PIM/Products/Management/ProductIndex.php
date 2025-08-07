@@ -5,14 +5,20 @@ namespace App\Livewire\Pim\Products\Management;
 use App\Models\Product;
 use App\Table\Table;
 use App\Table\Column;
+use App\Table\Filter;
+use App\Table\SelectFilter;
+use App\Table\Action;
+use App\Table\HeaderAction;
+use App\Table\BulkAction;
 use App\Table\Concerns\InteractsWithTable;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.app')]
 class ProductIndex extends Component
 {
-    use InteractsWithTable;
+    use InteractsWithTable, WithPagination;
     
     protected $listeners = [
         'refreshList' => '$refresh'
@@ -27,6 +33,7 @@ class ProductIndex extends Component
             ->model(Product::class)
             ->title('Product Catalog')
             ->subtitle('Manage your product catalog with advanced filtering and bulk operations')
+            ->searchable(['name', 'parent_sku', 'description'])
             ->columns([
                 Column::make('name')
                     ->label('Product Name')
@@ -45,6 +52,88 @@ class ProductIndex extends Component
                         'draft' => 'bg-yellow-100 text-yellow-800',
                     ])
                     ->sortable(),
+                    
+                Column::make('created_at')
+                    ->label('Created')
+                    ->sortable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options([
+                        'active' => 'Active',
+                        'inactive' => 'Inactive', 
+                        'draft' => 'Draft',
+                    ])
+                    ->placeholder('All Statuses'),
+                    
+                Filter::make('created_recently')
+                    ->label('Created Recently')
+                    ->toggle()
+                    ->query(function ($query, $value) {
+                        if ($value) {
+                            $query->where('created_at', '>=', now()->subDays(30));
+                        }
+                    }),
+            ])
+            ->headerActions([
+                HeaderAction::make('create')
+                    ->label('Create Product')
+                    ->icon('plus')
+                    ->color('primary'),
+                    
+                HeaderAction::make('import')
+                    ->label('Import Products')
+                    ->icon('upload')
+                    ->color('secondary'),
+            ])
+            ->actions([
+                Action::make('view')
+                    ->label('View')
+                    ->icon('eye'),
+                    
+                Action::make('edit')
+                    ->label('Edit')
+                    ->icon('pencil'),
+                    
+                Action::make('delete')
+                    ->label('Delete')
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function (Product $record) {
+                        $record->delete();
+                        session()->flash('success', 'Product deleted successfully.');
+                    }),
+            ])
+            ->bulkActions([
+                BulkAction::make('delete')
+                    ->label('Delete Selected')
+                    ->icon('trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->action(function ($records) {
+                        Product::whereIn('id', $records)->delete();
+                        session()->flash('success', count($records) . ' products deleted successfully.');
+                    }),
+                    
+                BulkAction::make('activate')
+                    ->label('Activate Selected')
+                    ->icon('check')
+                    ->color('success')
+                    ->action(function ($records) {
+                        Product::whereIn('id', $records)->update(['status' => 'active']);
+                        session()->flash('success', count($records) . ' products activated.');
+                    }),
+                    
+                BulkAction::make('deactivate')
+                    ->label('Deactivate Selected')
+                    ->icon('x')
+                    ->color('warning')
+                    ->action(function ($records) {
+                        Product::whereIn('id', $records)->update(['status' => 'inactive']);
+                        session()->flash('success', count($records) . ' products deactivated.');
+                    }),
             ]);
     }
 
