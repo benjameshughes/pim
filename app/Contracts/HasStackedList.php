@@ -2,6 +2,8 @@
 
 namespace App\Contracts;
 
+use App\StackedList\StackedListBuilder;
+
 interface HasStackedList
 {
     /**
@@ -10,7 +12,7 @@ interface HasStackedList
     public function handleBulkAction(string $action, array $selectedIds): void;
 
     /**
-     * Get the configuration for the StackedList.
+     * Get the StackedList builder definition.
      */
-    public function getStackedListConfig(): array;
+    public function getList(): StackedListBuilder;
 }

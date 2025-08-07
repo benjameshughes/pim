@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Attributes;
+namespace App\Livewire\Pim\Attributes;
 
 use App\Models\AttributeDefinition;
 use Livewire\Attributes\Layout;

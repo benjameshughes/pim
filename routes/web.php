@@ -47,7 +47,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Barcode management routes
     Route::prefix('barcodes')->name('barcodes.')->group(function () {
-        Route::get('/', BarcodeIndex::class)->name('index');
+        // NEW: Using @stackedList directive (FilamentPHP approach)
+        Route::get('/', function () {
+            return view('barcodes.index');
+        })->name('index');
+        
+        // Keep old route for comparison
+        Route::get('/component', BarcodeIndex::class)->name('component');
         
         // Pool management routes
         Route::prefix('pool')->name('pool.')->group(function () {
@@ -109,7 +115,28 @@ Route::middleware(['auth'])->group(function () {
     // Product Management Routes
     Route::prefix('products')->name('products.')->group(function () {
         // Specific routes MUST come before wildcard routes
-        Route::get('/', ProductIndex::class)->name('index');
+        // NEW: Using @stackedList directive (FilamentPHP approach) - no dedicated component!
+        Route::get('/', function () {
+            \Log::info('ROUTE DEBUG - /products route hit');
+            return view('products.index');
+        })->name('index');
+        
+        // Keep the old route for comparison (can be removed later)
+        Route::get('/component', ProductIndex::class)->name('component');
+        
+        // DEBUG: Simple test route
+        Route::get('/debug', function () {
+            $component = new \App\Livewire\Pim\Products\Management\ProductIndex();
+            $data = $component->getStackedListDataProperty();
+            
+            return response()->json([
+                'product_count_db' => \App\Models\Product::count(),
+                'component_data_count' => $data->count(),
+                'component_data_total' => $data->total(),
+                'first_product' => $data->first() ? $data->first()->toArray() : null,
+                'config' => $component->getStackedListTable()->toArray(),
+            ]);
+        })->name('debug');
         Route::get('create', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('create');
         
         // Variants

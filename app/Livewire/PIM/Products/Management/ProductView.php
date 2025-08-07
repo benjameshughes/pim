@@ -1,90 +1,167 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Management;
+namespace App\Livewire\Pim\Products\Management;
 
 use App\Models\Product;
-use App\Traits\HasRouteTabs;
+use App\Concerns\HasTabs;
+use App\Livewire\Concerns\HasImageUpload;
+use App\UI\Components\Tab;
+use App\UI\Components\TabSet;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class ProductView extends Component
 {
-    use HasRouteTabs;
+    use HasTabs, HasImageUpload;
 
     public Product $product;
-
-    protected $baseRoute = 'products.product';
-    
-    protected $tabConfig = [
-        'tabs' => [
-            [
-                'key' => 'overview',
-                'label' => 'Overview',
-                'icon' => 'package',
-            ],
-            [
-                'key' => 'variants',
-                'label' => 'Variants',
-                'icon' => 'layers',
-            ],
-            [
-                'key' => 'images',
-                'label' => 'Images',
-                'icon' => 'image',
-            ],
-            [
-                'key' => 'attributes',
-                'label' => 'Attributes',
-                'icon' => 'tag',
-            ],
-            [
-                'key' => 'sync',
-                'label' => 'Marketplace Sync',
-                'icon' => 'globe',
-            ],
-        ],
-    ];
 
     public function mount(Product $product)
     {
         $this->product = $product;
+        $this->initializeTabs();
     }
 
-    public function getTabsForNavigation(): array
+    /**
+     * Configure the tabs for this component
+     */
+    protected function configureTabs(): TabSet
     {
-        $config = $this->getTabConfig();
-        $baseRoute = $this->getBaseRoute();
-        $currentRoute = $this->getCurrentTab();
-        
-        $tabs = [];
-        
-        foreach ($config['tabs'] as $tab) {
-            $routeName = "{$baseRoute}.{$tab['key']}";
-            
-            $tabs[] = [
-                'key' => $tab['key'],
-                'label' => $tab['label'],
-                'icon' => $tab['icon'] ?? 'document',
-                'route' => $routeName,
-                'active' => $currentRoute === $routeName,
-                'url' => route($routeName, ['product' => $this->product]),
-            ];
-        }
-        
-        return $tabs;
+        return TabSet::make()
+            ->baseRoute('products.product')
+            ->defaultRouteParameters(['product' => $this->product])
+            ->wireNavigate(true)
+            ->tabs([
+                Tab::make('overview')
+                    ->label('Overview')
+                    ->icon('package'),
+
+                Tab::make('variants')
+                    ->label('Variants')
+                    ->icon('layers')
+                    ->badge(fn() => $this->getVariantCount(), 'blue'),
+
+                Tab::make('images')
+                    ->label('Images')
+                    ->icon('image')
+                    ->badge(fn() => $this->getImageCount(), 'green'),
+
+                Tab::make('attributes')
+                    ->label('Attributes')
+                    ->icon('tag')
+                    ->badge(fn() => $this->getAttributeCount(), 'purple'),
+
+                Tab::make('sync')
+                    ->label('Marketplace Sync')
+                    ->icon('globe')
+                    ->badge(fn() => $this->getSyncCount(), 'orange')
+                    ->hidden(fn() => !$this->hasSyncCapability()),
+            ]);
     }
 
+    /**
+     * Helper methods for tab badges
+     */
+    protected function getVariantCount(): int
+    {
+        return $this->product->variants_count ?? $this->product->variants()->count();
+    }
+
+    protected function getImageCount(): int
+    {
+        return $this->product->productImages()->count();
+    }
+
+    protected function getAttributeCount(): int
+    {
+        return $this->product->attributes()->count();
+    }
+
+    protected function getSyncCount(): int
+    {
+        return $this->product->variants()
+            ->whereHas('marketplaceVariants')
+            ->count();
+    }
+
+    protected function hasSyncCapability(): bool
+    {
+        // Show sync tab if product has variants or marketplace configurations
+        return $this->product->variants()->exists() || config('marketplace.enabled', true);
+    }
+
+    /**
+     * Check if we should redirect to the default tab
+     */
+    protected function shouldRedirectToFirstTab(string $currentRoute): bool
+    {
+        return $currentRoute === 'products.product.view' || $currentRoute === 'products.product';
+    }
+
+    /**
+     * Get the active tab property for the view (backwards compatibility)
+     */
     public function getActiveTabProperty(): string
     {
-        $currentRoute = request()->route()->getName();
+        $activeTab = $this->getActiveTab();
+        return $activeTab ? $activeTab->getKey() : 'overview';
+    }
+
+    /**
+     * Get image uploader configuration for product images
+     */
+    protected function getImageUploaderConfig(): array
+    {
+        return [
+            'modelType' => 'product',
+            'modelId' => $this->product->id,
+            'imageType' => 'main',
+            'multiple' => true,
+            'maxFiles' => 15,
+            'maxSize' => 10240, // 10MB
+            'acceptTypes' => ['jpg', 'jpeg', 'png', 'webp'],
+            'processImmediately' => true,
+            'showPreview' => true,
+            'allowReorder' => true,
+            'showExistingImages' => true,
+            'uploadText' => 'Add product images'
+        ];
+    }
+
+    /**
+     * Custom handler for image uploads - refresh product images
+     */
+    public function handleImagesUploaded($data)
+    {
+        // Reload the product with images to show the new ones
+        $this->product->refresh();
+        $this->product->load(['productImages']);
         
-        // Extract tab from route name (e.g., 'products.product.overview' -> 'overview')
-        $parts = explode('.', $currentRoute);
-        $lastPart = end($parts);
+        $count = $data['count'] ?? 0;
+        session()->flash('success', "Uploaded {$count} product images successfully!");
+    }
+
+    /**
+     * Custom handler for image deletion - refresh product images
+     */
+    public function handleImageDeleted($data)
+    {
+        $this->product->refresh();
+        $this->product->load(['productImages']);
         
-        // Default to 'overview' for base product route
-        return $lastPart === 'view' ? 'overview' : ($lastPart ?? 'overview');
+        session()->flash('success', 'Product image deleted successfully.');
+    }
+
+    /**
+     * Custom handler for image reordering - refresh product images
+     */
+    public function handleImagesReordered($data)
+    {
+        $this->product->refresh();
+        $this->product->load(['productImages']);
+        
+        session()->flash('success', 'Image order updated successfully.');
     }
 
 
@@ -99,8 +176,11 @@ class ProductView extends Component
             'attributes.attributeDefinition'
         ]);
 
+        // Check if we should redirect to default tab
+        $this->redirectToDefaultTabIfNeeded();
+
         return view('livewire.pim.products.management.product-view', [
-            'tabs' => $this->getTabsForNavigation(),
+            'tabs' => $this->getTabsForNavigation($this->product),
         ]);
     }
 }

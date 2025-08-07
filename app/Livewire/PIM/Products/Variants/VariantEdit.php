@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Variants;
+namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\Barcode;
 use App\Models\BarcodePool;
@@ -15,6 +15,7 @@ use App\Models\AttributeDefinition;
 use App\Models\ProductAttribute;
 use App\Models\VariantAttribute;
 use App\Services\BarcodeDetector;
+use App\Livewire\Concerns\HasImageUpload;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -25,7 +26,7 @@ use Illuminate\Support\Str;
 #[Layout('components.layouts.app')]
 class VariantEdit extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, HasImageUpload;
     
     public ?ProductVariant $variant = null;
     public $isEditing = false;
@@ -62,10 +63,8 @@ class VariantEdit extends Component
     #[Validate('nullable|numeric|min:0')]
     public $package_weight = '';
     
-    // Images
-    #[Validate(['newImages.*' => 'image|max:2048'])]
-    public $newImages = [];
-    public $existingImages = [];
+    // Images - now handled by ImageUploader component
+    public $showImageUploader = true;
     
     // Barcode Management
     public $barcodes = [];
@@ -134,7 +133,8 @@ class VariantEdit extends Component
                 'marketplaceVariants.marketplace',
                 'marketplaceBarcodes.marketplace',
                 'attributes',
-                'product.attributes'
+                'product.attributes',
+                'images'
             ]);
             $this->isEditing = true;
             
@@ -152,8 +152,7 @@ class VariantEdit extends Component
             $this->package_height = $variant->package_height;
             $this->package_weight = $variant->package_weight;
             
-            // Load images
-            $this->existingImages = $variant->images ?? [];
+            // Images are now handled by the ImageUploader component
             
             // Load barcodes
             $this->barcodes = $variant->barcodes->map(function ($barcode) {
@@ -239,17 +238,53 @@ class VariantEdit extends Component
         $this->activeTab = $tab;
     }
     
-    // Image Management
-    public function removeExistingImage($index)
+    /**
+     * Get image uploader configuration for variant images
+     */
+    protected function getImageUploaderConfig(): array
     {
-        unset($this->existingImages[$index]);
-        $this->existingImages = array_values($this->existingImages);
+        return [
+            'modelType' => 'variant',
+            'modelId' => $this->variant?->id,
+            'imageType' => 'main',
+            'multiple' => true,
+            'maxFiles' => 8,
+            'maxSize' => 10240, // 10MB
+            'acceptTypes' => ['jpg', 'jpeg', 'png', 'webp'],
+            'processImmediately' => true,
+            'showPreview' => true,
+            'allowReorder' => true,
+            'showExistingImages' => true,
+            'uploadText' => 'Upload variant images'
+        ];
     }
-    
-    public function removeNewImage($index)
+
+    /**
+     * Custom handler for image uploads
+     */
+    public function handleImagesUploaded($data)
     {
-        unset($this->newImages[$index]);
-        $this->newImages = array_values($this->newImages);
+        if ($this->variant) {
+            // Refresh the variant to show new images
+            $this->variant->refresh();
+            $this->variant->load(['images']);
+        }
+        
+        $count = $data['count'] ?? 0;
+        session()->flash('success', "Uploaded {$count} variant images successfully!");
+    }
+
+    /**
+     * Custom handler for image deletion
+     */
+    public function handleImageDeleted($data)
+    {
+        if ($this->variant) {
+            $this->variant->refresh();
+            $this->variant->load(['images']);
+        }
+        
+        session()->flash('success', 'Variant image deleted successfully.');
     }
     
     // Barcode Management
@@ -513,13 +548,7 @@ class VariantEdit extends Component
             'package_weight' => 'nullable|numeric|min:0',
         ]);
         
-        // Handle image uploads
-        $allImages = $this->existingImages;
-        foreach ($this->newImages as $newImage) {
-            $path = $newImage->store('variant-images', 'public');
-            $allImages[] = $path;
-        }
-        $validatedData['images'] = $allImages;
+        // Images are now handled by the ImageUploader component
         
         // Save or update variant
         if ($this->isEditing) {

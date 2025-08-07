@@ -174,4 +174,36 @@ trait HasStackedListActions
     {
         return Str::studly($string);
     }
+
+    /**
+     * Execute a bulk action from the StackedList (FilamentPHP-style).
+     */
+    public function executeStackedListBulkAction(string $action): void
+    {
+        if (empty($this->stackedListSelectedItems)) {
+            return;
+        }
+
+        $table = $this->getStackedListTable();
+        $bulkActions = $table->toArray()['bulk_actions'] ?? [];
+
+        // First try to find the action in the table definition
+        foreach ($bulkActions as $bulkAction) {
+            if (($bulkAction['key'] ?? '') === $action) {
+                if (isset($bulkAction['action']) && is_callable($bulkAction['action'])) {
+                    $bulkAction['action']($this->stackedListSelectedItems, $this);
+                    $this->clearStackedListSelection();
+                    return;
+                }
+                break;
+            }
+        }
+
+        // Fallback to the component's handleBulkAction method
+        if (method_exists($this, 'handleBulkAction')) {
+            $this->handleBulkAction($action, $this->stackedListSelectedItems);
+        }
+        
+        $this->clearStackedListSelection();
+    }
 }

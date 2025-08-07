@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Variants;
+namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\Barcode;
 use App\Models\BarcodePool;

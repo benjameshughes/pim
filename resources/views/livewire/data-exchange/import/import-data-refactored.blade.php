@@ -567,9 +567,8 @@
             </div>
         </x-card>
     @endif
-</div>
 
-@script
+    @script
 <script>
     // Enhanced progress tracking with memory leak prevention
     class ImportProgressTracker {
@@ -688,5 +687,6 @@
             cleanupTracker();
         }
     });
-</script>
-@endscript
+    </script>
+    @endscript
+</div>

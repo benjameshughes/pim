@@ -3,8 +3,17 @@
 namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\ProductVariant;
+use App\Models\Product;
 use App\Contracts\HasStackedList;
 use App\Concerns\HasStackedListBehavior;
+use App\StackedList\StackedListBuilder;
+use App\StackedList\Columns\Column;
+use App\StackedList\Columns\Badge;
+use App\StackedList\Actions\BulkAction;
+use App\StackedList\Actions\Action;
+use App\StackedList\Actions\HeaderAction;
+use App\StackedList\Filters\Filter;
+use App\StackedList\EmptyStateAction;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -22,174 +31,109 @@ class VariantIndex extends Component implements HasStackedList
 
     public function mount()
     {
-        $this->initializeStackedList(ProductVariant::class, $this->getStackedListConfig());
+        $this->initializeStackedList(ProductVariant::class, $this->getList());
     }
 
-    public function getStackedListConfig(): array
+    public function getList(): StackedListBuilder
     {
-        return [
-            // Header Configuration
-            'title' => 'Variant Management',
-            'subtitle' => 'Manage individual product variants across your catalog',
-            
-            // Search & Filter Configuration
-            'search_placeholder' => 'Search variants by SKU, color, size...',
-            'searchable' => ['sku', 'color', 'size', 'product.name'],
-            'sortable_columns' => ['sku', 'color', 'size', 'status', 'barcodes_count'],
-            
-            // Data Configuration
-            'with' => ['product'],
-            'withCount' => ['barcodes'],
-            'per_page_options' => [10, 25, 50, 100],
-            'export' => true,
-            'default_sort' => [
-                'column' => 'created_at',
-                'direction' => 'desc'
-            ],
-            
-            // Header Actions
-            'header_actions' => [
-                [
-                    'label' => 'Create Variant',
-                    'href' => route('products.variants.create'),
-                    'icon' => 'plus',
-                    'variant' => 'primary'
-                ]
-            ],
-            
-            // Filters
-            'filters' => [
-                'product_id' => [
-                    'type' => 'select',
-                    'label' => 'Product',
-                    'column' => 'product_id',
-                    'options' => \App\Models\Product::orderBy('name')->pluck('name', 'id')->toArray()
-                ],
-                'status' => [
-                    'type' => 'select',
-                    'label' => 'Status',
-                    'column' => 'status',
-                    'options' => [
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'discontinued' => 'Discontinued'
-                    ]
-                ]
-            ],
-            
-            // Table Columns
-            'columns' => [
-                [
-                    'key' => 'sku',
-                    'label' => 'Variant SKU',
-                    'type' => 'text',
-                    'font' => 'font-mono text-sm',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'product.name',
-                    'label' => 'Product Name',
-                    'type' => 'text',
-                    'font' => 'font-medium',
-                    'sortable' => false
-                ],
-                [
-                    'key' => 'color',
-                    'label' => 'Color',
-                    'type' => 'text',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'size',
-                    'label' => 'Size',
-                    'type' => 'text',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'barcodes_count',
-                    'label' => '# Barcodes',
-                    'type' => 'text',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'status',
-                    'label' => 'Status',
-                    'type' => 'badge',
-                    'sortable' => true,
-                    'badges' => [
-                        'active' => [
-                            'label' => 'Active',
-                            'class' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-                            'icon' => 'check-circle'
-                        ],
-                        'inactive' => [
-                            'label' => 'Inactive',
-                            'class' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600',
-                            'icon' => 'pause-circle'
-                        ],
-                        'discontinued' => [
-                            'label' => 'Discontinued',
-                            'class' => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-                            'icon' => 'x-circle'
-                        ]
-                    ]
-                ],
-                [
-                    'key' => 'actions',
-                    'label' => 'Actions',
-                    'type' => 'actions',
-                    'actions' => [
-                        [
-                            'label' => 'View',
-                            'route' => 'products.variants.view',
-                            'icon' => 'eye',
-                            'navigate' => true
-                        ],
-                        [
-                            'label' => 'Edit',
-                            'route' => 'products.variants.edit',
-                            'icon' => 'pencil',
-                            'navigate' => true
-                        ]
-                    ]
-                ]
-            ],
-            
-            // Bulk Actions
-            'bulk_actions' => [
-                [
-                    'key' => 'delete',
-                    'label' => 'Delete Selected',
-                    'variant' => 'danger',
-                    'icon' => 'trash-2'
-                ],
-                [
-                    'key' => 'activate',
-                    'label' => 'Activate',
-                    'variant' => 'outline',
-                    'icon' => 'check-circle'
-                ]
-            ],
-            
-            // Empty State Configuration
-            'empty_title' => 'No variants found',
-            'empty_description' => 'Create your first variant to get started.',
-            'empty_action' => [
-                'label' => 'Create Variant',
-                'href' => route('products.variants.create'),
-                'icon' => 'plus',
-                'variant' => 'primary'
-            ]
-        ];
+        return $this->stackedList()
+            ->model(ProductVariant::class)
+            ->title('Variant Management')
+            ->subtitle('Manage individual product variants across your catalog')
+            ->searchPlaceholder('Search variants by SKU, color, size...')
+            ->searchable(['sku', 'color', 'size', 'product.name'])
+            ->sortableColumns(['sku', 'color', 'size', 'status', 'barcodes_count'])
+            ->with(['product'])
+            ->withCount(['barcodes'])
+            ->perPageOptions([10, 25, 50, 100])
+            ->export()
+            ->defaultSort('created_at', 'desc')
+            ->columns([
+                Column::make('sku')
+                    ->label('Variant SKU')
+                    ->font('font-mono text-sm')
+                    ->sortable(),
+
+                Column::make('product.name')
+                    ->label('Product Name')
+                    ->font('font-medium'),
+
+                Column::make('color')
+                    ->label('Color')
+                    ->sortable(),
+
+                Column::make('size')
+                    ->label('Size')
+                    ->sortable(),
+
+                Column::make('barcodes_count')
+                    ->label('# Barcodes')
+                    ->sortable(),
+
+                Column::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->sortable()
+                    ->addBadge('active', Badge::make()
+                        ->class('bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800')
+                        ->icon('check-circle')
+                    )
+                    ->addBadge('inactive', Badge::make()
+                        ->class('bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600')
+                        ->icon('pause-circle')
+                    )
+                    ->addBadge('discontinued', Badge::make()
+                        ->class('bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800')
+                        ->icon('x-circle')
+                    ),
+            ])
+            ->bulkActions([
+                BulkAction::make('delete')
+                    ->label('Delete Selected')
+                    ->icon('trash-2')
+                    ->danger()
+                    ->action(fn($selectedIds) => $this->deleteVariants($selectedIds)),
+
+                BulkAction::make('activate')
+                    ->label('Activate')
+                    ->icon('check-circle')
+                    ->outline()
+                    ->action(fn($selectedIds) => $this->updateVariantStatus($selectedIds, 'active')),
+            ])
+            ->actions([
+                Action::view()->route('products.variants.view'),
+                Action::edit()->route('products.variants.edit'),
+            ])
+            ->filters([
+                Filter::select('product_id')
+                    ->label('Product')
+                    ->column('product_id')
+                    ->optionsFromModel(Product::class, 'name', 'id', ['name']),
+
+                Filter::select('status')
+                    ->option('active', 'Active')
+                    ->option('inactive', 'Inactive')
+                    ->option('discontinued', 'Discontinued'),
+            ])
+            ->headerActions([
+                HeaderAction::make('create')
+                    ->label('Create Variant')
+                    ->route('products.variants.create')
+                    ->primary(),
+            ])
+            ->emptyState(
+                'No variants found',
+                'Create your first variant to get started.',
+                EmptyStateAction::make('Create Variant')
+                    ->href(route('products.variants.create'))
+                    ->primary()
+            );
     }
 
     public function handleBulkAction(string $action, array $selectedIds): void
     {
-        match($action) {
-            'delete' => $this->deleteVariants($selectedIds),
-            'activate' => $this->updateVariantStatus($selectedIds, 'active'),
-            default => null
-        };
+        // Actions are now self-contained via closures - this method is no longer needed
+        // but required by HasStackedList interface for backward compatibility
     }
 
     private function deleteVariants(array $ids): void

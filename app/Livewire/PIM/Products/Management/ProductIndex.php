@@ -3,161 +3,72 @@
 namespace App\Livewire\Pim\Products\Management;
 
 use App\Models\Product;
-use App\Contracts\HasStackedList;
-use App\Concerns\HasStackedListBehavior;
-use App\StackedList\Concerns\HasStackedListActions;
+use App\StackedList\Concerns\InteractsWithStackedList;
+use App\StackedList\Table;
+use App\StackedList\Columns\Column;
+use App\StackedList\Columns\Badge;
 use App\StackedList\Actions\BulkAction;
+use App\StackedList\Actions\Action;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class ProductIndex extends Component implements HasStackedList
+class ProductIndex extends Component
 {
-    use HasStackedListBehavior;
-    use HasStackedListActions;
+    use InteractsWithStackedList;
 
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
 
-    public function mount()
+    /**
+     * Configure the StackedList table (FilamentPHP-style).
+     */
+    public function stackedList(Table $table): Table
     {
-        $this->initializeStackedList(Product::class, $this->getStackedListConfig());
-    }
+        return $table
+            ->model(Product::class)
+            ->title('Product Catalog')
+            ->subtitle('Manage your product catalog with advanced filtering and bulk operations')
+            ->searchable(['name', 'parent_sku', 'description'])
+            ->columns([
+                Column::make('name')
+                    ->label('Product Name')
+                    ->sortable(),
 
+                Column::make('parent_sku')
+                    ->label('SKU')
+                    ->sortable(),
 
-    public function getStackedListConfig(): array
-    {
-        return [
-            // Header Configuration
-            'title' => 'Product Catalog',
-            'subtitle' => 'Manage your product catalog with advanced filtering and bulk operations',
-            
-            // Search & Filter Configuration
-            'search_placeholder' => 'Search products by name, SKU, or description...',
-            'searchable' => ['name', 'description', 'parent_sku'],
-            'sortable_columns' => ['name', 'parent_sku', 'status', 'variants_count'],
-            
-            // Data Configuration
-            'withCount' => ['variants'],
-            'per_page_options' => [5, 10, 25, 50, 100],
-            'export' => true,
-            
-            // Header Actions
-            'header_actions' => [
-                [
-                    'label' => 'Create Product',
-                    'href' => route('products.create'),
-                    'icon' => 'plus',
-                    'variant' => 'primary'
-                ]
-            ],
-            
-            // Filters
-            'filters' => [
-                'status' => [
-                    'type' => 'select',
-                    'label' => 'Status',
-                    'column' => 'status',
-                    'options' => [
-                        'active' => 'Active',
-                        'inactive' => 'Inactive',
-                        'discontinued' => 'Discontinued'
-                    ]
-                ]
-            ],
-            
-            // Table Columns
-            'columns' => [
-                [
-                    'key' => 'name',
-                    'label' => 'Product Name',
-                    'type' => 'text',
-                    'font' => 'font-medium',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'parent_sku',
-                    'label' => 'SKU',
-                    'type' => 'text',
-                    'font' => 'font-mono text-sm',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'variants_count',
-                    'label' => '# Variants',
-                    'type' => 'text',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'status',
-                    'label' => 'Status',
-                    'type' => 'badge',
-                    'sortable' => true,
-                    'badges' => [
-                        'active' => [
-                            'label' => 'Active',
-                            'class' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-                            'icon' => 'check-circle'
-                        ],
-                        'inactive' => [
-                            'label' => 'Inactive',
-                            'class' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600',
-                            'icon' => 'pause-circle'
-                        ],
-                        'discontinued' => [
-                            'label' => 'Discontinued',
-                            'class' => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-                            'icon' => 'x-circle'
-                        ]
-                    ]
-                ],
-                [
-                    'key' => 'actions',
-                    'label' => 'Actions',
-                    'type' => 'actions',
-                    'actions' => [
-                        [
-                            'label' => 'View',
-                            'route' => 'products.view',
-                            'icon' => 'eye',
-                            'navigate' => true
-                        ],
-                        [
-                            'label' => 'Edit',
-                            'route' => 'products.product.edit',
-                            'icon' => 'pencil',
-                            'navigate' => true
-                        ]
-                    ]
-                ]
-            ],
-            
-            // Bulk Actions
-            'bulk_actions' => collect([
+                Column::make('status')
+                    ->label('Status')
+                    ->sortable(),
+            ])
+            ->bulkActions([
                 BulkAction::make('update_pricing')
                     ->label('Update Pricing')
                     ->icon('dollar-sign')
-                    ->outline(),
+                    ->outline()
+                    ->action(function($selectedIds, $livewire) {
+                        return $livewire->handleUpdatePricing($selectedIds);
+                    }),
+
                 BulkAction::export(),
+
                 BulkAction::make('toggle_status')
                     ->label('Toggle Status')
                     ->icon('refresh-cw')
-                    ->outline(),
-                BulkAction::delete()
-            ])->map(fn($action) => $action->toArray())->toArray(),
-            
-            // Empty State Configuration
-            'empty_title' => 'No products found',
-            'empty_description' => 'Create your first product to get started with your catalog.',
-            'empty_action' => [
-                'label' => 'Create Product',
-                'href' => route('products.create'),
-                'icon' => 'plus',
-                'variant' => 'primary'
-            ]
-        ];
+                    ->outline()
+                    ->action(function($selectedIds, $livewire) {
+                        return $livewire->toggleProductStatus($selectedIds);
+                    }),
+
+                BulkAction::delete(),
+            ])
+            ->actions([
+                Action::view()->route('products.view'),
+                Action::edit()->route('products.product.edit'),
+            ]);
     }
 
     private function toggleProductStatus(array $selectedIds): bool
@@ -169,9 +80,7 @@ class ProductIndex extends Component implements HasStackedList
                 $product->save();
             }
         }
-        
-        // No flash message - user can see the status change immediately
-        
+
         return true;
     }
 

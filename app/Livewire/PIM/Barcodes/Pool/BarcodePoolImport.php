@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Barcodes\Pool;
+namespace App\Livewire\Pim\Barcodes\Pool;
 
 use App\Actions\Import\ImportBarcodePoolAction;
 use App\Models\BarcodePool;

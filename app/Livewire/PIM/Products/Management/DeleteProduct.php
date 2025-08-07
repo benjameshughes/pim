@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Products\Management;
+namespace App\Livewire\Pim\Products\Management;
 
 use App\Models\Product;
 use App\Models\DeletedProductVariant;

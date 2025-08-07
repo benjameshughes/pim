@@ -65,7 +65,7 @@
 
     <!-- Tab Navigation -->
     <x-route-tabs :tabs="$tabs" class="mb-6">
-        <div class="p-6">
+        <div class="p-6" wire:cloak>
             @if($this->activeTab === 'overview')
                 <!-- Overview Tab Content -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -149,47 +149,99 @@
 
             @elseif($this->activeTab === 'variants')
                 <!-- Variants Tab Content -->
-                <livewire:products.product-variants-list :product="$product" wire:key="product-variants-{{ $product->id }}" />
+                <livewire:pim.products.variants.variant-index :product="$product" wire:key="product-variants-{{ $product->id }}" />
 
             @elseif($this->activeTab === 'images')
                 <!-- Images Tab Content -->
-                @if($product->productImages->isNotEmpty())
-                    <div class="space-y-6">
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
                         <flux:heading size="lg">Product Images</flux:heading>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                            @foreach($product->productImages as $image)
-                                <div class="relative group rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-700 aspect-square border border-zinc-200 dark:border-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all duration-200">
-                                    <img src="{{ Storage::url($image->image_path) }}" 
-                                         alt="{{ $image->alt_text ?? $product->name }}" 
-                                         class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                                    <div class="absolute top-2 left-2">
-                                        <flux:badge variant="outline" class="text-xs bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm">
-                                            {{ ucfirst($image->image_type) }}
-                                        </flux:badge>
-                                    </div>
-                                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center p-4">
-                                        <flux:button variant="ghost" size="sm" class="bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm text-zinc-900 dark:text-zinc-100 hover:bg-white dark:hover:bg-zinc-800">
-                                            <flux:icon name="eye" class="w-4 h-4 mr-1" />
-                                            View
-                                        </flux:button>
-                                    </div>
-                                </div>
-                            @endforeach
+                        <flux:subheading class="text-zinc-600 dark:text-zinc-400">
+                            {{ $product->productImages->count() }} images
+                        </flux:subheading>
+                    </div>
+                    
+                    <!-- Main Images Section -->
+                    <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                        <div class="border-b border-zinc-200 dark:border-zinc-700 p-4">
+                            <div class="flex gap-2 flex-wrap">
+                                <flux:badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+                                    Main Images ({{ $product->productImages->where('image_type', 'main')->count() }})
+                                </flux:badge>
+                                <flux:badge variant="outline">
+                                    Detail Images ({{ $product->productImages->where('image_type', 'detail')->count() }})
+                                </flux:badge>
+                                <flux:badge variant="outline">
+                                    Lifestyle Images ({{ $product->productImages->where('image_type', 'lifestyle')->count() }})
+                                </flux:badge>
+                                <flux:badge variant="outline">
+                                    Swatch Images ({{ $product->productImages->where('image_type', 'swatch')->count() }})
+                                </flux:badge>
+                            </div>
+                        </div>
+                        
+                        <!-- Main Images Uploader -->
+                        <div class="p-6">
+                            <livewire:components.image-uploader 
+                                :model-type="'product'"
+                                :model-id="$product->id"
+                                :image-type="'main'"
+                                :multiple="true"
+                                :max-files="10"
+                                :max-size="10240"
+                                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                                :process-immediately="true"
+                                :show-preview="true"
+                                :allow-reorder="true"
+                                :show-existing-images="true"
+                                upload-text="Upload main product images"
+                                wire:key="product-main-images-{{ $product->id }}"
+                            />
                         </div>
                     </div>
-                @else
-                    <div class="text-center py-12">
-                        <flux:icon name="image" class="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                        <flux:heading size="lg" class="text-zinc-600 dark:text-zinc-400 mb-2">No Images</flux:heading>
-                        <flux:subheading class="text-zinc-500 dark:text-zinc-500 mb-4">
-                            Upload product images to showcase your products
-                        </flux:subheading>
-                        <flux:button variant="primary">
-                            <flux:icon name="upload" class="w-4 h-4 mr-2" />
-                            Upload Images
-                        </flux:button>
+                    
+                    <!-- Detail Images Section -->
+                    <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                        <div class="p-6">
+                            <livewire:components.image-uploader 
+                                :model-type="'product'"
+                                :model-id="$product->id"
+                                :image-type="'detail'"
+                                :multiple="true"
+                                :max-files="8"
+                                :max-size="10240"
+                                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                                :process-immediately="true"
+                                :show-preview="true"
+                                :allow-reorder="true"
+                                :show-existing-images="true"
+                                upload-text="Upload detailed product images"
+                                wire:key="product-detail-images-{{ $product->id }}"
+                            />
+                        </div>
                     </div>
-                @endif
+                    
+                    <!-- Lifestyle Images Section -->
+                    <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                        <div class="p-6">
+                            <livewire:components.image-uploader 
+                                :model-type="'product'"
+                                :model-id="$product->id"
+                                :image-type="'lifestyle'"
+                                :multiple="true"
+                                :max-files="6"
+                                :max-size="10240"
+                                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                                :process-immediately="true"
+                                :show-preview="true"
+                                :allow-reorder="true"
+                                :show-existing-images="true"
+                                upload-text="Upload lifestyle product images"
+                                wire:key="product-lifestyle-images-{{ $product->id }}"
+                            />
+                        </div>
+                    </div>
+                </div>
 
             @elseif($this->activeTab === 'attributes')
                 <!-- Attributes Tab Content -->

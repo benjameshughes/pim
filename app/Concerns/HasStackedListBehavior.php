@@ -7,6 +7,8 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Illuminate\Database\Eloquent\Builder;
 use App\Actions\StackedList\ExportStackedListDataAction;
+use App\StackedList\StackedListBuilder;
+use App\StackedList\Actions\BulkAction;
 
 /**
  * Trait for adding StackedList functionality to Livewire components.
@@ -20,7 +22,7 @@ trait HasStackedListBehavior
 
     // Core properties
     public string $stackedListModel;
-    public array $stackedListConfig = [];
+    protected StackedListBuilder $stackedListBuilder;
 
     // URL-tracked properties
     #[Url(except: '')]
@@ -54,16 +56,27 @@ trait HasStackedListBehavior
         // Boot method - runs after component is instantiated
     }
 
-    public function initializeStackedList(string $modelClass, array $config = [])
+    public function initializeStackedList(string $modelClass, StackedListBuilder $builder)
     {
         $this->stackedListModel = $modelClass;
-        $this->stackedListConfig = $config;
-        
-        // Set default sort
-        if (empty($this->stackedListSortBy) && !empty($config['default_sort'])) {
-            $this->stackedListSortBy = data_get($config, 'default_sort.column');
-            $this->stackedListSortDirection = data_get($config, 'default_sort.direction', 'asc');
-        }
+        $this->stackedListBuilder = $builder;
+    }
+
+    /**
+     * Create a new StackedListBuilder instance.
+     */
+    protected function stackedList(): StackedListBuilder
+    {
+        return new StackedListBuilder();
+    }
+
+    /**
+     * Get the stacked list builder for the component.
+     */
+    #[Computed]
+    public function stackedListBuilder(): StackedListBuilder
+    {
+        return $this->stackedListBuilder;
     }
 
     #[Computed]
@@ -76,15 +89,16 @@ trait HasStackedListBehavior
     public function stackedListData()
     {
         $query = $this->stackedListQuery;
+        $config = $this->stackedListBuilder->toArray();
         
         // Load relationships
-        if (!empty($this->stackedListConfig['with'])) {
-            $query->with($this->stackedListConfig['with']);
+        if (!empty($config['with'])) {
+            $query->with($config['with']);
         }
         
         // Load counts
-        if (!empty($this->stackedListConfig['withCount'])) {
-            $query->withCount($this->stackedListConfig['withCount']);
+        if (!empty($config['withCount'])) {
+            $query->withCount($config['withCount']);
         }
         
         return $query->paginate($this->stackedListPerPage);
@@ -93,7 +107,8 @@ trait HasStackedListBehavior
     #[Computed]
     public function stackedListPerPageOptions()
     {
-        return collect(data_get($this->stackedListConfig, 'per_page_options', [5, 10, 25, 50, 100]))
+        $config = $this->stackedListBuilder->toArray();
+        return collect(data_get($config, 'per_page_options', [5, 10, 25, 50, 100]))
             ->mapWithKeys(fn($value) => [$value => $value === 1 ? '1 item' : "{$value} items"]);
     }
 
@@ -127,7 +142,8 @@ trait HasStackedListBehavior
 
     protected function applyStackedListBaseFilters(Builder $query): void
     {
-        foreach ($this->stackedListConfig['baseFilters'] ?? [] as $field => $value) {
+        $config = $this->stackedListBuilder->toArray();
+        foreach ($config['baseFilters'] ?? [] as $field => $value) {
             if (is_callable($value)) {
                 $value($query);
             } else {
@@ -138,12 +154,13 @@ trait HasStackedListBehavior
 
     protected function applyStackedListSearch(Builder $query): void
     {
-        if (empty($this->stackedListSearch) || empty($this->stackedListConfig['searchable'])) {
+        $config = $this->stackedListBuilder->toArray();
+        if (empty($this->stackedListSearch) || empty($config['searchable'])) {
             return;
         }
 
-        $query->where(function (Builder $subQuery) {
-            foreach ($this->stackedListConfig['searchable'] as $field) {
+        $query->where(function (Builder $subQuery) use ($config) {
+            foreach ($config['searchable'] as $field) {
                 if (str_contains($field, '.')) {
                     // Relationship search
                     [$relation, $column] = explode('.', $field, 2);
@@ -160,10 +177,11 @@ trait HasStackedListBehavior
 
     protected function applyStackedListFilters(Builder $query): void
     {
+        $config = $this->stackedListBuilder->toArray();
         foreach ($this->stackedListFilters as $key => $value) {
             if (empty($value)) continue;
             
-            $filterConfig = $this->stackedListConfig['filters'][$key] ?? null;
+            $filterConfig = $config['filters'][$key] ?? null;
             if (!$filterConfig) continue;
 
             $column = $filterConfig['column'] ?? $key;
@@ -355,7 +373,17 @@ trait HasStackedListBehavior
             return;
         }
 
-        // Call the component's handleBulkAction method
+        // First try to find the action in the builder
+        if ($this->stackedListBuilder) {
+            $bulkAction = $this->stackedListBuilder->getBulkAction($action);
+            if ($bulkAction && $bulkAction->hasAction()) {
+                $bulkAction->execute($this->stackedListSelectedItems, $this);
+                $this->clearStackedListSelection();
+                return;
+            }
+        }
+
+        // Fallback to the component's handleBulkAction method
         if (method_exists($this, 'handleBulkAction')) {
             $this->handleBulkAction($action, $this->stackedListSelectedItems);
         }
@@ -383,12 +411,13 @@ trait HasStackedListBehavior
         $query = $this->buildStackedListQuery();
         
         // Load relationships for export
-        if (!empty($this->stackedListConfig['with'])) {
-            $query->with($this->stackedListConfig['with']);
+        $config = $this->stackedListBuilder->toArray();
+        if (!empty($config['with'])) {
+            $query->with($config['with']);
         }
         
-        if (!empty($this->stackedListConfig['withCount'])) {
-            $query->withCount($this->stackedListConfig['withCount']);
+        if (!empty($config['withCount'])) {
+            $query->withCount($config['withCount']);
         }
         
         $data = $query->get();
@@ -416,13 +445,14 @@ trait HasStackedListBehavior
             $exportAction = app(ExportStackedListDataAction::class);
             
             // Get columns for export
-            $columns = collect($this->stackedListConfig['columns'] ?? [])
+            $config = $this->stackedListBuilder->toArray();
+            $columns = collect($config['columns'] ?? [])
                 ->where('type', '!=', 'actions')
                 ->pluck('label', 'key')
                 ->toArray();
             
             $metadata = [
-                'title' => $this->stackedListConfig['title'] ?? 'Export',
+                'title' => $config['title'] ?? 'Export',
                 'search' => $this->stackedListSearch,
                 'filters' => $this->stackedListFilters,
                 'sortBy' => $this->stackedListSortBy,

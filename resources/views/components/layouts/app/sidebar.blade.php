@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-flux-appearance
     <head>
         @include('partials.head')
     </head>
@@ -165,6 +165,10 @@
 
         {{ $slot }}
 
+        {{-- Toast Container with integrated Alpine Store --}}
+        <x-toast-container />
+
         @fluxScripts
+        @livewireScripts
     </body>
 </html>

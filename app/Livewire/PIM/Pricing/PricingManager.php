@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Pricing;
+namespace App\Livewire\Pim\Pricing;
 
 use App\Models\Pricing;
 use App\Models\ProductVariant;

@@ -4,18 +4,7 @@
     </div>
 @endif
 
-<x-stacked-list 
-    :config="$this->getStackedListConfig()"
-    :data="$this->stackedListData"
-    :selected-items="$this->stackedListSelectedItems"
-    :search="$this->stackedListSearch"
-    :filters="$this->stackedListFilters"
-    :per-page="$this->stackedListPerPage"
-    :sort-by="$this->stackedListSortBy"
-    :sort-direction="$this->stackedListSortDirection"
-    :sort-stack="$this->stackedListSortStack"
-    :select-all="$this->stackedListSelectAll"
-/>
+<x-stacked-list />
 
 <!-- Delete Confirmation Modal -->
 @if($showDeleteModal)

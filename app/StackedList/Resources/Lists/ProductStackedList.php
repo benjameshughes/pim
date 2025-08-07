@@ -21,12 +21,13 @@ class ProductStackedList
             ->title('Product Catalog')
             ->subtitle('Manage your product catalog with advanced filtering and bulk operations')
             ->searchPlaceholder('Search products by name, SKU, or description...')
-            ->searchable(['name', 'description', 'parent_sku'])
+            ->searchable(['name', 'parent_sku', 'description'])
             ->withCount(['variants'])
             ->columns([
                 Column::make('name')
                     ->label('Product Name')
                     ->sortable()
+                    ->searchable()
                     ->font('font-medium'),
 
                 Column::make('parent_sku')

@@ -48,6 +48,11 @@ class ProductVariant extends Model implements HasMedia
         return $this->hasMany(Pricing::class);
     }
 
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class, 'variant_id');
+    }
+
     public function attributes(): HasMany
     {
         return $this->hasMany(VariantAttribute::class, 'variant_id');

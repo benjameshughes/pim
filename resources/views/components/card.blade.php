@@ -4,9 +4,9 @@
     'class' => '',
 ])
 
-<div {{ $attributes->merge(['class' => 'rounded-xl border bg-white dark:bg-stone-950 dark:border-stone-800 shadow-xs ' . $class]) }}>
+<div {{ $attributes->merge(['class' => 'rounded-xl border bg-white dark:bg-zinc-800 dark:border-zinc-700 shadow-sm ' . $class]) }}>
     @if($header)
-        <div class="border-b border-stone-200 dark:border-stone-800 px-6 py-4">
+        <div class="border-b border-zinc-200 dark:border-zinc-700 px-6 py-4">
             {{ $header }}
         </div>
     @endif
@@ -16,7 +16,7 @@
     </div>
     
     @if($footer)
-        <div class="border-t border-stone-200 dark:border-stone-800 px-6 py-4">
+        <div class="border-t border-zinc-200 dark:border-zinc-700 px-6 py-4">
             {{ $footer }}
         </div>
     @endif

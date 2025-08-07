@@ -323,6 +323,11 @@ class Dashboard extends Component
         $this->getPimWorkflowProperty();
         $this->getPimChartsProperty();
         
+        // Show success toast using helper function
+        toast_success('Dashboard Refreshed', 'All metrics have been updated successfully.')
+            ->duration(3000)
+            ->send();
+        
         $this->dispatch('data-refreshed');
     }
 

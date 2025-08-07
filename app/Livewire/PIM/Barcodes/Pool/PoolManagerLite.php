@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\PIM\Barcodes\Pool;
+namespace App\Livewire\Pim\Barcodes\Pool;
 
 use App\Models\BarcodePool;
 use Illuminate\Support\Facades\DB;

@@ -76,57 +76,61 @@
     </div>
 
     <!-- Upload Section -->
-    <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6">
-        <flux:heading size="sm" class="mb-4">Upload New Images</flux:heading>
-        
-        <div class="border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg p-6">
-            <div class="text-center">
-                <svg class="mx-auto h-12 w-12 text-zinc-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <div class="mt-4">
-                    <label for="file-upload" class="cursor-pointer">
-                        <span class="mt-2 block text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                            Drop images here or click to upload
-                        </span>
-                        <input 
-                            id="file-upload" 
-                            wire:model="newImages" 
-                            type="file" 
-                            multiple 
-                            accept="image/*" 
-                            class="sr-only"
-                        />
-                    </label>
-                    <p class="mt-1 text-xs text-zinc-500">PNG, JPG, GIF up to 5MB each</p>
+    @if($showImageUploader)
+        <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+            <div class="p-6 border-b border-zinc-200 dark:border-zinc-700">
+                <div class="flex justify-between items-center">
+                    <flux:heading size="sm">Upload New Images</flux:heading>
+                    <flux:button 
+                        variant="ghost" 
+                        size="sm" 
+                        icon="x" 
+                        wire:click="toggleImageUploader"
+                        class="text-zinc-500 hover:text-zinc-700"
+                    >
+                        Hide
+                    </flux:button>
                 </div>
+                <flux:subheading class="text-zinc-600 dark:text-zinc-400 mt-1">
+                    Upload unassigned images that can be assigned to products or variants later
+                </flux:subheading>
             </div>
+            
+            <livewire:components.simple-image-uploader
+                :model-type="null"
+                :model-id="null"
+                :image-type="$defaultImageType"
+                :multiple="true"
+                :max-files="20"
+                :max-size="10240"
+                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                :process-immediately="true"
+                :show-preview="true"
+                :allow-reorder="false"
+                :show-existing-images="false"
+                upload-text="Drag & drop images here or click to browse"
+                wire:key="image-manager-uploader"
+            />
         </div>
-
-        @if($newImages)
-            <div class="mt-4 flex justify-between items-center">
-                <span class="text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ count($newImages) }} file(s) selected
-                </span>
-                
+    @else
+        <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <flux:heading size="sm">Upload New Images</flux:heading>
+                    <flux:subheading class="text-zinc-600 dark:text-zinc-400 mt-1">
+                        Add unassigned images to your library
+                    </flux:subheading>
+                </div>
                 <flux:button 
-                    wire:click="uploadImages" 
-                    variant="primary"
-                    :disabled="$uploading"
+                    variant="primary" 
+                    icon="plus" 
+                    wire:click="toggleImageUploader"
                 >
-                    @if($uploading)
-                        <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Uploading...
-                    @else
-                        Upload Images
-                    @endif
+                    Show Uploader
                 </flux:button>
             </div>
-        @endif
-    </div>
+        </div>
+    @endif
 
     <!-- Assignment Panel -->
     @if($assignmentMode && !empty($selectedImages))
@@ -222,7 +226,7 @@
 
     <!-- Images Grid -->
     <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6">
-        @if(empty($imageData))
+        @if($images->isEmpty())
             <div class="text-center py-8">
                 <svg class="mx-auto h-12 w-12 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -232,7 +236,7 @@
             </div>
         @else
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                @foreach($imageData as $image)
+                @foreach($images as $image)
                     <div class="relative group">
                         <!-- Selection Checkbox (Bulk Edit Mode) -->
                         @if($bulkEditMode)
@@ -240,48 +244,68 @@
                                 <input 
                                     type="checkbox" 
                                     wire:model.live="selectedImages" 
-                                    value="{{ $image['path'] }}"
+                                    value="{{ $image->id }}"
                                     class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                                 />
                             </div>
                         @endif
 
                         <!-- Image -->
-                        <div class="aspect-square bg-zinc-100 dark:bg-zinc-700 rounded-lg overflow-hidden">
-                            @if($image['exists'])
-                                <img 
-                                    src="{{ $image['url'] }}" 
-                                    alt="Product image"
-                                    class="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
-                                    onclick="window.open('{{ $image['url'] }}', '_blank')"
-                                />
-                            @else
-                                <div class="w-full h-full flex items-center justify-center">
-                                    <svg class="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
+                        <div class="aspect-square bg-zinc-100 dark:bg-zinc-700 rounded-lg overflow-hidden relative">
+                            <img 
+                                src="{{ $image->getVariantUrl('small') }}" 
+                                alt="{{ $image->alt_text }}"
+                                class="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity"
+{{-- onclick="window.open('{{ $image->getVariantUrl('large') }}', '_blank')" --}}
+                                loading="lazy"
+                            />
+                            
+                            <!-- Processing Status Overlay -->
+                            @if(!$image->isProcessed())
+                                <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    @if($image->isPending())
+                                        <div class="text-center text-white">
+                                            <flux:icon name="clock" class="w-4 h-4 mx-auto mb-1" />
+                                            <p class="text-xs">Pending</p>
+                                        </div>
+                                    @elseif($image->isProcessing())
+                                        <div class="text-center text-white">
+                                            <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mx-auto mb-1"></div>
+                                            <p class="text-xs">Processing</p>
+                                        </div>
+                                    @elseif($image->isFailed())
+                                        <div class="text-center text-red-400">
+                                            <flux:icon name="triangle-alert" class="w-4 h-4 mx-auto mb-1" />
+                                            <p class="text-xs">Failed</p>
+                                        </div>
+                                    @endif
                                 </div>
                             @endif
                         </div>
 
                         <!-- Image Info -->
                         <div class="mt-2">
-                            <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate" title="{{ basename($image['path']) }}">
-                                {{ basename($image['path']) }}
+                            <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate" title="{{ $image->original_filename }}">
+                                {{ $image->original_filename }}
                             </p>
                             
+                            <div class="flex items-center justify-between text-xs text-zinc-500 mt-1">
+                                <span>{{ ucfirst($image->image_type) }}</span>
+                                <span>{{ number_format($image->file_size / 1024, 1) }}KB</span>
+                            </div>
+                            
                             <!-- Usage Info -->
-                            @if($image['usage']['products'] || $image['usage']['variants'])
+                            @if($image->product_id || $image->variant_id)
                                 <div class="flex gap-1 mt-1">
-                                    @if($image['usage']['products'])
+                                    @if($image->product_id)
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                                            P: {{ count($image['usage']['products']) }}
+                                            Product
                                         </span>
                                     @endif
                                     
-                                    @if($image['usage']['variants'])
+                                    @if($image->variant_id)
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
-                                            V: {{ count($image['usage']['variants']) }}
+                                            Variant
                                         </span>
                                     @endif
                                 </div>
@@ -297,8 +321,7 @@
                             <div class="flex gap-2">
                                 @if(!$bulkEditMode)
                                     <button 
-                                        wire:click="$set('selectedImages', ['{{ $image['path'] }}'])"
-                                        wire:click="toggleAssignmentMode"
+                                        wire:click="selectImageForAssignment({{ $image->id }})"
                                         class="bg-white text-zinc-900 px-2 py-1 rounded text-xs font-medium hover:bg-zinc-100"
                                     >
                                         Assign
@@ -306,7 +329,7 @@
                                 @endif
                                 
                                 <button 
-                                    onclick="window.open('{{ $image['url'] }}', '_blank')"
+    {{-- onclick="window.open('{{ $image->getVariantUrl('large') }}', '_blank')" --}}
                                     class="bg-white text-zinc-900 px-2 py-1 rounded text-xs font-medium hover:bg-zinc-100"
                                 >
                                     View
@@ -318,11 +341,9 @@
             </div>
 
             <!-- Pagination -->
-            @if($totalPages > 1)
-                <div class="mt-6 flex justify-center">
-                    {{ $this->paginationView() }}
-                </div>
-            @endif
+            <div class="mt-6">
+                {{ $images->links() }}
+            </div>
         @endif
     </div>
 </div>

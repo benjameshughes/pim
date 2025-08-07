@@ -9,7 +9,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class AutoProductList extends Component implements HasStackedList
+class AutoProductList extends Component
 {
     use HasStackedListBehavior;
 

@@ -53,3 +53,19 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* Custom Flux checkbox styling for proper rounding */
+[data-flux-checkbox] input[type="checkbox"] {
+    @apply rounded-md;
+}
+
+/* Ensure all Flux checkboxes are rounded regardless of class application */
+flux\\:checkbox input[type="checkbox"],
+[data-flux-checkbox] input {
+    border-radius: 0.375rem !important; /* rounded-md equivalent */
+}
+
+/* Livewire wire:cloak to prevent flickering during initialization */
+[wire\:cloak] {
+    display: none !important;
+}

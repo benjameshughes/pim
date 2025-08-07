@@ -402,13 +402,13 @@
             </div>
         </div>
     </div>
-</div>
 
-@script
-<script>
-    $wire.on('data-refreshed', () => {
-        // Optional: Show success notification
-        console.log('PIM dashboard data refreshed successfully');
-    });
-</script>
-@endscript
+    @script
+    <script>
+        $wire.on('data-refreshed', () => {
+            // Optional: Show success notification
+            console.log('PIM dashboard data refreshed successfully');
+        });
+    </script>
+    @endscript
+</div>

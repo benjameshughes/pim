@@ -6,6 +6,36 @@ export default {
     "./resources/**/*.vue",
     "./vendor/livewire/flux/stubs/**/*.blade.php",
     "./vendor/livewire/flux-pro/stubs/**/*.blade.php",
+    "./app/Toasts/**/*.php",
+    "./config/toasts.php",
+  ],
+
+  safelist: [
+    // Toast positioning classes
+    'fixed', 'top-4', 'right-4', 'left-4', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'z-50', 'max-w-sm',
+    'flex-col', 'flex-col-reverse', 'items-start', 'items-end', 'items-center',
+    
+    // Toast type styling classes using custom status colors
+    'bg-status-success-50', 'dark:bg-status-success-700', 'dark:bg-opacity-30', 'border-status-success-100', 'dark:border-status-success-600',
+    'text-status-success-700', 'dark:text-status-success-100', 'text-status-success-500',
+    'hover:bg-status-success-100', 'dark:hover:bg-status-success-600',
+    
+    'bg-status-error-50', 'dark:bg-status-error-700', 'border-status-error-100', 'dark:border-status-error-600',
+    'text-status-error-700', 'dark:text-status-error-100', 'text-status-error-500',
+    'hover:bg-status-error-100', 'dark:hover:bg-status-error-600',
+    
+    'bg-status-warning-50', 'dark:bg-status-warning-700', 'border-status-warning-100', 'dark:border-status-warning-600',
+    'text-status-warning-700', 'dark:text-status-warning-100', 'text-status-warning-500',
+    'hover:bg-status-warning-100', 'dark:hover:bg-status-warning-600',
+    
+    'bg-status-info-50', 'dark:bg-status-info-700', 'border-status-info-100', 'dark:border-status-info-600',
+    'text-status-info-700', 'dark:text-status-info-100', 'text-status-info-500',
+    'hover:bg-status-info-100', 'dark:hover:bg-status-info-600',
+    
+    // Animation classes
+    'opacity-0', 'opacity-100', 'transform', 'translate-x-full', 'translate-x-0',
+    'scale-95', 'scale-100', 'transition-all', 'duration-300', 'duration-200',
+    'ease-in-out', 'ease-out',
   ],
   
   darkMode: 'class', // Enable class-based dark mode
@@ -43,31 +73,51 @@ export default {
         status: {
           success: {
             50: '#f0fdf4',
-            100: '#dcfce7', 
+            100: '#dcfce7',
+            200: '#bbf7d0',
+            300: '#86efac', 
+            400: '#4ade80',
             500: '#22c55e',
             600: '#16a34a',
             700: '#15803d',
+            800: '#166534',
+            900: '#14532d',
           },
           warning: {
             50: '#fffbeb',
             100: '#fef3c7',
+            200: '#fde68a',
+            300: '#fcd34d',
+            400: '#fbbf24',
             500: '#f59e0b',
             600: '#d97706', 
             700: '#b45309',
+            800: '#92400e',
+            900: '#78350f',
           },
           error: {
             50: '#fef2f2',
             100: '#fee2e2',
+            200: '#fecaca',
+            300: '#fca5a5',
+            400: '#f87171',
             500: '#ef4444',
             600: '#dc2626',
             700: '#b91c1c',
+            800: '#991b1b',
+            900: '#7f1d1d',
           },
           info: {
             50: '#eff6ff',
             100: '#dbeafe',
+            200: '#bfdbfe',
+            300: '#93c5fd',
+            400: '#60a5fa',
             500: '#3b82f6',
             600: '#2563eb',
             700: '#1d4ed8',
+            800: '#1e40af',
+            900: '#1e3a8a',
           },
         },
         
@@ -167,6 +217,8 @@ export default {
         'fade-in': 'fadeIn 0.3s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'scale-in': 'scaleIn 0.2s ease-out',
+        'tab-content': 'tabContent 0.25s ease-out',
+        'tab-border': 'tabBorder 0.2s ease-out',
       },
 
       keyframes: {
@@ -181,6 +233,26 @@ export default {
         scaleIn: {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        tabContent: {
+          '0%': { 
+            opacity: '0', 
+            transform: 'translateY(4px)',
+          },
+          '100%': { 
+            opacity: '1', 
+            transform: 'translateY(0)',
+          },
+        },
+        tabBorder: {
+          '0%': {
+            transform: 'scaleX(0)',
+            transformOrigin: 'left',
+          },
+          '100%': {
+            transform: 'scaleX(1)',
+            transformOrigin: 'left',
+          },
         },
       },
       

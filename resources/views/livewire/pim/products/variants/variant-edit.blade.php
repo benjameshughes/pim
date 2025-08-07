@@ -131,9 +131,9 @@
                         class="py-4 px-1 border-b-2 font-medium text-sm transition-colors {{ $activeTab === 'images' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300 dark:text-zinc-400 dark:hover:text-zinc-300' }}">
                     <flux:icon.photo class="w-4 h-4 inline mr-2" />
                     Images
-                    @if(count($existingImages) + count($newImages) > 0)
+                    @if($variant && $variant->images && $variant->images->count() > 0)
                         <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                            {{ count($existingImages) + count($newImages) }}
+                            {{ $variant->images->count() }}
                         </span>
                     @endif
                 </button>
@@ -386,66 +386,86 @@
             <!-- Images Tab -->
             @if($activeTab === 'images')
             <div class="space-y-6">
-                <flux:heading size="lg">Image Management</flux:heading>
+                <div class="flex justify-between items-center">
+                    <flux:heading size="lg">Variant Images</flux:heading>
+                    <flux:subheading class="text-zinc-600 dark:text-zinc-400">
+                        @if($variant && $variant->images)
+                            {{ $variant->images->count() }} images
+                        @else
+                            0 images
+                        @endif
+                    </flux:subheading>
+                </div>
                 
-                <!-- Existing Images -->
-                @if(count($existingImages) > 0)
-                <div>
-                    <flux:subheading class="mb-3">Current Images</flux:subheading>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        @foreach($existingImages as $index => $image)
-                        <div class="relative group rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-700 aspect-square">
-                            <img src="{{ asset('storage/' . $image) }}" 
-                                 alt="Variant image" 
-                                 class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 flex items-center justify-center">
-                                <flux:button variant="danger" size="sm" 
-                                           class="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                           wire:click="removeExistingImage({{ $index }})">
-                                    <flux:icon.trash class="w-4 h-4" />
-                                </flux:button>
-                            </div>
+                <!-- Main Images Section -->
+                <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                    <div class="border-b border-zinc-200 dark:border-zinc-700 p-4">
+                        <div class="flex gap-2 flex-wrap">
+                            <flux:badge variant="outline" class="bg-blue-50 text-blue-700 border-blue-200">
+                                @if($variant && $variant->images)
+                                    Main Images ({{ $variant->images->where('image_type', 'main')->count() }})
+                                @else
+                                    Main Images (0)
+                                @endif
+                            </flux:badge>
+                            <flux:badge variant="outline">
+                                @if($variant && $variant->images)
+                                    Swatch Images ({{ $variant->images->where('image_type', 'swatch')->count() }})
+                                @else
+                                    Swatch Images (0)
+                                @endif
+                            </flux:badge>
                         </div>
-                        @endforeach
+                    </div>
+                    
+                    <!-- Main Images Uploader -->
+                    <div class="p-6">
+                        @if($variant && $variant->id)
+                            <livewire:components.image-uploader 
+                                :model-type="'variant'"
+                                :model-id="$variant->id"
+                                :image-type="'main'"
+                                :multiple="true"
+                                :max-files="6"
+                                :max-size="10240"
+                                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                                :process-immediately="true"
+                                :show-preview="true"
+                                :allow-reorder="true"
+                                :show-existing-images="true"
+                                upload-text="Upload main variant images"
+                                wire:key="variant-main-images-{{ $variant->id }}"
+                            />
+                        @else
+                            <div class="text-center py-8 text-zinc-500 dark:text-zinc-400">
+                                <flux:icon name="image" class="w-12 h-12 mx-auto mb-3 text-zinc-400" />
+                                <p>Save the variant first to upload images</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
-                @endif
                 
-                <!-- New Images Upload -->
-                <div>
-                    <flux:field>
-                        <flux:label for="newImages">Add New Images</flux:label>
-                        <input type="file" 
-                               wire:model="newImages" 
-                               multiple 
-                               accept="image/*"
-                               class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800">
-                        <flux:error name="newImages.*" />
-                        <flux:description>Upload multiple images at once. Maximum 2MB per image.</flux:description>
-                    </flux:field>
-                </div>
-                
-                <!-- New Images Preview -->
-                @if(count($newImages) > 0)
-                <div>
-                    <flux:subheading class="mb-3">New Images Preview</flux:subheading>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        @foreach($newImages as $index => $image)
-                        <div class="relative group rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-700 aspect-square">
-                            <img src="{{ $image->temporaryUrl() }}" 
-                                 alt="New image preview" 
-                                 class="w-full h-full object-cover">
-                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity duration-200 flex items-center justify-center">
-                                <flux:button variant="danger" size="sm" 
-                                           class="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                           wire:click="removeNewImage({{ $index }})">
-                                    <flux:icon.trash class="w-4 h-4" />
-                                </flux:button>
-                            </div>
+                <!-- Swatch Images Section -->
+                @if($variant && $variant->id)
+                    <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+                        <div class="p-6">
+                            <livewire:components.image-uploader 
+                                :model-type="'variant'"
+                                :model-id="$variant->id"
+                                :image-type="'swatch'"
+                                :multiple="true"
+                                :max-files="3"
+                                :max-size="10240"
+                                :accept-types="['jpg', 'jpeg', 'png', 'webp']"
+                                :process-immediately="true"
+                                :show-preview="true"
+                                :allow-reorder="true"
+                                :show-existing-images="true"
+                                upload-text="Upload swatch images (color/material samples)"
+                                wire:key="variant-swatch-images-{{ $variant->id }}"
+                            />
                         </div>
-                        @endforeach
                     </div>
-                </div>
                 @endif
             </div>
             @endif

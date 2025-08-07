@@ -1,0 +1,172 @@
+/* Enhanced CSS for modern toast styling */
+@media (prefers-reduced-motion: reduce) {
+    .toast-item * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.toast-item {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    /* Enhanced shadow for depth */
+    box-shadow: 
+        0 20px 25px -5px rgba(0, 0, 0, 0.1),
+        0 10px 10px -5px rgba(0, 0, 0, 0.04),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+    
+    /* Smooth transitions */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 25px 30px -5px rgba(0, 0, 0, 0.15),
+        0 15px 15px -5px rgba(0, 0, 0, 0.06),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.toast-item:focus-within {
+    outline: 2px solid rgb(59 130 246 / 0.5);
+    outline-offset: 2px;
+    transform: translateY(-1px);
+}
+
+/* Smooth transitions for all interactive elements */
+.toast-item button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-item button:hover {
+    transform: scale(1.05);
+}
+
+.toast-item button:active {
+    transform: scale(0.95);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+    .toast-container-wrapper [class*="fixed"] {
+        left: 0.75rem !important;
+        right: 0.75rem !important;
+        max-width: none !important;
+        width: auto !important;
+    }
+    
+    .toast-container-wrapper [class*="translate-x"] {
+        transform: translateX(0) !important;
+    }
+    
+    .toast-item {
+        max-width: none;
+        width: 100%;
+    }
+    
+    /* Larger touch targets on mobile */
+    .toast-item button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .toast-item {
+        border-width: 2px;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+    
+    .toast-item .absolute.inset-0 {
+        display: none;
+    }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+    .toast-item {
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+    
+    .toast-item:hover {
+        box-shadow: 
+            0 25px 30px -5px rgba(0, 0, 0, 0.3),
+            0 15px 15px -5px rgba(0, 0, 0, 0.1),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* Animation for staggered entrance */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Progress bar gradient animations */
+.toast-item [class*="progress"] {
+    position: relative;
+    overflow: hidden;
+}
+
+.toast-item [class*="progress"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Accessibility improvements */
+.toast-item:focus {
+    outline: 2px solid var(--focus-color, #3b82f6);
+    outline-offset: 2px;
+}
+
+/* Reduce animation for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .toast-item [class*="progress"]::after {
+        animation: none;
+    }
+    
+    .toast-item:hover {
+        transform: none;
+    }
+    
+    .toast-item button:hover {
+        transform: none;
+    }
+}

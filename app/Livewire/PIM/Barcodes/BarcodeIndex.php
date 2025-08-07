@@ -4,15 +4,17 @@ namespace App\Livewire\Pim\Barcodes;
 
 use App\Models\Barcode;
 use App\Models\ProductVariant;
-use App\Contracts\HasStackedList;
-use App\Concerns\HasStackedListBehavior;
+use App\StackedList\Concerns\InteractsWithStackedList;
+use App\StackedList\Table;
+use App\StackedList\Columns\Column;
+use App\StackedList\Actions\Action;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class BarcodeIndex extends Component implements HasStackedList
+class BarcodeIndex extends Component
 {
-    use HasStackedListBehavior;
+    use InteractsWithStackedList;
 
     public $parentProductsOnly = false;
 
@@ -20,171 +22,33 @@ class BarcodeIndex extends Component implements HasStackedList
         'refreshList' => '$refresh'
     ];
 
-    public function mount()
+    /**
+     * Configure the StackedList table (FilamentPHP-style).
+     */
+    public function stackedList(Table $table): Table
     {
-        $this->initializeStackedList(Barcode::class, $this->getStackedListConfig());
-    }
+        return $table
+            ->model(Barcode::class)
+            ->title('Barcode Manager')
+            ->searchable(['barcode', 'productVariant.product.name'])
+            ->with(['productVariant.product'])
+            ->columns([
+                Column::make('barcode')
+                    ->label('Barcode')
+                    ->sortable()
+                    ->font('font-mono'),
 
-    public function getStackedListConfig(): array
-    {
-        return [
-            // Header Configuration
-            'title' => 'Barcode Registry',
-            'subtitle' => 'Manage product barcodes and identifiers across your catalog',
-            
-            // Search & Filter Configuration
-            'search_placeholder' => 'Search barcodes...',
-            'searchable' => ['barcode'],
-            'sortable_columns' => ['barcode', 'barcode_type', 'is_primary', 'created_at'],
-            
-            // Data Configuration
-            'with' => ['productVariant.product'],
-            'per_page_options' => [25, 50, 100, 150, 200],
-            'export' => true,
-            'default_sort' => [
-                'column' => 'created_at',
-                'direction' => 'desc'
-            ],
-            
-            // Header Actions
-            'header_actions' => [
-                [
-                    'label' => 'Generate Barcodes',
-                    'href' => '#',
-                    'icon' => 'plus',
-                    'variant' => 'primary'
-                ]
-            ],
-            
-            // Filters
-            'filters' => [
-                'product_id' => [
-                    'type' => 'select',
-                    'label' => 'Product',
-                    'relation' => 'productVariant',
-                    'column' => 'product_id',
-                    'options' => \App\Models\Product::orderBy('name')->limit(100)->pluck('name', 'id')->toArray()
-                ],
-                'barcode_type' => [
-                    'type' => 'select',
-                    'label' => 'Type',
-                    'column' => 'barcode_type',
-                    'options' => Barcode::BARCODE_TYPES
-                ]
-            ],
-            
-            // Table Columns
-            'columns' => [
-                [
-                    'key' => 'barcode',
-                    'label' => 'Barcode',
-                    'type' => 'text',
-                    'font' => 'font-mono text-sm',
-                    'sortable' => true
-                ],
-                [
-                    'key' => 'productVariant.product.name',
-                    'label' => 'Product',
-                    'type' => 'text',
-                    'font' => 'font-medium',
-                    'sortable' => false
-                ],
-                [
-                    'key' => 'productVariant.sku',
-                    'label' => 'Variant SKU',
-                    'type' => 'text',
-                    'font' => 'font-mono text-xs',
-                    'sortable' => false
-                ],
-                [
-                    'key' => 'barcode_type',
-                    'label' => 'Type',
-                    'type' => 'badge',
-                    'sortable' => true,
-                    'badges' => [
-                        'CODE128' => [
-                            'label' => 'Code 128',
-                            'class' => 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
-                            'icon' => 'barcode'
-                        ],
-                        'EAN13' => [
-                            'label' => 'EAN-13',
-                            'class' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-                            'icon' => 'barcode'
-                        ],
-                        'UPC' => [
-                            'label' => 'UPC',
-                            'class' => 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800',
-                            'icon' => 'barcode'
-                        ],
-                        'default' => [
-                            'label' => 'Other',
-                            'class' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600',
-                            'icon' => 'barcode'
-                        ]
-                    ]
-                ],
-                [
-                    'key' => 'is_primary',
-                    'label' => 'Primary',
-                    'type' => 'badge',
-                    'sortable' => true,
-                    'badges' => [
-                        '1' => [
-                            'label' => 'Primary',
-                            'class' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-                            'icon' => 'star'
-                        ],
-                        '0' => [
-                            'label' => 'Secondary',
-                            'class' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600',
-                            'icon' => 'minus'
-                        ]
-                    ]
-                ],
-                [
-                    'key' => 'actions',
-                    'label' => 'Actions',
-                    'type' => 'actions',
-                    'actions' => [
-                        [
-                            'label' => 'Primary',
-                            'icon' => 'star',
-                            'variant' => 'ghost',
-                            'method' => 'setPrimary',
-                            'title' => 'Set as primary barcode'
-                        ],
-                        [
-                            'label' => 'Delete',
-                            'icon' => 'trash-2',
-                            'variant' => 'ghost',
-                            'method' => 'deleteBarcode',
-                            'title' => 'Delete barcode'
-                        ]
-                    ]
-                ]
-            ],
-            
-            // Bulk Actions
-            'bulk_actions' => [
-                [
-                    'key' => 'delete',
-                    'label' => 'Delete Selected',
-                    'variant' => 'danger',
-                    'icon' => 'trash-2'
-                ]
-            ],
-            
-            // Empty State Configuration
-            'empty_title' => 'No barcodes found',
-            'empty_description' => 'Generate your first barcode to get started.',
-            'empty_action' => [
-                'label' => 'Generate Barcode',
-                'href' => '#',
-                'icon' => 'plus',
-                'variant' => 'primary'
-            ]
-        ];
+                Column::make('productVariant.product.name')
+                    ->label('Product')
+                    ->sortable(),
+
+                Column::make('barcode_type')
+                    ->label('Type')
+                    ->sortable(),
+            ])
+            ->actions([
+                Action::view()->route('barcode.view'),
+            ]);
     }
 
     public function updatingParentProductsOnly()
@@ -259,7 +123,6 @@ class BarcodeIndex extends Component implements HasStackedList
             default => null
         };
     }
-
 
     public function render()
     {
