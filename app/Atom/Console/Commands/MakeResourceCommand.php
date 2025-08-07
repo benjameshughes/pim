@@ -79,6 +79,21 @@ class MakeResourceCommand extends GeneratorCommand implements PromptsForMissingI
     }
 
     /**
+     * Get the desired class name from the input.
+     */
+    protected function getNameInput(): string
+    {
+        $name = trim($this->argument('name'));
+        
+        // If the name doesn't end with "Resource", add it
+        if (!str_ends_with($name, 'Resource')) {
+            $name .= 'Resource';
+        }
+        
+        return $name;
+    }
+
+    /**
      * Get the model name from the resource name.
      */
     protected function getModelName(string $name): string

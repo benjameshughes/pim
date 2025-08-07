@@ -9,24 +9,24 @@ use App\Atom\Tables\Column;
 use App\Atom\Tables\Filter;
 use App\Atom\Tables\HeaderAction;
 use App\Atom\Tables\Table;
-use App\Models\Users;
+use App\Models\User;
 
 /**
- * Users Resource
+ * User Resource
  * 
- * Resource class for managing Users records across different systems.
+ * Resource class for managing User records across different systems.
  */
-class Users extends Resource
+class UserResource extends Resource
 {
     /**
      * The resource's associated Eloquent model.
      */
-    protected static ?string $model = App\Models\Users::class;
+    protected static ?string $model = App\Models\User::class;
     
     /**
      * The resource navigation label.
      */
-    protected static ?string $navigationLabel = 'Userss';
+    protected static ?string $navigationLabel = 'Users';
     
     /**
      * The resource navigation icon.
@@ -41,12 +41,12 @@ class Users extends Resource
     /**
      * The model label (singular).
      */
-    protected static ?string $modelLabel = 'users';
+    protected static ?string $modelLabel = 'user';
     
     /**
      * The plural model label.
      */
-    protected static ?string $pluralModelLabel = 'userss';
+    protected static ?string $pluralModelLabel = 'users';
     
     /**
      * The record title attribute for identification.
@@ -78,7 +78,7 @@ class Users extends Resource
             ])
             ->headerActions([
                 HeaderAction::make('create')
-                    ->label('Create Users')
+                    ->label('Create User')
                     ->icon('plus')
                     ->color('primary'),
             ])
@@ -95,7 +95,7 @@ class Users extends Resource
                     ->requiresConfirmation()
                     ->action(function ($record) {
                         $record->delete();
-                        session()->flash('success', 'Users deleted successfully.');
+                        session()->flash('success', 'User deleted successfully.');
                     }),
             ])
             ->bulkActions([
@@ -105,8 +105,8 @@ class Users extends Resource
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function ($records) {
-                        App\Models\Users::whereIn('id', $records)->delete();
-                        session()->flash('success', count($records) . ' userss deleted successfully.');
+                        App\Models\User::whereIn('id', $records)->delete();
+                        session()->flash('success', count($records) . ' users deleted successfully.');
                     }),
             ]);
     }
