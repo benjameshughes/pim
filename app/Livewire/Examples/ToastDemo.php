@@ -135,6 +135,32 @@ class ToastDemo extends Component
         Toast::clear();
         $this->dispatch('toast-added'); // Trigger refresh
     }
+    
+    /**
+     * Demo navigation persistence.
+     */
+    public function showNavigationPersistent()
+    {
+        Toast::success('I persist across pages!', 'Navigate to another page using wire:navigate and I\'ll still be here.')
+            ->persist() // This makes it survive navigation
+            ->duration(15000) // Long duration to test
+            ->send();
+            
+        Toast::info('I disappear on navigation', 'I\'m a regular toast that won\'t survive page changes.')
+            ->duration(15000)
+            ->send();
+    }
+    
+    /**
+     * Demo both persist() and persistent().
+     */
+    public function showPersistentAndPersistent()
+    {
+        Toast::warning('Ultimate Persistence!', 'I survive navigation AND won\'t auto-dismiss.')
+            ->persist() // Survives navigation
+            ->persistent() // Won't auto-dismiss
+            ->send();
+    }
 
     public function render()
     {

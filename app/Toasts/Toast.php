@@ -24,6 +24,7 @@ class Toast implements ToastContract, Arrayable
     public string $position;
     public bool $closable = true;
     public bool $persistent = false;
+    public bool $navigatePersist = false; // Whether toast persists across wire:navigate
     public array $data = [];
 
     public function __construct()
@@ -177,6 +178,16 @@ class Toast implements ToastContract, Arrayable
     }
 
     /**
+     * Make the toast persist across wire:navigate page changes.
+     */
+    public function persist(bool $persist = true): static
+    {
+        $this->navigatePersist = $persist;
+
+        return $this;
+    }
+
+    /**
      * Add custom data to the toast.
      */
     public function data(array $data): static
@@ -289,6 +300,7 @@ class Toast implements ToastContract, Arrayable
             'position' => $this->position,
             'closable' => $this->closable,
             'persistent' => $this->persistent,
+            'navigatePersist' => $this->navigatePersist,
             'duration' => $this->duration ?? config('toasts.defaults.duration', 4000),
             'icon' => $this->icon ?? null,
             'actions' => array_map(fn($action) => $action->toArray(), $this->actions ?? []),

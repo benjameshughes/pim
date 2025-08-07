@@ -63,6 +63,35 @@
                     Batch Toasts
                 </flux:button>
             </div>
+            
+            <!-- Navigation Persistence Demo -->
+            <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <flux:heading size="md" class="mb-2">Navigation Persistence (wire:navigate)</flux:heading>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Test toasts that persist across page navigation when using wire:navigate.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <flux:button variant="primary" wire:click="showNavigationPersistent">
+                        <flux:icon name="navigation" class="mr-2 h-4 w-4" />
+                        Show Navigation Test
+                    </flux:button>
+                    
+                    <flux:button variant="warning" wire:click="showPersistentAndPersistent">
+                        <flux:icon name="shield" class="mr-2 h-4 w-4" />
+                        Ultimate Persistence
+                    </flux:button>
+                    
+                    <flux:button variant="ghost" href="{{ route('products.index') }}" wire:navigate>
+                        <flux:icon name="external-link" class="mr-2 h-4 w-4" />
+                        Navigate to Products
+                    </flux:button>
+                    
+                    <flux:button variant="ghost" href="{{ route('dashboard') }}" wire:navigate>
+                        <flux:icon name="home" class="mr-2 h-4 w-4" />
+                        Navigate to Dashboard
+                    </flux:button>
+                </div>
+            </div>
         </div>
 
         <!-- Custom Toast Builder Section -->

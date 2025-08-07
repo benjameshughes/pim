@@ -19,10 +19,18 @@ class ToastContainer extends Component
         return $toastManager->getToastsByPosition();
     }
 
+    /**
+     * Get all toasts as a flat array for Alpine store initialization.
+     */
+    public function getAllToastsProperty(): Collection
+    {
+        $toastManager = app(ToastManager::class);
+        return $toastManager->all();
+    }
 
     public function mount()
     {
-        // No longer need to load toasts in mount since we use computed property
+        // Initial loading doesn't need to dispatch since template will handle it
     }
 
     /**
@@ -32,7 +40,7 @@ class ToastContainer extends Component
     {
         $toastManager = app(ToastManager::class);
         $toastManager->remove($toastId);
-        // No need to loadToasts() - computed property will refresh automatically
+        // Component will re-render and Alpine store will sync
     }
 
     /**
@@ -42,7 +50,7 @@ class ToastContainer extends Component
     {
         $toastManager = app(ToastManager::class);
         $toastManager->clear();
-        // No need to loadToasts() - computed property will refresh automatically
+        // Component will re-render and Alpine store will sync
     }
 
     /**
@@ -51,8 +59,7 @@ class ToastContainer extends Component
     #[On('toast-added')]
     public function handleToastAdded(): void
     {
-        // Component will re-render automatically, fetching fresh data via computed property
-        $this->render();
+        // Component will re-render and Alpine store will sync
     }
 
     /**
@@ -62,6 +69,28 @@ class ToastContainer extends Component
     public function handleToastRemoved(string $toastId): void
     {
         $this->removeToast($toastId);
+    }
+
+    /**
+     * Listen for toast removal events from Alpine store.
+     */
+    #[On('toast-removed-from-store')]
+    public function handleToastRemovedFromStore(string $toastId): void
+    {
+        $toastManager = app(ToastManager::class);
+        $toastManager->remove($toastId);
+        // Don't dispatch back to Alpine to avoid loops
+    }
+
+    /**
+     * Listen for toasts cleared events from Alpine store.
+     */
+    #[On('toasts-cleared-from-store')]
+    public function handleTostsClearedFromStore(): void
+    {
+        $toastManager = app(ToastManager::class);
+        $toastManager->clear();
+        // Don't dispatch back to Alpine to avoid loops
     }
 
     /**
@@ -81,6 +110,7 @@ class ToastContainer extends Component
             'actionData' => $actionData,
         ]);
     }
+
 
     public function render()
     {

@@ -1,26 +1,26 @@
 <?php
 
 use App\Livewire\Dashboard;
-use App\Livewire\PIM\Products\Management\ProductIndex;
-use App\Livewire\PIM\Products\Management\ProductForm;
-use App\Livewire\PIM\Products\Variants\VariantIndex;
-use App\Livewire\PIM\Products\Variants\VariantForm;
-use App\Livewire\PIM\Products\Variants\VariantView;
-use App\Livewire\PIM\Products\Variants\VariantEdit;
+use App\Livewire\Pim\Products\Management\ProductIndex;
+use App\Livewire\Pim\Products\Management\ProductForm;
+use App\Livewire\Pim\Products\Variants\VariantIndex;
+use App\Livewire\Pim\Products\Variants\VariantForm;
+use App\Livewire\Pim\Products\Variants\VariantView;
+use App\Livewire\Pim\Products\Variants\VariantEdit;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Livewire\DataExchange\Import\ImportData;
 use App\Livewire\DataExchange\Import\ImportDataRefactored;
 use App\Livewire\DataExchange\Import\BulkOperations;
-use App\Livewire\PIM\Barcodes\BarcodeIndex;
-use App\Livewire\PIM\Barcodes\Pool\PoolManager;
-use App\Livewire\PIM\Barcodes\Pool\BarcodePoolImport;
-use App\Livewire\PIM\Pricing\PricingManager;
-use App\Livewire\PIM\Media\ImageManager;
-use App\Livewire\PIM\Attributes\AttributeDefinitionsManager;
+use App\Livewire\Pim\Barcodes\BarcodeIndex;
+use App\Livewire\Pim\Barcodes\Pool\PoolManager;
+use App\Livewire\Pim\Barcodes\Pool\BarcodePoolImport;
+use App\Livewire\Pim\Pricing\PricingManager;
+use App\Livewire\Pim\Media\ImageManager;
+use App\Livewire\Pim\Attributes\AttributeDefinitionsManager;
 use App\Livewire\DataExchange\Export\ShopifyExport;
-use App\Livewire\PIM\Products\Management\DeleteProduct;
-use App\Livewire\PIM\Products\Variants\DeleteVariant;
+use App\Livewire\Pim\Products\Management\DeleteProduct;
+use App\Livewire\Pim\Products\Variants\DeleteVariant;
 use App\Livewire\Archive\DeletedProductsArchive;
 use App\Livewire\DataExchange\Sync\MiraklSync;
 use App\Livewire\DataExchange\Sync\ShopifySync;
@@ -51,7 +51,7 @@ Route::middleware(['auth'])->group(function () {
         
         // Pool management routes
         Route::prefix('pool')->name('pool.')->group(function () {
-            Route::get('/', \App\Livewire\PIM\Barcodes\Pool\PoolManagerLite::class)->name('index');
+            Route::get('/', \App\Livewire\Pim\Barcodes\Pool\PoolManagerLite::class)->name('index');
             Route::get('/full', PoolManager::class)->name('full');
             Route::get('/import', BarcodePoolImport::class)->name('import');
         });
@@ -110,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('products')->name('products.')->group(function () {
         // Specific routes MUST come before wildcard routes
         Route::get('/', ProductIndex::class)->name('index');
-        Route::get('create', \App\Livewire\PIM\Products\Management\ProductWizard::class)->name('create');
+        Route::get('create', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('create');
         
         // Variants
         Route::get('variants', VariantIndex::class)->name('variants.index');
@@ -141,16 +141,33 @@ Route::middleware(['auth'])->group(function () {
         
         // Product view routes - organized like bulk operations
         Route::prefix('{product}')->name('product.')->group(function () {
-            Route::get('/overview', \App\Livewire\PIM\Products\Management\ProductView::class)->name('overview');
-            Route::get('/variants', \App\Livewire\PIM\Products\Management\ProductView::class)->name('variants');
-            Route::get('/images', \App\Livewire\PIM\Products\Management\ProductView::class)->name('images');
-            Route::get('/attributes', \App\Livewire\PIM\Products\Management\ProductView::class)->name('attributes');
-            Route::get('/sync', \App\Livewire\PIM\Products\Management\ProductView::class)->name('sync');
+            Route::get('/overview', \App\Livewire\Pim\Products\Management\ProductView::class)->name('overview');
+            Route::get('/variants', \App\Livewire\Pim\Products\Management\ProductView::class)->name('variants');
+            Route::get('/images', \App\Livewire\Pim\Products\Management\ProductView::class)->name('images');
+            Route::get('/attributes', \App\Livewire\Pim\Products\Management\ProductView::class)->name('attributes');
+            Route::get('/sync', \App\Livewire\Pim\Products\Management\ProductView::class)->name('sync');
             Route::get('/edit', function(Product $product) { return view('products.products.edit', compact('product')); })->name('edit');
         });
         
         // Wildcard routes MUST come last
-        Route::get('{product}', \App\Livewire\PIM\Products\Management\ProductView::class)->name('view');
+        Route::get('{product}', \App\Livewire\Pim\Products\Management\ProductView::class)->name('view');
+    });
+
+    // Image Upload API Routes (for AJAX/API usage)
+    Route::middleware(['auth'])->prefix('api/images')->name('api.images.')->group(function () {
+        Route::post('upload', [\App\Http\Controllers\ImageUploadController::class, 'upload'])->name('upload');
+        Route::delete('{image}', [\App\Http\Controllers\ImageUploadController::class, 'delete'])->name('delete');
+        Route::put('reorder', [\App\Http\Controllers\ImageUploadController::class, 'reorder'])->name('reorder');
+        Route::get('{modelType}/{modelId}', [\App\Http\Controllers\ImageUploadController::class, 'index'])->name('index');
+    });
+
+    // Example Routes (for demonstration)
+    Route::middleware(['auth'])->prefix('examples')->name('examples.')->group(function () {
+        Route::get('variant/{variant}/images', \App\Livewire\Examples\VariantImageManager::class)->name('variant.images');
+        Route::get('product-creation', \App\Livewire\Examples\ProductCreationWithImages::class)->name('product.creation');
+        Route::get('toast-demo', \App\Livewire\Examples\ToastDemo::class)->name('toast.demo');
+        Route::get('toast-stacking', \App\Livewire\Examples\ToastStackingDemo::class)->name('toast.stacking');
+        Route::get('stacked-list', \App\Livewire\ExampleStackedList::class)->name('stacked.list');
     });
 
     // Admin Routes

@@ -60,6 +60,14 @@ class ToastManager
     }
 
     /**
+     * Alias for getToasts() - returns all toasts as flat collection.
+     */
+    public function all(): Collection
+    {
+        return $this->getToasts();
+    }
+
+    /**
      * Get toasts grouped by position.
      */
     public function getToastsByPosition(): Collection
@@ -156,6 +164,11 @@ class ToastManager
             ->closable($data['closable'] ?? true)
             ->persistent($data['persistent'] ?? false)
             ->duration($data['duration'] ?? config('toasts.defaults.duration'));
+        
+        // Handle navigation persistence
+        if (isset($data['navigatePersist'])) {
+            $toast->persist($data['navigatePersist']);
+        }
 
         if (!empty($data['icon'])) {
             $toast->icon($data['icon']);
