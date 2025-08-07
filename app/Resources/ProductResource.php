@@ -1,36 +1,70 @@
 <?php
 
-namespace App\Livewire\Pim\Products\Management;
+namespace App\Resources;
 
 use App\Models\Product;
-use App\Table\Table;
 use App\Table\Column;
 use App\Table\Filter;
 use App\Table\SelectFilter;
 use App\Table\Action;
 use App\Table\HeaderAction;
 use App\Table\BulkAction;
-use App\Table\Concerns\InteractsWithTable;
-use Livewire\Attributes\Layout;
-use Livewire\Component;
-use Livewire\WithPagination;
+use App\Table\Table;
 
-#[Layout('components.layouts.app')]
-class ProductIndex extends Component
+/**
+ * Product Resource
+ * 
+ * Pure PHP resource class that defines how products should be managed
+ * across different systems (Livewire tables, API endpoints, etc.).
+ */
+class ProductResource extends Resource
 {
-    use InteractsWithTable, WithPagination;
-    
-    protected $listeners = [
-        'refreshList' => '$refresh'
-    ];
+    /**
+     * The resource's associated Eloquent model.
+     */
+    protected static ?string $model = Product::class;
     
     /**
-     * Configure the table (FilamentPHP-style).
+     * The resource navigation label.
      */
-    public function table(Table $table): Table
+    protected static ?string $navigationLabel = 'Products';
+    
+    /**
+     * The resource navigation icon.
+     */
+    protected static ?string $navigationIcon = 'cube';
+    
+    /**
+     * The resource navigation group.
+     */
+    protected static ?string $navigationGroup = 'Product Management';
+    
+    /**
+     * The resource navigation sort order.
+     */
+    protected static ?int $navigationSort = 1;
+    
+    /**
+     * The model label (singular).
+     */
+    protected static ?string $modelLabel = 'product';
+    
+    /**
+     * The plural model label.
+     */
+    protected static ?string $pluralModelLabel = 'products';
+    
+    /**
+     * The record title attribute for identification.
+     */
+    protected static ?string $recordTitleAttribute = 'name';
+    
+    /**
+     * Configure the resource table.
+     */
+    public static function table(Table $table): Table
     {
         return $table
-            ->model(Product::class)
             ->title('Product Catalog')
             ->subtitle('Manage your product catalog with advanced filtering and bulk operations')
             ->searchable(['name', 'parent_sku', 'description'])
@@ -95,7 +129,8 @@ class ProductIndex extends Component
                     
                 Action::make('edit')
                     ->label('Edit')
-                    ->icon('pencil'),
+                    ->icon('pencil')
+                    ->url(fn (Product $record) => static::getUrl('edit', ['record' => $record])),
                     
                 Action::make('delete')
                     ->label('Delete')
@@ -136,10 +171,5 @@ class ProductIndex extends Component
                         session()->flash('success', count($records) . ' products deactivated.');
                     }),
             ]);
-    }
-
-    public function render()
-    {
-        return view('livewire.pim.products.management.product-index');
     }
 }
