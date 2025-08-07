@@ -14,13 +14,13 @@ use Symfony\Component\Console\Input\InputOption;
  * FilamentPHP-inspired Artisan command to generate resource classes.
  * Creates pure PHP resource classes that work across different systems.
  */
-#[AsCommand(name: 'make:resource')]
+#[AsCommand(name: 'atom:resource')]
 class MakeResourceCommand extends GeneratorCommand implements PromptsForMissingInput
 {
     /**
      * The console command name.
      */
-    protected $name = 'make:resource';
+    protected $name = 'atom:resource';
 
     /**
      * The console command description.
@@ -46,7 +46,7 @@ class MakeResourceCommand extends GeneratorCommand implements PromptsForMissingI
      */
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\Resources';
+        return $rootNamespace . '\Atom\Resources';
     }
 
     /**
