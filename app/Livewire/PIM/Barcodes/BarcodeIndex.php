@@ -4,33 +4,32 @@ namespace App\Livewire\Pim\Barcodes;
 
 use App\Models\Barcode;
 use App\Models\ProductVariant;
-use App\StackedList\Concerns\InteractsWithStackedList;
-use App\StackedList\Table;
-use App\StackedList\Columns\Column;
-use App\StackedList\Actions\Action;
+use App\Table\Table;
+use App\Table\Column;
+use App\Table\Concerns\InteractsWithTable;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class BarcodeIndex extends Component
 {
-    use InteractsWithStackedList;
-
+    use InteractsWithTable;
+    
     public $parentProductsOnly = false;
 
     protected $listeners = [
         'refreshList' => '$refresh'
     ];
-
+    
     /**
-     * Configure the StackedList table (FilamentPHP-style).
+     * Configure the table (FilamentPHP-style).
      */
-    public function stackedList(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->model(Barcode::class)
             ->title('Barcode Manager')
-            ->searchable(['barcode', 'productVariant.product.name'])
+            ->subtitle('Manage product barcodes and generate new ones')
             ->with(['productVariant.product'])
             ->columns([
                 Column::make('barcode')
@@ -44,10 +43,12 @@ class BarcodeIndex extends Component
 
                 Column::make('barcode_type')
                     ->label('Type')
+                    ->badge([
+                        'EAN13' => 'bg-blue-100 text-blue-800',
+                        'CODE128' => 'bg-green-100 text-green-800',
+                        'UPC' => 'bg-purple-100 text-purple-800',
+                    ])
                     ->sortable(),
-            ])
-            ->actions([
-                Action::view()->route('barcode.view'),
             ]);
     }
 

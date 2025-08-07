@@ -16,8 +16,8 @@
     </div>
 @endif
 
-{{-- FilamentPHP-style table rendering --}}
-{!! $this->table !!}
+{{-- NEW: Clean Table System - FilamentPHP-style magic method rendering --}}
+{{ $this->table }}
 
 {{--    @if (session()->has('success'))--}}
 {{--        <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">--}}

@@ -4,23 +4,12 @@ namespace App\Livewire\Pim\Products\Variants;
 
 use App\Models\ProductVariant;
 use App\Models\Product;
-use App\Contracts\HasStackedList;
-use App\Concerns\HasStackedListBehavior;
-use App\StackedList\StackedListBuilder;
-use App\StackedList\Columns\Column;
-use App\StackedList\Columns\Badge;
-use App\StackedList\Actions\BulkAction;
-use App\StackedList\Actions\Action;
-use App\StackedList\Actions\HeaderAction;
-use App\StackedList\Filters\Filter;
-use App\StackedList\EmptyStateAction;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-class VariantIndex extends Component implements HasStackedList
+class VariantIndex extends Component
 {
-    use HasStackedListBehavior;
 
     public $showDeleteModal = false;
     public $variantToDelete = null;

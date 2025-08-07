@@ -3,15 +3,12 @@
 namespace App\Livewire\Examples;
 
 use App\Models\Product;
-use App\Contracts\HasStackedList;
-use App\Concerns\HasStackedListBehavior;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class AutoProductList extends Component
 {
-    use HasStackedListBehavior;
 
     protected $listeners = [
         'refreshList' => '$refresh'

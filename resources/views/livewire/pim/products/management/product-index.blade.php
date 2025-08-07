@@ -4,6 +4,6 @@
     </div>
 @endif
 
-{{-- FilamentPHP-style table rendering --}}
-{!! $this->table !!}
+{{-- NEW: Clean Table System - FilamentPHP-style magic method rendering --}}
+{{ $this->table }}
 
