@@ -413,6 +413,93 @@ The framework works with:
 - ✅ Any CSS framework (Tailwind, Bootstrap, custom)
 - ✅ Any UI library (Flux, Blade UI, Livewire UI, custom)
 
+### Console Commands
+
+The Atom framework includes powerful console commands for resource generation:
+
+#### `php artisan atom:resource {name}`
+
+Generate new Atom resources with intelligent naming:
+
+```bash
+# Simple usage - automatically appends "Resource"
+php artisan atom:resource Product    # → ProductResource.php  
+php artisan atom:resource User       # → UserResource.php
+php artisan atom:resource Order      # → OrderResource.php
+
+# Still works with full names (no duplication)
+php artisan atom:resource ProductResource  # → ProductResource.php
+```
+
+**Command Features:**
+- ✅ **Smart Naming**: Auto-appends "Resource" suffix if not provided
+- ✅ **Correct Namespace**: Creates in `App\Atom\Resources` with proper imports
+- ✅ **Model Detection**: Automatically infers model name and creates proper references
+- ✅ **Full Template**: Generates complete resource with table configuration, actions, and bulk operations
+- ✅ **No Conflicts**: Uses `atom:resource` to avoid Laravel's default `make:resource`
+
+**Options:**
+- `--model=ModelName` - Specify different model name
+- `--model-namespace=Namespace` - Custom model namespace (default: App\Models)
+- `--force` - Overwrite existing resource
+- `--simple` - Generate minimal configuration
+- `--generate` - Auto-generate based on model (coming soon)
+
+**Generated Structure:**
+```php
+<?php
+
+namespace App\Atom\Resources;
+
+use \App\Models\Product;
+use App\Atom\Resources\Resource;
+// ... other imports
+
+class ProductResource extends Resource
+{
+    protected static ?string $model = \App\Models\Product::class;
+    protected static ?string $navigationLabel = 'Products';
+    protected static ?string $navigationIcon = 'cube';
+    
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([...])
+            ->actions([...])
+            ->bulkActions([...]);
+    }
+}
+```
+
+### Configuration
+
+Customize the framework through dedicated configuration classes:
+
+#### Navigation Configuration (`app/Atom/Config/NavigationConfig.php`)
+```php
+// Add your application's navigation items
+Navigation::make()
+    ->label('Products')
+    ->route('products.index')
+    ->icon('package')
+    ->group('Catalog')
+    ->sort(10)
+    ->register();
+```
+
+#### Framework Configuration (`app/Atom/Config/AtomConfig.php`)
+```php
+// Customize framework behavior
+public static function getDefaultLayouts(): array
+{
+    return [
+        'components.layouts.app',    // Try these layouts in order
+        'layouts.app',
+        'app',
+    ];
+}
+```
+
 ## Design Patterns & Architecture
 
 ### Builder Pattern / Fluent API
