@@ -267,6 +267,74 @@ trait InteractsWithTable
         return false;
     }
     
+    // ===== ACTION EXECUTION METHODS =====
+    
+    /**
+     * Execute a header action
+     */
+    public function executeTableHeaderAction(string $actionKey): void
+    {
+        $table = $this->getTableProperty();
+        $config = $table->toArray();
+        
+        foreach ($config['headerActions'] as $actionConfig) {
+            if ($actionConfig['key'] === $actionKey) {
+                if ($actionConfig['hasAction']) {
+                    // Execute the action callback if it exists
+                    // This would need the actual Action object, so we'll handle it in a future iteration
+                }
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Execute a row action
+     */
+    public function executeTableAction(string $actionKey, $recordId): void
+    {
+        $table = $this->getTableProperty();
+        $config = $table->toArray();
+        
+        foreach ($config['actions'] as $actionConfig) {
+            if ($actionConfig['key'] === $actionKey) {
+                if ($actionConfig['hasAction']) {
+                    // Execute the action callback if it exists
+                    // This would need the actual Action object and record
+                }
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Execute a bulk action
+     */
+    public function executeTableBulkAction(string $actionKey): void
+    {
+        if (empty($this->selectedTableRecords)) {
+            return;
+        }
+        
+        $table = $this->getTableProperty();
+        $config = $table->toArray();
+        
+        foreach ($config['bulkActions'] as $actionConfig) {
+            if ($actionConfig['key'] === $actionKey) {
+                if ($actionConfig['hasAction']) {
+                    // Execute the bulk action callback if it exists
+                    // This would need the actual BulkAction object and selected records
+                }
+                
+                // Clear selection if configured to do so
+                if ($actionConfig['deselectRecordsAfterCompletion'] ?? true) {
+                    $this->clearSelectedTableRecords();
+                }
+                break;
+            }
+        }
+    }
+    
     // ===== ABSTRACT METHODS =====
     
     /**

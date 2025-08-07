@@ -27,6 +27,7 @@ class Table implements Htmlable
     protected array $filters = [];
     protected array $actions = [];
     protected array $bulkActions = [];
+    protected array $headerActions = [];
     protected array $with = [];
     protected array $withCount = [];
     protected int $recordsPerPage = 10;
@@ -121,6 +122,15 @@ class Table implements Htmlable
     public function filters(array $filters): static
     {
         $this->filters = $filters;
+        return $this;
+    }
+    
+    /**
+     * Set header actions.
+     */
+    public function headerActions(array $actions): static
+    {
+        $this->headerActions = $actions;
         return $this;
     }
     
@@ -290,21 +300,30 @@ class Table implements Htmlable
             return;
         }
         
-        $filters = $this->livewire->getTableFilters();
+        $activeFilters = $this->livewire->getTableFilters();
         
-        foreach ($filters as $key => $value) {
-            if (empty($value) && $value !== '0' && $value !== 0 && $value !== false) {
-                continue;
+        foreach ($this->filters as $filter) {
+            $filterKey = is_object($filter) ? $filter->getKey() : $filter['key'];
+            $value = $activeFilters[$filterKey] ?? null;
+            
+            // Skip empty values (but allow 0, '0', false)
+            if (is_null($value) || $value === '' || (is_array($value) && empty($value))) {
+                // Check for default values
+                if (is_object($filter) && $filter->hasDefault()) {
+                    $value = $filter->getDefault();
+                } else {
+                    continue;
+                }
             }
             
-            $filterConfig = $this->filters[$key] ?? null;
-            if (!$filterConfig) {
-                continue;
-            }
-            
-            // Apply filter based on its configuration
-            if (isset($filterConfig['query']) && is_callable($filterConfig['query'])) {
-                $filterConfig['query']($query, $value);
+            // Apply the filter
+            if (is_object($filter)) {
+                $filterQuery = $filter->getQuery();
+                if ($filterQuery) {
+                    $filterQuery($query, $value);
+                }
+            } elseif (isset($filter['query']) && is_callable($filter['query'])) {
+                $filter['query']($query, $value);
             }
         }
     }
@@ -397,6 +416,11 @@ class Table implements Htmlable
             }, $this->filters),
             
             // Actions
+            'headerActions' => array_map(function ($action) {
+                return is_object($action) && method_exists($action, 'toArray') 
+                    ? $action->toArray() 
+                    : $action;
+            }, $this->headerActions),
             'actions' => array_map(function ($action) {
                 return is_object($action) && method_exists($action, 'toArray') 
                     ? $action->toArray() 
