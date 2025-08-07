@@ -1,81 +1,87 @@
 <?php
 
-namespace App\Toasts\Contracts;
+namespace App\UI\Toasts\Contracts;
 
+/**
+ * Toast Contract Interface
+ * 
+ * FilamentPHP-inspired contract for toast notifications.
+ * Defines the core interface for building and sending toast notifications.
+ */
 interface ToastContract
 {
     /**
-     * Create a new toast notification.
+     * Create a new toast instance
      */
     public static function make(): static;
-
+    
     /**
-     * Set the toast title.
+     * Set the toast title
      */
     public function title(string $title): static;
-
+    
     /**
-     * Set the toast body content.
+     * Set the toast body content
      */
-    public function body(?string $body): static;
-
+    public function body(string $body): static;
+    
     /**
-     * Set the toast type.
+     * Set the toast icon
+     */
+    public function icon(string $icon): static;
+    
+    /**
+     * Set the toast type
      */
     public function type(string $type): static;
-
+    
     /**
-     * Set the toast position.
+     * Set toast color
+     */
+    public function color(string $color): static;
+    
+    /**
+     * Set toast duration in milliseconds
+     */
+    public function duration(int $duration): static;
+    
+    /**
+     * Set toast duration in seconds
+     */
+    public function seconds(int $seconds): static;
+    
+    /**
+     * Make toast persistent (requires manual dismiss)
+     */
+    public function persistent(): static;
+    
+    /**
+     * Set toast position
      */
     public function position(string $position): static;
-
+    
     /**
-     * Make the toast closable.
+     * Add action to toast
      */
-    public function closable(bool $closable = true): static;
-
+    public function action($action): static;
+    
     /**
-     * Make the toast persistent (won't auto-dismiss).
+     * Add multiple actions to toast
      */
-    public function persistent(bool $persistent = true): static;
-
+    public function actions(array $actions): static;
+    
     /**
-     * Send the toast notification.
+     * Send the toast notification
      */
-    public function send(): static;
-
+    public function send(): void;
+    
     /**
-     * Get the toast ID.
+     * Convert toast to array format
+     */
+    public function toArray(): array;
+    
+    /**
+     * Get unique toast identifier
      */
     public function getId(): string;
-
-    /**
-     * Get the toast title.
-     */
-    public function getTitle(): string;
-
-    /**
-     * Get the toast body.
-     */
-    public function getBody(): ?string;
-
-    /**
-     * Get the toast type.
-     */
-    public function getType(): string;
-
-    /**
-     * Get the toast position.
-     */
-    public function getPosition(): string;
-
-    /**
-     * Check if the toast is closable.
-     */
-    public function isClosable(): bool;
-
-    /**
-     * Check if the toast is persistent.
-     */
-    public function isPersistent(): bool;
 }

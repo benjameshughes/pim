@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Examples;
 
-use App\Toasts\Toast;
-use App\Toasts\ToastAction;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\Toast;
+use App\UI\Toasts\ToastAction;
+use App\UI\Toasts\ToastManager;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;

@@ -1,35 +1,36 @@
 <?php
 
-namespace App\Toasts;
+namespace App\UI\Toasts;
 
-use App\Toasts\Concerns\HasActions;
-use App\Toasts\Concerns\HasIcon;
-use App\Toasts\Concerns\HasStyling;
-use App\Toasts\Concerns\HasTiming;
-use App\Toasts\Contracts\ToastContract;
+use App\UI\Toasts\Concerns\HasActions;
+use App\UI\Toasts\Concerns\HasContent;
+use App\UI\Toasts\Concerns\HasStyling;
+use App\UI\Toasts\Concerns\HasTiming;
+use App\UI\Toasts\Contracts\ToastContract;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Str;
 
+/**
+ * Toast Class
+ * 
+ * FilamentPHP-inspired toast notification builder.
+ * Provides a fluent API for creating rich toast notifications.
+ */
 class Toast implements ToastContract, Arrayable
 {
-    use HasActions;
-    use HasIcon;
+    use HasContent;
     use HasStyling;
     use HasTiming;
+    use HasActions;
 
     protected string $id;
-    public string $title = '';
-    public ?string $body = null;
-    public string $type = 'info';
-    public string $position;
-    public bool $closable = true;
-    public bool $persistent = false;
-    public bool $navigatePersist = false; // Whether toast persists across wire:navigate
-    public array $data = [];
+    protected bool $navigatePersist = false; // Whether toast persists across wire:navigate
+    protected array $data = [];
 
     public function __construct()
     {
         $this->id = Str::uuid()->toString();
+        // Initialize defaults from config
         $this->position = config('toasts.defaults.position', 'top-right');
         $this->duration = config('toasts.defaults.duration', 4000);
         $this->type = config('toasts.defaults.type', 'info');
@@ -46,169 +47,97 @@ class Toast implements ToastContract, Arrayable
     }
 
     /**
-     * Create a success toast notification.
+     * Create a success toast (FilamentPHP style)
      */
-    public static function success(?string $title = null, ?string $body = null): static
+    public static function success(?string $title = null): static
     {
-        $toast = static::make()->type('success');
+        $toast = static::make()->success();
         
         if ($title !== null) {
             $toast->title($title);
-        }
-        
-        if ($body !== null) {
-            $toast->body($body);
         }
         
         return $toast;
     }
 
     /**
-     * Create an error toast notification.
+     * Create an error toast (FilamentPHP style)
      */
-    public static function error(?string $title = null, ?string $body = null): static
+    public static function error(?string $title = null): static
     {
-        $toast = static::make()->type('error');
+        $toast = static::make()->error();
         
         if ($title !== null) {
             $toast->title($title);
-        }
-        
-        if ($body !== null) {
-            $toast->body($body);
         }
         
         return $toast;
     }
 
     /**
-     * Create a warning toast notification.
+     * Create a warning toast (FilamentPHP style)
      */
-    public static function warning(?string $title = null, ?string $body = null): static
+    public static function warning(?string $title = null): static
     {
-        $toast = static::make()->type('warning');
+        $toast = static::make()->warning();
         
         if ($title !== null) {
             $toast->title($title);
-        }
-        
-        if ($body !== null) {
-            $toast->body($body);
         }
         
         return $toast;
     }
 
     /**
-     * Create an info toast notification.
+     * Create an info toast (FilamentPHP style)
      */
-    public static function info(?string $title = null, ?string $body = null): static
+    public static function info(?string $title = null): static
     {
-        $toast = static::make()->type('info');
+        $toast = static::make()->info();
         
         if ($title !== null) {
             $toast->title($title);
-        }
-        
-        if ($body !== null) {
-            $toast->body($body);
         }
         
         return $toast;
     }
 
     /**
-     * Set the toast title.
-     */
-    public function title(string $title): static
-    {
-        $this->title = $title;
-
-        return $this;
-    }
-
-    /**
-     * Set the toast body content.
-     */
-    public function body(?string $body): static
-    {
-        $this->body = $body;
-
-        return $this;
-    }
-
-    /**
-     * Set the toast type.
-     */
-    public function type(string $type): static
-    {
-        $this->type = $type;
-
-        return $this;
-    }
-
-    /**
-     * Set the toast position.
-     */
-    public function position(string $position): static
-    {
-        $this->position = $position;
-
-        return $this;
-    }
-
-    /**
-     * Make the toast closable.
-     */
-    public function closable(bool $closable = true): static
-    {
-        $this->closable = $closable;
-
-        return $this;
-    }
-
-    /**
-     * Make the toast persistent (won't auto-dismiss).
-     */
-    public function persistent(bool $persistent = true): static
-    {
-        $this->persistent = $persistent;
-
-        return $this;
-    }
-
-    /**
-     * Make the toast persist across wire:navigate page changes.
+     * Make the toast persist across wire:navigate page changes (FilamentPHP-inspired)
      */
     public function persist(bool $persist = true): static
     {
         $this->navigatePersist = $persist;
-
         return $this;
     }
 
     /**
-     * Add custom data to the toast.
+     * Check if toast persists across navigation
+     */
+    public function getNavigatePersist(): bool
+    {
+        return $this->navigatePersist;
+    }
+
+    /**
+     * Add custom data to the toast
      */
     public function data(array $data): static
     {
         $this->data = array_merge($this->data, $data);
-
         return $this;
     }
 
     /**
-     * Send the toast notification.
+     * Send the toast notification (FilamentPHP style)
      */
-    public function send(): static
+    public function send(): void
     {
-        app(\App\Toasts\ToastManager::class)->add($this);
-
-        return $this;
+        app(\App\UI\Toasts\ToastManager::class)->add($this);
     }
 
     /**
-     * Get the toast ID.
+     * Get the toast ID
      */
     public function getId(): string
     {
@@ -216,55 +145,7 @@ class Toast implements ToastContract, Arrayable
     }
 
     /**
-     * Get the toast title.
-     */
-    public function getTitle(): string
-    {
-        return $this->title;
-    }
-
-    /**
-     * Get the toast body.
-     */
-    public function getBody(): ?string
-    {
-        return $this->body;
-    }
-
-    /**
-     * Get the toast type.
-     */
-    public function getType(): string
-    {
-        return $this->type;
-    }
-
-    /**
-     * Get the toast position.
-     */
-    public function getPosition(): string
-    {
-        return $this->position;
-    }
-
-    /**
-     * Check if the toast is closable.
-     */
-    public function isClosable(): bool
-    {
-        return $this->closable;
-    }
-
-    /**
-     * Check if the toast is persistent.
-     */
-    public function isPersistent(): bool
-    {
-        return $this->persistent;
-    }
-
-    /**
-     * Get custom data.
+     * Get custom data
      */
     public function getData(): array
     {
@@ -272,41 +153,27 @@ class Toast implements ToastContract, Arrayable
     }
 
     /**
-     * Get the toast styling configuration.
-     */
-    public function getTypeConfig(): array
-    {
-        return config("toasts.types.{$this->type}", config('toasts.types.info'));
-    }
-
-    /**
-     * Get the position configuration.
-     */
-    public function getPositionConfig(): array
-    {
-        return config("toasts.positions.{$this->position}", config('toasts.positions.top-right'));
-    }
-
-    /**
-     * Convert the toast to an array.
+     * Convert the toast to an array (FilamentPHP-inspired)
      */
     public function toArray(): array
     {
         return [
             'id' => $this->id,
-            'title' => $this->title ?? '',
-            'body' => $this->body,
-            'type' => $this->type,
-            'position' => $this->position,
-            'closable' => $this->closable,
-            'persistent' => $this->persistent,
+            'title' => $this->getTitle(),
+            'body' => $this->getBody(),
+            'icon' => $this->getIcon(),
+            'type' => $this->getType(),
+            'color' => $this->getColor(),
+            'variant' => $this->getVariant(),
+            'position' => $this->getPosition(),
+            'duration' => $this->getDuration(),
+            'persistent' => $this->isPersistent(),
+            'closable' => $this->isClosable(),
             'navigatePersist' => $this->navigatePersist,
-            'duration' => $this->duration ?? config('toasts.defaults.duration', 4000),
-            'icon' => $this->icon ?? null,
-            'actions' => array_map(fn($action) => $action->toArray(), $this->actions ?? []),
-            'data' => $this->data ?? [],
-            'type_config' => $this->getTypeConfig(),
-            'position_config' => $this->getPositionConfig(),
+            'actions' => $this->getActionsArray(),
+            'data' => $this->data,
+            'classes' => $this->getClasses(),
+            'styles' => $this->getStyles(),
         ];
     }
 }

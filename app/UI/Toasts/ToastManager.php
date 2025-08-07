@@ -1,23 +1,41 @@
 <?php
 
-namespace App\Toasts;
+namespace App\UI\Toasts;
 
-use App\Toasts\Contracts\ToastContract;
-use App\Toasts\ToastAction;
+use App\UI\Toasts\Contracts\ToastContract;
 use Illuminate\Session\SessionManager;
 use Illuminate\Support\Collection;
+use Illuminate\Contracts\Support\Htmlable;
+use Livewire\Component;
 
-class ToastManager
+/**
+ * ToastManager Class
+ * 
+ * FilamentPHP-inspired toast management system.
+ * Works exactly like the Table class with Htmlable interface.
+ * Enables {{ $this->toasts }} magic in Blade templates.
+ */
+class ToastManager implements Htmlable
 {
     protected SessionManager $session;
     protected string $sessionKey;
     protected int $maxToasts;
+    protected ?Component $livewire = null;
 
     public function __construct(SessionManager $session)
     {
         $this->session = $session;
         $this->sessionKey = config('toasts.session_key', 'toasts');
         $this->maxToasts = config('toasts.max_toasts', 5);
+    }
+    
+    /**
+     * Set the Livewire component instance (like Table class)
+     */
+    public function setComponent(?Component $livewire): static
+    {
+        $this->livewire = $livewire;
+        return $this;
     }
 
     /**
@@ -245,5 +263,57 @@ class ToastManager
     public function info(string $title, ?string $body = null): Toast
     {
         return Toast::info()->title($title)->body($body);
+    }
+    
+    /**
+     * Find a toast by ID
+     */
+    public function find(string $toastId): ?ToastContract
+    {
+        return $this->getToasts()->first(function (ToastContract $toast) use ($toastId) {
+            return $toast->getId() === $toastId;
+        });
+    }
+    
+    /**
+     * Convert toasts to array format for rendering
+     */
+    public function toArray(): array
+    {
+        $toasts = $this->getToasts();
+        
+        return [
+            'toasts' => $toasts->map(fn($toast) => $toast->toArray())->toArray(),
+            'toastsByPosition' => $this->getToastsByPosition()->map(function ($positionToasts, $position) {
+                return [
+                    'position' => $position,
+                    'toasts' => $positionToasts->map(fn($toast) => $toast->toArray())->toArray(),
+                ];
+            })->toArray(),
+            'hasToasts' => $toasts->isNotEmpty(),
+            'positions' => $toasts->pluck('position')->unique()->values()->toArray(),
+        ];
+    }
+    
+    /**
+     * Convert to HTML (implements Htmlable interface)
+     * This enables {{ $this->toasts }} to work in Blade templates
+     * Exactly like the Table class
+     */
+    public function toHtml(): string
+    {
+        return view('components.toast-container')->with([
+            'toastManager' => $this,
+            'toasts' => $this->getToasts(),
+            'config' => $this->toArray(),
+        ])->render();
+    }
+    
+    /**
+     * Convert to string (enables string casting)
+     */
+    public function __toString(): string
+    {
+        return $this->toHtml();
     }
 }

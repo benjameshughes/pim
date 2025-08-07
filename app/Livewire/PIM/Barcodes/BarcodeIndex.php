@@ -112,8 +112,7 @@ class BarcodeIndex extends Component
                 HeaderAction::make('import')
                     ->label('Import Barcodes')
                     ->icon('upload')
-                    ->color('secondary')
-                    ->route('barcodes.import'),
+                    ->color('secondary'),
             ])
             ->actions([
                 Action::make('set_primary')

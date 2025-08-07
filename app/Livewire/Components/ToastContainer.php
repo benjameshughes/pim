@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Components;
 
-use App\Toasts\ToastManager;
+use App\UI\Toasts\ToastManager;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Component;

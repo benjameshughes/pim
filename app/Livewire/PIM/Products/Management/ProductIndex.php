@@ -90,7 +90,8 @@ class ProductIndex extends Component
             ->actions([
                 Action::make('view')
                     ->label('View')
-                    ->icon('eye'),
+                    ->icon('eye')
+                    ->route('product.variants.{variant}'),
                     
                 Action::make('edit')
                     ->label('Edit')

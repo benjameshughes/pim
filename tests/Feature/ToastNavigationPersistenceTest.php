@@ -1,7 +1,7 @@
 <?php
 
-use App\Toasts\Toast;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\Toast;
+use App\UI\Toasts\ToastManager;
 use Livewire\Livewire;
 
 beforeEach(function () {

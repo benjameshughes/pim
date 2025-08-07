@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Toasts\Concerns;
+namespace App\UI\Toasts\Concerns;
 
 trait HasIcon
 {

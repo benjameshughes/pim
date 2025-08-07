@@ -1,11 +1,11 @@
 <?php
 
-use App\Toasts\Toast;
+use App\UI\Toasts\Toast;
 use Livewire\Livewire;
 
 test('closing one toast does not close other toasts', function () {
     // Clear existing toasts
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create 3 toasts
     Toast::success('Toast 1', 'First toast message')->send();
@@ -39,7 +39,7 @@ test('closing one toast does not close other toasts', function () {
 });
 
 test('close button only closes its own toast', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create multiple toasts
     Toast::success('Success Toast')->send();
@@ -62,7 +62,7 @@ test('close button only closes its own toast', function () {
 });
 
 test('toasts remain independent when interacting with one', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create toasts with different configurations
     Toast::success('Persistent Toast')->persistent()->send();
@@ -89,7 +89,7 @@ test('toasts remain independent when interacting with one', function () {
 });
 
 test('multiple toasts can be closed in any order', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create 5 toasts
     for ($i = 1; $i <= 5; $i++) {

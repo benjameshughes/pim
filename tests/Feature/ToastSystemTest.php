@@ -1,10 +1,10 @@
 <?php
 
 use App\Livewire\Components\ToastContainer;
-use App\Toasts\Facades\Toast;
-use App\Toasts\Toast as ToastNotification;
-use App\Toasts\ToastAction;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\Facades\Toast;
+use App\UI\Toasts\Toast as ToastNotification;
+use App\UI\Toasts\ToastAction;
+use App\UI\Toasts\ToastManager;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -484,7 +484,7 @@ describe('Toast Manager Edge Cases', function () {
         // This should not throw an error about using object as array
         $reconstructedToast = $reconstructMethod->invoke($manager, $toastData);
         
-        expect($reconstructedToast)->toBeInstanceOf(\App\Toasts\Contracts\ToastContract::class);
+        expect($reconstructedToast)->toBeInstanceOf(\App\UI\Toasts\Contracts\ToastContract::class);
         expect($reconstructedToast->getTitle())->toBe('Test Toast');
         expect($reconstructedToast->getActions())->toHaveCount(2); // Only valid actions should be added
         expect($reconstructedToast->getActions()[0]->getLabel())->toBe('Array Action');

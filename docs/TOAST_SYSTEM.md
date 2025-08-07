@@ -43,7 +43,7 @@ The system provides global helper functions:
 ### Basic Usage
 
 ```php
-use App\Toasts\Facades\Toast;
+use App\UI\Toasts\Facades\Toast;
 
 // Simple success toast
 Toast::success('Operation Successful!', 'Your changes have been saved.')
@@ -77,8 +77,7 @@ toast('Information', 'Here is some helpful info.')->send();
 ### Advanced Features
 
 ```php
-use App\Toasts\Toast;
-use App\Toasts\ToastAction;
+use App\UI\Toasts\Toast;use App\UI\Toasts\ToastAction;
 
 // Toast with actions
 Toast::info('Confirmation Required', 'Do you want to proceed?')
@@ -109,7 +108,7 @@ Toast::make()
 ### In Livewire Components
 
 ```php
-use App\Toasts\Facades\Toast;
+use App\UI\Toasts\Facades\Toast;
 
 class MyLivewireComponent extends Component
 {
@@ -136,7 +135,7 @@ class MyLivewireComponent extends Component
 ### In Controllers
 
 ```php
-use App\Toasts\Facades\Toast;
+
 
 class ProductController extends Controller
 {

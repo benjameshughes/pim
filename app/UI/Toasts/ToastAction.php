@@ -1,10 +1,16 @@
 <?php
 
-namespace App\Toasts;
+namespace App\UI\Toasts;
 
 use Closure;
 use Illuminate\Contracts\Support\Arrayable;
 
+/**
+ * ToastAction Class
+ * 
+ * FilamentPHP-inspired action buttons for toast notifications.
+ * Supports URLs, callbacks, styling, and interaction behaviors.
+ */
 class ToastAction implements Arrayable
 {
     protected string $label;
@@ -13,6 +19,9 @@ class ToastAction implements Arrayable
     protected ?string $icon = null;
     protected array $classes = [];
     protected bool $shouldCloseToast = true;
+    protected string $color = 'primary';
+    protected string $variant = 'filled';
+    protected bool $openInNewTab = false;
 
     protected function __construct(string $label)
     {
@@ -72,12 +81,38 @@ class ToastAction implements Arrayable
     }
 
     /**
+     * Set action color (FilamentPHP style)
+     */
+    public function color(string $color): static
+    {
+        $this->color = $color;
+        return $this;
+    }
+
+    /**
+     * Set action variant (FilamentPHP style)
+     */
+    public function variant(string $variant): static
+    {
+        $this->variant = $variant;
+        return $this;
+    }
+
+    /**
+     * Open URL in new tab
+     */
+    public function openInNewTab(bool $openInNewTab = true): static
+    {
+        $this->openInNewTab = $openInNewTab;
+        return $this;
+    }
+
+    /**
      * Set whether the toast should close when the action is clicked.
      */
     public function shouldCloseToast(bool $shouldClose = true): static
     {
         $this->shouldCloseToast = $shouldClose;
-
         return $this;
     }
 
@@ -130,6 +165,30 @@ class ToastAction implements Arrayable
     }
 
     /**
+     * Get the action color
+     */
+    public function getColor(): string
+    {
+        return $this->color;
+    }
+
+    /**
+     * Get the action variant
+     */
+    public function getVariant(): string
+    {
+        return $this->variant;
+    }
+
+    /**
+     * Check if should open in new tab
+     */
+    public function getOpenInNewTab(): bool
+    {
+        return $this->openInNewTab;
+    }
+
+    /**
      * Convert the action to an array.
      */
     public function toArray(): array
@@ -139,6 +198,9 @@ class ToastAction implements Arrayable
             'url' => $this->url,
             'icon' => $this->icon,
             'classes' => $this->classes,
+            'color' => $this->color,
+            'variant' => $this->variant,
+            'open_in_new_tab' => $this->openInNewTab,
             'should_close_toast' => $this->shouldCloseToast,
         ];
     }

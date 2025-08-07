@@ -1,10 +1,9 @@
 <?php
 
 use App\Livewire\Components\ToastContainer;
-use App\Toasts\Facades\Toast;
-use App\Toasts\Toast as ToastNotification;
-use App\Toasts\ToastAction;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\Facades\Toast;
+use App\UI\Toasts\ToastAction;
+use App\UI\Toasts\ToastManager;
 use Livewire\Livewire;
 
 beforeEach(function () {

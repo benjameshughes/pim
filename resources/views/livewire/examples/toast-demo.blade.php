@@ -283,4 +283,7 @@ Toast::warning('Warning', 'Check your input.')
             </x-card>
         </div>
     </div>
+
+    {{-- FilamentPHP-style toast rendering using magic property --}}
+    {{ $this->toasts }}
 </flux:main>

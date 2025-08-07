@@ -1,6 +1,6 @@
 <?php
 
-use App\Toasts\Toast;
+use App\UI\Toasts\Toast;
 use Livewire\Livewire;
 
 test('alpine store integration works without errors', function () {
@@ -43,7 +43,7 @@ test('toast data is properly formatted as array for Alpine', function () {
 
 test('alpine store handles empty toast state', function () {
     // Clear any existing toasts
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     $component = Livewire::test('components.toast-container');
     

@@ -1,11 +1,11 @@
 <?php
 
-use App\Toasts\Toast;
+use App\UI\Toasts\Toast;
 use Livewire\Livewire;
 
 test('multiple toasts stack independently with their own timers', function () {
     // Clear any existing toasts
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create multiple toasts with different durations
     Toast::success('First Toast', 'This appears first')
@@ -46,7 +46,7 @@ test('multiple toasts stack independently with their own timers', function () {
 });
 
 test('toasts in different positions stack independently', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create toasts in different positions
     Toast::success('Top Right Toast')
@@ -85,7 +85,7 @@ test('toasts in different positions stack independently', function () {
 });
 
 test('toasts maintain maximum limit when stacking', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create more toasts than the limit (default is 5)
     for ($i = 1; $i <= 10; $i++) {
@@ -104,7 +104,7 @@ test('toasts maintain maximum limit when stacking', function () {
 });
 
 test('each toast can be removed independently while others remain', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create 3 toasts
     Toast::success('Toast 1')->send();
@@ -131,11 +131,11 @@ test('each toast can be removed independently while others remain', function () 
 });
 
 test('toast stacking with different types and actions work independently', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     // Create toasts with different configurations
     Toast::success('Success with action')
-        ->action(\App\Toasts\ToastAction::make('Undo')->url('/undo'))
+        ->action(\App\UI\Toasts\ToastAction::make('Undo')->url('/undo'))
         ->send();
     
     Toast::error('Error persistent')
@@ -166,7 +166,7 @@ test('toast stacking with different types and actions work independently', funct
 });
 
 test('html renders multiple stacked toasts with proper structure', function () {
-    app(\App\Toasts\ToastManager::class)->clear();
+    app(\App\UI\Toasts\ToastManager::class)->clear();
     
     Toast::success('First')->send();
     Toast::error('Second')->send();

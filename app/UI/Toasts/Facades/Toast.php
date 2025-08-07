@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Toasts\Facades;
+namespace App\UI\Toasts\Facades;
 
-use App\Toasts\Toast as ToastNotification;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\Toast as ToastNotification;
+use App\UI\Toasts\ToastManager;
 use Illuminate\Support\Facades\Facade;
 
 /**
@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static ToastNotification error(string $title, ?string $body = null)
  * @method static ToastNotification warning(string $title, ?string $body = null)
  * @method static ToastNotification info(string $title, ?string $body = null)
- * @method static ToastManager add(\App\Toasts\Contracts\ToastContract $toast)
+ * @method static ToastManager add(\App\UI\Toasts\Contracts\ToastContract $toast)
  * @method static \Illuminate\Support\Collection getToasts()
  * @method static \Illuminate\Support\Collection getToastsByPosition()
  * @method static ToastManager clear()

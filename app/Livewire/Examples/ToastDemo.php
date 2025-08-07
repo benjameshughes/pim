@@ -2,15 +2,17 @@
 
 namespace App\Livewire\Examples;
 
-use App\Toasts\Facades\Toast;
-use App\Toasts\Toast as ToastNotification;
-use App\Toasts\ToastAction;
+use App\UI\Toasts\Concerns\InteractsWithToasts;
+use App\UI\Toasts\Facades\Toast;
+use App\UI\Toasts\Toast as ToastNotification;
+use App\UI\Toasts\ToastAction;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class ToastDemo extends Component
 {
+    use InteractsWithToasts;
     public string $customTitle = 'Custom Toast Title';
     public string $customBody = 'This is a custom toast message with detailed content.';
     public string $selectedType = 'info';

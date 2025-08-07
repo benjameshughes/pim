@@ -2,8 +2,7 @@
 
 namespace App\Providers;
 
-use App\Toasts\Toast;
-use App\Toasts\ToastManager;
+use App\UI\Toasts\ToastManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
@@ -99,11 +98,11 @@ if (!function_exists('toast')) {
      *
      * @param string|null $title
      * @param string|null $body
-     * @return \App\Toasts\Toast|\App\Toasts\ToastManager
+     * @return \App\UI\Toasts\Toast|\App\UI\Toasts\ToastManager
      */
     function toast(?string $title = null, ?string $body = null)
     {
-        $toastManager = app(\App\Toasts\ToastManager::class);
+        $toastManager = app(\App\UI\Toasts\ToastManager::class);
 
         if ($title === null) {
             return $toastManager;
@@ -119,11 +118,11 @@ if (!function_exists('toast_success')) {
      *
      * @param string $title
      * @param string|null $body
-     * @return \App\Toasts\Toast
+     * @return \App\UI\Toasts\Toast
      */
-    function toast_success(string $title, ?string $body = null): \App\Toasts\Toast
+    function toast_success(string $title, ?string $body = null): \App\UI\Toasts\Toast
     {
-        return app(\App\Toasts\ToastManager::class)->success($title, $body);
+        return app(\App\UI\Toasts\ToastManager::class)->success($title, $body);
     }
 }
 
@@ -133,11 +132,11 @@ if (!function_exists('toast_error')) {
      *
      * @param string $title
      * @param string|null $body
-     * @return \App\Toasts\Toast
+     * @return \App\UI\Toasts\Toast
      */
-    function toast_error(string $title, ?string $body = null): \App\Toasts\Toast
+    function toast_error(string $title, ?string $body = null): \App\UI\Toasts\Toast
     {
-        return app(\App\Toasts\ToastManager::class)->error($title, $body);
+        return app(\App\UI\Toasts\ToastManager::class)->error($title, $body);
     }
 }
 
@@ -147,11 +146,11 @@ if (!function_exists('toast_warning')) {
      *
      * @param string $title
      * @param string|null $body
-     * @return \App\Toasts\Toast
+     * @return \App\UI\Toasts\Toast
      */
-    function toast_warning(string $title, ?string $body = null): \App\Toasts\Toast
+    function toast_warning(string $title, ?string $body = null): \App\UI\Toasts\Toast
     {
-        return app(\App\Toasts\ToastManager::class)->warning($title, $body);
+        return app(\App\UI\Toasts\ToastManager::class)->warning($title, $body);
     }
 }
 
@@ -161,11 +160,11 @@ if (!function_exists('toast_info')) {
      *
      * @param string $title
      * @param string|null $body
-     * @return \App\Toasts\Toast
+     * @return \App\UI\Toasts\Toast
      */
-    function toast_info(string $title, ?string $body = null): \App\Toasts\Toast
+    function toast_info(string $title, ?string $body = null): \App\UI\Toasts\Toast
     {
-        return app(\App\Toasts\ToastManager::class)->info($title, $body);
+        return app(\App\UI\Toasts\ToastManager::class)->info($title, $body);
     }
 }
 PHP;
