@@ -571,34 +571,66 @@ class ProductWizard extends Component
 
         try {
             DB::transaction(function () {
-                // Create the product
-                $productData = $this->form->only(['name', 'slug', 'description', 'status']);
+                // Create the product using our beautiful ProductBuilder! 🚀
+                $builder = Product::build()
+                    ->name($this->form->name)
+                    ->slug($this->form->slug)
+                    ->description($this->form->description)
+                    ->status($this->form->status);
                 
                 // Add parent SKU
-                $productData['parent_sku'] = $this->parentSku;
-                
-                // Add feature and detail fields
-                for ($i = 1; $i <= 5; $i++) {
-                    $productData["product_features_{$i}"] = $this->form->{"product_features_{$i}"};
-                    $productData["product_details_{$i}"] = $this->form->{"product_details_{$i}"};
+                if ($this->parentSku) {
+                    $builder->set('parent_sku', $this->parentSku);
                 }
                 
-                $product = Product::create($productData);
+                // Add features using ProductBuilder's features method
+                $features = [];
+                for ($i = 1; $i <= 5; $i++) {
+                    $feature = $this->form->{"product_features_{$i}"};
+                    if (!empty($feature)) {
+                        $features[] = $feature;
+                    }
+                }
+                if (!empty($features)) {
+                    $builder->features($features);
+                }
+                
+                // Add details using ProductBuilder's details method  
+                $details = [];
+                for ($i = 1; $i <= 5; $i++) {
+                    $detail = $this->form->{"product_details_{$i}"};
+                    if (!empty($detail)) {
+                        $details[] = $detail;
+                    }
+                }
+                if (!empty($details)) {
+                    $builder->details($details);
+                }
+                
+                // Add product attributes using Builder
+                if (!empty($this->attributeValues)) {
+                    $builder->attributes(array_filter($this->attributeValues));
+                }
+                
+                // Execute the ProductBuilder to create the product
+                $product = $builder->execute();
 
-                // Handle images
+                // Handle images using existing method (still works!)
                 $this->handleProductImages($product);
 
-                // Handle attributes
-                $this->handleProductAttributes($product);
-
-                // Handle variants and barcodes
+                // Handle variants using our new Builder pattern
                 $this->handleProductVariants($product);
 
-                session()->flash('message', 'Product created successfully with all variants!');
+                session()->flash('message', 'Product created successfully with all variants using Builder patterns!');
                 return redirect()->route('products.view', $product);
             });
         } catch (\Exception $e) {
             session()->flash('error', 'Error creating product: ' . $e->getMessage());
+            \Log::error('Product creation failed in wizard: ' . $e->getMessage(), [
+                'form_data' => $this->form->toArray(),
+                'parent_sku' => $this->parentSku,
+                'variants_count' => count($this->generateVariants ? $this->variantMatrix : $this->customVariants)
+            ]);
         }
     }
 
@@ -619,60 +651,100 @@ class ProductWizard extends Component
         }
     }
 
-    private function handleProductAttributes($product)
-    {
-        foreach ($this->attributeValues as $key => $value) {
-            if (!empty($value)) {
-                $attribute = AttributeDefinition::where('key', $key)->first();
-                if ($attribute) {
-                    ProductAttribute::create([
-                        'product_id' => $product->id,
-                        'variant_id' => null,
-                        'attribute_definition_id' => $attribute->id,
-                        'value' => $value,
-                    ]);
-                }
-            }
-        }
-    }
 
     private function handleProductVariants($product)
     {
         $variants = $this->generateVariants ? $this->variantMatrix : $this->customVariants;
         
         foreach ($variants as $index => $variantData) {
-            // Ensure unique SKU
-            $originalSku = $variantData['sku'];
-            $sku = $originalSku;
-            $counter = 1;
+            // Create variant using our beautiful Builder pattern! 🚀
+            $builder = ProductVariant::buildFor($product)
+                ->sku($variantData['sku'])
+                ->stockLevel($variantData['stock_level'] ?? 0)
+                ->status($variantData['status'] ?? 'active');
             
-            while (ProductVariant::where('sku', $sku)->exists()) {
-                $sku = $originalSku . '-' . $counter;
-                $counter++;
-            }
-            
-            $variant = ProductVariant::create([
-                'product_id' => $product->id,
-                'sku' => $sku,
-                'stock_level' => $variantData['stock_level'] ?? 0,
-                'status' => $variantData['status'] ?? 'active',
-            ]);
-
-            // Set attributes using the attribute system
+            // Add variant attributes using Builder methods
             if (!empty($variantData['color'])) {
-                \App\Models\VariantAttribute::setValue($variant->id, 'color', $variantData['color'], 'string');
+                $builder->color($variantData['color']);
             }
-            if (!empty($variantData['width'])) {
-                \App\Models\VariantAttribute::setValue($variant->id, 'width', $variantData['width'], 'string');
+            
+            if (!empty($variantData['width']) || !empty($variantData['drop'])) {
+                $builder->windowDimensions(
+                    $variantData['width'] ?? '',
+                    $variantData['drop'] ?? ''
+                );
             }
-            if (!empty($variantData['drop'])) {
-                \App\Models\VariantAttribute::setValue($variant->id, 'drop', $variantData['drop'], 'string');
-            }
-
-            // Handle barcode assignment if enabled
+            
+            // Handle barcode assignment using Builder barcode methods
             if ($this->assignBarcodes && isset($this->variantBarcodes[$index])) {
-                $this->assignBarcodeToVariant($variant, $this->variantBarcodes[$index]);
+                $barcode = $this->variantBarcodes[$index];
+                $builder->primaryBarcode($barcode, $this->barcodeType);
             }
+            
+            // Execute the builder to create the variant with all integrations
+            try {
+                $variant = $builder->execute();
+                \Log::info("Created variant {$variant->sku} with Builder pattern");
+            } catch (\Exception $e) {
+                \Log::error("Failed to create variant {$variantData['sku']}: " . $e->getMessage());
+                
+                // Fallback to basic creation if builder fails
+                $variant = ProductVariant::create([
+                    'product_id' => $product->id,
+                    'sku' => $this->ensureUniqueSku($variantData['sku']),
+                    'stock_level' => $variantData['stock_level'] ?? 0,
+                    'status' => $variantData['status'] ?? 'active',
+                ]);
+                
+                // Handle attributes manually for fallback
+                $this->handleVariantAttributesFallback($variant, $variantData, $index);
+            }
+        }
+    }
+    
+    /**
+     * Ensure SKU is unique by appending counter if needed
+     * 
+     * @param string $originalSku
+     * @return string
+     */
+    private function ensureUniqueSku(string $originalSku): string
+    {
+        $sku = $originalSku;
+        $counter = 1;
+        
+        while (ProductVariant::where('sku', $sku)->exists()) {
+            $sku = $originalSku . '-' . $counter;
+            $counter++;
+        }
+        
+        return $sku;
+    }
+    
+    /**
+     * Fallback method for handling variant attributes if Builder fails
+     * 
+     * @param ProductVariant $variant
+     * @param array $variantData
+     * @param int $index
+     * @return void
+     */
+    private function handleVariantAttributesFallback(ProductVariant $variant, array $variantData, int $index): void
+    {
+        // Set attributes using the attribute system
+        if (!empty($variantData['color'])) {
+            \App\Models\VariantAttribute::setValue($variant->id, 'color', $variantData['color'], 'string');
+        }
+        if (!empty($variantData['width'])) {
+            \App\Models\VariantAttribute::setValue($variant->id, 'width', $variantData['width'], 'string');
+        }
+        if (!empty($variantData['drop'])) {
+            \App\Models\VariantAttribute::setValue($variant->id, 'drop', $variantData['drop'], 'string');
+        }
+
+        // Handle barcode assignment if enabled
+        if ($this->assignBarcodes && isset($this->variantBarcodes[$index])) {
+            $this->assignBarcodeToVariant($variant, $this->variantBarcodes[$index]);
         }
     }
 

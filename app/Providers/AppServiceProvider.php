@@ -40,7 +40,6 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
         $this->registerEventListeners();
         $this->configureUrlGeneration();
-        $this->registerCustomNavigation();
     }
 
     /**
@@ -88,14 +87,4 @@ class AppServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Register application navigation.
-     * 
-     * Uses dedicated NavigationConfig class to keep AppServiceProvider clean.
-     * Customize navigation in app/Atom/Config/NavigationConfig.php
-     */
-    protected function registerCustomNavigation(): void
-    {
-        \App\Atom\Config\NavigationConfig::register();
-    }
 }

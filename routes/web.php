@@ -1,7 +1,7 @@
 <?php
 
 use App\Livewire\Dashboard;
-use App\Navigation\NavigationManager;
+// use App\Navigation\NavigationManager; // Temporarily disabled - Atom framework removed
 // use App\Livewire\Pim\Products\Management\ProductIndex; // Replaced by ResourceManager
 use App\Livewire\Pim\Products\Management\ProductForm;
 use App\Livewire\Pim\Products\Variants\VariantIndex;
@@ -35,14 +35,14 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Test navigation route
-Route::get('/test-navigation', function () {
-    $resourceNavigation = NavigationManager::getGroupedItems();
-    $navigationBreadcrumbs = NavigationManager::generateBreadcrumbs();
-    $resourceStats = \App\Resources\ResourceManager::getStatistics();
-    
-    return view('test-navigation', compact('resourceNavigation', 'navigationBreadcrumbs', 'resourceStats'));
-})->name('test.navigation');
+// Test navigation route - Temporarily disabled
+// Route::get('/test-navigation', function () {
+//     $resourceNavigation = NavigationManager::getGroupedItems();
+//     $navigationBreadcrumbs = NavigationManager::generateBreadcrumbs();
+//     $resourceStats = \App\Resources\ResourceManager::getStatistics();
+//     
+//     return view('test-navigation', compact('resourceNavigation', 'navigationBreadcrumbs', 'resourceStats'));
+// })->name('test.navigation');
 
 Route::get('dashboard', Dashboard::class)
     ->middleware(['auth', 'verified'])
@@ -117,18 +117,24 @@ Route::middleware(['auth'])->group(function () {
     // Archive route
     Route::get('/archive', DeletedProductsArchive::class)->name('archive');
 
-    // Product Management Routes - Now handled by ResourceManager auto-registration
-    // The following routes have been migrated to ResourceManager:
-    // - products/ (index) -> resources.products.index  
-    // - products/create -> resources.products.create
-    // - products/{record} (view) -> resources.products.view
-    // - products/{record}/edit -> resources.products.edit
+    // Clean Product Management Routes - Builder Pattern + Actions Pattern
+    Route::resource('products', \App\Http\Controllers\Products\ProductController::class);
+    
+    // Additional product routes
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::post('{product}/restore', [\App\Http\Controllers\Products\ProductController::class, 'restore'])->name('restore');
+        Route::delete('{product}/force', [\App\Http\Controllers\Products\ProductController::class, 'forceDestroy'])->name('force-destroy');
+    });
     
     // Legacy routes that still need manual registration
     Route::prefix('products')->name('products.')->group(function () {
+        // ProductWizard - Enhanced with Builder patterns
+        Route::get('wizard', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('wizard');
+        
         // Variants
         Route::get('variants', VariantIndex::class)->name('variants.index');
-        Route::get('variants/create', function() { return 'Variant Create - Coming Soon'; })->name('variants.create');
+        Route::get('variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create');
+        Route::get('{product}/variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create-for-product');
         
         // Variant tabs - specific routes MUST come before wildcard
         Route::get('variants/{variant}/details', VariantView::class)->name('variants.details');

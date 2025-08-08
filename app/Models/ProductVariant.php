@@ -261,4 +261,125 @@ class ProductVariant extends Model implements HasMedia
                 ]);
         });
     }
+    
+    /**
+     * Create a new variant builder instance
+     * 
+     * @return \App\Builders\Variants\VariantBuilder
+     */
+    public static function build(): \App\Builders\Variants\VariantBuilder
+    {
+        return \App\Builders\Variants\VariantBuilder::create();
+    }
+    
+    /**
+     * Create variant builder for specific product
+     * 
+     * @param Product $product
+     * @return \App\Builders\Variants\VariantBuilder  
+     */
+    public static function buildFor(Product $product): \App\Builders\Variants\VariantBuilder
+    {
+        return \App\Builders\Variants\VariantBuilder::for($product);
+    }
+    
+    /**
+     * Get variant builder for editing this variant
+     * 
+     * @return \App\Builders\Variants\VariantBuilder
+     */
+    public function edit(): \App\Builders\Variants\VariantBuilder
+    {
+        $builder = \App\Builders\Variants\VariantBuilder::create();
+        
+        // Pre-populate with current variant data
+        $builder->productId($this->product_id)
+                ->sku($this->sku)
+                ->status($this->status ?? 'active')
+                ->stockLevel($this->stock_level ?? 0);
+                
+        // Add dimensions if available
+        if ($this->package_length) {
+            $builder->dimensions(
+                $this->package_length,
+                $this->package_width,
+                $this->package_height,
+                $this->package_weight
+            );
+        }
+        
+        // Add current attributes
+        $attributes = [];
+        foreach ($this->attributes as $attribute) {
+            $attributes[$attribute->attribute_key] = $attribute->attribute_value;
+        }
+        if (!empty($attributes)) {
+            $builder->attributes($attributes);
+        }
+        
+        return $builder;
+    }
+    
+    /**
+     * Query scope for active variants
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+    
+    /**
+     * Query scope with common relationships
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithCommon($query)
+    {
+        return $query->with([
+            'product:id,name,parent_sku',
+            'barcodes:id,product_variant_id,barcode,is_primary',
+            'pricing:id,product_variant_id,retail_price,marketplace',
+            'attributes:id,variant_id,attribute_key,attribute_value'
+        ]);
+    }
+    
+    /**
+     * Check if variant has primary barcode
+     * 
+     * @return bool
+     */
+    public function hasPrimaryBarcode(): bool
+    {
+        return $this->barcodes()->where('is_primary', true)->exists();
+    }
+    
+    /**
+     * Check if variant has pricing
+     * 
+     * @return bool
+     */
+    public function hasPricing(): bool
+    {
+        return $this->pricing()->exists();
+    }
+    
+    /**
+     * Get display name with product name and attributes
+     * 
+     * @return string
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        $parts = array_filter([
+            $this->product->name ?? 'Product',
+            $this->color,
+            $this->dimensions ?? $this->size
+        ]);
+        
+        return implode(' - ', $parts);
+    }
 }
