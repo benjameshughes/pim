@@ -69,7 +69,7 @@
                                     >
                                         {{ $label }}
                                     </flux:button>
-                                @else
+                                @elseif($actionType === 'button')
                                     <flux:button 
                                         @if(isset($action['wire:click'])) wire:click="{{ $action['wire:click'] }}" @endif
                                         @if(isset($action['x-on:click'])) x-on:click="{{ $action['x-on:click'] }}" @endif
