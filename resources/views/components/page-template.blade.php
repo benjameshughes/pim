@@ -48,38 +48,9 @@
                 @if(!empty($actions))
                     <div class="flex items-center gap-3 flex-wrap">
                         @foreach($actions as $action)
-                            @continue(($action['visible'] ?? true) === false)
-                            
-                            @php
-                                $label = $action['label'] ?? 'Action';
-                                $variant = $action['variant'] ?? 'outline';
-                                $size = $action['size'] ?? 'base';
-                                $icon = $action['icon'] ?? null;
-                                $actionType = $action['type'] ?? 'button';
-                            @endphp
-                            
-                            @switch($actionType)
-                                @case('link')
-                                    <flux:button 
-                                        href="{{ $action['href'] ?? '#' }}" 
-                                        variant="{{ $variant }}" 
-                                        size="{{ $size }}"
-                                        {!! $icon ? 'icon="' . $icon . '"' : '' !!}
-                                        {!! isset($action['wire:navigate']) && $action['wire:navigate'] ? 'wire:navigate' : '' !!}
-                                    >
-                                        {{ $label }}
-                                    </flux:button>
-                                    @break
-                                @default
-                                    <flux:button 
-                                        variant="{{ $variant }}" 
-                                        size="{{ $size }}"
-                                        {!! $icon ? 'icon="' . $icon . '"' : '' !!}
-                                        {!! isset($action['wire:click']) ? 'wire:click="' . $action['wire:click'] . '"' : '' !!}
-                                    >
-                                        {{ $label }}
-                                    </flux:button>
-                            @endswitch
+                            @if(($action['visible'] ?? true))
+                                @include('components.partials.action-button', ['action' => $action])
+                            @endif
                         @endforeach
                     </div>
                 @endif
