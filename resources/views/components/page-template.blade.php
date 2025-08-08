@@ -48,48 +48,38 @@
                 @if(!empty($actions))
                     <div class="flex items-center gap-3 flex-wrap">
                         @foreach($actions as $action)
+                            @continue(($action['visible'] ?? true) === false)
+                            
                             @php
-                                $actionType = $action['type'] ?? 'button';
+                                $label = $action['label'] ?? 'Action';
                                 $variant = $action['variant'] ?? 'outline';
                                 $size = $action['size'] ?? 'base';
                                 $icon = $action['icon'] ?? null;
-                                $label = $action['label'] ?? 'Action';
-                                $isVisible = isset($action['visible']) ? $action['visible'] : true;
+                                $actionType = $action['type'] ?? 'button';
                             @endphp
                             
-                            @if($isVisible)
-                                @if($actionType === 'link')
+                            @switch($actionType)
+                                @case('link')
                                     <flux:button 
-                                        href="{{ $action['href'] }}" 
+                                        href="{{ $action['href'] ?? '#' }}" 
                                         variant="{{ $variant }}" 
                                         size="{{ $size }}"
-                                        @if($icon) icon="{{ $icon }}" @endif
-                                        @if($action['wire:navigate'] ?? false) wire:navigate @endif
-                                        @if($action['target'] ?? false) target="{{ $action['target'] }}" @endif
+                                        {!! $icon ? 'icon="' . $icon . '"' : '' !!}
+                                        {!! isset($action['wire:navigate']) && $action['wire:navigate'] ? 'wire:navigate' : '' !!}
                                     >
                                         {{ $label }}
                                     </flux:button>
-                                @elseif($actionType === 'button')
+                                    @break
+                                @default
                                     <flux:button 
-                                        @if(isset($action['wire:click'])) wire:click="{{ $action['wire:click'] }}" @endif
-                                        @if(isset($action['x-on:click'])) x-on:click="{{ $action['x-on:click'] }}" @endif
                                         variant="{{ $variant }}" 
                                         size="{{ $size }}"
-                                        @if($icon) icon="{{ $icon }}" @endif
-                                        @if(isset($action['loading'])) wire:loading.attr="disabled" @endif
+                                        {!! $icon ? 'icon="' . $icon . '"' : '' !!}
+                                        {!! isset($action['wire:click']) ? 'wire:click="' . $action['wire:click'] . '"' : '' !!}
                                     >
-                                        <span @if(isset($action['loading'])) wire:loading.remove wire:target="{{ $action['loading'] }}" @endif>
-                                            {{ $label }}
-                                        </span>
-                                        @if(isset($action['loading']))
-                                            <div wire:loading wire:target="{{ $action['loading'] }}" class="flex items-center">
-                                                <div class="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mr-2"></div>
-                                                {{ $action['loadingText'] ?? 'Processing...' }}
-                                            </div>
-                                        @endif
+                                        {{ $label }}
                                     </flux:button>
-                                @endif
-                            @endif
+                            @endswitch
                         @endforeach
                     </div>
                 @endif
