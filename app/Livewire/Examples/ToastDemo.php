@@ -2,17 +2,13 @@
 
 namespace App\Livewire\Examples;
 
-use App\UI\Toasts\Concerns\InteractsWithToasts;
-use App\UI\Toasts\Facades\Toast;
-use App\UI\Toasts\Toast as ToastNotification;
-use App\UI\Toasts\ToastAction;
+use App\Support\Toast;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
 class ToastDemo extends Component
 {
-    use InteractsWithToasts;
     public string $customTitle = 'Custom Toast Title';
     public string $customBody = 'This is a custom toast message with detailed content.';
     public string $selectedType = 'info';
@@ -28,27 +24,27 @@ class ToastDemo extends Component
     {
         Toast::success('Operation Successful!', 'Your changes have been saved successfully.')
             ->duration(5000)
-            ->send();
+            ->send($this);
     }
 
     public function showErrorToast()
     {
         Toast::error('Operation Failed!', 'Something went wrong. Please try again.')
             ->persistent()
-            ->send();
+            ->send($this);
     }
 
     public function showWarningToast()
     {
         Toast::warning('Warning Notice', 'Please review your input before proceeding.')
             ->duration(6000)
-            ->send();
+            ->send($this);
     }
 
     public function showInfoToast()
     {
         Toast::info('Information', 'Here\'s some helpful information for you.')
-            ->send();
+            ->send($this);
     }
 
     /**
@@ -58,18 +54,9 @@ class ToastDemo extends Component
     {
         Toast::info('Action Required', 'Would you like to proceed with this operation?')
             ->persistent()
-            ->action(
-                ToastAction::make('Proceed')
-                    ->icon('check')
-                    ->class(['text-blue-600', 'hover:text-blue-800'])
-            )
-            ->action(
-                ToastAction::make('Cancel')
-                    ->icon('x')
-                    ->class(['text-gray-600', 'hover:text-gray-800'])
-                    ->shouldCloseToast(true)
-            )
-            ->send();
+            ->action('Proceed', 'proceed')
+            ->action('Cancel', 'cancel')
+            ->send($this);
     }
 
     /**
@@ -80,10 +67,10 @@ class ToastDemo extends Component
         $positions = ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
         
         foreach ($positions as $index => $position) {
-            ToastNotification::info("Position Demo", "This toast is positioned at: {$position}")
+            Toast::info("Position Demo", "This toast is positioned at: {$position}")
                 ->position($position)
                 ->duration(3000 + ($index * 500)) // Staggered duration
-                ->send();
+                ->send($this);
         }
     }
 
@@ -101,7 +88,7 @@ class ToastDemo extends Component
             ->closable($this->closable)
             ->persistent($this->persistent)
             ->icon('star')
-            ->send();
+            ->send($this);
     }
 
     /**
@@ -109,11 +96,11 @@ class ToastDemo extends Component
      */
     public function showHelperFunctionDemo()
     {
-        // Using global helper functions
-        toast_success('Helper Success', 'This toast was created using the toast_success() helper function.')->send();
+        // Using our new Toast system
+        Toast::success('Helper Success', 'This toast was created using the new Toast system.')->send($this);
         
-        // Using the main toast() helper
-        toast('Helper Info', 'This toast was created using the toast() helper function.')->send();
+        // Using the main toast helper
+        Toast::info('Helper Info', 'This toast was created using the Toast class.')->send($this);
     }
 
     /**
@@ -125,7 +112,7 @@ class ToastDemo extends Component
         for ($i = 1; $i <= 3; $i++) {
             Toast::info("Batch Toast {$i}", "This is toast number {$i} in a batch.")
                 ->duration(8000)
-                ->send();
+                ->send($this);
         }
     }
 
@@ -146,11 +133,11 @@ class ToastDemo extends Component
         Toast::success('I persist across pages!', 'Navigate to another page using wire:navigate and I\'ll still be here.')
             ->persist() // This makes it survive navigation
             ->duration(15000) // Long duration to test
-            ->send();
+            ->send($this);
             
         Toast::info('I disappear on navigation', 'I\'m a regular toast that won\'t survive page changes.')
             ->duration(15000)
-            ->send();
+            ->send($this);
     }
     
     /**
@@ -161,7 +148,7 @@ class ToastDemo extends Component
         Toast::warning('Ultimate Persistence!', 'I survive navigation AND won\'t auto-dismiss.')
             ->persist() // Survives navigation
             ->persistent() // Won't auto-dismiss
-            ->send();
+            ->send($this);
     }
 
     public function render()

@@ -1,8 +1,7 @@
 <?php
 
 use App\Livewire\Dashboard;
-// use App\Navigation\NavigationManager; // Temporarily disabled - Atom framework removed
-// use App\Livewire\Pim\Products\Management\ProductIndex; // Replaced by ResourceManager
+// Legacy framework navigation disabled
 use App\Livewire\Pim\Products\Management\ProductForm;
 use App\Livewire\Pim\Products\Variants\VariantIndex;
 use App\Livewire\Pim\Products\Variants\VariantForm;
@@ -35,14 +34,7 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-// Test navigation route - Temporarily disabled
-// Route::get('/test-navigation', function () {
-//     $resourceNavigation = NavigationManager::getGroupedItems();
-//     $navigationBreadcrumbs = NavigationManager::generateBreadcrumbs();
-//     $resourceStats = \App\Resources\ResourceManager::getStatistics();
-//     
-//     return view('test-navigation', compact('resourceNavigation', 'navigationBreadcrumbs', 'resourceStats'));
-// })->name('test.navigation');
+// Legacy test navigation routes removed
 
 Route::get('dashboard', Dashboard::class)
     ->middleware(['auth', 'verified'])
@@ -57,7 +49,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Barcode management routes
     Route::prefix('barcodes')->name('barcodes.')->group(function () {
-        // Direct Livewire component route (will be updated to new Table system)
+        // Barcode management component
         Route::get('/', BarcodeIndex::class)->name('index');
         
         // Pool management routes
@@ -179,7 +171,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('variant/{variant}/images', \App\Livewire\Examples\VariantImageManager::class)->name('variant.images');
         Route::get('product-creation', \App\Livewire\Examples\ProductCreationWithImages::class)->name('product.creation');
         Route::get('toast-demo', \App\Livewire\Examples\ToastDemo::class)->name('toast.demo');
-        Route::get('toast-stacking', \App\Livewire\Examples\ToastStackingDemo::class)->name('toast.stacking');
         // Route::get('stacked-list', \App\Livewire\ExampleStackedList::class)->name('stacked.list'); // Removed with old system
     });
 
