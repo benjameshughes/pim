@@ -10,39 +10,41 @@ use Exception;
 class DataTransformationException extends Exception
 {
     private ?array $contextData = null;
+
     private ?int $rowNumber = null;
+
     private ?string $fieldName = null;
-    
+
     public function __construct(
-        string $message = "",
+        string $message = '',
         int $code = 0,
-        \Throwable $previous = null,
+        ?\Throwable $previous = null,
         ?array $contextData = null,
         ?int $rowNumber = null,
         ?string $fieldName = null
     ) {
         parent::__construct($message, $code, $previous);
-        
+
         $this->contextData = $contextData;
         $this->rowNumber = $rowNumber;
         $this->fieldName = $fieldName;
     }
-    
+
     public function getContextData(): ?array
     {
         return $this->contextData;
     }
-    
+
     public function getRowNumber(): ?int
     {
         return $this->rowNumber;
     }
-    
+
     public function getFieldName(): ?string
     {
         return $this->fieldName;
     }
-    
+
     public function toArray(): array
     {
         return [
@@ -52,10 +54,10 @@ class DataTransformationException extends Exception
             'field_name' => $this->fieldName,
             'context_data' => $this->contextData,
             'file' => $this->getFile(),
-            'line' => $this->getLine()
+            'line' => $this->getLine(),
         ];
     }
-    
+
     /**
      * Create exception for field validation failure
      */
@@ -74,7 +76,7 @@ class DataTransformationException extends Exception
             $fieldName
         );
     }
-    
+
     /**
      * Create exception for type casting failure
      */
@@ -93,7 +95,7 @@ class DataTransformationException extends Exception
             $fieldName
         );
     }
-    
+
     /**
      * Create exception for sanitization failure
      */

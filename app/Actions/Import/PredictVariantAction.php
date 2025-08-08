@@ -2,10 +2,9 @@
 
 namespace App\Actions\Import;
 
-use App\Models\ProductVariant;
 use App\Models\Product;
-use App\Repositories\ProductVariantRepository;
 use App\Repositories\ProductRepository;
+use App\Repositories\ProductVariantRepository;
 use Illuminate\Support\Facades\Log;
 
 class PredictVariantAction
@@ -16,51 +15,51 @@ class PredictVariantAction
     ) {}
 
     public function execute(
-        ?string $variantSku, 
-        string $productName, 
-        ?string $extractedColor, 
-        ?string $extractedSize, 
+        ?string $variantSku,
+        string $productName,
+        ?string $extractedColor,
+        ?string $extractedSize,
         string $importMode
     ): string {
         // Check for existing variant by SKU
-        if (!empty($variantSku)) {
+        if (! empty($variantSku)) {
             $existingVariant = $this->variantRepository->findBySku($variantSku);
             if ($existingVariant) {
                 return $this->getActionForMode($importMode, true);
             }
         }
-        
+
         // Check for existing variant by product name + color + size combination
         if ($extractedColor || $extractedSize) {
-            $parentProduct = $this->productRepository->findParentByNameLike('%' . $productName . '%');
-            
+            $parentProduct = $this->productRepository->findParentByNameLike('%'.$productName.'%');
+
             if ($parentProduct) {
                 $existingVariant = $this->variantRepository->findByProductColorAndSize(
-                    $parentProduct, 
-                    $extractedColor, 
+                    $parentProduct,
+                    $extractedColor,
                     $extractedSize
                 );
-                
+
                 if ($existingVariant) {
-                    Log::info("Found existing variant by color/size", [
+                    Log::info('Found existing variant by color/size', [
                         'parent_product' => $parentProduct->name,
                         'color' => $extractedColor,
                         'size' => $extractedSize,
-                        'existing_sku' => $existingVariant->sku
+                        'existing_sku' => $existingVariant->sku,
                     ]);
-                    
+
                     return $this->getActionForMode($importMode, true);
                 }
             }
         }
-        
+
         // No existing variant found
         return $this->getActionForMode($importMode, false);
     }
-    
+
     private function getActionForMode(string $importMode, bool $exists): string
     {
-        return match([$importMode, $exists]) {
+        return match ([$importMode, $exists]) {
             ['create_only', true] => 'skip',
             ['create_only', false] => 'create',
             ['update_existing', true] => 'update',

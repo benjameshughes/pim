@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Carbon\Carbon;
 
 class EbayAccount extends Model
 {
@@ -38,7 +38,7 @@ class EbayAccount extends Model
      */
     public function isTokenExpired(): bool
     {
-        if (!$this->token_expires_at) {
+        if (! $this->token_expires_at) {
             return true;
         }
 
@@ -50,9 +50,9 @@ class EbayAccount extends Model
      */
     public function isActive(): bool
     {
-        return $this->status === 'active' && 
-               !empty($this->access_token) && 
-               !$this->isTokenExpired();
+        return $this->status === 'active' &&
+               ! empty($this->access_token) &&
+               ! $this->isTokenExpired();
     }
 
     /**
@@ -60,9 +60,9 @@ class EbayAccount extends Model
      */
     public function needsRefresh(): bool
     {
-        return $this->status === 'active' && 
-               $this->isTokenExpired() && 
-               !empty($this->refresh_token);
+        return $this->status === 'active' &&
+               $this->isTokenExpired() &&
+               ! empty($this->refresh_token);
     }
 
     /**
@@ -78,7 +78,7 @@ class EbayAccount extends Model
      */
     public function updateTokens(array $tokenData): void
     {
-        $expiresAt = isset($tokenData['expires_in']) 
+        $expiresAt = isset($tokenData['expires_in'])
             ? now()->addSeconds($tokenData['expires_in'])
             : null;
 

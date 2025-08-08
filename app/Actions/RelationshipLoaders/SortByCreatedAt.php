@@ -17,7 +17,7 @@ class SortByCreatedAt
     {
         return [
             'action' => self::class,
-            'direction' => 'desc'
+            'direction' => 'desc',
         ];
     }
 
@@ -25,7 +25,7 @@ class SortByCreatedAt
     {
         return [
             'action' => self::class,
-            'direction' => 'asc'
+            'direction' => 'asc',
         ];
     }
 }

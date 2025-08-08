@@ -33,7 +33,7 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn([
                 'product_features_1', 'product_features_2', 'product_features_3', 'product_features_4', 'product_features_5',
-                'product_details_1', 'product_details_2', 'product_details_3', 'product_details_4', 'product_details_5'
+                'product_details_1', 'product_details_2', 'product_details_3', 'product_details_4', 'product_details_5',
             ]);
         });
     }

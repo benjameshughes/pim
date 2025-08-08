@@ -13,30 +13,46 @@ class AttributeDefinitionsManager extends Component
     use WithPagination;
 
     public $search = '';
+
     public $categoryFilter = '';
+
     public $appliesFilter = '';
+
     public $activeFilter = 'active';
 
     // Modal properties
     public $showModal = false;
+
     public $editingAttribute = null;
+
     public $modalTitle = '';
 
     // Form properties
     public $key = '';
+
     public $label = '';
+
     public $data_type = 'string';
+
     public $category = '';
+
     public $applies_to = 'both';
+
     public $is_required = false;
+
     public $description = '';
+
     public $sort_order = 0;
+
     public $is_active = true;
-    
+
     // Validation rules
     public $validationRules = [];
+
     public $min_value = '';
+
     public $max_value = '';
+
     public $options = '';
 
     protected $rules = [
@@ -124,9 +140,10 @@ class AttributeDefinitionsManager extends Component
             // Check for unique key
             if (AttributeDefinition::where('key', $this->key)->exists()) {
                 $this->addError('key', 'This key already exists.');
+
                 return;
             }
-            
+
             AttributeDefinition::create($data);
             session()->flash('success', 'Attribute definition created successfully!');
         }
@@ -138,15 +155,15 @@ class AttributeDefinitionsManager extends Component
     {
         $attribute = AttributeDefinition::findOrFail($attributeId);
         $attribute->delete();
-        
+
         session()->flash('success', 'Attribute definition deleted successfully!');
     }
 
     public function toggleStatus($attributeId)
     {
         $attribute = AttributeDefinition::findOrFail($attributeId);
-        $attribute->update(['is_active' => !$attribute->is_active]);
-        
+        $attribute->update(['is_active' => ! $attribute->is_active]);
+
         session()->flash('success', 'Attribute status updated successfully!');
     }
 
@@ -199,9 +216,9 @@ class AttributeDefinitionsManager extends Component
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('key', 'like', '%' . $this->search . '%')
-                  ->orWhere('label', 'like', '%' . $this->search . '%')
-                  ->orWhere('description', 'like', '%' . $this->search . '%');
+                $q->where('key', 'like', '%'.$this->search.'%')
+                    ->orWhere('label', 'like', '%'.$this->search.'%')
+                    ->orWhere('description', 'like', '%'.$this->search.'%');
             });
         }
 

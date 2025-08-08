@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ShopifyTaxonomyCategory extends Model
 {
@@ -18,7 +18,7 @@ class ShopifyTaxonomyCategory extends Model
         'parent_id',
         'children_ids',
         'ancestor_ids',
-        'attributes'
+        'attributes',
     ];
 
     protected $casts = [
@@ -26,7 +26,7 @@ class ShopifyTaxonomyCategory extends Model
         'is_root' => 'boolean',
         'children_ids' => 'array',
         'ancestor_ids' => 'array',
-        'attributes' => 'array'
+        'attributes' => 'array',
     ];
 
     /**
@@ -67,7 +67,7 @@ class ShopifyTaxonomyCategory extends Model
     public function scopeSearch($query, string $term)
     {
         return $query->where('full_name', 'LIKE', "%{$term}%")
-                    ->orWhere('name', 'LIKE', "%{$term}%");
+            ->orWhere('name', 'LIKE', "%{$term}%");
     }
 
     /**
@@ -76,12 +76,12 @@ class ShopifyTaxonomyCategory extends Model
     public static function findByKeywords(array $keywords): \Illuminate\Database\Eloquent\Collection
     {
         $query = static::query();
-        
+
         foreach ($keywords as $keyword) {
             $query->orWhere('full_name', 'LIKE', "%{$keyword}%")
-                  ->orWhere('name', 'LIKE', "%{$keyword}%");
+                ->orWhere('name', 'LIKE', "%{$keyword}%");
         }
-        
+
         return $query->get();
     }
 
@@ -91,7 +91,7 @@ class ShopifyTaxonomyCategory extends Model
     public static function getBestMatchForProduct(string $productName): ?self
     {
         $productName = strtolower($productName);
-        
+
         // Define keyword priority (more specific first)
         $keywordMap = [
             'blackout blind' => ['blackout', 'blind'],
@@ -106,13 +106,13 @@ class ShopifyTaxonomyCategory extends Model
         foreach ($keywordMap as $pattern => $keywords) {
             if (str_contains($productName, $pattern)) {
                 $categories = static::findByKeywords($keywords);
-                
+
                 // Prefer leaf categories (most specific)
                 $leafCategory = $categories->where('is_leaf', true)->first();
                 if ($leafCategory) {
                     return $leafCategory;
                 }
-                
+
                 // Fall back to any matching category
                 return $categories->first();
             }
@@ -128,14 +128,14 @@ class ShopifyTaxonomyCategory extends Model
     public function getCategoryMetafields(): array
     {
         $metafields = [];
-        
-        if (!empty($this->attributes)) {
+
+        if (! empty($this->attributes)) {
             foreach ($this->attributes as $attribute) {
                 $metafields[] = [
                     'namespace' => 'taxonomy',
                     'key' => strtolower(str_replace(' ', '_', $attribute['name'] ?? 'attribute')),
                     'value' => '',
-                    'type' => $this->inferMetafieldType($attribute)
+                    'type' => $this->inferMetafieldType($attribute),
                 ];
             }
         }
@@ -151,7 +151,7 @@ class ShopifyTaxonomyCategory extends Model
         if (isset($attribute['values']) && is_array($attribute['values'])) {
             return count($attribute['values']) > 5 ? 'multi_line_text_field' : 'single_line_text_field';
         }
-        
+
         return 'single_line_text_field';
     }
 }

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Pricing extends Model
 {
     protected $table = 'pricing';
-    
+
     protected $fillable = [
         'product_variant_id',
         'marketplace',
@@ -60,17 +60,17 @@ class Pricing extends Model
         // Start with retail price
         $retailPrice = (float) $this->retail_price;
         $costPrice = (float) ($this->cost_price ?? 0);
-        
+
         if ($retailPrice <= 0) {
             return $this;
         }
 
         // Calculate VAT
         $this->calculateVAT();
-        
+
         // Calculate channel fees
         $this->calculateChannelFees();
-        
+
         // Calculate total costs and profit
         $this->calculateProfitAndCosts();
 
@@ -160,7 +160,7 @@ class Pricing extends Model
         if ($this->vat_inclusive) {
             return $this->retail_price - ($this->vat_amount ?? 0);
         }
-        
+
         return $this->retail_price;
     }
 
@@ -172,7 +172,7 @@ class Pricing extends Model
         if ($this->vat_inclusive) {
             return $this->retail_price;
         }
-        
+
         return $this->retail_price + ($this->vat_amount ?? 0);
     }
 
@@ -189,7 +189,7 @@ class Pricing extends Model
      */
     public function getFormattedProfitMargin(): string
     {
-        return number_format($this->profit_margin_percentage ?? 0, 1) . '%';
+        return number_format($this->profit_margin_percentage ?? 0, 1).'%';
     }
 
     /**
@@ -198,6 +198,7 @@ class Pricing extends Model
     public function recalculateAndSave(): bool
     {
         $this->calculatePricing();
+
         return $this->save();
     }
 

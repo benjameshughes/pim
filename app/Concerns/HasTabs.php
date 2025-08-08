@@ -8,7 +8,9 @@ use App\UI\Components\TabSet;
 trait HasTabs
 {
     protected ?TabSet $tabSet = null;
+
     protected ?string $baseRoute = null;
+
     protected array $baseRouteParameters = [];
 
     /**
@@ -39,17 +41,17 @@ trait HasTabs
     public function getTabsForNavigation(?object $model = null): array
     {
         $tabSet = $this->getTabSet();
-        
-        if (!$tabSet) {
+
+        if (! $tabSet) {
             return [];
         }
 
         // Use the model from the component if available and none provided
-        if (!$model && property_exists($this, 'model')) {
+        if (! $model && property_exists($this, 'model')) {
             $model = $this->model;
         }
 
-        return $tabSet->buildNavigation($model);
+        return $tabSet->buildNavigation($model)->toArray();
     }
 
     /**
@@ -67,20 +69,20 @@ trait HasTabs
     {
         $tabSet = $this->getTabSet();
         $tab = $tabSet?->getTab($tabKey);
-        
-        if (!$tab) {
+
+        if (! $tab) {
             return;
         }
 
         // Use the model from the component if available and none provided
-        if (!$model && property_exists($this, 'model')) {
+        if (! $model && property_exists($this, 'model')) {
             $model = $this->model;
         }
 
         // Build navigation to get the URL
         $navigation = $tabSet->buildNavigation($model);
         $tabNavigation = collect($navigation)->firstWhere('key', $tabKey);
-        
+
         if ($tabNavigation && isset($tabNavigation['url'])) {
             $this->redirect($tabNavigation['url'], navigate: true);
         }
@@ -93,10 +95,10 @@ trait HasTabs
     {
         $tabSet = $this->getTabSet();
         $tab = $tabSet?->getTab($tabKey);
-        
+
         if ($tab && $tab->hasClickHandler()) {
             $result = $tab->executeClickHandler();
-            
+
             // If the click handler returns false, don't navigate
             if ($result === false) {
                 return;
@@ -129,15 +131,15 @@ trait HasTabs
     public function redirectToDefaultTabIfNeeded(): void
     {
         $tabSet = $this->getTabSet();
-        
-        if (!$tabSet) {
+
+        if (! $tabSet) {
             return;
         }
 
         $currentRoute = $this->getCurrentRoute();
         $firstTab = $tabSet->getFirstTab();
-        
-        if (!$firstTab) {
+
+        if (! $firstTab) {
             return;
         }
 
@@ -178,6 +180,7 @@ trait HasTabs
     public function getTabBadge(string $tabKey): string|int|null
     {
         $tab = $this->getTabSet()?->getTab($tabKey);
+
         return $tab?->getBadge();
     }
 
@@ -187,7 +190,7 @@ trait HasTabs
     public function updateTabBadge(string $tabKey, string|int|null $badge): void
     {
         $tab = $this->getTabSet()?->getTab($tabKey);
-        
+
         if ($tab) {
             $tab->badge($badge);
         }

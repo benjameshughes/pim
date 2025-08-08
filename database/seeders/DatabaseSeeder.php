@@ -15,15 +15,19 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Don't overwrite existing users - just ensure we have at least one
+        if (User::count() === 0) {
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
 
         // Seed the new marketplace and attribute structures
         $this->call([
             MarketplaceSeeder::class,
             WindowShadeAttributeSeeder::class,
+            CoreAttributeSeeder::class,
         ]);
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -13,17 +13,17 @@ class ShopifyExportService
      * Export products to Shopify CSV format
      * Groups variants by color into separate products
      */
-    public function exportProducts(Collection $products = null): array
+    public function exportProducts(?Collection $products = null): array
     {
         if ($products === null) {
             $products = Product::with(['variants', 'categories', 'productImages'])->get();
         }
 
         $shopifyProducts = [];
-        
+
         foreach ($products as $product) {
             $colorGroups = $this->groupVariantsByColor($product);
-            
+
             foreach ($colorGroups as $color => $variants) {
                 $shopifyProducts[] = $this->createShopifyProduct($product, $color, $variants);
             }
@@ -38,17 +38,17 @@ class ShopifyExportService
     private function groupVariantsByColor(Product $product): array
     {
         $colorGroups = [];
-        
+
         foreach ($product->variants as $variant) {
             $color = $variant->color ?: 'No Color';
-            
-            if (!isset($colorGroups[$color])) {
+
+            if (! isset($colorGroups[$color])) {
                 $colorGroups[$color] = [];
             }
-            
+
             $colorGroups[$color][] = $variant;
         }
-        
+
         return $colorGroups;
     }
 
@@ -59,14 +59,14 @@ class ShopifyExportService
     {
         $colorName = $color === 'No Color' ? '' : $color;
         $productName = $colorName ? "{$colorName} {$product->name}" : $product->name;
-        
+
         // Get primary category for product type
         $primaryCategory = $product->primaryCategory();
         $productType = $primaryCategory ? $primaryCategory->full_name : 'Window Treatments';
-        
+
         // Build collections from categories
         $collections = $this->buildCollections($product, $color);
-        
+
         // Main product row
         $shopifyProduct = [
             'Handle' => $this->generateHandle($productName),
@@ -121,7 +121,7 @@ class ShopifyExportService
         ];
 
         $rows = [$shopifyProduct];
-        
+
         // Add variant rows
         foreach ($variants as $index => $variant) {
             $variantRow = $this->createVariantRow($variant, $index === 0);
@@ -137,7 +137,7 @@ class ShopifyExportService
     private function createVariantRow($variant, bool $isFirstVariant = false): array
     {
         $sizeOption = $this->buildSizeOption($variant);
-        
+
         return [
             'Handle' => $isFirstVariant ? '' : '', // Empty for variant rows
             'Title' => '',
@@ -197,15 +197,15 @@ class ShopifyExportService
     private function buildSizeOption($variant): string
     {
         $parts = [];
-        
+
         if ($variant->width) {
             $parts[] = "W: {$variant->width}";
         }
-        
+
         if ($variant->drop) {
             $parts[] = "D: {$variant->drop}";
         }
-        
+
         return implode(' x ', $parts) ?: 'Standard';
     }
 
@@ -223,11 +223,11 @@ class ShopifyExportService
     private function buildDescription(Product $product, string $color): string
     {
         $description = "<p>{$product->description}</p>";
-        
+
         if ($color && $color !== 'No Color') {
             $description .= "<p><strong>Color:</strong> {$color}</p>";
         }
-        
+
         // Add features if available
         $features = [];
         for ($i = 1; $i <= 5; $i++) {
@@ -236,15 +236,15 @@ class ShopifyExportService
                 $features[] = $feature;
             }
         }
-        
-        if (!empty($features)) {
-            $description .= "<p><strong>Features:</strong></p><ul>";
+
+        if (! empty($features)) {
+            $description .= '<p><strong>Features:</strong></p><ul>';
             foreach ($features as $feature) {
                 $description .= "<li>{$feature}</li>";
             }
-            $description .= "</ul>";
+            $description .= '</ul>';
         }
-        
+
         return $description;
     }
 
@@ -254,23 +254,23 @@ class ShopifyExportService
     private function buildCollections(Product $product, string $color): string
     {
         $collections = [];
-        
+
         // Add category-based collections
         foreach ($product->categories as $category) {
             $collections[] = $category->name;
-            
+
             // Add parent categories too
             $ancestors = $category->getAllAncestors();
             foreach ($ancestors as $ancestor) {
                 $collections[] = $ancestor->name;
             }
         }
-        
+
         // Add color-based collection
         if ($color && $color !== 'No Color') {
             $collections[] = "{$color} Window Treatments";
         }
-        
+
         return implode(', ', array_unique($collections));
     }
 
@@ -280,21 +280,21 @@ class ShopifyExportService
     private function buildTags(Product $product, string $color): string
     {
         $tags = [];
-        
+
         // Add categories as tags
         foreach ($product->categories as $category) {
             $tags[] = $category->name;
         }
-        
+
         // Add color tag
         if ($color && $color !== 'No Color') {
             $tags[] = $color;
         }
-        
+
         // Add generic tags
         $tags[] = 'window treatments';
         $tags[] = 'blinds';
-        
+
         return implode(', ', array_unique($tags));
     }
 
@@ -305,6 +305,7 @@ class ShopifyExportService
     {
         // Get the retail price, defaulting to 0 if not found
         $pricing = $variant->pricing()->where('sales_channel_id', 1)->first(); // Assuming 1 = retail
+
         return $pricing ? number_format($pricing->price, 2, '.', '') : '0.00';
     }
 
@@ -314,6 +315,7 @@ class ShopifyExportService
     private function getVariantBarcode($variant): string
     {
         $barcode = $variant->primaryBarcode();
+
         return $barcode ? $barcode->barcode : '';
     }
 
@@ -338,16 +340,16 @@ class ShopifyExportService
 
         // Get headers from first row
         $headers = array_keys($allRows[0]);
-        
+
         // Start with CSV header
-        $csv = implode(',', array_map([$this, 'escapeCsvField'], $headers)) . "\n";
-        
+        $csv = implode(',', array_map([$this, 'escapeCsvField'], $headers))."\n";
+
         // Add data rows
         foreach ($allRows as $row) {
             $values = array_map([$this, 'escapeCsvField'], array_values($row));
-            $csv .= implode(',', $values) . "\n";
+            $csv .= implode(',', $values)."\n";
         }
-        
+
         return $csv;
     }
 
@@ -357,6 +359,7 @@ class ShopifyExportService
     private function escapeCsvField($field): string
     {
         $field = str_replace('"', '""', $field);
-        return '"' . $field . '"';
+
+        return '"'.$field.'"';
     }
 }

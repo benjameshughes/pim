@@ -10,13 +10,13 @@ use Exception;
 class BarcodePoolExhaustedException extends Exception
 {
     protected $message = 'No barcodes available in pool';
-    
+
     public function __construct(string $barcodeType = 'barcode', ?string $message = null)
     {
         $this->message = $message ?? "No available {$barcodeType} barcodes in pool. Please import more barcodes before continuing.";
         parent::__construct($this->message);
     }
-    
+
     /**
      * Get user-friendly error message with suggestions
      */
@@ -24,7 +24,7 @@ class BarcodePoolExhaustedException extends Exception
     {
         return "We've run out of barcodes! Please contact support or import more barcodes to continue creating variants.";
     }
-    
+
     /**
      * Get suggested actions for the user
      */

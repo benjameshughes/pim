@@ -12,6 +12,7 @@ class ImportException extends Exception
     public static function csvParsingFailed(string $message, ?int $row = null): self
     {
         $errorMessage = $row ? "CSV parsing failed at row {$row}: {$message}" : "CSV parsing failed: {$message}";
+
         return new self($errorMessage);
     }
 
@@ -44,7 +45,7 @@ class ImportException extends Exception
                 'message' => $this->getMessage(),
             ], 422);
         }
-        
+
         // For browser requests, return null to let Laravel/Flare handle it
         return null;
     }

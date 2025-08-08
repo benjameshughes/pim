@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\MarketplaceBarcode;
+use App\Models\MarketplaceVariant;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\MarketplaceVariant;
-use App\Models\MarketplaceBarcode;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EbayExportService
 {
@@ -22,7 +22,7 @@ class EbayExportService
     /**
      * Export products to eBay
      */
-    public function exportProducts(Collection $products = null): array
+    public function exportProducts(?Collection $products = null): array
     {
         if ($products === null) {
             $products = Product::with(['variants.attributes', 'variants.pricing', 'variants.barcodes', 'attributes'])->get();
@@ -39,11 +39,11 @@ class EbayExportService
 
         foreach ($products as $product) {
             $results['total_products']++;
-            
+
             foreach ($product->variants as $variant) {
                 $results['total_variants']++;
                 $exportResult = $this->exportVariant($product, $variant);
-                
+
                 if ($exportResult['success']) {
                     $results['successful_exports']++;
                     $results['exported_items'][] = [
@@ -72,29 +72,31 @@ class EbayExportService
     public function exportVariant(Product $product, ProductVariant $variant): array
     {
         DB::beginTransaction();
-        
+
         try {
             // Step 1: Create inventory item
             $inventoryData = $this->buildInventoryItemData($product, $variant);
             $inventoryResult = $this->ebayService->createInventoryItem($variant->sku, $inventoryData);
-            
-            if (!$inventoryResult['success']) {
+
+            if (! $inventoryResult['success']) {
                 DB::rollback();
+
                 return [
                     'success' => false,
-                    'error' => 'Failed to create inventory item: ' . $inventoryResult['error'],
+                    'error' => 'Failed to create inventory item: '.$inventoryResult['error'],
                 ];
             }
 
             // Step 2: Create offer
             $offerData = $this->buildOfferData($product, $variant);
             $offerResult = $this->ebayService->createOffer($offerData);
-            
-            if (!$offerResult['success']) {
+
+            if (! $offerResult['success']) {
                 DB::rollback();
+
                 return [
                     'success' => false,
-                    'error' => 'Failed to create offer: ' . $offerResult['error'],
+                    'error' => 'Failed to create offer: '.$offerResult['error'],
                 ];
             }
 
@@ -102,12 +104,13 @@ class EbayExportService
 
             // Step 3: Publish offer
             $publishResult = $this->ebayService->publishOffer($offerId);
-            
-            if (!$publishResult['success']) {
+
+            if (! $publishResult['success']) {
                 DB::rollback();
+
                 return [
                     'success' => false,
-                    'error' => 'Failed to publish offer: ' . $publishResult['error'],
+                    'error' => 'Failed to publish offer: '.$publishResult['error'],
                 ];
             }
 
@@ -185,7 +188,7 @@ class EbayExportService
             'pricingSummary' => [
                 'price' => [
                     'currency' => 'USD',
-                    'value' => number_format((float)$price, 2, '.', ''),
+                    'value' => number_format((float) $price, 2, '.', ''),
                 ],
             ],
             'listingDescription' => $this->buildListingDescription($product, $variant),
@@ -204,11 +207,11 @@ class EbayExportService
     private function buildProductTitle(Product $product, ProductVariant $variant): string
     {
         $title = $product->name;
-        
+
         if ($variant->color) {
             $title .= " - {$variant->color}";
         }
-        
+
         if ($variant->dimensions) {
             $title .= " ({$variant->dimensions})";
         }
@@ -223,7 +226,7 @@ class EbayExportService
     private function buildProductDescription(Product $product, ProductVariant $variant): string
     {
         $description = $product->description ?: '';
-        
+
         // Add variant-specific details
         $details = [];
         if ($variant->color) {
@@ -232,9 +235,9 @@ class EbayExportService
         if ($variant->dimensions) {
             $details[] = "Size: {$variant->dimensions}";
         }
-        
-        if (!empty($details)) {
-            $description .= "\n\nProduct Details:\n" . implode("\n", $details);
+
+        if (! empty($details)) {
+            $description .= "\n\nProduct Details:\n".implode("\n", $details);
         }
 
         // Add features from product
@@ -245,9 +248,9 @@ class EbayExportService
                 $features[] = $feature;
             }
         }
-        
-        if (!empty($features)) {
-            $description .= "\n\nKey Features:\n" . implode("\n", array_map(fn($f) => "• {$f}", $features));
+
+        if (! empty($features)) {
+            $description .= "\n\nKey Features:\n".implode("\n", array_map(fn ($f) => "• {$f}", $features));
         }
 
         return $description;
@@ -267,7 +270,7 @@ class EbayExportService
     private function getProductImages(Product $product, ProductVariant $variant): array
     {
         $images = [];
-        
+
         // Try variant images first
         if ($variant->variantImages()->exists()) {
             foreach ($variant->variantImages as $image) {
@@ -276,9 +279,9 @@ class EbayExportService
                 }
             }
         }
-        
+
         // Fall back to product images
-        if (empty($images) && !empty($product->images)) {
+        if (empty($images) && ! empty($product->images)) {
             $images = is_array($product->images) ? $product->images : [$product->images];
         }
 
@@ -292,7 +295,7 @@ class EbayExportService
     private function buildProductAspects(Product $product, ProductVariant $variant): array
     {
         $aspects = [];
-        
+
         // Add brand
         $brand = $product->attributes()->where('attribute_key', 'brand')->first();
         if ($brand) {
@@ -300,12 +303,12 @@ class EbayExportService
         } else {
             $aspects['Brand'] = ['Unbranded']; // eBay often requires brand
         }
-        
+
         // Add color
         if ($variant->color) {
             $aspects['Color'] = [$variant->color];
         }
-        
+
         // Add material
         $material = $product->attributes()->where('attribute_key', 'material')->first();
         if ($material) {
@@ -315,7 +318,7 @@ class EbayExportService
         // Add variant attributes
         foreach ($variant->attributes as $attr) {
             $key = ucfirst(str_replace('_', ' ', $attr->attribute_key));
-            if (!isset($aspects[$key])) {
+            if (! isset($aspects[$key])) {
                 $aspects[$key] = [$attr->attribute_value];
             }
         }
@@ -323,11 +326,11 @@ class EbayExportService
         // Add product attributes
         foreach ($product->attributes as $attr) {
             $key = ucfirst(str_replace('_', ' ', $attr->attribute_key));
-            if (!isset($aspects[$key])) {
+            if (! isset($aspects[$key])) {
                 $aspects[$key] = [$attr->attribute_value];
             }
         }
-        
+
         return $aspects;
     }
 
@@ -337,24 +340,24 @@ class EbayExportService
     private function buildPackageInfo(ProductVariant $variant): ?array
     {
         $package = [];
-        
+
         if ($variant->package_weight) {
             $package['weight'] = [
                 'unit' => 'POUND',
-                'value' => (string)$variant->package_weight,
+                'value' => (string) $variant->package_weight,
             ];
         }
-        
+
         if ($variant->package_length || $variant->package_width || $variant->package_height) {
             $package['dimensions'] = [
                 'unit' => 'INCH',
-                'length' => (string)($variant->package_length ?? 0),
-                'width' => (string)($variant->package_width ?? 0),
-                'height' => (string)($variant->package_height ?? 0),
+                'length' => (string) ($variant->package_length ?? 0),
+                'width' => (string) ($variant->package_width ?? 0),
+                'height' => (string) ($variant->package_height ?? 0),
             ];
         }
-        
-        return !empty($package) ? $package : null;
+
+        return ! empty($package) ? $package : null;
     }
 
     /**
@@ -372,7 +375,7 @@ class EbayExportService
         if (str_contains(strtolower($product->name), 'blind')) {
             return '11700'; // Home & Garden > Window Treatments & Hardware > Blinds & Shades
         }
-        
+
         return '11700'; // Default to Home & Garden
     }
 
@@ -383,9 +386,10 @@ class EbayExportService
     {
         // Get eBay marketplace
         $ebayMarketplace = \App\Models\Marketplace::where('platform', 'ebay')->first();
-        
-        if (!$ebayMarketplace) {
+
+        if (! $ebayMarketplace) {
             Log::warning('eBay marketplace not found in database');
+
             return;
         }
 

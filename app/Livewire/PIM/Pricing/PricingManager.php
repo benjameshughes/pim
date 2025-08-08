@@ -2,36 +2,45 @@
 
 namespace App\Livewire\Pim\Pricing;
 
-use App\Models\Pricing;
-use App\Models\ProductVariant;
-use App\Models\SalesChannel;
 use App\Models\Marketplace;
 use App\Models\MarketplaceVariant;
+use App\Models\Pricing;
+use App\Models\SalesChannel;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+// Layout handled by wrapper template
 class PricingManager extends Component
 {
     use WithPagination;
 
     public $search = '';
+
     public $channelFilter = '';
+
     public $profitabilityFilter = '';
+
     public $showUnprofitable = false;
 
     // Bulk edit properties
     public $selectedPricing = [];
+
     public $bulkEditMode = false;
+
     public $bulkVatPercentage = '';
+
     public $bulkChannelFeePercentage = '';
+
     public $bulkShippingCost = '';
-    
+
     // Marketplace pricing properties
     public $showMarketplacePricing = false;
+
     public $selectedMarketplace = '';
+
     public $priceAdjustmentPercentage = '';
+
     public $currencyFilter = 'GBP';
 
     public function updatingSearch()
@@ -51,7 +60,7 @@ class PricingManager extends Component
 
     public function toggleBulkEdit()
     {
-        $this->bulkEditMode = !$this->bulkEditMode;
+        $this->bulkEditMode = ! $this->bulkEditMode;
         $this->selectedPricing = [];
     }
 
@@ -70,7 +79,7 @@ class PricingManager extends Component
     {
         $pricing = Pricing::findOrFail($pricingId);
         $pricing->recalculateAndSave();
-        
+
         session()->flash('success', 'Pricing recalculated successfully!');
     }
 
@@ -78,6 +87,7 @@ class PricingManager extends Component
     {
         if (empty($this->selectedPricing)) {
             session()->flash('error', 'Please select pricing entries to recalculate.');
+
             return;
         }
 
@@ -98,6 +108,7 @@ class PricingManager extends Component
     {
         if (empty($this->selectedPricing)) {
             session()->flash('error', 'Please select pricing entries to update.');
+
             return;
         }
 
@@ -114,6 +125,7 @@ class PricingManager extends Component
 
         if (empty($updates)) {
             session()->flash('error', 'Please enter values to update.');
+
             return;
         }
 
@@ -131,20 +143,22 @@ class PricingManager extends Component
         $this->bulkVatPercentage = '';
         $this->bulkChannelFeePercentage = '';
         $this->bulkShippingCost = '';
-        
+
         session()->flash('success', "Updated {$count} pricing entries successfully!");
     }
 
     public function syncMarketplacePricing()
     {
-        if (!$this->selectedMarketplace) {
+        if (! $this->selectedMarketplace) {
             session()->flash('error', 'Please select a marketplace.');
+
             return;
         }
 
         $marketplace = Marketplace::where('code', $this->selectedMarketplace)->first();
-        if (!$marketplace) {
+        if (! $marketplace) {
             session()->flash('error', 'Marketplace not found.');
+
             return;
         }
 
@@ -153,14 +167,16 @@ class PricingManager extends Component
 
         foreach ($this->selectedPricing as $pricingId) {
             $pricing = Pricing::find($pricingId);
-            if (!$pricing) continue;
+            if (! $pricing) {
+                continue;
+            }
 
             // Find or create marketplace variant
             $marketplaceVariant = MarketplaceVariant::firstOrCreate([
                 'variant_id' => $pricing->product_variant_id,
                 'marketplace_id' => $marketplace->id,
             ], [
-                'marketplace_sku' => $pricing->productVariant->sku . '-' . $marketplace->code,
+                'marketplace_sku' => $pricing->productVariant->sku.'-'.$marketplace->code,
                 'status' => 'draft',
             ]);
 
@@ -184,7 +200,7 @@ class PricingManager extends Component
 
     public function toggleMarketplacePricing()
     {
-        $this->showMarketplacePricing = !$this->showMarketplacePricing;
+        $this->showMarketplacePricing = ! $this->showMarketplacePricing;
         $this->selectedPricing = [];
     }
 
@@ -192,7 +208,7 @@ class PricingManager extends Component
     {
         $pricing = Pricing::findOrFail($pricingId);
         $pricing->delete();
-        
+
         session()->flash('success', 'Pricing entry deleted successfully!');
     }
 
@@ -201,10 +217,10 @@ class PricingManager extends Component
         return Pricing::with(['productVariant.product', 'salesChannel'])
             ->when($this->search, function ($query) {
                 $query->whereHas('productVariant.product', function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%');
+                    $q->where('name', 'like', '%'.$this->search.'%');
                 })->orWhereHas('productVariant', function ($q) {
-                    $q->where('sku', 'like', '%' . $this->search . '%');
-                })->orWhere('marketplace', 'like', '%' . $this->search . '%');
+                    $q->where('sku', 'like', '%'.$this->search.'%');
+                })->orWhere('marketplace', 'like', '%'.$this->search.'%');
             })
             ->when($this->channelFilter, function ($query) {
                 $query->where('marketplace', $this->channelFilter);
@@ -221,7 +237,7 @@ class PricingManager extends Component
     public function render()
     {
         $pricing = $this->getPricingQuery()->paginate(20);
-        
+
         // Calculate summary statistics
         $totalPricing = Pricing::count();
         $profitablePricing = Pricing::where('profit_amount', '>', 0)->count();
@@ -236,7 +252,7 @@ class PricingManager extends Component
                 // Special handling for Shopify using ShopifyProductSync
                 $totalSyncs = \App\Models\ShopifyProductSync::where('sync_status', 'synced')->count();
                 $recentSyncs = \App\Models\ShopifyProductSync::where('last_synced_at', '>=', now()->subHours(24))->count();
-                
+
                 $marketplaceStats[$marketplace->code] = [
                     'name' => $marketplace->name,
                     'variants' => $totalSyncs,

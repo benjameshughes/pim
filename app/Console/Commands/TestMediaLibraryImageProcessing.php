@@ -35,7 +35,7 @@ class TestMediaLibraryImageProcessing extends Command
             ['name' => 'Test Product for Media Library'],
             [
                 'description' => 'Testing Media Library image processing flow',
-                'status' => 'active'
+                'status' => 'active',
             ]
         );
 
@@ -46,7 +46,7 @@ class TestMediaLibraryImageProcessing extends Command
                 'product_id' => $product->id,
                 'color' => 'Blue',
                 'size' => 'L',
-                'status' => 'active'
+                'status' => 'active',
             ]
         );
 
@@ -57,7 +57,7 @@ class TestMediaLibraryImageProcessing extends Command
             'variant_sku' => 'MEDIA-TEST-001',
             'color' => 'Blue',
             'size' => 'L',
-            'image_urls' => 'https://picsum.photos/600/600,https://picsum.photos/700/500'
+            'image_urls' => 'https://picsum.photos/600/600,https://picsum.photos/700/500',
         ];
 
         $this->info('Dispatching ProductVariantImported event with Media Library processing...');

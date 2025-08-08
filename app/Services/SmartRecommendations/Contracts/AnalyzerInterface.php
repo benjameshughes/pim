@@ -8,8 +8,8 @@ interface AnalyzerInterface
 {
     /**
      * Analyze the given variant IDs and return recommendations
-     * 
-     * @param array $variantIds Empty array means analyze all variants
+     *
+     * @param  array  $variantIds  Empty array means analyze all variants
      * @return Collection<Recommendation>
      */
     public function analyze(array $variantIds = []): Collection;

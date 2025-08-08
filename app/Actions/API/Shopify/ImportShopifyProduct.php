@@ -2,13 +2,12 @@
 
 namespace App\Actions\API\Shopify;
 
+use App\Models\Barcode;
+use App\Models\Pricing;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\VariantAttribute;
-use App\Models\Barcode;
-use App\Models\Pricing;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 
 class ImportShopifyProduct
 {
@@ -23,17 +22,18 @@ class ImportShopifyProduct
             'action' => 'skipped',
             'product_id' => null,
             'variants_imported' => 0,
-            'errors' => []
+            'errors' => [],
         ];
 
         try {
             // Extract base product info
             $productInfo = $this->extractProductInfo($shopifyProduct);
-            
+
             // Check if we should skip this product
             if ($this->shouldSkipProduct($shopifyProduct, $productInfo)) {
                 $results['action'] = 'skipped';
                 $results['errors'][] = 'Product already exists or invalid data';
+
                 return $results;
             }
 
@@ -41,21 +41,22 @@ class ImportShopifyProduct
                 $results['action'] = 'would_create';
                 $results['variants_imported'] = count($shopifyProduct['variants']);
                 $results['success'] = true;
+
                 return $results;
             }
 
             // Create the parent product
             $product = $this->createProduct($productInfo);
-            
+
             // Import variants
             $variantResults = $this->importVariants($product, $shopifyProduct['variants']);
-            
+
             $results['success'] = true;
             $results['action'] = 'created';
             $results['product_id'] = $product->id;
             $results['variants_imported'] = $variantResults['imported'];
-            
-            if (!empty($variantResults['errors'])) {
+
+            if (! empty($variantResults['errors'])) {
                 $results['errors'] = $variantResults['errors'];
             }
 
@@ -63,14 +64,14 @@ class ImportShopifyProduct
                 'shopify_id' => $shopifyProduct['id'],
                 'laravel_product_id' => $product->id,
                 'title' => $shopifyProduct['title'],
-                'variants_imported' => $variantResults['imported']
+                'variants_imported' => $variantResults['imported'],
             ]);
 
         } catch (\Exception $e) {
             $results['errors'][] = $e->getMessage();
             Log::error('Failed to import Shopify product', [
                 'shopify_id' => $shopifyProduct['id'] ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -103,7 +104,7 @@ class ImportShopifyProduct
             'product_type' => $shopifyProduct['product_type'] ?? 'Roller Blind',
             'vendor' => $shopifyProduct['vendor'] ?? 'Blinds Outlet',
             'tags' => $shopifyProduct['tags'] ?? '',
-            'status' => $shopifyProduct['status'] ?? 'active'
+            'status' => $shopifyProduct['status'] ?? 'active',
         ];
     }
 
@@ -145,13 +146,13 @@ class ImportShopifyProduct
                 'base_name' => $productInfo['base_name'],
                 'color' => $productInfo['color'],
                 'imported_from' => 'shopify',
-                'imported_at' => now()->toISOString()
-            ]
+                'imported_at' => now()->toISOString(),
+            ],
         ]);
 
         // Generate a parent SKU if needed
-        if (!$product->parent_sku) {
-            $product->update(['parent_sku' => 'SH' . str_pad($product->id, 3, '0', STR_PAD_LEFT)]);
+        if (! $product->parent_sku) {
+            $product->update(['parent_sku' => 'SH'.str_pad($product->id, 3, '0', STR_PAD_LEFT)]);
         }
 
         return $product;
@@ -171,16 +172,16 @@ class ImportShopifyProduct
                 $this->createVariantAttributes($variant, $shopifyVariant);
                 $this->createVariantBarcode($variant, $shopifyVariant);
                 $this->createVariantPricing($variant, $shopifyVariant);
-                
+
                 $imported++;
             } catch (\Exception $e) {
-                $errors[] = "Variant {$shopifyVariant['sku']}: " . $e->getMessage();
+                $errors[] = "Variant {$shopifyVariant['sku']}: ".$e->getMessage();
             }
         }
 
         return [
             'imported' => $imported,
-            'errors' => $errors
+            'errors' => $errors,
         ];
     }
 
@@ -198,8 +199,8 @@ class ImportShopifyProduct
                 'shopify_variant_id' => $shopifyVariant['id'],
                 'shopify_title' => $shopifyVariant['title'],
                 'shopify_position' => $shopifyVariant['position'] ?? 1,
-                'imported_from' => 'shopify'
-            ]
+                'imported_from' => 'shopify',
+            ],
         ]);
     }
 
@@ -209,21 +210,21 @@ class ImportShopifyProduct
     private function createVariantAttributes(ProductVariant $variant, array $shopifyVariant): void
     {
         // Size/Width from option1 (e.g., "60cm", "90cm")
-        if (!empty($shopifyVariant['option1'])) {
+        if (! empty($shopifyVariant['option1'])) {
             $size = $shopifyVariant['option1'];
-            
+
             // Extract numeric width if it contains "cm"
             if (str_contains($size, 'cm')) {
                 VariantAttribute::create([
                     'product_variant_id' => $variant->id,
                     'attribute_key' => 'width',
-                    'attribute_value' => $size
+                    'attribute_value' => $size,
                 ]);
             } else {
                 VariantAttribute::create([
                     'product_variant_id' => $variant->id,
                     'attribute_key' => 'size',
-                    'attribute_value' => $size
+                    'attribute_value' => $size,
                 ]);
             }
         }
@@ -234,24 +235,24 @@ class ImportShopifyProduct
             VariantAttribute::create([
                 'product_variant_id' => $variant->id,
                 'attribute_key' => 'color',
-                'attribute_value' => $product->metadata['color']
+                'attribute_value' => $product->metadata['color'],
             ]);
         }
 
         // Add other options if available
-        if (!empty($shopifyVariant['option2'])) {
+        if (! empty($shopifyVariant['option2'])) {
             VariantAttribute::create([
                 'product_variant_id' => $variant->id,
                 'attribute_key' => 'option2',
-                'attribute_value' => $shopifyVariant['option2']
+                'attribute_value' => $shopifyVariant['option2'],
             ]);
         }
 
-        if (!empty($shopifyVariant['option3'])) {
+        if (! empty($shopifyVariant['option3'])) {
             VariantAttribute::create([
                 'product_variant_id' => $variant->id,
                 'attribute_key' => 'option3',
-                'attribute_value' => $shopifyVariant['option3']
+                'attribute_value' => $shopifyVariant['option3'],
             ]);
         }
     }
@@ -261,16 +262,16 @@ class ImportShopifyProduct
      */
     private function createVariantBarcode(ProductVariant $variant, array $shopifyVariant): void
     {
-        if (!empty($shopifyVariant['barcode'])) {
+        if (! empty($shopifyVariant['barcode'])) {
             // Remove any quotes from barcode
             $barcode = trim($shopifyVariant['barcode'], "'\"");
-            
+
             Barcode::create([
                 'product_variant_id' => $variant->id,
                 'barcode' => $barcode,
                 'barcode_type' => 'EAN13', // Assume EAN13 for UK products
                 'is_primary' => true,
-                'source' => 'shopify_import'
+                'source' => 'shopify_import',
             ]);
         }
     }
@@ -280,9 +281,9 @@ class ImportShopifyProduct
      */
     private function createVariantPricing(ProductVariant $variant, array $shopifyVariant): void
     {
-        if (!empty($shopifyVariant['price'])) {
+        if (! empty($shopifyVariant['price'])) {
             $price = (float) $shopifyVariant['price'];
-            
+
             Pricing::create([
                 'product_variant_id' => $variant->id,
                 'sales_channel_id' => null, // Default channel
@@ -290,7 +291,7 @@ class ImportShopifyProduct
                 'currency' => 'GBP',
                 'vat_rate' => 20.0, // UK VAT
                 'vat_inclusive' => true,
-                'source' => 'shopify_import'
+                'source' => 'shopify_import',
             ]);
         }
     }
@@ -300,7 +301,7 @@ class ImportShopifyProduct
      */
     private function mapStatus(string $shopifyStatus): string
     {
-        return match($shopifyStatus) {
+        return match ($shopifyStatus) {
             'active' => 'active',
             'draft' => 'inactive',
             'archived' => 'discontinued',

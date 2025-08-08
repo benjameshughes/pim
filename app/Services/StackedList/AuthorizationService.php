@@ -13,8 +13,8 @@ class AuthorizationService
     public function canPerformBulkAction(string $action, string $modelClass, ?int $userId = null): bool
     {
         $userId = $userId ?? auth()->id();
-        
-        if (!$userId) {
+
+        if (! $userId) {
             return false;
         }
 
@@ -27,7 +27,7 @@ class AuthorizationService
         // Check model-specific permission
         $modelName = strtolower(class_basename($modelClass));
         $modelPermission = "{$modelName}.bulk.{$action}";
-        
+
         return Gate::forUser($userId)->check($modelPermission);
     }
 
@@ -37,14 +37,14 @@ class AuthorizationService
     public function canViewStackedList(string $modelClass, ?int $userId = null): bool
     {
         $userId = $userId ?? auth()->id();
-        
-        if (!$userId) {
+
+        if (! $userId) {
             return false;
         }
 
         $modelName = strtolower(class_basename($modelClass));
-        
-        return Gate::forUser($userId)->check("viewAny", $modelClass) ||
+
+        return Gate::forUser($userId)->check('viewAny', $modelClass) ||
                Gate::forUser($userId)->check("{$modelName}.viewAny");
     }
 
@@ -54,13 +54,13 @@ class AuthorizationService
     public function canExportData(string $modelClass, ?int $userId = null): bool
     {
         $userId = $userId ?? auth()->id();
-        
-        if (!$userId) {
+
+        if (! $userId) {
             return false;
         }
 
         $modelName = strtolower(class_basename($modelClass));
-        
+
         return Gate::forUser($userId)->check('export') ||
                Gate::forUser($userId)->check("{$modelName}.export");
     }
@@ -71,15 +71,15 @@ class AuthorizationService
     public function applyRowLevelSecurity($query, string $modelClass, ?int $userId = null)
     {
         $userId = $userId ?? auth()->id();
-        
-        if (!$userId) {
+
+        if (! $userId) {
             return $query->whereRaw('1 = 0'); // No access
         }
 
         // Apply model-specific row-level security if method exists
         $modelName = strtolower(class_basename($modelClass));
-        $methodName = "apply" . ucfirst($modelName) . "RowSecurity";
-        
+        $methodName = 'apply'.ucfirst($modelName).'RowSecurity';
+
         if (method_exists($this, $methodName)) {
             return $this->$methodName($query, $userId);
         }
@@ -94,15 +94,15 @@ class AuthorizationService
     protected function applyProductRowSecurity($query, int $userId)
     {
         // Example: Users can only see products they created or are assigned to
-        if (!auth()->user()->hasRole('admin')) {
-            $query->where(function($q) use ($userId) {
+        if (! auth()->user()->hasRole('admin')) {
+            $query->where(function ($q) use ($userId) {
                 $q->where('created_by', $userId)
-                  ->orWhereHas('assignedUsers', function($subQ) use ($userId) {
-                      $subQ->where('user_id', $userId);
-                  });
+                    ->orWhereHas('assignedUsers', function ($subQ) use ($userId) {
+                        $subQ->where('user_id', $userId);
+                    });
             });
         }
-        
+
         return $query;
     }
 }

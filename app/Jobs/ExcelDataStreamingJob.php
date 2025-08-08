@@ -15,9 +15,10 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ExcelDataStreamingJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, ChunkedExcelReader;
+    use ChunkedExcelReader, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 1800; // 30 minutes for large files
+
     public int $maxExceptions = 3;
 
     public function __construct(
@@ -34,9 +35,10 @@ class ExcelDataStreamingJob implements ShouldQueue
     public function handle(): void
     {
         $progress = FileProcessingProgress::find($this->progressId);
-        
-        if (!$progress) {
+
+        if (! $progress) {
             Log::error('File processing progress record not found', ['id' => $this->progressId]);
+
             return;
         }
 
@@ -44,40 +46,40 @@ class ExcelDataStreamingJob implements ShouldQueue
             $progress->updateStatus('processing', "Starting {$this->dataType} data loading...");
 
             // Verify file exists
-            if (!Storage::disk('local')->exists($this->filePath)) {
-                throw new \Exception('File not found: ' . $this->filePath);
+            if (! Storage::disk('local')->exists($this->filePath)) {
+                throw new \Exception('File not found: '.$this->filePath);
             }
 
             $fullPath = Storage::disk('local')->path($this->filePath);
-            
+
             Log::info('Starting Excel data streaming', [
                 'data_type' => $this->dataType,
                 'worksheets' => count($this->selectedWorksheets),
                 'chunk_size' => $this->chunkSize,
                 'max_rows' => $this->maxRows,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
             // Process worksheets with chunking
             $allData = $this->processWorksheetsInChunks($fullPath, $progress);
-            
+
             // Store results based on data type
             $this->storeProcessedData($progress, $allData);
 
             Log::info('Excel data streaming completed', [
                 'total_rows' => count($allData),
                 'data_type' => $this->dataType,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Excel data streaming failed', [
                 'error' => $e->getMessage(),
                 'data_type' => $this->dataType,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
-            $progress->updateStatus('failed', 'Data loading failed: ' . $e->getMessage());
+            $progress->updateStatus('failed', 'Data loading failed: '.$e->getMessage());
             throw $e;
         }
     }
@@ -90,11 +92,11 @@ class ExcelDataStreamingJob implements ShouldQueue
 
         foreach ($this->selectedWorksheets as $worksheetName) {
             $progress->updateStatus('processing', "Processing worksheet: {$worksheetName}");
-            
+
             try {
                 $worksheetData = $this->processWorksheetWithChunking($filePath, $worksheetName, $progress);
                 $allData = array_merge($allData, $worksheetData);
-                
+
                 $processedWorksheets++;
                 $worksheetProgress = ($processedWorksheets / $totalWorksheets) * 100;
                 $progress->updateProgress($worksheetProgress);
@@ -103,14 +105,14 @@ class ExcelDataStreamingJob implements ShouldQueue
                     'worksheet' => $worksheetName,
                     'rows_loaded' => count($worksheetData),
                     'total_rows_so_far' => count($allData),
-                    'progress_id' => $this->progressId
+                    'progress_id' => $this->progressId,
                 ]);
 
             } catch (\Exception $e) {
                 Log::warning('Failed to process worksheet', [
                     'worksheet' => $worksheetName,
                     'error' => $e->getMessage(),
-                    'progress_id' => $this->progressId
+                    'progress_id' => $this->progressId,
                 ]);
                 // Continue with other worksheets
             }
@@ -135,26 +137,27 @@ class ExcelDataStreamingJob implements ShouldQueue
 
         // Get headers
         $headers = $this->extractHeaders($worksheet);
-        
+
         if (empty($headers)) {
             Log::warning('No headers found in worksheet', [
                 'worksheet' => $worksheetName,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
             $spreadsheet->disconnectWorksheets();
+
             return [];
         }
 
         // Determine row processing limits
         $highestRow = $worksheet->getHighestRow();
         $maxRowsToProcess = $this->getMaxRowsToProcess($highestRow);
-        
+
         Log::info('Processing worksheet rows', [
             'worksheet' => $worksheetName,
             'highest_row' => $highestRow,
             'max_rows_to_process' => $maxRowsToProcess,
             'headers_count' => count($headers),
-            'progress_id' => $this->progressId
+            'progress_id' => $this->progressId,
         ]);
 
         // Process data in chunks
@@ -188,10 +191,10 @@ class ExcelDataStreamingJob implements ShouldQueue
 
         while ($processedRows < $maxRows) {
             $chunkEndRow = min($startRow + $this->chunkSize - 1, $maxRows + 1);
-            
+
             // Read chunk
             $chunkData = $this->readDataChunk($worksheet, $startRow, $chunkEndRow, $endColumn, $headers);
-            
+
             if (empty($chunkData)) {
                 break; // No more data
             }
@@ -215,7 +218,7 @@ class ExcelDataStreamingJob implements ShouldQueue
             'worksheet' => $worksheetName,
             'total_rows_processed' => $processedRows,
             'data_rows_loaded' => count($allData),
-            'progress_id' => $this->progressId
+            'progress_id' => $this->progressId,
         ]);
 
         return $allData;
@@ -224,11 +227,11 @@ class ExcelDataStreamingJob implements ShouldQueue
     private function readDataChunk($worksheet, int $startRow, int $endRow, string $endColumn, array $headers): array
     {
         $chunkData = [];
-        
+
         for ($row = $startRow; $row <= $endRow; $row++) {
             try {
                 $rowData = $worksheet->rangeToArray("A{$row}:{$endColumn}{$row}", null, true, false, false)[0] ?? [];
-                
+
                 // Skip empty rows
                 if (empty(array_filter($rowData))) {
                     continue;
@@ -236,19 +239,20 @@ class ExcelDataStreamingJob implements ShouldQueue
 
                 // Pad or trim to match header count
                 $rowData = array_pad(array_slice($rowData, 0, count($headers)), count($headers), null);
-                
+
                 $chunkData[] = [
                     'data' => $rowData,
                     'headers' => $headers,
-                    'row_number' => $row
+                    'row_number' => $row,
                 ];
 
             } catch (\Exception $e) {
                 Log::warning('Failed to read row', [
                     'row' => $row,
                     'error' => $e->getMessage(),
-                    'progress_id' => $this->progressId
+                    'progress_id' => $this->progressId,
                 ]);
+
                 continue;
             }
         }
@@ -262,7 +266,7 @@ class ExcelDataStreamingJob implements ShouldQueue
             'data_type' => $this->dataType,
             'total_rows' => count($data),
             'worksheets_processed' => count($this->selectedWorksheets),
-            'chunk_size_used' => $this->chunkSize
+            'chunk_size_used' => $this->chunkSize,
         ];
 
         // Store different data based on type
@@ -287,9 +291,9 @@ class ExcelDataStreamingJob implements ShouldQueue
     {
         // Group sample data by worksheet and limit to first few rows
         $sampleData = [];
-        
+
         foreach ($this->selectedWorksheets as $worksheetName) {
-            $worksheetRows = array_filter($data, function($row) use ($worksheetName) {
+            $worksheetRows = array_filter($data, function ($row) {
                 // Assuming we add worksheet info to each row during processing
                 return true; // Simplified for now
             });
@@ -303,17 +307,17 @@ class ExcelDataStreamingJob implements ShouldQueue
     private function storeTemporaryData(array $data): string
     {
         // Store large datasets temporarily in cache or storage
-        $dataKey = 'excel_data_' . $this->progressId . '_' . time();
-        
+        $dataKey = 'excel_data_'.$this->progressId.'_'.time();
+
         // Use file storage for large datasets
         $fileName = "temp_data/{$dataKey}.json";
         Storage::disk('local')->put($fileName, json_encode($data));
-        
+
         Log::info('Temporary data stored', [
             'key' => $dataKey,
             'file' => $fileName,
             'size' => count($data),
-            'progress_id' => $this->progressId
+            'progress_id' => $this->progressId,
         ]);
 
         return $dataKey;
@@ -325,11 +329,11 @@ class ExcelDataStreamingJob implements ShouldQueue
             'data_type' => $this->dataType,
             'worksheets' => count($this->selectedWorksheets),
             'progress_id' => $this->progressId,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
 
         if ($progress = FileProcessingProgress::find($this->progressId)) {
-            $progress->updateStatus('failed', 'Data loading failed: ' . $exception->getMessage());
+            $progress->updateStatus('failed', 'Data loading failed: '.$exception->getMessage());
         }
     }
 }

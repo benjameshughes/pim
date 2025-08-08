@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Variant Performance Service
- * 
+ *
  * Handles performance optimizations for variant creation and management
  */
 class VariantPerformanceService
@@ -21,7 +21,7 @@ class VariantPerformanceService
     {
         // Warm up barcode pool counts for all types
         $barcodeTypes = ['EAN13', 'UPC', 'CODE128', 'CODE39'];
-        
+
         foreach ($barcodeTypes as $type) {
             Cache::remember("barcode_count_{$type}", 300, function () use ($type) {
                 return BarcodePool::where('status', 'available')
@@ -29,17 +29,17 @@ class VariantPerformanceService
                     ->count();
             });
         }
-        
+
         // Warm up variant count per product
         Cache::remember('total_variant_count', 300, function () {
             return ProductVariant::count();
         });
     }
-    
+
     /**
      * Get cached barcode pool stats
      */
-    public static function getBarcodePoolStats(string $type = null): array
+    public static function getBarcodePoolStats(?string $type = null): array
     {
         if ($type) {
             return [
@@ -55,7 +55,7 @@ class VariantPerformanceService
                 }),
             ];
         }
-        
+
         return Cache::remember('barcode_pool_stats_all', 300, function () {
             return DB::table('barcode_pools')
                 ->select('barcode_type', 'status', DB::raw('count(*) as count'))
@@ -68,42 +68,42 @@ class VariantPerformanceService
                 ->toArray();
         });
     }
-    
+
     /**
      * Invalidate relevant caches after variant creation
      */
-    public static function invalidateVariantCaches(string $barcodeType = null): void
+    public static function invalidateVariantCaches(?string $barcodeType = null): void
     {
         Cache::forget('total_variant_count');
-        
+
         if ($barcodeType) {
             Cache::forget("barcode_count_{$barcodeType}");
             Cache::forget("barcode_assigned_{$barcodeType}");
         }
-        
+
         Cache::forget('barcode_pool_stats_all');
     }
-    
+
     /**
      * Batch create multiple variants efficiently
      */
     public static function batchCreateVariants(array $variantData): array
     {
         $createdVariants = [];
-        
+
         DB::transaction(function () use ($variantData, &$createdVariants) {
             foreach ($variantData as $data) {
                 $variant = ProductVariant::create($data);
                 $createdVariants[] = $variant->id;
             }
         });
-        
+
         // Eager load all relationships in one query
         return ProductVariant::whereIn('id', $createdVariants)
             ->with(['barcodes', 'pricing', 'attributes', 'product:id,name,sku'])
             ->get();
     }
-    
+
     /**
      * Get performance metrics
      */
@@ -121,29 +121,29 @@ class VariantPerformanceService
             ];
         });
     }
-    
+
     /**
      * Optimize database tables (should be run periodically)
      */
     public static function optimizeTables(): array
     {
         $results = [];
-        
+
         $tables = ['product_variants', 'barcodes', 'pricing', 'variant_attributes', 'barcode_pools'];
-        
+
         foreach ($tables as $table) {
             try {
                 // SQLite doesn't support OPTIMIZE TABLE, but we can run ANALYZE
                 DB::statement("ANALYZE {$table}");
                 $results[$table] = 'analyzed';
             } catch (\Exception $e) {
-                $results[$table] = 'error: ' . $e->getMessage();
+                $results[$table] = 'error: '.$e->getMessage();
             }
         }
-        
+
         return $results;
     }
-    
+
     /**
      * Clear old performance logs
      */

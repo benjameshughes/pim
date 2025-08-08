@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->enum('status', ['active', 'inactive', 'out_of_stock'])->default('active');
             $table->timestamps();
-            
+
             $table->unique(['product_id', 'color', 'size']);
         });
     }

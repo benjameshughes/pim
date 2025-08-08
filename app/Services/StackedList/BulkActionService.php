@@ -2,9 +2,9 @@
 
 namespace App\Services\StackedList;
 
-use App\Jobs\StackedList\BulkUpdateStatusJob;
-use App\Jobs\StackedList\BulkDeleteJob;
 use App\Exceptions\StackedList\UnauthorizedBulkActionException;
+use App\Jobs\StackedList\BulkDeleteJob;
+use App\Jobs\StackedList\BulkUpdateStatusJob;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -21,12 +21,13 @@ class BulkActionService
      */
     public function updateStatus(string $modelClass, array $ids, string $status): int
     {
-        if (!$this->authService->canPerformBulkAction('activate', $modelClass)) {
+        if (! $this->authService->canPerformBulkAction('activate', $modelClass)) {
             throw UnauthorizedBulkActionException::forAction('activate', $modelClass);
         }
 
         if (count($ids) > $this->asyncThreshold) {
             BulkUpdateStatusJob::dispatch($modelClass, $ids, $status, auth()->id());
+
             return count($ids); // Return expected count for message
         }
 
@@ -39,12 +40,13 @@ class BulkActionService
      */
     public function delete(string $modelClass, array $ids): int
     {
-        if (!$this->authService->canPerformBulkAction('delete', $modelClass)) {
+        if (! $this->authService->canPerformBulkAction('delete', $modelClass)) {
             throw UnauthorizedBulkActionException::forAction('delete', $modelClass);
         }
 
         if (count($ids) > $this->asyncThreshold) {
             BulkDeleteJob::dispatch($modelClass, $ids, auth()->id());
+
             return count($ids); // Return expected count for message
         }
 

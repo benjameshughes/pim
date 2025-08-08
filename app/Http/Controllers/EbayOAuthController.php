@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\EbayOAuthService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 class EbayOAuthController extends Controller
 {
@@ -32,7 +32,7 @@ class EbayOAuthController extends Controller
                 $request->input('scopes', [])
             );
 
-            if (!$result['success']) {
+            if (! $result['success']) {
                 return back()->with('error', $result['error']);
             }
 
@@ -48,7 +48,7 @@ class EbayOAuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->with('error', 'Failed to initiate eBay authorization: ' . $e->getMessage());
+            return back()->with('error', 'Failed to initiate eBay authorization: '.$e->getMessage());
         }
     }
 
@@ -69,7 +69,7 @@ class EbayOAuthController extends Controller
                 'error_description' => $errorDescription,
             ]);
 
-            $message = match($error) {
+            $message = match ($error) {
                 'access_denied' => 'Authorization was denied. Please try again if you want to connect your eBay account.',
                 'invalid_request' => 'Invalid OAuth request. Please try again.',
                 'invalid_client' => 'Invalid eBay application configuration. Please contact support.',
@@ -83,7 +83,7 @@ class EbayOAuthController extends Controller
         }
 
         // Validate required parameters
-        if (!$code || !$state) {
+        if (! $code || ! $state) {
             return redirect()->route('products.ebay-sync')
                 ->with('error', 'Missing required OAuth parameters from eBay callback.');
         }
@@ -92,7 +92,7 @@ class EbayOAuthController extends Controller
             // Exchange code for tokens
             $tokenResult = $this->oauthService->exchangeCodeForToken($code, $state);
 
-            if (!$tokenResult['success']) {
+            if (! $tokenResult['success']) {
                 return redirect()->route('products.ebay-sync')
                     ->with('error', $tokenResult['error']);
             }
@@ -103,7 +103,7 @@ class EbayOAuthController extends Controller
             // Create or update eBay account
             $accountResult = $this->oauthService->createOrUpdateAccount($tokenResult, $accountName);
 
-            if (!$accountResult['success']) {
+            if (! $accountResult['success']) {
                 return redirect()->route('products.ebay-sync')
                     ->with('error', $accountResult['error']);
             }
@@ -111,7 +111,7 @@ class EbayOAuthController extends Controller
             $account = $accountResult['account'];
             $isNew = $accountResult['is_new'];
 
-            $message = $isNew 
+            $message = $isNew
                 ? "eBay account '{$account->name}' connected successfully!"
                 : "eBay account '{$account->name}' updated successfully!";
 
@@ -127,12 +127,12 @@ class EbayOAuthController extends Controller
         } catch (Exception $e) {
             Log::error('eBay OAuth callback processing failed', [
                 'error' => $e->getMessage(),
-                'code_present' => !empty($code),
-                'state_present' => !empty($state),
+                'code_present' => ! empty($code),
+                'state_present' => ! empty($state),
             ]);
 
             return redirect()->route('products.ebay-sync')
-                ->with('error', 'Failed to process eBay authorization: ' . $e->getMessage());
+                ->with('error', 'Failed to process eBay authorization: '.$e->getMessage());
         }
     }
 
@@ -168,7 +168,7 @@ class EbayOAuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->with('error', 'Failed to revoke eBay account: ' . $e->getMessage());
+            return back()->with('error', 'Failed to revoke eBay account: '.$e->getMessage());
         }
     }
 
@@ -185,7 +185,7 @@ class EbayOAuthController extends Controller
             if ($tokenResult['success']) {
                 // Refresh account data
                 $account->refresh();
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'eBay account connection is working!',
@@ -211,7 +211,7 @@ class EbayOAuthController extends Controller
 
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to test account: ' . $e->getMessage(),
+                'error' => 'Failed to test account: '.$e->getMessage(),
             ], 500);
         }
     }

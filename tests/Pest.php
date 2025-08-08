@@ -1,5 +1,17 @@
 <?php
 
+pest()->extend(Tests\DuskTestCase::class)
+//  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Browser');
+
+pest()->extend(Tests\DuskTestCase::class)
+//  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Browser');
+
+pest()->extend(Tests\DuskTestCase::class)
+//  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
+    ->in('Browser');
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -41,7 +53,7 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function actLikeUser()
 {
-    // ..
+    return test()->actingAs(\App\Models\User::factory()->create());
 }

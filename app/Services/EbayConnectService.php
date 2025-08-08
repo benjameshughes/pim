@@ -2,17 +2,20 @@
 
 namespace App\Services;
 
+use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Exception;
+use Illuminate\Support\Facades\Log;
 
 class EbayConnectService
 {
     private Client $client;
+
     private array $config;
+
     private string $environment;
+
     private string $baseUrl;
 
     public function __construct()
@@ -24,9 +27,9 @@ class EbayConnectService
             'redirect_uri' => config('services.ebay.redirect_uri'),
             'dev_id' => config('services.ebay.dev_id'),
         ];
-        
-        $this->baseUrl = $this->environment === 'PRODUCTION' 
-            ? 'https://api.ebay.com' 
+
+        $this->baseUrl = $this->environment === 'PRODUCTION'
+            ? 'https://api.ebay.com'
             : 'https://api.sandbox.ebay.com';
 
         // Only throw exception when actually trying to make API calls
@@ -51,13 +54,13 @@ class EbayConnectService
         }
 
         $cacheKey = "ebay_app_token_{$this->environment}";
-        
+
         return Cache::remember($cacheKey, now()->addMinutes(50), function () {
             try {
                 $response = $this->client->post("{$this->baseUrl}/identity/v1/oauth2/token", [
                     'headers' => [
                         'Content-Type' => 'application/x-www-form-urlencoded',
-                        'Authorization' => 'Basic ' . base64_encode($this->config['client_id'] . ':' . $this->config['client_secret']),
+                        'Authorization' => 'Basic '.base64_encode($this->config['client_id'].':'.$this->config['client_secret']),
                     ],
                     'form_params' => [
                         'grant_type' => 'client_credentials',
@@ -66,23 +69,23 @@ class EbayConnectService
                 ]);
 
                 $data = json_decode($response->getBody()->getContents(), true);
-                
+
                 return [
                     'success' => true,
                     'access_token' => $data['access_token'],
                     'token_type' => $data['token_type'],
                     'expires_in' => $data['expires_in'],
                 ];
-                
+
             } catch (RequestException $e) {
                 Log::error('eBay application token request failed', [
                     'error' => $e->getMessage(),
                     'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null,
                 ]);
-                
+
                 return [
                     'success' => false,
-                    'error' => 'Failed to get application token: ' . $e->getMessage(),
+                    'error' => 'Failed to get application token: '.$e->getMessage(),
                 ];
             }
         });
@@ -94,8 +97,8 @@ class EbayConnectService
     public function createInventoryItem(string $sku, array $inventoryData): array
     {
         $tokenResult = $this->getApplicationToken();
-        
-        if (!$tokenResult['success']) {
+
+        if (! $tokenResult['success']) {
             return $tokenResult;
         }
 
@@ -107,7 +110,7 @@ class EbayConnectService
 
             $response = $this->client->put("{$this->baseUrl}/sell/inventory/v1/inventory_item/{$sku}", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenResult['access_token'],
+                    'Authorization' => 'Bearer '.$tokenResult['access_token'],
                     'Content-Type' => 'application/json',
                     'Content-Language' => 'en-US',
                 ],
@@ -115,21 +118,21 @@ class EbayConnectService
             ]);
 
             $responseCode = $response->getStatusCode();
-            
+
             return [
                 'success' => in_array($responseCode, [200, 201, 204]),
                 'sku' => $sku,
                 'status_code' => $responseCode,
                 'response' => json_decode($response->getBody()->getContents(), true),
             ];
-            
+
         } catch (RequestException $e) {
             Log::error('eBay inventory item creation failed', [
                 'sku' => $sku,
                 'error' => $e->getMessage(),
                 'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null,
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -144,15 +147,15 @@ class EbayConnectService
     public function getInventoryItem(string $sku): array
     {
         $tokenResult = $this->getApplicationToken();
-        
-        if (!$tokenResult['success']) {
+
+        if (! $tokenResult['success']) {
             return $tokenResult;
         }
 
         try {
             $response = $this->client->get("{$this->baseUrl}/sell/inventory/v1/inventory_item/{$sku}", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenResult['access_token'],
+                    'Authorization' => 'Bearer '.$tokenResult['access_token'],
                     'Content-Language' => 'en-US',
                 ],
             ]);
@@ -161,7 +164,7 @@ class EbayConnectService
                 'success' => true,
                 'data' => json_decode($response->getBody()->getContents(), true),
             ];
-            
+
         } catch (RequestException $e) {
             if ($e->hasResponse() && $e->getResponse()->getStatusCode() === 404) {
                 return [
@@ -184,8 +187,8 @@ class EbayConnectService
     public function createOffer(array $offerData): array
     {
         $tokenResult = $this->getApplicationToken();
-        
-        if (!$tokenResult['success']) {
+
+        if (! $tokenResult['success']) {
             return $tokenResult;
         }
 
@@ -197,7 +200,7 @@ class EbayConnectService
 
             $response = $this->client->post("{$this->baseUrl}/sell/inventory/v1/offer", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenResult['access_token'],
+                    'Authorization' => 'Bearer '.$tokenResult['access_token'],
                     'Content-Type' => 'application/json',
                     'Content-Language' => 'en-US',
                 ],
@@ -205,19 +208,19 @@ class EbayConnectService
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             return [
                 'success' => true,
                 'offer_id' => $data['offerId'] ?? null,
                 'response' => $data,
             ];
-            
+
         } catch (RequestException $e) {
             Log::error('eBay offer creation failed', [
                 'error' => $e->getMessage(),
                 'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null,
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -232,8 +235,8 @@ class EbayConnectService
     public function publishOffer(string $offerId): array
     {
         $tokenResult = $this->getApplicationToken();
-        
-        if (!$tokenResult['success']) {
+
+        if (! $tokenResult['success']) {
             return $tokenResult;
         }
 
@@ -242,27 +245,27 @@ class EbayConnectService
 
             $response = $this->client->post("{$this->baseUrl}/sell/inventory/v1/offer/{$offerId}/publish", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenResult['access_token'],
+                    'Authorization' => 'Bearer '.$tokenResult['access_token'],
                     'Content-Type' => 'application/json',
                     'Content-Language' => 'en-US',
                 ],
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             return [
                 'success' => true,
                 'listing_id' => $data['listingId'] ?? null,
                 'response' => $data,
             ];
-            
+
         } catch (RequestException $e) {
             Log::error('eBay offer publishing failed', [
                 'offer_id' => $offerId,
                 'error' => $e->getMessage(),
                 'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null,
             ]);
-            
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -277,15 +280,15 @@ class EbayConnectService
     public function getInventoryLocations(): array
     {
         $tokenResult = $this->getApplicationToken();
-        
-        if (!$tokenResult['success']) {
+
+        if (! $tokenResult['success']) {
             return $tokenResult;
         }
 
         try {
             $response = $this->client->get("{$this->baseUrl}/sell/inventory/v1/location", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $tokenResult['access_token'],
+                    'Authorization' => 'Bearer '.$tokenResult['access_token'],
                     'Content-Language' => 'en-US',
                 ],
             ]);
@@ -294,7 +297,7 @@ class EbayConnectService
                 'success' => true,
                 'data' => json_decode($response->getBody()->getContents(), true),
             ];
-            
+
         } catch (RequestException $e) {
             return [
                 'success' => false,
@@ -310,8 +313,8 @@ class EbayConnectService
     {
         try {
             $tokenResult = $this->getApplicationToken();
-            
-            if (!$tokenResult['success']) {
+
+            if (! $tokenResult['success']) {
                 return [
                     'success' => false,
                     'message' => 'Failed to authenticate with eBay API',
@@ -321,7 +324,7 @@ class EbayConnectService
 
             // Test by getting locations (lightweight call)
             $locationsResult = $this->getInventoryLocations();
-            
+
             if ($locationsResult['success']) {
                 return [
                     'success' => true,
@@ -332,15 +335,15 @@ class EbayConnectService
             } else {
                 return [
                     'success' => false,
-                    'message' => 'Connection failed: ' . $locationsResult['error'],
+                    'message' => 'Connection failed: '.$locationsResult['error'],
                     'error' => $locationsResult['error'],
                 ];
             }
-            
+
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Connection test failed: ' . $e->getMessage(),
+                'message' => 'Connection test failed: '.$e->getMessage(),
                 'error' => $e->getMessage(),
             ];
         }
@@ -401,28 +404,28 @@ class EbayConnectService
     private function buildProductAspects(array $productData): array
     {
         $aspects = [];
-        
-        if (!empty($productData['brand'])) {
+
+        if (! empty($productData['brand'])) {
             $aspects['Brand'] = [$productData['brand']];
         }
-        
-        if (!empty($productData['color'])) {
+
+        if (! empty($productData['color'])) {
             $aspects['Color'] = [$productData['color']];
         }
-        
-        if (!empty($productData['material'])) {
+
+        if (! empty($productData['material'])) {
             $aspects['Material'] = [$productData['material']];
         }
 
         // Add custom aspects from attributes
-        if (!empty($productData['attributes'])) {
+        if (! empty($productData['attributes'])) {
             foreach ($productData['attributes'] as $key => $value) {
-                if (!empty($value) && !in_array($key, ['brand', 'color', 'material'])) {
+                if (! empty($value) && ! in_array($key, ['brand', 'color', 'material'])) {
                     $aspects[ucfirst($key)] = is_array($value) ? $value : [$value];
                 }
             }
         }
-        
+
         return $aspects;
     }
 
@@ -432,15 +435,15 @@ class EbayConnectService
     private function buildPackageInfo(array $productData): ?array
     {
         $package = [];
-        
-        if (!empty($productData['weight'])) {
+
+        if (! empty($productData['weight'])) {
             $package['weight'] = [
                 'unit' => 'POUND',
                 'value' => $productData['weight'],
             ];
         }
-        
-        if (!empty($productData['length']) || !empty($productData['width']) || !empty($productData['height'])) {
+
+        if (! empty($productData['length']) || ! empty($productData['width']) || ! empty($productData['height'])) {
             $package['dimensions'] = [
                 'unit' => 'INCH',
                 'length' => $productData['length'] ?? 0,
@@ -448,7 +451,7 @@ class EbayConnectService
                 'height' => $productData['height'] ?? 0,
             ];
         }
-        
-        return !empty($package) ? $package : null;
+
+        return ! empty($package) ? $package : null;
     }
 }

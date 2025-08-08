@@ -2,9 +2,9 @@
 
 namespace App\Services\SmartRecommendations;
 
+use App\Services\SmartRecommendations\Analyzers\ConsistencyAnalyzer;
 use App\Services\SmartRecommendations\Analyzers\DataCompletenessAnalyzer;
 use App\Services\SmartRecommendations\Analyzers\MarketplaceReadinessAnalyzer;
-use App\Services\SmartRecommendations\Analyzers\ConsistencyAnalyzer;
 use App\Services\SmartRecommendations\DTOs\RecommendationCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -22,24 +22,24 @@ class SmartRecommendationsService
      */
     public function getRecommendations(array $variantIds = []): RecommendationCollection
     {
-        $cacheKey = 'smart_recommendations_' . md5(serialize($variantIds));
-        
+        $cacheKey = 'smart_recommendations_'.md5(serialize($variantIds));
+
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($variantIds) {
             $recommendations = collect();
-            
+
             // Run all analyzers
             $recommendations = $recommendations->merge(
                 $this->completenessAnalyzer->analyze($variantIds)
             );
-            
+
             $recommendations = $recommendations->merge(
                 $this->marketplaceAnalyzer->analyze($variantIds)
             );
-            
+
             $recommendations = $recommendations->merge(
                 $this->consistencyAnalyzer->analyze($variantIds)
             );
-            
+
             return new RecommendationCollection($recommendations);
         });
     }
@@ -50,7 +50,7 @@ class SmartRecommendationsService
     public function getQuickWins(array $variantIds = []): Collection
     {
         $recommendations = $this->getRecommendations($variantIds);
-        
+
         return $recommendations->getQuickWins();
     }
 
@@ -60,7 +60,7 @@ class SmartRecommendationsService
     public function getCriticalIssues(array $variantIds = []): Collection
     {
         $recommendations = $this->getRecommendations($variantIds);
-        
+
         return $recommendations->getCritical();
     }
 
@@ -71,8 +71,8 @@ class SmartRecommendationsService
     {
         $recommendations = $this->getRecommendations($variantIds);
         $recommendation = $recommendations->find($recommendationId);
-        
-        if (!$recommendation) {
+
+        if (! $recommendation) {
             return false;
         }
 
@@ -85,7 +85,7 @@ class SmartRecommendationsService
     public function getDataHealthScore(array $variantIds = []): int
     {
         $recommendations = $this->getRecommendations($variantIds);
-        
+
         return $recommendations->calculateHealthScore();
     }
 

@@ -2,9 +2,9 @@
 
 namespace App\Actions\Import;
 
-use App\Models\ProductVariant;
-use App\Models\MarketplaceBarcode;
 use App\Models\Marketplace;
+use App\Models\MarketplaceBarcode;
+use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Log;
 
 class HandleMarketplaceBarcodes
@@ -12,20 +12,20 @@ class HandleMarketplaceBarcodes
     public function execute(ProductVariant $variant, array $data): void
     {
         $barcodeFields = [
-            'amazon_barcode', 'ebay_barcode', 'shopify_barcode'
+            'amazon_barcode', 'ebay_barcode', 'shopify_barcode',
         ];
-        
+
         foreach ($barcodeFields as $field) {
-            if (!empty($data[$field])) {
+            if (! empty($data[$field])) {
                 $marketplaceName = str_replace('_barcode', '', $field);
-                
+
                 $marketplace = Marketplace::where('name', $marketplaceName)->first();
-                if (!$marketplace) {
+                if (! $marketplace) {
                     continue;
                 }
-                
+
                 $barcodeType = $this->detectBarcodeType($data[$field]);
-                
+
                 MarketplaceBarcode::updateOrCreate([
                     'variant_id' => $variant->id,
                     'marketplace_id' => $marketplace->id,
@@ -34,22 +34,22 @@ class HandleMarketplaceBarcodes
                     'type' => $barcodeType,
                     'is_active' => true,
                 ]);
-                
-                Log::info("Created/updated marketplace barcode", [
+
+                Log::info('Created/updated marketplace barcode', [
                     'variant_id' => $variant->id,
                     'marketplace' => $marketplaceName,
                     'barcode' => $data[$field],
-                    'type' => $barcodeType
+                    'type' => $barcodeType,
                 ]);
             }
         }
     }
-    
+
     private function detectBarcodeType(string $barcode): string
     {
         $length = strlen($barcode);
-        
-        return match($length) {
+
+        return match ($length) {
             8 => 'EAN8',
             12 => 'UPC-A',
             13 => 'EAN13',

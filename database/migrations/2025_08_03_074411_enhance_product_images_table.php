@@ -21,9 +21,9 @@ return new class extends Migration
             $table->string('alt_text')->nullable();
             $table->json('metadata')->nullable(); // size, format, etc.
             $table->timestamps();
-            
+
             // Note: Check constraint would go here in production DB (SQLite doesn't support check method)
-            
+
             $table->index(['product_id', 'image_type', 'sort_order']);
             $table->index(['variant_id', 'image_type', 'sort_order']);
         });

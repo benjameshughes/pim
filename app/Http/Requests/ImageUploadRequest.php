@@ -28,36 +28,36 @@ class ImageUploadRequest extends FormRequest
             'files' => [
                 'required',
                 'array',
-                "max:{$maxFiles}"
+                "max:{$maxFiles}",
             ],
             'files.*' => [
                 'required',
                 File::image()
                     ->max($maxSize)
                     ->types($acceptTypes),
-                'dimensions:min_width=300,min_height=300'
+                'dimensions:min_width=300,min_height=300',
             ],
             'image_type' => [
                 'required',
-                'in:main,detail,swatch,lifestyle,installation'
+                'in:main,detail,swatch,lifestyle,installation',
             ],
             'model_type' => [
                 'nullable',
-                'in:product,variant'
+                'in:product,variant',
             ],
             'model_id' => [
                 'nullable',
                 'integer',
-                'min:1'
+                'min:1',
             ],
             'process_immediately' => [
-                'boolean'
+                'boolean',
             ],
             'alt_text' => [
                 'nullable',
                 'string',
-                'max:255'
-            ]
+                'max:255',
+            ],
         ];
     }
 
@@ -99,7 +99,7 @@ class ImageUploadRequest extends FormRequest
         // Ensure arrays are properly formatted
         if ($this->has('accept_types') && is_string($this->accept_types)) {
             $this->merge([
-                'accept_types' => explode(',', $this->accept_types)
+                'accept_types' => explode(',', $this->accept_types),
             ]);
         }
 
@@ -108,7 +108,7 @@ class ImageUploadRequest extends FormRequest
             'process_immediately' => true,
             'max_size' => 10240,
             'max_files' => 10,
-            'accept_types' => ['jpg', 'jpeg', 'png', 'webp']
+            'accept_types' => ['jpg', 'jpeg', 'png', 'webp'],
         ]);
     }
 
@@ -122,7 +122,7 @@ class ImageUploadRequest extends FormRequest
                 response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
-                    'errors' => $validator->errors()
+                    'errors' => $validator->errors(),
                 ], 422)
             );
         }

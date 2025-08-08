@@ -37,7 +37,7 @@ class StackedListServiceProvider extends ServiceProvider
 
         // Register Blade components
         $this->loadViewsFrom(__DIR__.'/../../resources/views/components', 'stacked-list');
-        
+
         // Register default column limit and cache settings
         $this->configureDefaults();
     }
@@ -52,8 +52,8 @@ class StackedListServiceProvider extends ServiceProvider
             'stacked-list.defaults.column_limit' => config('stacked-list.column_limit', 6),
             'stacked-list.defaults.cache_ttl' => config('stacked-list.cache_ttl', 3600),
             'stacked-list.defaults.hidden_columns' => config('stacked-list.hidden_columns', [
-                'id', 'password', 'remember_token', 'email_verified_at', 
-                'created_at', 'updated_at', 'deleted_at'
+                'id', 'password', 'remember_token', 'email_verified_at',
+                'created_at', 'updated_at', 'deleted_at',
             ]),
         ]);
     }

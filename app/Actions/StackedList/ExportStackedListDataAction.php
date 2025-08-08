@@ -31,13 +31,13 @@ class ExportStackedListDataAction
     protected function exportToCsv(Collection $data, array $columns, array $metadata): StreamedResponse
     {
         $filename = $this->generateFilename($metadata['title'] ?? 'export', 'csv');
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function() use ($data, $columns) {
+        $callback = function () use ($data, $columns) {
             $file = fopen('php://output', 'w');
 
             // Header row
@@ -64,7 +64,7 @@ class ExportStackedListDataAction
     protected function exportToJson(Collection $data, array $columns, array $metadata): StreamedResponse
     {
         $filename = $this->generateFilename($metadata['title'] ?? 'export', 'json');
-        
+
         $headers = [
             'Content-Type' => 'application/json',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
@@ -81,11 +81,12 @@ class ExportStackedListDataAction
                 foreach (array_keys($columns) as $key) {
                     $row[$key] = data_get($item, $key);
                 }
+
                 return $row;
-            })->toArray()
+            })->toArray(),
         ];
 
-        $callback = function() use ($exportData) {
+        $callback = function () use ($exportData) {
             echo json_encode($exportData, JSON_PRETTY_PRINT);
         };
 
@@ -128,7 +129,7 @@ class ExportStackedListDataAction
     {
         $slug = Str::slug($base);
         $timestamp = now()->format('Y-m-d-H-i-s');
-        
+
         return "{$slug}-{$timestamp}.{$extension}";
     }
 }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('barcode');
             $table->boolean('is_primary')->default(false);
             $table->timestamps();
-            
+
             $table->unique(['product_variant_id', 'barcode']);
         });
     }

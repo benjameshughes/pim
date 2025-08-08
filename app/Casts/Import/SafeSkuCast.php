@@ -14,10 +14,13 @@ use Illuminate\Support\Str;
 class SafeSkuCast implements CastsAttributes
 {
     private int $maxLength;
+
     private bool $allowHyphens;
+
     private bool $allowUnderscores;
+
     private bool $forceUppercase;
-    
+
     public function __construct(
         int $maxLength = 50,
         bool $allowHyphens = true,
@@ -29,7 +32,7 @@ class SafeSkuCast implements CastsAttributes
         $this->allowUnderscores = $allowUnderscores;
         $this->forceUppercase = $forceUppercase;
     }
-    
+
     /**
      * Cast the given value when retrieving from database
      */
@@ -37,7 +40,7 @@ class SafeSkuCast implements CastsAttributes
     {
         return $value;
     }
-    
+
     /**
      * Cast the given value when storing to database
      */
@@ -46,13 +49,13 @@ class SafeSkuCast implements CastsAttributes
         if ($value === null || $value === '') {
             return null;
         }
-        
+
         $originalValue = (string) $value;
         $sku = trim($originalValue);
-        
+
         // Remove null bytes and control characters
         $sku = preg_replace('/[\x00-\x1F\x7F]/', '', $sku);
-        
+
         // Build allowed character pattern
         $allowedChars = 'a-zA-Z0-9';
         if ($this->allowHyphens) {
@@ -61,15 +64,15 @@ class SafeSkuCast implements CastsAttributes
         if ($this->allowUnderscores) {
             $allowedChars .= '_';
         }
-        
+
         // Remove disallowed characters
-        $cleanSku = preg_replace('/[^' . $allowedChars . ']/', '', $sku);
-        
+        $cleanSku = preg_replace('/[^'.$allowedChars.']/', '', $sku);
+
         // Apply case transformation
         if ($this->forceUppercase) {
             $cleanSku = strtoupper($cleanSku);
         }
-        
+
         // Remove multiple consecutive hyphens/underscores
         if ($this->allowHyphens) {
             $cleanSku = preg_replace('/\-+/', '-', $cleanSku);
@@ -77,43 +80,43 @@ class SafeSkuCast implements CastsAttributes
         if ($this->allowUnderscores) {
             $cleanSku = preg_replace('/_+/', '_', $cleanSku);
         }
-        
+
         // Trim leading/trailing separators
         $cleanSku = trim($cleanSku, '-_');
-        
+
         // Ensure minimum length
         if (strlen($cleanSku) === 0) {
             Log::warning('Empty SKU after cleaning, generating fallback', [
                 'model' => get_class($model),
                 'key' => $key,
-                'original_value' => $originalValue
+                'original_value' => $originalValue,
             ]);
-            
+
             // Generate fallback SKU
-            $cleanSku = 'SKU_' . Str::random(8);
+            $cleanSku = 'SKU_'.Str::random(8);
         }
-        
+
         // Truncate if too long
         if (strlen($cleanSku) > $this->maxLength) {
             Log::info('SKU truncated due to length limit', [
                 'model' => get_class($model),
                 'key' => $key,
                 'original_length' => strlen($cleanSku),
-                'max_length' => $this->maxLength
+                'max_length' => $this->maxLength,
             ]);
             $cleanSku = substr($cleanSku, 0, $this->maxLength);
         }
-        
+
         // Log transformation if value changed significantly
         if ($originalValue !== $cleanSku) {
             Log::info('SKU transformed during casting', [
                 'model' => get_class($model),
                 'key' => $key,
                 'original' => $originalValue,
-                'transformed' => $cleanSku
+                'transformed' => $cleanSku,
             ]);
         }
-        
+
         return $cleanSku;
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Actions\Import;
 
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Exception;
-use Illuminate\Support\Facades\Log;
 
 class AnalyzeExcelFile
 {
@@ -19,38 +19,38 @@ class AnalyzeExcelFile
                 $worksheetNames = $reader->listWorksheetNames($filePath);
             }
             $worksheets = [];
-            
+
             foreach ($worksheetNames as $index => $name) {
                 $reader = IOFactory::createReaderForFile($filePath);
                 $reader->setReadDataOnly(true);
                 $reader->setLoadSheetsOnly([$name]);
                 $reader->setReadEmptyCells(false);
-                
+
                 $spreadsheet = $reader->load($filePath);
                 $worksheet = $spreadsheet->getActiveSheet();
-                
+
                 $highestRow = $worksheet->getHighestRow();
                 $highestColumn = $worksheet->getHighestColumn();
-                
+
                 if ($highestRow > 0) {
                     $worksheets[] = [
                         'index' => $index,
                         'name' => $name,
                         'row_count' => $highestRow,
                         'column_count' => \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn),
-                        'has_data' => $highestRow > 1
+                        'has_data' => $highestRow > 1,
                     ];
                 }
-                
+
                 $spreadsheet->disconnectWorksheets();
                 unset($spreadsheet);
             }
-            
+
             return $worksheets;
-            
+
         } catch (Exception $e) {
             Log::error('Excel analysis failed', ['error' => $e->getMessage()]);
-            throw new \Exception('Failed to analyze Excel file: ' . $e->getMessage());
+            throw new \Exception('Failed to analyze Excel file: '.$e->getMessage());
         }
     }
 }

@@ -14,6 +14,7 @@ class PoolManagerLite extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
 
     protected $paginationTheme = 'bootstrap';
@@ -33,7 +34,7 @@ class PoolManagerLite extends Component
         // Ultra-simple query - no relationships loaded upfront
         $query = BarcodePool::select(['id', 'barcode', 'barcode_type', 'status', 'assigned_to_variant_id', 'assigned_at'])
             ->when($this->search, function ($query) {
-                $query->where('barcode', 'like', '%' . $this->search . '%');
+                $query->where('barcode', 'like', '%'.$this->search.'%');
             })
             ->when($this->statusFilter, function ($query) {
                 $query->where('status', $this->statusFilter);

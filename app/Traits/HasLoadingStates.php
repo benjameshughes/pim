@@ -4,7 +4,7 @@ namespace App\Traits;
 
 /**
  * Loading States Trait
- * 
+ *
  * Provides loading state management for Livewire components with
  * progressive indicators and user feedback.
  */
@@ -12,22 +12,16 @@ trait HasLoadingStates
 {
     /**
      * Global loading state
-     * 
-     * @var bool
      */
     public bool $isLoading = false;
-    
+
     /**
      * Specific loading states for different operations
-     * 
-     * @var array
      */
     public array $loadingStates = [];
-    
+
     /**
      * Loading messages for user feedback
-     * 
-     * @var array
      */
     public array $loadingMessages = [
         'saving' => 'Saving your changes...',
@@ -38,7 +32,7 @@ trait HasLoadingStates
         'deleting' => 'Deleting item...',
         'searching' => 'Searching...',
     ];
-    
+
     /**
      * Set loading state for specific operation
      */
@@ -49,10 +43,10 @@ trait HasLoadingStates
             'message' => $message ?? ($this->loadingMessages[$operation] ?? 'Processing...'),
             'startTime' => $loading ? microtime(true) : null,
         ];
-        
+
         // Update global loading state
         $this->updateGlobalLoadingState();
-        
+
         // Emit loading state change for UI updates
         $this->dispatch('loading-state-changed', [
             'operation' => $operation,
@@ -60,7 +54,7 @@ trait HasLoadingStates
             'message' => $this->loadingStates[$operation]['message'],
         ]);
     }
-    
+
     /**
      * Check if specific operation is loading
      */
@@ -68,7 +62,7 @@ trait HasLoadingStates
     {
         return $this->loadingStates[$operation]['active'] ?? false;
     }
-    
+
     /**
      * Get loading message for operation
      */
@@ -76,7 +70,7 @@ trait HasLoadingStates
     {
         return $this->loadingStates[$operation]['message'] ?? 'Loading...';
     }
-    
+
     /**
      * Update global loading state based on active operations
      */
@@ -86,7 +80,7 @@ trait HasLoadingStates
             ->where('active', true)
             ->isNotEmpty();
     }
-    
+
     /**
      * Clear specific loading state
      */
@@ -94,7 +88,7 @@ trait HasLoadingStates
     {
         $this->setLoading($operation, false);
     }
-    
+
     /**
      * Clear all loading states
      */
@@ -104,32 +98,33 @@ trait HasLoadingStates
             $this->clearLoading($operation);
         }
     }
-    
+
     /**
      * Execute callback with loading state management
      */
     protected function withLoadingState(string $operation, callable $callback, ?string $message = null)
     {
         $this->setLoading($operation, true, $message);
-        
+
         try {
             $result = $callback();
             $this->clearLoading($operation);
+
             return $result;
         } catch (\Exception $e) {
             $this->clearLoading($operation);
             throw $e;
         }
     }
-    
+
     /**
      * Get active loading operations
      */
     protected function getActiveLoadingOperations(): array
     {
         return collect($this->loadingStates)
-            ->filter(fn($state) => $state['active'])
-            ->map(fn($state, $operation) => [
+            ->filter(fn ($state) => $state['active'])
+            ->map(fn ($state, $operation) => [
                 'operation' => $operation,
                 'message' => $state['message'],
                 'duration' => $state['startTime'] ? round((microtime(true) - $state['startTime']) * 1000) : 0,
@@ -137,7 +132,7 @@ trait HasLoadingStates
             ->values()
             ->toArray();
     }
-    
+
     /**
      * Set custom loading messages
      */
@@ -145,7 +140,7 @@ trait HasLoadingStates
     {
         $this->loadingMessages = array_merge($this->loadingMessages, $messages);
     }
-    
+
     /**
      * Create progressive loading sequence
      */
@@ -153,13 +148,13 @@ trait HasLoadingStates
     {
         $totalSteps = count($steps);
         $currentStep = 0;
-        
+
         foreach ($steps as $operation => $message) {
             $currentStep++;
             $progress = round(($currentStep / $totalSteps) * 100);
-            
+
             $this->setLoading($operation, true, "{$message} ({$progress}%)");
-            
+
             try {
                 $callback($operation, $currentStep, $totalSteps);
                 $this->clearLoading($operation);
@@ -169,20 +164,20 @@ trait HasLoadingStates
             }
         }
     }
-    
+
     /**
      * Simulate loading for demo/testing purposes
      */
     protected function simulateLoading(string $operation, int $duration = 1000, ?string $message = null): void
     {
         $this->setLoading($operation, true, $message);
-        
+
         // In real app, you wouldn't sleep - this is for demonstration
         // usleep($duration * 1000);
-        
+
         $this->clearLoading($operation);
     }
-    
+
     /**
      * Get loading states for JavaScript
      */

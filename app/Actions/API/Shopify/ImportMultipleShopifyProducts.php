@@ -24,25 +24,25 @@ class ImportMultipleShopifyProducts
         Log::info('Starting Shopify import', [
             'limit' => $limit,
             'dry_run' => $dryRun,
-            'filter_status' => $filterStatus
+            'filter_status' => $filterStatus,
         ]);
 
         // Fetch products from Shopify
         $shopifyResult = $this->shopifyService->getProducts($limit);
-        
-        if (!$shopifyResult['success']) {
+
+        if (! $shopifyResult['success']) {
             return [
                 'success' => false,
-                'error' => 'Failed to fetch products from Shopify: ' . $shopifyResult['error'],
-                'results' => []
+                'error' => 'Failed to fetch products from Shopify: '.$shopifyResult['error'],
+                'results' => [],
             ];
         }
 
         $shopifyProducts = $shopifyResult['data']['products'] ?? [];
-        
+
         // Filter by status if specified
         if ($filterStatus) {
-            $shopifyProducts = array_filter($shopifyProducts, function($product) use ($filterStatus) {
+            $shopifyProducts = array_filter($shopifyProducts, function ($product) use ($filterStatus) {
                 return $product['status'] === $filterStatus;
             });
         }
@@ -53,25 +53,25 @@ class ImportMultipleShopifyProducts
             'created' => 0,
             'skipped' => 0,
             'errors' => 0,
-            'total_variants' => 0
+            'total_variants' => 0,
         ];
 
         foreach ($shopifyProducts as $shopifyProduct) {
             $result = $this->importShopifyProduct->execute($shopifyProduct, $dryRun);
-            
+
             $results[$shopifyProduct['id']] = [
                 'shopify_id' => $shopifyProduct['id'],
                 'title' => $shopifyProduct['title'],
                 'handle' => $shopifyProduct['handle'],
                 'status' => $shopifyProduct['status'],
                 'variants_count' => count($shopifyProduct['variants']),
-                'result' => $result
+                'result' => $result,
             ];
 
             // Update summary
             $summary['total_processed']++;
             $summary['total_variants'] += $result['variants_imported'];
-            
+
             switch ($result['action']) {
                 case 'created':
                 case 'would_create':
@@ -81,8 +81,8 @@ class ImportMultipleShopifyProducts
                     $summary['skipped']++;
                     break;
             }
-            
-            if (!$result['success'] || !empty($result['errors'])) {
+
+            if (! $result['success'] || ! empty($result['errors'])) {
                 $summary['errors']++;
             }
 
@@ -95,7 +95,7 @@ class ImportMultipleShopifyProducts
         return [
             'success' => true,
             'summary' => $summary,
-            'results' => $results
+            'results' => $results,
         ];
     }
 }

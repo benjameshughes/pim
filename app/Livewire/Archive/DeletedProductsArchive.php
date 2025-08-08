@@ -7,14 +7,17 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+// Layout handled by wrapper template
 class DeletedProductsArchive extends Component
 {
     use WithPagination;
 
     public string $search = '';
+
     public string $reasonFilter = '';
+
     public string $sortBy = 'deleted_at';
+
     public string $sortDirection = 'desc';
 
     protected $queryString = ['search', 'reasonFilter', 'sortBy', 'sortDirection'];
@@ -54,10 +57,10 @@ class DeletedProductsArchive extends Component
         $query = DeletedProductVariant::query()
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
-                    $q->where('product_name', 'like', '%' . $this->search . '%')
-                      ->orWhere('variant_sku', 'like', '%' . $this->search . '%')
-                      ->orWhere('primary_barcode', 'like', '%' . $this->search . '%')
-                      ->orWhere('color', 'like', '%' . $this->search . '%');
+                    $q->where('product_name', 'like', '%'.$this->search.'%')
+                        ->orWhere('variant_sku', 'like', '%'.$this->search.'%')
+                        ->orWhere('primary_barcode', 'like', '%'.$this->search.'%')
+                        ->orWhere('color', 'like', '%'.$this->search.'%');
                 });
             })
             ->when($this->reasonFilter, function ($query) {
@@ -75,13 +78,13 @@ class DeletedProductsArchive extends Component
             'deletion_reasons' => DeletedProductVariant::selectRaw('deletion_reason, COUNT(*) as count')
                 ->groupBy('deletion_reason')
                 ->pluck('count', 'deletion_reason')
-                ->toArray()
+                ->toArray(),
         ];
 
         return view('livewire.archive.deleted-products-archive', [
             'deletedVariants' => $deletedVariants,
             'availableReasons' => DeletedProductVariant::getAvailableReasons(),
-            'stats' => $stats
+            'stats' => $stats,
         ]);
     }
 }

@@ -10,13 +10,13 @@ class CreateVariantPricing
     public function execute(ProductVariant $variant, array $pricingData): void
     {
         $retailPrice = (float) ($pricingData['retail_price'] ?? 0);
-        
+
         if ($retailPrice > 0) {
             // Calculate VAT (20% inclusive by default)
             $vatRate = 0.20;
             $priceExcludingVat = $retailPrice / (1 + $vatRate);
             $vatAmount = $retailPrice - $priceExcludingVat;
-            
+
             VariantPricing::create([
                 'variant_id' => $variant->id,
                 'marketplace' => 'default',

@@ -33,30 +33,32 @@ class ProcessProductImagesListener implements ShouldQueue
         try {
             // Refresh the product model to ensure it exists in the database
             $product = $event->product->fresh();
-            
-            if (!$product) {
-                Log::error("Product not found in database", [
-                    'product_id' => $event->product->id
+
+            if (! $product) {
+                Log::error('Product not found in database', [
+                    'product_id' => $event->product->id,
                 ]);
+
                 return;
             }
 
-            Log::info("Processing ProductImported event", [
+            Log::info('Processing ProductImported event', [
                 'product_id' => $product->id,
-                'product_name' => $product->name
+                'product_name' => $product->name,
             ]);
 
             // Extract image URLs from imported data
             $imageUrls = $this->extractImageUrls($event->importedData);
-            
+
             if (empty($imageUrls)) {
                 Log::info("No image URLs found for product: {$product->name}");
+
                 return;
             }
 
-            Log::info("Found image URLs for processing", [
+            Log::info('Found image URLs for processing', [
                 'product_id' => $product->id,
-                'urls' => $imageUrls
+                'urls' => $imageUrls,
             ]);
 
             // Dispatch the image processing job with fresh product instance
@@ -68,13 +70,13 @@ class ProcessProductImagesListener implements ShouldQueue
 
             Log::info("Dispatched image processing job for product: {$product->name}", [
                 'product_id' => $product->id,
-                'image_count' => count($imageUrls)
+                'image_count' => count($imageUrls),
             ]);
         } catch (\Throwable $e) {
-            Log::error("Failed to handle ProductImported event", [
+            Log::error('Failed to handle ProductImported event', [
                 'product_id' => $event->product->id ?? 'unknown',
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
@@ -86,17 +88,17 @@ class ProcessProductImagesListener implements ShouldQueue
     private function extractImageUrls(array $importedData): array
     {
         $imageUrls = [];
-        
+
         // Look for image URL fields in imported data
         $imageFields = [
             'image_url', 'image_urls', 'image_1', 'image_2', 'image_3', 'image_4', 'image_5',
-            'main_image', 'product_image', 'photo_url', 'picture_url', 'images'
+            'main_image', 'product_image', 'photo_url', 'picture_url', 'images',
         ];
-        
+
         foreach ($imageFields as $field) {
-            if (!empty($importedData[$field])) {
+            if (! empty($importedData[$field])) {
                 $value = $importedData[$field];
-                
+
                 // Handle comma-separated URLs
                 if (is_string($value) && str_contains($value, ',')) {
                     $urls = array_map('trim', explode(',', $value));
@@ -116,7 +118,7 @@ class ProcessProductImagesListener implements ShouldQueue
                 }
             }
         }
-        
+
         return array_unique($imageUrls);
     }
 
@@ -127,6 +129,7 @@ class ProcessProductImagesListener implements ShouldQueue
     {
         // Only queue if there are potential image URLs to process
         $imageUrls = $this->extractImageUrls($event->importedData);
-        return !empty($imageUrls);
+
+        return ! empty($imageUrls);
     }
 }

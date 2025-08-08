@@ -2,8 +2,8 @@
 
 namespace App\Services\SmartRecommendations\Actions;
 
-use App\Models\ProductVariant;
 use App\Models\BarcodePool;
+use App\Models\ProductVariant;
 use App\Models\VariantBarcode;
 use Illuminate\Support\Facades\DB;
 
@@ -34,7 +34,7 @@ class AssignMissingBarcodesAction extends BaseRecommendationAction
             'affected_variants' => $variants->count(),
             'available_barcodes' => $availableBarcodes,
             'can_complete' => $availableBarcodes >= $variants->count(),
-            'sample_variants' => $variants->map(fn($variant) => [
+            'sample_variants' => $variants->map(fn ($variant) => [
                 'sku' => $variant->sku,
                 'product' => $variant->product->name,
             ])->toArray(),
@@ -68,8 +68,8 @@ class AssignMissingBarcodesAction extends BaseRecommendationAction
             foreach ($variants as $variant) {
                 // Get next available barcode
                 $barcodePool = BarcodePool::available()->first();
-                
-                if (!$barcodePool) {
+
+                if (! $barcodePool) {
                     // No more barcodes available
                     break;
                 }

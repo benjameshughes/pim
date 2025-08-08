@@ -40,8 +40,9 @@ class SyncShopifyTaxonomy extends Command
         $this->info('🛍️  Syncing Shopify taxonomy...');
 
         // Check if we should skip if data already exists
-        if (!$this->option('force') && ShopifyTaxonomyCategory::count() > 0) {
+        if (! $this->option('force') && ShopifyTaxonomyCategory::count() > 0) {
             $this->info('Taxonomy data already exists. Use --force to re-sync.');
+
             return 0;
         }
 
@@ -53,7 +54,7 @@ class SyncShopifyTaxonomy extends Command
         try {
             // Start with a reasonable batch size
             $this->syncTaxonomyBatch(250);
-            
+
             $totalCategories = ShopifyTaxonomyCategory::count();
             $this->info("✅ Successfully synced {$totalCategories} taxonomy categories");
 
@@ -68,8 +69,9 @@ class SyncShopifyTaxonomy extends Command
             $this->error("❌ Failed to sync taxonomy: {$e->getMessage()}");
             Log::error('Shopify taxonomy sync failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
+
             return 1;
         }
     }
@@ -80,25 +82,25 @@ class SyncShopifyTaxonomy extends Command
     private function syncTaxonomyBatch(int $batchSize): void
     {
         $this->info("Fetching taxonomy categories (batch size: {$batchSize})...");
-        
+
         $response = $this->shopifyService->getTaxonomyCategories($batchSize);
-        
-        if (!$response['success']) {
-            throw new \Exception("Failed to fetch taxonomy: " . $response['error']);
+
+        if (! $response['success']) {
+            throw new \Exception('Failed to fetch taxonomy: '.$response['error']);
         }
 
         $categories = $response['data']['taxonomy']['categories']['edges'] ?? [];
-        $this->info("Processing " . count($categories) . " categories...");
+        $this->info('Processing '.count($categories).' categories...');
 
         $bar = $this->output->createProgressBar(count($categories));
         $bar->start();
 
         DB::beginTransaction();
-        
+
         try {
             foreach ($categories as $categoryEdge) {
                 $node = $categoryEdge['node'];
-                
+
                 ShopifyTaxonomyCategory::updateOrCreate(
                     ['shopify_id' => $node['id']],
                     [
@@ -110,17 +112,17 @@ class SyncShopifyTaxonomy extends Command
                         'parent_id' => $node['parentId'],
                         'children_ids' => $node['childrenIds'] ?? [],
                         'ancestor_ids' => [], // Will be populated in second pass
-                        'attributes' => [] // Will be populated separately
+                        'attributes' => [], // Will be populated separately
                     ]
                 );
-                
+
                 $bar->advance();
             }
-            
+
             DB::commit();
             $bar->finish();
             $this->newLine();
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             $bar->finish();
@@ -138,13 +140,13 @@ class SyncShopifyTaxonomy extends Command
     private function populateAncestors(): void
     {
         $this->info('Building category hierarchy...');
-        
+
         $categories = ShopifyTaxonomyCategory::all();
-        
+
         foreach ($categories as $category) {
             $ancestors = [];
             $current = $category;
-            
+
             // Walk up the tree to collect ancestors
             while ($current->parent_id) {
                 $parent = $categories->where('shopify_id', $current->parent_id)->first();
@@ -155,7 +157,7 @@ class SyncShopifyTaxonomy extends Command
                     break;
                 }
             }
-            
+
             $category->update(['ancestor_ids' => array_reverse($ancestors)]);
         }
     }
@@ -167,15 +169,15 @@ class SyncShopifyTaxonomy extends Command
     {
         $this->newLine();
         $this->info('📊 Taxonomy Statistics:');
-        
+
         $rootCount = ShopifyTaxonomyCategory::roots()->count();
         $leafCount = ShopifyTaxonomyCategory::leaves()->count();
         $maxLevel = ShopifyTaxonomyCategory::max('level');
-        
+
         $this->line("   Root categories: {$rootCount}");
         $this->line("   Leaf categories: {$leafCount}");
         $this->line("   Maximum depth: {$maxLevel}");
-        
+
         // Show root categories
         $this->newLine();
         $this->info('🗂️  Root Categories:');
@@ -192,25 +194,26 @@ class SyncShopifyTaxonomy extends Command
     {
         $this->newLine();
         $this->info('🪟 Window Treatment Categories:');
-        
+
         $keywords = ['blind', 'shade', 'window', 'treatment', 'curtain'];
         $blindCategories = ShopifyTaxonomyCategory::findByKeywords($keywords);
-        
+
         if ($blindCategories->isEmpty()) {
             $this->warn('   No window treatment categories found');
+
             return;
         }
-        
+
         foreach ($blindCategories as $category) {
             $marker = $category->is_leaf ? '🎯' : '📁';
             $this->line("   {$marker} {$category->shopify_id} - {$category->full_name}");
         }
-        
+
         // Show the best match for our products
         $this->newLine();
         $this->info('🎯 Best Matches for Our Products:');
         $testProducts = ['Blackout Blind', 'Roller Blind', 'Venetian Blind', 'Day Night Blind'];
-        
+
         foreach ($testProducts as $productName) {
             $match = ShopifyTaxonomyCategory::getBestMatchForProduct($productName);
             if ($match) {

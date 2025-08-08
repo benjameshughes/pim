@@ -3,17 +3,20 @@
 namespace App\Services;
 
 use App\Models\EbayAccount;
+use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Exception;
 
 class EbayOAuthService
 {
     private Client $client;
+
     private array $config;
+
     private string $environment;
+
     private string $baseUrl;
 
     public function __construct()
@@ -25,9 +28,9 @@ class EbayOAuthService
             'redirect_uri' => config('services.ebay.redirect_uri'),
             'dev_id' => config('services.ebay.dev_id'),
         ];
-        
-        $this->baseUrl = $this->environment === 'PRODUCTION' 
-            ? 'https://api.ebay.com' 
+
+        $this->baseUrl = $this->environment === 'PRODUCTION'
+            ? 'https://api.ebay.com'
             : 'https://api.sandbox.ebay.com';
 
         $this->client = new Client([
@@ -39,7 +42,7 @@ class EbayOAuthService
     /**
      * Generate the authorization URL for user consent
      */
-    public function generateAuthorizationUrl(string $accountName = null, array $scopes = []): array
+    public function generateAuthorizationUrl(?string $accountName = null, array $scopes = []): array
     {
         if (empty($this->config['client_id']) || empty($this->config['redirect_uri'])) {
             return [
@@ -60,10 +63,10 @@ class EbayOAuthService
 
         // Generate state parameter for CSRF protection
         $state = Str::random(40);
-        
+
         // Store state in session for validation
         session(['ebay_oauth_state' => $state]);
-        
+
         // Store account name if provided
         if ($accountName) {
             session(['ebay_oauth_account_name' => $accountName]);
@@ -82,7 +85,7 @@ class EbayOAuthService
             'prompt' => 'login', // Force user to login even if they have existing session
         ];
 
-        $url = $authUrl . '?' . http_build_query($params);
+        $url = $authUrl.'?'.http_build_query($params);
 
         return [
             'success' => true,
@@ -116,8 +119,8 @@ class EbayOAuthService
             $response = $this->client->post("{$this->baseUrl}/identity/v1/oauth2/token", [
                 'headers' => [
                     'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Authorization' => 'Basic ' . base64_encode(
-                        $this->config['client_id'] . ':' . $this->config['client_secret']
+                    'Authorization' => 'Basic '.base64_encode(
+                        $this->config['client_id'].':'.$this->config['client_secret']
                     ),
                 ],
                 'form_params' => [
@@ -149,7 +152,7 @@ class EbayOAuthService
 
             return [
                 'success' => false,
-                'error' => 'Failed to exchange authorization code: ' . $e->getMessage(),
+                'error' => 'Failed to exchange authorization code: '.$e->getMessage(),
             ];
         }
     }
@@ -170,8 +173,8 @@ class EbayOAuthService
             $response = $this->client->post("{$this->baseUrl}/identity/v1/oauth2/token", [
                 'headers' => [
                     'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Authorization' => 'Basic ' . base64_encode(
-                        $this->config['client_id'] . ':' . $this->config['client_secret']
+                    'Authorization' => 'Basic '.base64_encode(
+                        $this->config['client_id'].':'.$this->config['client_secret']
                     ),
                 ],
                 'form_params' => [
@@ -209,7 +212,7 @@ class EbayOAuthService
 
             return [
                 'success' => false,
-                'error' => 'Failed to refresh token: ' . $e->getMessage(),
+                'error' => 'Failed to refresh token: '.$e->getMessage(),
             ];
         }
     }
@@ -222,7 +225,7 @@ class EbayOAuthService
         try {
             $response = $this->client->get("{$this->baseUrl}/commerce/identity/v1/user/", [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $accessToken,
+                    'Authorization' => 'Bearer '.$accessToken,
                     'Content-Type' => 'application/json',
                 ],
             ]);
@@ -244,7 +247,7 @@ class EbayOAuthService
 
             return [
                 'success' => false,
-                'error' => 'Failed to get user info: ' . $e->getMessage(),
+                'error' => 'Failed to get user info: '.$e->getMessage(),
             ];
         }
     }
@@ -252,16 +255,16 @@ class EbayOAuthService
     /**
      * Create or update eBay account from OAuth response
      */
-    public function createOrUpdateAccount(array $tokenData, string $accountName = null): array
+    public function createOrUpdateAccount(array $tokenData, ?string $accountName = null): array
     {
         try {
             // Get user info to obtain eBay user ID
             $userInfo = $this->getUserInfo($tokenData['access_token']);
-            
-            if (!$userInfo['success']) {
+
+            if (! $userInfo['success']) {
                 return [
                     'success' => false,
-                    'error' => 'Failed to get user information: ' . $userInfo['error'],
+                    'error' => 'Failed to get user information: '.$userInfo['error'],
                 ];
             }
 
@@ -269,10 +272,10 @@ class EbayOAuthService
             $username = $userInfo['username'];
 
             // Use provided account name or generate from username
-            $finalAccountName = $accountName ?: ($username . ' (' . $this->environment . ')');
+            $finalAccountName = $accountName ?: ($username.' ('.$this->environment.')');
 
             // Parse scopes
-            $scopes = !empty($tokenData['scope']) 
+            $scopes = ! empty($tokenData['scope'])
                 ? explode(' ', $tokenData['scope'])
                 : [];
 
@@ -314,7 +317,7 @@ class EbayOAuthService
 
             return [
                 'success' => false,
-                'error' => 'Failed to create account: ' . $e->getMessage(),
+                'error' => 'Failed to create account: '.$e->getMessage(),
             ];
         }
     }
@@ -326,6 +329,7 @@ class EbayOAuthService
     {
         if ($account->isActive()) {
             $account->markAsUsed();
+
             return [
                 'success' => true,
                 'access_token' => $account->access_token,
@@ -352,8 +356,8 @@ class EbayOAuthService
             $this->client->post("{$this->baseUrl}/identity/v1/oauth2/revoke", [
                 'headers' => [
                     'Content-Type' => 'application/x-www-form-urlencoded',
-                    'Authorization' => 'Basic ' . base64_encode(
-                        $this->config['client_id'] . ':' . $this->config['client_secret']
+                    'Authorization' => 'Basic '.base64_encode(
+                        $this->config['client_id'].':'.$this->config['client_secret']
                     ),
                 ],
                 'form_params' => [
@@ -384,7 +388,7 @@ class EbayOAuthService
 
             return [
                 'success' => false,
-                'error' => 'Failed to revoke tokens: ' . $e->getMessage(),
+                'error' => 'Failed to revoke tokens: '.$e->getMessage(),
             ];
         }
     }

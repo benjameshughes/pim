@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ImageUploadRequest;
-use App\Models\ProductImage;
-use App\Models\Product;
-use App\Models\ProductVariant;
 use App\Jobs\ProcessImageToR2;
+use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class ImageUploadController extends Controller
 {
@@ -20,14 +19,14 @@ class ImageUploadController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $uploadedImages = [];
             $model = $this->resolveModel($request->model_type, $request->model_id);
-            
+
             foreach ($request->file('files') as $file) {
                 // Store temporarily
                 $path = $file->store('product-images/temp', 'public');
-                
+
                 // Create ProductImage record
                 $productImage = ProductImage::create([
                     'product_id' => $model instanceof Product ? $model->id : null,
@@ -45,14 +44,14 @@ class ImageUploadController extends Controller
                         'uploaded_via' => 'api',
                         'uploaded_at' => now()->toISOString(),
                         'user_id' => auth()->id(),
-                    ]
+                    ],
                 ]);
-                
+
                 // Queue for processing
                 if ($request->process_immediately) {
                     ProcessImageToR2::dispatch($productImage);
                 }
-                
+
                 $uploadedImages[] = [
                     'id' => $productImage->id,
                     'filename' => $productImage->original_filename,
@@ -62,25 +61,25 @@ class ImageUploadController extends Controller
                     'url' => $productImage->url,
                 ];
             }
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Images uploaded successfully',
                 'data' => [
                     'uploaded_count' => count($uploadedImages),
                     'images' => $uploadedImages,
-                    'queued_for_processing' => $request->process_immediately ? count($uploadedImages) : 0
-                ]
+                    'queued_for_processing' => $request->process_immediately ? count($uploadedImages) : 0,
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage()
+                'message' => 'Upload failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -93,16 +92,16 @@ class ImageUploadController extends Controller
         try {
             $image = ProductImage::findOrFail($imageId);
             $image->delete();
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Image deleted successfully'
+                'message' => 'Image deleted successfully',
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to delete image: ' . $e->getMessage()
+                'message' => 'Failed to delete image: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -114,20 +113,20 @@ class ImageUploadController extends Controller
     {
         try {
             $orderedIds = $request->input('ordered_ids', []);
-            
+
             foreach ($orderedIds as $index => $imageId) {
                 ProductImage::where('id', $imageId)->update(['sort_order' => $index + 1]);
             }
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Images reordered successfully'
+                'message' => 'Images reordered successfully',
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to reorder images: ' . $e->getMessage()
+                'message' => 'Failed to reorder images: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -135,22 +134,22 @@ class ImageUploadController extends Controller
     /**
      * Get images for a model
      */
-    public function index(string $modelType, int $modelId, string $imageType = null): JsonResponse
+    public function index(string $modelType, int $modelId, ?string $imageType = null): JsonResponse
     {
         try {
             $model = $this->resolveModel($modelType, $modelId);
             $query = ProductImage::query();
-            
+
             if ($model instanceof Product) {
                 $query->forProduct($model->id);
             } elseif ($model instanceof ProductVariant) {
                 $query->forVariant($model->id);
             }
-            
+
             if ($imageType) {
                 $query->byType($imageType);
             }
-            
+
             $images = $query->ordered()->get()->map(function ($image) {
                 return [
                     'id' => $image->id,
@@ -164,7 +163,7 @@ class ImageUploadController extends Controller
                     'created_at' => $image->created_at->toISOString(),
                 ];
             });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -172,13 +171,13 @@ class ImageUploadController extends Controller
                     'total' => $images->count(),
                     'model_type' => $modelType,
                     'model_id' => $modelId,
-                ]
+                ],
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch images: ' . $e->getMessage()
+                'message' => 'Failed to fetch images: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -188,10 +187,10 @@ class ImageUploadController extends Controller
      */
     private function resolveModel(?string $modelType, ?int $modelId)
     {
-        if (!$modelType || !$modelId) {
+        if (! $modelType || ! $modelId) {
             return null;
         }
-        
+
         return match ($modelType) {
             'product' => Product::findOrFail($modelId),
             'variant' => ProductVariant::findOrFail($modelId),
@@ -204,18 +203,18 @@ class ImageUploadController extends Controller
      */
     private function getNextSortOrder($model, string $imageType): int
     {
-        if (!$model) {
+        if (! $model) {
             return 1;
         }
-        
+
         $query = ProductImage::where('image_type', $imageType);
-        
+
         if ($model instanceof Product) {
             $query->where('product_id', $model->id);
         } elseif ($model instanceof ProductVariant) {
             $query->where('variant_id', $model->id);
         }
-        
+
         return ($query->max('sort_order') ?? 0) + 1;
     }
 }

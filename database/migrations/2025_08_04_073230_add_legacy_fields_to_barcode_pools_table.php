@@ -17,7 +17,7 @@ return new class extends Migration
             $table->timestamp('date_first_used')->nullable()->after('assigned_at');
             $table->boolean('is_legacy')->default(false)->after('notes');
             $table->string('import_batch_id', 50)->nullable()->after('is_legacy');
-            
+
             // Add indexes for performance
             $table->index(['status', 'is_legacy']);
             $table->index('import_batch_id');
@@ -30,13 +30,24 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('barcode_pools', function (Blueprint $table) {
-            $table->dropIndex(['status', 'is_legacy']);
-            $table->dropIndex(['import_batch_id']);
+            // Drop indexes if they exist
+            try {
+                $table->dropIndex(['status', 'is_legacy']);
+            } catch (\Exception $e) {
+                // Index doesn't exist, continue
+            }
+            
+            try {
+                $table->dropIndex(['import_batch_id']);
+            } catch (\Exception $e) {
+                // Index doesn't exist, continue
+            }
+            
             $table->dropColumn([
-                'legacy_notes', 
-                'date_first_used', 
-                'is_legacy', 
-                'import_batch_id'
+                'legacy_notes',
+                'date_first_used',
+                'is_legacy',
+                'import_batch_id',
             ]);
         });
     }

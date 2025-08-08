@@ -12,16 +12,18 @@ use Illuminate\Database\Eloquent\Model;
 class SafeDecimal implements CastsAttributes
 {
     private int $precision;
+
     private ?float $min;
+
     private ?float $max;
-    
+
     public function __construct(int $precision = 2, ?float $min = null, ?float $max = null)
     {
         $this->precision = $precision;
         $this->min = $min;
         $this->max = $max;
     }
-    
+
     /**
      * Cast the given value for storage
      */
@@ -30,28 +32,28 @@ class SafeDecimal implements CastsAttributes
         if ($value === null || $value === '') {
             return null;
         }
-        
+
         // Handle Excel scientific notation
         if (is_string($value) && preg_match('/^\d+\.?\d*E[+-]?\d+$/i', $value)) {
             $value = (float) $value;
         }
-        
+
         // Convert to float and validate
         $floatValue = (float) $value;
-        
+
         // Apply range validation
         if ($this->min !== null && $floatValue < $this->min) {
             throw new \InvalidArgumentException("Value {$floatValue} is below minimum {$this->min}");
         }
-        
+
         if ($this->max !== null && $floatValue > $this->max) {
             throw new \InvalidArgumentException("Value {$floatValue} is above maximum {$this->max}");
         }
-        
+
         // Format with specified precision to prevent floating point issues
         return number_format($floatValue, $this->precision, '.', '');
     }
-    
+
     /**
      * Cast the given value for retrieval
      */
@@ -60,7 +62,7 @@ class SafeDecimal implements CastsAttributes
         if ($value === null) {
             return null;
         }
-        
+
         return (float) $value;
     }
 }

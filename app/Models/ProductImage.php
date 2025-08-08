@@ -6,12 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class ProductImage extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'product_id',
         'variant_id',
@@ -37,8 +37,11 @@ class ProductImage extends Model
     protected $appends = ['url', 'variants'];
 
     public const PROCESSING_PENDING = 'pending';
+
     public const PROCESSING_IN_PROGRESS = 'processing';
+
     public const PROCESSING_COMPLETED = 'completed';
+
     public const PROCESSING_FAILED = 'failed';
 
     public const SIZES = [
@@ -96,17 +99,19 @@ class ProductImage extends Model
 
     public function getVariantUrl(string $size = 'medium'): string
     {
-        if ($this->processing_status !== self::PROCESSING_COMPLETED || !isset(self::SIZES[$size])) {
+        if ($this->processing_status !== self::PROCESSING_COMPLETED || ! isset(self::SIZES[$size])) {
             return $this->url;
         }
 
         $path = $this->getVariantPath($size);
+
         return Storage::disk($this->storage_disk ?: 'images')->url($path);
     }
 
     public function getVariantPath(string $size): string
     {
         $pathInfo = pathinfo($this->image_path);
+
         return "{$pathInfo['dirname']}/{$pathInfo['filename']}_{$size}.{$pathInfo['extension']}";
     }
 
@@ -196,7 +201,7 @@ class ProductImage extends Model
         if ($error) {
             $metadata['processing_error'] = $error;
         }
-        
+
         $this->update([
             'processing_status' => self::PROCESSING_FAILED,
             'metadata' => $metadata,
@@ -206,7 +211,7 @@ class ProductImage extends Model
     public function delete(): ?bool
     {
         $disk = $this->storage_disk ?: 'public';
-        
+
         // Delete original image
         if (Storage::disk($disk)->exists($this->image_path)) {
             Storage::disk($disk)->delete($this->image_path);

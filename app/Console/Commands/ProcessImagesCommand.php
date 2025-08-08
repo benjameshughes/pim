@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ProductImage;
 use App\Jobs\ProcessImageToR2;
+use App\Models\ProductImage;
 use App\Services\ImageProcessingService;
 use Illuminate\Console\Command;
 
@@ -37,14 +37,14 @@ class ProcessImagesCommand extends Command
 
         // Determine what images to process
         $query = ProductImage::query();
-        
+
         if ($this->option('failed')) {
             $query->where('processing_status', ProductImage::PROCESSING_FAILED);
             $this->info('🔄 Processing failed images only...');
         } elseif ($this->option('all')) {
             $query->whereIn('processing_status', [
-                ProductImage::PROCESSING_PENDING, 
-                ProductImage::PROCESSING_FAILED
+                ProductImage::PROCESSING_PENDING,
+                ProductImage::PROCESSING_FAILED,
             ]);
             $this->info('🚀 Processing all pending and failed images...');
         } else {
@@ -57,6 +57,7 @@ class ProcessImagesCommand extends Command
 
         if ($images->isEmpty()) {
             $this->info('✅ No images to process!');
+
             return self::SUCCESS;
         }
 
@@ -72,17 +73,19 @@ class ProcessImagesCommand extends Command
                         basename($image->image_path),
                         $image->image_type,
                         $image->processing_status,
-                        $image->product ? "Product: {$image->product->name}" : 
-                            ($image->variant ? "Variant: {$image->variant->product->name} - {$image->variant->color}" : 'Unassigned')
+                        $image->product ? "Product: {$image->product->name}" :
+                            ($image->variant ? "Variant: {$image->variant->product->name} - {$image->variant->color}" : 'Unassigned'),
                     ];
                 })
             );
+
             return self::SUCCESS;
         }
 
         // Confirm before processing
-        if (!$this->confirm("Process {$images->count()} images?")) {
+        if (! $this->confirm("Process {$images->count()} images?")) {
             $this->info('Operation cancelled.');
+
             return self::SUCCESS;
         }
 
@@ -96,7 +99,7 @@ class ProcessImagesCommand extends Command
 
         foreach ($images as $image) {
             $bar->setMessage("Processing {$image->original_filename}...");
-            
+
             if ($this->option('failed')) {
                 // Reset failed status before reprocessing
                 $image->update(['processing_status' => ProductImage::PROCESSING_PENDING]);
@@ -105,9 +108,9 @@ class ProcessImagesCommand extends Command
             // Queue for processing
             ProcessImageToR2::dispatch($image);
             $processed++;
-            
+
             $bar->advance();
-            
+
             // Add small delay to prevent overwhelming the queue
             usleep(100000); // 0.1 seconds
         }

@@ -14,12 +14,12 @@ use Livewire\WithPagination;
 #[Layout('components.layouts.app')]
 class BulkOperationsOverview extends Component
 {
-    use WithPagination, HasRouteTabs, SharesBulkOperationsState;
+    use HasRouteTabs, SharesBulkOperationsState, WithPagination;
 
     // URL-tracked state
     #[Url(except: '', as: 'q')]
     public $search = '';
-    
+
     #[Url(except: 'all', as: 'filter')]
     public $searchFilter = 'all';
 
@@ -31,10 +31,11 @@ class BulkOperationsOverview extends Component
 
     // Local state
     public $selectAll = false;
+
     public $selectedProducts = [];
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [
@@ -82,16 +83,16 @@ class BulkOperationsOverview extends Component
     {
         // Load state from session/URL
         $searchState = $this->getSearchState();
-        
+
         // Prefer URL params over session
         $this->search = request('q', $searchState['search']);
         $this->searchFilter = request('filter', $searchState['searchFilter']);
-        
+
         // Load selected variants from URL or session
         if (empty($this->selectedVariants)) {
             $this->selectedVariants = $this->getSelectedVariants();
         }
-        
+
         // Load expanded products
         if (empty($this->expandedProducts)) {
             $this->expandedProducts = $this->getExpandedProducts();
@@ -148,11 +149,11 @@ class BulkOperationsOverview extends Component
         // Update selectedProducts based on selected variants
         $this->selectedProducts = [];
         $products = Product::with('variants')->get();
-        
+
         foreach ($products as $product) {
             $variantIds = $product->variants->pluck('id')->toArray();
             $selectedProductVariantIds = array_intersect($this->selectedVariants, $variantIds);
-            
+
             // If all variants of this product are selected, add product to selectedProducts
             if (count($selectedProductVariantIds) === count($variantIds) && count($variantIds) > 0) {
                 $this->selectedProducts[] = $product->id;
@@ -164,28 +165,28 @@ class BulkOperationsOverview extends Component
     {
         // When products are selected/deselected, update variants accordingly
         $products = Product::with('variants')->whereIn('id', $this->selectedProducts)->get();
-        
+
         // Get all variant IDs from selected products
         $productVariantIds = [];
         foreach ($products as $product) {
             $productVariantIds = array_merge($productVariantIds, $product->variants->pluck('id')->toArray());
         }
-        
+
         // Remove variants from products that are no longer selected
         $allSelectedProductIds = $this->selectedProducts;
         $allProducts = Product::with('variants')->get();
-        
+
         foreach ($allProducts as $product) {
-            if (!in_array($product->id, $allSelectedProductIds)) {
+            if (! in_array($product->id, $allSelectedProductIds)) {
                 // Remove this product's variants from selected variants
                 $variantIds = $product->variants->pluck('id')->toArray();
                 $this->selectedVariants = array_diff($this->selectedVariants, $variantIds);
             }
         }
-        
+
         // Add variants from newly selected products
         $this->selectedVariants = array_unique(array_merge($this->selectedVariants, $productVariantIds));
-        
+
         // Update session state
         $this->setSelectedVariants($this->selectedVariants);
         $this->updateSelectAll();
@@ -201,7 +202,6 @@ class BulkOperationsOverview extends Component
         $this->updatedExpandedProducts();
     }
 
-
     public function render()
     {
         $query = Product::with(['variants.attributes', 'variants.pricing', 'variants.barcodes']);
@@ -209,11 +209,11 @@ class BulkOperationsOverview extends Component
         // Apply search filters
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhere('parent_sku', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('variants', function ($vq) {
-                      $vq->where('sku', 'like', '%' . $this->search . '%');
-                  });
+                $q->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('parent_sku', 'like', '%'.$this->search.'%')
+                    ->orWhereHas('variants', function ($vq) {
+                        $vq->where('sku', 'like', '%'.$this->search.'%');
+                    });
             });
         }
 
@@ -222,20 +222,20 @@ class BulkOperationsOverview extends Component
             switch ($this->searchFilter) {
                 case 'parent_sku':
                     if ($this->search) {
-                        $query->where('parent_sku', 'like', '%' . $this->search . '%');
+                        $query->where('parent_sku', 'like', '%'.$this->search.'%');
                     }
                     break;
                 case 'variant_sku':
                     if ($this->search) {
                         $query->whereHas('variants', function ($q) {
-                            $q->where('sku', 'like', '%' . $this->search . '%');
+                            $q->where('sku', 'like', '%'.$this->search.'%');
                         });
                     }
                     break;
                 case 'barcode':
                     if ($this->search) {
                         $query->whereHas('variants.barcodes', function ($q) {
-                            $q->where('barcode', 'like', '%' . $this->search . '%');
+                            $q->where('barcode', 'like', '%'.$this->search.'%');
                         });
                     }
                     break;

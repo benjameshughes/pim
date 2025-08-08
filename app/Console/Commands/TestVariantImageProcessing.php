@@ -35,7 +35,7 @@ class TestVariantImageProcessing extends Command
             ['name' => 'Test Product for Variant Images'],
             [
                 'description' => 'Testing variant image processing flow',
-                'status' => 'active'
+                'status' => 'active',
             ]
         );
 
@@ -46,7 +46,7 @@ class TestVariantImageProcessing extends Command
                 'product_id' => $product->id,
                 'color' => 'Red',
                 'size' => 'M',
-                'status' => 'active'
+                'status' => 'active',
             ]
         );
 
@@ -59,7 +59,7 @@ class TestVariantImageProcessing extends Command
             'size' => 'M',
             'image_url' => 'https://picsum.photos/400/500',
             'image_1' => 'https://picsum.photos/400/501',
-            'image_2' => 'https://picsum.photos/400/502'
+            'image_2' => 'https://picsum.photos/400/502',
         ];
 
         $this->info('Dispatching ProductVariantImported event...');

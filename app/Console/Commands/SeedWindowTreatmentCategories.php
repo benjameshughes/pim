@@ -30,20 +30,21 @@ class SeedWindowTreatmentCategories extends Command
         $this->info('🪟 Seeding window treatment categories...');
 
         DB::beginTransaction();
-        
+
         try {
             // Create the taxonomy tree for window treatments
             $this->createWindowTreatmentHierarchy();
-            
+
             DB::commit();
-            
+
             $this->info('✅ Successfully seeded window treatment categories');
             $this->showWindowTreatmentCategories();
-            
+
             return 0;
         } catch (\Exception $e) {
             DB::rollBack();
             $this->error("❌ Failed to seed categories: {$e->getMessage()}");
+
             return 1;
         }
     }
@@ -65,9 +66,9 @@ class SeedWindowTreatmentCategories extends Command
                 'is_root' => true,
                 'parent_id' => null,
                 'children_ids' => ['gid://shopify/TaxonomyCategory/hg-d'],
-                'ancestor_ids' => []
+                'ancestor_ids' => [],
             ],
-            
+
             // Level 2: Decor
             [
                 'shopify_id' => 'gid://shopify/TaxonomyCategory/hg-d',
@@ -78,9 +79,9 @@ class SeedWindowTreatmentCategories extends Command
                 'is_root' => false,
                 'parent_id' => 'gid://shopify/TaxonomyCategory/hg',
                 'children_ids' => ['gid://shopify/TaxonomyCategory/hg-d-wt'],
-                'ancestor_ids' => ['gid://shopify/TaxonomyCategory/hg']
+                'ancestor_ids' => ['gid://shopify/TaxonomyCategory/hg'],
             ],
-            
+
             // Level 3: Window Treatments
             [
                 'shopify_id' => 'gid://shopify/TaxonomyCategory/hg-d-wt',
@@ -93,11 +94,11 @@ class SeedWindowTreatmentCategories extends Command
                 'children_ids' => [
                     'gid://shopify/TaxonomyCategory/hg-d-wt-bs',
                     'gid://shopify/TaxonomyCategory/hg-d-wt-c',
-                    'gid://shopify/TaxonomyCategory/hg-d-wt-v'
+                    'gid://shopify/TaxonomyCategory/hg-d-wt-v',
                 ],
-                'ancestor_ids' => ['gid://shopify/TaxonomyCategory/hg', 'gid://shopify/TaxonomyCategory/hg-d']
+                'ancestor_ids' => ['gid://shopify/TaxonomyCategory/hg', 'gid://shopify/TaxonomyCategory/hg-d'],
             ],
-            
+
             // Level 4: Blinds & Shades (LEAF - our target category)
             [
                 'shopify_id' => 'gid://shopify/TaxonomyCategory/hg-d-wt-bs',
@@ -111,32 +112,32 @@ class SeedWindowTreatmentCategories extends Command
                 'ancestor_ids' => [
                     'gid://shopify/TaxonomyCategory/hg',
                     'gid://shopify/TaxonomyCategory/hg-d',
-                    'gid://shopify/TaxonomyCategory/hg-d-wt'
+                    'gid://shopify/TaxonomyCategory/hg-d-wt',
                 ],
                 'attributes' => [
                     [
                         'name' => 'Color',
-                        'values' => ['Black', 'White', 'Grey', 'Brown', 'Beige', 'Blue', 'Green']
+                        'values' => ['Black', 'White', 'Grey', 'Brown', 'Beige', 'Blue', 'Green'],
                     ],
                     [
                         'name' => 'Material',
-                        'values' => ['Fabric', 'Wood', 'Aluminum', 'Vinyl', 'Bamboo']
+                        'values' => ['Fabric', 'Wood', 'Aluminum', 'Vinyl', 'Bamboo'],
                     ],
                     [
                         'name' => 'Mount Type',
-                        'values' => ['Inside Mount', 'Outside Mount', 'Ceiling Mount']
+                        'values' => ['Inside Mount', 'Outside Mount', 'Ceiling Mount'],
                     ],
                     [
                         'name' => 'Light Control',
-                        'values' => ['Blackout', 'Room Darkening', 'Light Filtering', 'Sheer']
+                        'values' => ['Blackout', 'Room Darkening', 'Light Filtering', 'Sheer'],
                     ],
                     [
                         'name' => 'Operating System',
-                        'values' => ['Cordless', 'Corded', 'Motorized', 'Manual']
-                    ]
-                ]
+                        'values' => ['Cordless', 'Corded', 'Motorized', 'Manual'],
+                    ],
+                ],
             ],
-            
+
             // Level 4: Curtains & Drapes
             [
                 'shopify_id' => 'gid://shopify/TaxonomyCategory/hg-d-wt-c',
@@ -150,10 +151,10 @@ class SeedWindowTreatmentCategories extends Command
                 'ancestor_ids' => [
                     'gid://shopify/TaxonomyCategory/hg',
                     'gid://shopify/TaxonomyCategory/hg-d',
-                    'gid://shopify/TaxonomyCategory/hg-d-wt'
-                ]
+                    'gid://shopify/TaxonomyCategory/hg-d-wt',
+                ],
             ],
-            
+
             // Level 4: Valances
             [
                 'shopify_id' => 'gid://shopify/TaxonomyCategory/hg-d-wt-v',
@@ -167,9 +168,9 @@ class SeedWindowTreatmentCategories extends Command
                 'ancestor_ids' => [
                     'gid://shopify/TaxonomyCategory/hg',
                     'gid://shopify/TaxonomyCategory/hg-d',
-                    'gid://shopify/TaxonomyCategory/hg-d-wt'
-                ]
-            ]
+                    'gid://shopify/TaxonomyCategory/hg-d-wt',
+                ],
+            ],
         ];
 
         $bar = $this->output->createProgressBar(count($categories));
@@ -194,14 +195,14 @@ class SeedWindowTreatmentCategories extends Command
     {
         $this->newLine();
         $this->info('🎯 Window Treatment Category Hierarchy:');
-        
+
         $windowCategories = ShopifyTaxonomyCategory::where('full_name', 'LIKE', '%Window%')
             ->orWhere('full_name', 'LIKE', '%Blind%')
             ->orWhere('full_name', 'LIKE', '%Decor%')
             ->orderBy('level')
             ->orderBy('name')
             ->get();
-            
+
         foreach ($windowCategories as $category) {
             $indent = str_repeat('  ', $category->level - 1);
             $marker = $category->is_leaf ? '🎯' : '📁';
@@ -211,14 +212,14 @@ class SeedWindowTreatmentCategories extends Command
         // Test product matching
         $this->newLine();
         $this->info('🧪 Testing Product Category Matching:');
-        
+
         $testProducts = [
             'Blackout Roof Blind CK01',
             'Day Night Blind',
             'Roller Blind',
-            'Venetian Blind'
+            'Venetian Blind',
         ];
-        
+
         foreach ($testProducts as $productName) {
             $match = ShopifyTaxonomyCategory::getBestMatchForProduct($productName);
             if ($match) {

@@ -7,15 +7,17 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+// Layout handled by parent view
 class ProductIndex extends Component
 {
     use WithPagination;
-    
+
     public string $search = '';
+
     public string $statusFilter = '';
+
     public int $perPage = 25;
-    
+
     /**
      * Update search and reset pagination
      */
@@ -23,7 +25,7 @@ class ProductIndex extends Component
     {
         $this->resetPage();
     }
-    
+
     /**
      * Update filter and reset pagination
      */
@@ -31,7 +33,15 @@ class ProductIndex extends Component
     {
         $this->resetPage();
     }
-    
+
+    /**
+     * Update perPage and reset pagination
+     */
+    public function updatedPerPage(): void
+    {
+        $this->resetPage();
+    }
+
     /**
      * Get products query with filters
      */
@@ -40,21 +50,21 @@ class ProductIndex extends Component
         $query = Product::query()
             ->with(['variants', 'productImages'])
             ->withCount('variants');
-        
-        if (!empty($this->search)) {
+
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('name', 'like', "%{$this->search}%")
-                  ->orWhere('parent_sku', 'like', "%{$this->search}%");
+                    ->orWhere('parent_sku', 'like', "%{$this->search}%");
             });
         }
-        
-        if (!empty($this->statusFilter)) {
+
+        if (! empty($this->statusFilter)) {
             $query->where('status', $this->statusFilter);
         }
-        
+
         return $query->latest()->paginate($this->perPage);
     }
-    
+
     /**
      * Get status badge class
      */
@@ -68,7 +78,7 @@ class ProductIndex extends Component
             default => 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
         };
     }
-    
+
     /**
      * Render the component
      */

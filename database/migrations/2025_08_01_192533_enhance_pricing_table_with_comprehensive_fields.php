@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('profit_margin_percentage', 5, 2)->nullable()->after('profit_amount');
             $table->string('currency', 3)->default('GBP')->after('marketplace');
             $table->boolean('vat_inclusive')->default(true)->after('vat_amount');
-            
+
             // Rename existing columns for clarity
             $table->renameColumn('vat_cost', 'total_cost');
             $table->renameColumn('net_cost', 'final_price');
@@ -37,7 +37,7 @@ return new class extends Migration
         Schema::table('pricing', function (Blueprint $table) {
             $table->dropColumn([
                 'cost_price',
-                'vat_percentage', 
+                'vat_percentage',
                 'vat_amount',
                 'channel_fee_percentage',
                 'channel_fee_amount',
@@ -46,7 +46,7 @@ return new class extends Migration
                 'currency',
                 'vat_inclusive',
             ]);
-            
+
             $table->renameColumn('total_cost', 'vat_cost');
             $table->renameColumn('final_price', 'net_cost');
         });

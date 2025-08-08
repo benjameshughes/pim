@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -23,8 +23,8 @@ class ProductImageFactory extends Factory
             'product_id' => Product::factory(),
             'variant_id' => null,
             'image_path' => 'product-images/test-image.jpg',
-            'original_filename' => $this->faker->word() . '.jpg',
-            'image_type' => 'product',
+            'original_filename' => $this->faker->word().'.jpg',
+            'image_type' => 'detail',
             'sort_order' => 1,
             'processing_status' => ProductImage::PROCESSING_COMPLETED,
             'storage_disk' => 'public',
@@ -32,7 +32,7 @@ class ProductImageFactory extends Factory
             'mime_type' => 'image/jpeg',
             'dimensions' => [
                 'width' => 800,
-                'height' => 600
+                'height' => 600,
             ],
             'metadata' => [],
             'alt_text' => $this->faker->sentence(3),
@@ -42,12 +42,12 @@ class ProductImageFactory extends Factory
     /**
      * Create a variant image instead of product image
      */
-    public function forVariant(ProductVariant $variant = null): static
+    public function forVariant(?ProductVariant $variant = null): static
     {
         return $this->state(fn (array $attributes) => [
             'product_id' => null,
             'variant_id' => $variant?->id ?? ProductVariant::factory(),
-            'image_type' => 'variant',
+            'image_type' => 'detail',
         ]);
     }
 

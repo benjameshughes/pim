@@ -21,27 +21,27 @@ class ColumnMappingService
     {
         // Build the header-to-field mapping index once
         $headerToFieldMapping = $this->buildMappingIndex->execute($originalHeaders, $columnMapping);
-        
+
         $mappedData = [];
-        
+
         foreach ($worksheetData as $rowIndex => $rowWithHeaders) {
             $mappedRow = $this->mapRowToFields->execute(
-                $rowWithHeaders['data'], 
-                $rowWithHeaders['headers'], 
+                $rowWithHeaders['data'],
+                $rowWithHeaders['headers'],
                 $headerToFieldMapping
             );
-            
+
             // Only include rows with meaningful data
-            if (!empty($mappedRow['variant_sku']) || !empty($mappedRow['product_name'])) {
+            if (! empty($mappedRow['variant_sku']) || ! empty($mappedRow['product_name'])) {
                 $mappedData[] = $mappedRow;
             }
         }
-        
+
         Log::info('Row mapping completed', [
             'total_input_rows' => count($worksheetData),
-            'mapped_rows' => count($mappedData)
+            'mapped_rows' => count($mappedData),
         ]);
-        
+
         return $mappedData;
     }
 
@@ -52,10 +52,10 @@ class ColumnMappingService
     {
         $mapping = [];
         $fieldPatterns = $this->getFieldPatterns();
-        
+
         foreach ($headers as $index => $header) {
             $normalizedHeader = strtolower(trim($header));
-            
+
             foreach ($fieldPatterns as $fieldName => $patterns) {
                 foreach ($patterns as $pattern) {
                     if (strpos($normalizedHeader, $pattern) !== false) {
@@ -65,12 +65,12 @@ class ColumnMappingService
                 }
             }
         }
-        
+
         Log::info('Auto-mapped fields', [
             'total_headers' => count($headers),
-            'mapped_fields' => count(array_filter($mapping))
+            'mapped_fields' => count(array_filter($mapping)),
         ]);
-        
+
         return $mapping;
     }
 
@@ -83,14 +83,14 @@ class ColumnMappingService
             'column_mapping' => $columnMapping,
             'headers' => $headers,
             'created_at' => now(),
-            'fingerprint' => $this->generateMappingFingerprint($headers)
+            'fingerprint' => $this->generateMappingFingerprint($headers),
         ];
-        
+
         Cache::put('import_column_mapping', $mappingData, now()->addDays(30));
-        
+
         Log::info('Column mapping saved to cache', [
             'mapped_fields' => count(array_filter($columnMapping)),
-            'cache_expires' => now()->addDays(30)
+            'cache_expires' => now()->addDays(30),
         ]);
     }
 
@@ -100,14 +100,14 @@ class ColumnMappingService
     public function loadSavedMappingConfiguration(): ?array
     {
         $mappingData = Cache::get('import_column_mapping');
-        
+
         if ($mappingData) {
             Log::info('Loaded saved column mapping', [
                 'created_at' => $mappingData['created_at'],
-                'mapped_fields' => count(array_filter($mappingData['column_mapping']))
+                'mapped_fields' => count(array_filter($mappingData['column_mapping'])),
             ]);
         }
-        
+
         return $mappingData;
     }
 
@@ -117,20 +117,20 @@ class ColumnMappingService
     public function getMappingStatistics(): array
     {
         $savedMapping = $this->loadSavedMappingConfiguration();
-        
-        if (!$savedMapping) {
+
+        if (! $savedMapping) {
             return [
                 'has_saved_mapping' => false,
                 'total_mappings' => 0,
-                'created_at' => null
+                'created_at' => null,
             ];
         }
-        
+
         return [
             'has_saved_mapping' => true,
             'total_mappings' => count(array_filter($savedMapping['column_mapping'])),
             'created_at' => $savedMapping['created_at'],
-            'fingerprint' => $savedMapping['fingerprint']
+            'fingerprint' => $savedMapping['fingerprint'],
         ];
     }
 
@@ -158,10 +158,10 @@ class ColumnMappingService
     {
         $mapping = [];
         $fieldPatterns = $this->getFieldPatterns();
-        
+
         foreach ($headers as $header) {
             $normalizedHeader = strtolower(trim($header));
-            
+
             foreach ($fieldPatterns as $fieldName => $patterns) {
                 foreach ($patterns as $pattern) {
                     if (strpos($normalizedHeader, $pattern) !== false) {
@@ -171,12 +171,12 @@ class ColumnMappingService
                 }
             }
         }
-        
+
         Log::info('Auto-guessed column mappings', [
             'total_headers' => count($headers),
-            'mapped_columns' => count($mapping)
+            'mapped_columns' => count($mapping),
         ]);
-        
+
         return $mapping;
     }
 

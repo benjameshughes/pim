@@ -31,12 +31,12 @@ class BulkUpdateStatusJob implements ShouldQueue
             $updated = $this->modelClass::whereIn('id', $chunk)
                 ->update(['status' => $this->status]);
 
-            Log::info("Bulk status update", [
+            Log::info('Bulk status update', [
                 'model' => $this->modelClass,
                 'ids_count' => count($chunk),
                 'updated_count' => $updated,
                 'status' => $this->status,
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
         }
 

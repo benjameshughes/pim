@@ -1,89 +1,57 @@
-@if (session()->has('message'))
-    <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">
-        {{ session('message') }}
+<x-page-template 
+    title="Barcode Management"
+    :breadcrumbs="[
+        ['name' => 'Dashboard', 'url' => route('dashboard')],
+        ['name' => 'Barcodes']
+    ]"
+    :actions="[
+        [
+            'type' => 'link',
+            'label' => 'Pool Management',
+            'href' => route('barcodes.pool.index'),
+            'variant' => 'primary',
+            'icon' => 'database'
+        ],
+        [
+            'type' => 'link', 
+            'label' => 'Import Pool',
+            'href' => route('barcodes.pool.import'),
+            'variant' => 'outline',
+            'icon' => 'arrow-up-tray'
+        ]
+    ]"
+>
+    <x-slot:subtitle>
+        Manage GS1 barcodes and assignment to product variants
+    </x-slot:subtitle>
+
+    <div class="text-center py-16">
+        <div class="mx-auto h-16 w-16 text-zinc-400 mb-4">
+            <flux:icon name="qr-code" class="h-16 w-16" />
+        </div>
+        <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+            Barcode Management Interface
+        </h3>
+        <p class="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
+            The barcode management interface is being updated. You can still manage barcode pools and imports.
+        </p>
+        <div class="flex items-center justify-center gap-4">
+            <flux:button 
+                href="{{ route('barcodes.pool.index') }}"
+                variant="primary"
+                icon="database"
+                wire:navigate
+            >
+                Manage Pool
+            </flux:button>
+            <flux:button 
+                href="{{ route('barcodes.pool.import') }}"
+                variant="outline"
+                icon="arrow-up-tray"
+                wire:navigate
+            >
+                Import Barcodes
+            </flux:button>
+        </div>
     </div>
-@endif
-
-@if (session()->has('success'))
-    <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">
-        {{ session('success') }}
-    </div>
-@endif
-
-@if (session()->has('error'))
-    <div class="mb-4 rounded-lg bg-red-100 px-6 py-4 text-red-700 dark:bg-red-900 dark:text-red-300">
-        {{ session('error') }}
-    </div>
-@endif
-
-{{-- NEW: Clean Table System - FilamentPHP-style magic method rendering --}}
-{{ $this->table }}
-
-{{--    @if (session()->has('success'))--}}
-{{--        <div class="mb-4 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">--}}
-{{--            {{ session('success') }}--}}
-{{--        </div>--}}
-{{--    @endif--}}
-
-{{--    @if (session()->has('error'))--}}
-{{--        <div class="mb-4 rounded-lg bg-red-100 px-6 py-4 text-red-700 dark:bg-red-900 dark:text-red-300">--}}
-{{--            {{ session('error') }}--}}
-{{--        </div>--}}
-{{--    @endif--}}
-
-{{--    <x-stacked-list --}}
-{{--        :config="$this->getStackedListConfig()"--}}
-{{--        :data="$this->stackedListData"--}}
-{{--        :selected-items="$this->stackedListSelectedItems"--}}
-{{--        :search="$this->stackedListSearch"--}}
-{{--        :filters="$this->stackedListFilters"--}}
-{{--        :per-page="$this->stackedListPerPage"--}}
-{{--        :sort-by="$this->stackedListSortBy"--}}
-{{--        :sort-direction="$this->stackedListSortDirection"--}}
-{{--        :sort-stack="$this->stackedListSortStack"--}}
-{{--        :select-all="$this->stackedListSelectAll"--}}
-{{--        :parent-products-only="$this->parentProductsOnly"--}}
-{{--    />--}}
-
-{{--<!-- Generate Barcode Section -->--}}
-{{--@if($variants->isNotEmpty())--}}
-{{--    <div class="mt-8 bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-6">--}}
-{{--        <flux:heading size="lg" class="mb-4">Generate New Barcodes</flux:heading>--}}
-{{--        <flux:subheading class="mb-6">Create barcodes for recent variants without barcodes (showing up to 100)</flux:subheading>--}}
-{{--        --}}
-{{--        <div class="space-y-4">--}}
-{{--            @foreach($variants->take(20) as $variant)--}}
-{{--                @if($variant->barcodes->isEmpty())--}}
-{{--                    <div class="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg">--}}
-{{--                        <div>--}}
-{{--                            <div class="font-medium text-sm">{{ $variant->product->name }}</div>--}}
-{{--                            <div class="text-sm text-zinc-500 dark:text-zinc-400">--}}
-{{--                                SKU: {{ $variant->sku }}--}}
-{{--                                @if($variant->color || $variant->size)--}}
-{{--                                    | {{ $variant->color }} {{ $variant->size }}--}}
-{{--                                @endif--}}
-{{--                            </div>--}}
-{{--                        </div>--}}
-{{--                        <div class="flex items-center space-x-2">--}}
-{{--                            @foreach($barcodeTypes as $key => $label)--}}
-{{--                                <flux:button --}}
-{{--                                    size="sm"--}}
-{{--                                    wire:click="generateBarcode({{ $variant->id }}, '{{ $key }}')"--}}
-{{--                                >--}}
-{{--                                    Generate {{ $label }}--}}
-{{--                                </flux:button>--}}
-{{--                            @endforeach--}}
-{{--                        </div>--}}
-{{--                    </div>--}}
-{{--                @endif--}}
-{{--            @endforeach--}}
-{{--            --}}
-{{--            @if($variants->count() >= 20)--}}
-{{--                <div class="text-center py-4 text-zinc-500 dark:text-zinc-400 text-sm">--}}
-{{--                    Showing first 20 variants without barcodes. Use filters to find specific variants.--}}
-{{--                </div>--}}
-{{--            @endif--}}
-{{--        </div>--}}
-{{--    </div>--}}
-{{--@endif--}}
-</div>
+</x-page-template>

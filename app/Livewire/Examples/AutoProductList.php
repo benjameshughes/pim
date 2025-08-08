@@ -9,9 +9,8 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class AutoProductList extends Component
 {
-
     protected $listeners = [
-        'refreshList' => '$refresh'
+        'refreshList' => '$refresh',
     ];
 
     public function mount()
@@ -25,17 +24,17 @@ class AutoProductList extends Component
             // Header Configuration
             'title' => 'Example Product Gallery',
             'subtitle' => 'Example product listing with FilamentPHP-style config',
-            
+
             // Search & Filter Configuration
             'search_placeholder' => 'Search products by name, SKU, or description...',
             'searchable' => ['name', 'parent_sku'],
             'sortable_columns' => ['name', 'parent_sku', 'status', 'variants_count'],
-            
+
             // Data Configuration
             'withCount' => ['variants'],
             'per_page_options' => [5, 10, 25, 50],
             'export' => false,
-            
+
             // Table Columns (excluding description, features, slug, metadata as requested)
             'columns' => [
                 [
@@ -43,20 +42,20 @@ class AutoProductList extends Component
                     'label' => 'Product Name',
                     'type' => 'text',
                     'font' => 'font-medium',
-                    'sortable' => true
+                    'sortable' => true,
                 ],
                 [
                     'key' => 'parent_sku',
                     'label' => 'SKU',
                     'type' => 'text',
                     'font' => 'font-mono text-sm',
-                    'sortable' => true
+                    'sortable' => true,
                 ],
                 [
                     'key' => 'variants_count',
                     'label' => 'Variants',
                     'type' => 'text',
-                    'sortable' => true
+                    'sortable' => true,
                 ],
                 [
                     'key' => 'status',
@@ -67,19 +66,19 @@ class AutoProductList extends Component
                         'active' => [
                             'label' => 'Active',
                             'class' => 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-                            'icon' => 'check-circle'
+                            'icon' => 'check-circle',
                         ],
                         'inactive' => [
                             'label' => 'Inactive',
                             'class' => 'bg-zinc-100 text-zinc-800 border-zinc-200 dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600',
-                            'icon' => 'pause-circle'
+                            'icon' => 'pause-circle',
                         ],
                         'discontinued' => [
                             'label' => 'Discontinued',
                             'class' => 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-                            'icon' => 'x-circle'
-                        ]
-                    ]
+                            'icon' => 'x-circle',
+                        ],
+                    ],
                 ],
                 [
                     'key' => 'actions',
@@ -90,18 +89,18 @@ class AutoProductList extends Component
                             'label' => 'Activate',
                             'method' => 'activateProduct',
                             'icon' => 'check-circle',
-                            'navigate' => false
+                            'navigate' => false,
                         ],
                         [
                             'label' => 'Deactivate',
                             'method' => 'deactivateProduct',
                             'icon' => 'x-circle',
-                            'navigate' => false
-                        ]
-                    ]
-                ]
+                            'navigate' => false,
+                        ],
+                    ],
+                ],
             ],
-            
+
             // Empty State Configuration
             'empty_title' => 'No products found',
             'empty_description' => 'This is an example component showing the FilamentPHP-style config system.',

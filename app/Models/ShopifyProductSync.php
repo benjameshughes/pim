@@ -14,12 +14,12 @@ class ShopifyProductSync extends Model
         'shopify_handle',
         'sync_status',
         'last_sync_data',
-        'last_synced_at'
+        'last_synced_at',
     ];
 
     protected $casts = [
         'last_sync_data' => 'array',
-        'last_synced_at' => 'datetime'
+        'last_synced_at' => 'datetime',
     ];
 
     /**
@@ -55,9 +55,9 @@ class ShopifyProductSync extends Model
      * Create or update sync record
      */
     public static function updateSyncRecord(
-        int $productId, 
-        string $color, 
-        string $shopifyProductId, 
+        int $productId,
+        string $color,
+        string $shopifyProductId,
         array $syncData,
         string $status = 'synced',
         ?string $handle = null
@@ -65,14 +65,14 @@ class ShopifyProductSync extends Model
         return static::updateOrCreate(
             [
                 'product_id' => $productId,
-                'color' => $color
+                'color' => $color,
             ],
             [
                 'shopify_product_id' => $shopifyProductId,
                 'shopify_handle' => $handle,
                 'sync_status' => $status,
                 'last_sync_data' => $syncData,
-                'last_synced_at' => now()
+                'last_synced_at' => now(),
             ]
         );
     }
@@ -88,7 +88,7 @@ class ShopifyProductSync extends Model
 
         // Compare key fields that would require an update
         $compareFields = ['title', 'body_html', 'variants_count', 'price_range'];
-        
+
         foreach ($compareFields as $field) {
             if (($this->last_sync_data[$field] ?? null) !== ($newData[$field] ?? null)) {
                 return true;

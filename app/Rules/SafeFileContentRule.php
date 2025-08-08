@@ -14,8 +14,9 @@ class SafeFileContentRule implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (!$value instanceof UploadedFile) {
+        if (! $value instanceof UploadedFile) {
             $fail('The file must be a valid uploaded file.');
+
             return;
         }
 
@@ -23,9 +24,10 @@ class SafeFileContentRule implements ValidationRule
         if ($this->isZipBomb($value)) {
             Log::warning('Potential zip bomb detected', [
                 'filename' => $value->getClientOriginalName(),
-                'size' => $value->getSize()
+                'size' => $value->getSize(),
             ]);
             $fail('The file appears to be a compressed archive with suspicious compression ratios.');
+
             return;
         }
 
@@ -33,9 +35,10 @@ class SafeFileContentRule implements ValidationRule
         if ($this->containsExecutableContent($value)) {
             Log::warning('File contains executable content', [
                 'filename' => $value->getClientOriginalName(),
-                'mime_type' => $value->getMimeType()
+                'mime_type' => $value->getMimeType(),
             ]);
             $fail('The file contains potentially dangerous executable content.');
+
             return;
         }
 
@@ -43,20 +46,22 @@ class SafeFileContentRule implements ValidationRule
         if ($this->containsSuspiciousMacros($value)) {
             Log::warning('File may contain malicious macros', [
                 'filename' => $value->getClientOriginalName(),
-                'extension' => $value->getClientOriginalExtension()
+                'extension' => $value->getClientOriginalExtension(),
             ]);
             $fail('The Excel file contains macros. Please use macro-free Excel files (.xlsx) for security.');
+
             return;
         }
 
         // Check file header matches extension
-        if (!$this->hasValidFileSignature($value)) {
+        if (! $this->hasValidFileSignature($value)) {
             Log::warning('File signature mismatch detected', [
                 'filename' => $value->getClientOriginalName(),
                 'declared_extension' => $value->getClientOriginalExtension(),
-                'mime_type' => $value->getMimeType()
+                'mime_type' => $value->getMimeType(),
             ]);
             $fail('The file header does not match the file extension.');
+
             return;
         }
     }
@@ -67,14 +72,14 @@ class SafeFileContentRule implements ValidationRule
     private function isZipBomb(UploadedFile $file): bool
     {
         $extension = strtolower($file->getClientOriginalExtension());
-        
+
         // Only check compressed formats
-        if (!in_array($extension, ['xlsx', 'xls', 'zip'])) {
+        if (! in_array($extension, ['xlsx', 'xls', 'zip'])) {
             return false;
         }
 
         $fileSize = $file->getSize();
-        
+
         // If file is too small, skip check
         if ($fileSize < 1024) {
             return false;
@@ -96,11 +101,11 @@ class SafeFileContentRule implements ValidationRule
     private function containsExecutableContent(UploadedFile $file): bool
     {
         $extension = strtolower($file->getClientOriginalExtension());
-        
+
         // Explicitly reject executable extensions
         $dangerousExtensions = [
             'exe', 'bat', 'cmd', 'com', 'pif', 'scr', 'vbs', 'js',
-            'jar', 'app', 'deb', 'pkg', 'rpm', 'dmg', 'iso'
+            'jar', 'app', 'deb', 'pkg', 'rpm', 'dmg', 'iso',
         ];
 
         if (in_array($extension, $dangerousExtensions)) {
@@ -115,7 +120,7 @@ class SafeFileContentRule implements ValidationRule
             'application/x-ms-dos-executable',
             'application/java-archive',
             'text/javascript',
-            'application/javascript'
+            'application/javascript',
         ];
 
         return in_array($mimeType, $dangerousMimeTypes);
@@ -127,10 +132,10 @@ class SafeFileContentRule implements ValidationRule
     private function containsSuspiciousMacros(UploadedFile $file): bool
     {
         $extension = strtolower($file->getClientOriginalExtension());
-        
+
         // Check for macro-enabled Excel formats
         $macroEnabledExtensions = ['xlsm', 'xltm', 'xlam'];
-        
+
         if (in_array($extension, $macroEnabledExtensions)) {
             return true;
         }
@@ -154,17 +159,17 @@ class SafeFileContentRule implements ValidationRule
     private function hasValidFileSignature(UploadedFile $file): bool
     {
         $extension = strtolower($file->getClientOriginalExtension());
-        
+
         // Read first few bytes for file signature
         $handle = fopen($file->getRealPath(), 'rb');
-        if (!$handle) {
+        if (! $handle) {
             return false;
         }
 
         $header = fread($handle, 16);
         fclose($handle);
 
-        if (!$header) {
+        if (! $header) {
             return false;
         }
 
@@ -173,14 +178,14 @@ class SafeFileContentRule implements ValidationRule
             'xlsx' => [
                 "\x50\x4B\x03\x04", // ZIP signature (XLSX is ZIP-based)
                 "\x50\x4B\x05\x06", // Empty ZIP
-                "\x50\x4B\x07\x08"  // Spanned ZIP
+                "\x50\x4B\x07\x08",  // Spanned ZIP
             ],
             'xls' => [
                 "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1", // OLE2 signature
                 "\x09\x08\x06\x00\x00\x00\x10\x00", // Excel BIFF5
-                "\x09\x08\x08\x00\x00\x00\x05\x00"  // Excel BIFF8
+                "\x09\x08\x08\x00\x00\x00\x05\x00",  // Excel BIFF8
             ],
-            'csv' => [] // CSV can start with anything, skip signature check
+            'csv' => [], // CSV can start with anything, skip signature check
         ];
 
         // Skip signature check for CSV
@@ -195,6 +200,7 @@ class SafeFileContentRule implements ValidationRule
                     return true;
                 }
             }
+
             return false;
         }
 

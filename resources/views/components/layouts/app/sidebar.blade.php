@@ -87,8 +87,8 @@
                 <flux:navlist.group heading="Data Exchange" class="grid">
                     <flux:navlist.item 
                         icon="arrow-down-tray" 
-                        href="{{ route('import') }}" 
-                        current="{{ request()->routeIs('import*') }}" 
+                        href="{{ route('import.index') }}" 
+                        current="{{ request()->routeIs('import.*') }}" 
                         wire:navigate
                     >
                         Import Data
@@ -182,10 +182,19 @@
                     <flux:navlist.item 
                         icon="beaker" 
                         href="{{ route('examples.toast.demo') }}" 
-                        current="{{ request()->routeIs('examples.*') }}" 
+                        current="{{ request()->routeIs('examples.toast.demo') }}" 
                         wire:navigate
                     >
                         Toast Demo
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="adjustments-horizontal" 
+                        href="{{ route('examples.attributes.demo') }}" 
+                        current="{{ request()->routeIs('examples.attributes.demo') }}" 
+                        wire:navigate
+                    >
+                        Attributes Demo
                     </flux:navlist.item>
                 </flux:navlist.group>
                 @endif
@@ -303,6 +312,9 @@
 
         @fluxScripts
         @livewireScripts
+        
+        {{-- Component Scripts Stack --}}
+        @stack('scripts')
         
         {{-- Alpine Toast Integration (ResourceManager Pattern) - Temporarily disabled for debugging --}}
         {{-- @include('partials.alpine-toast-integration') --}}

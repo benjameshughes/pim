@@ -10,13 +10,13 @@ class CreateParentProduct
     {
         $productName = $variantData['product_name'] ?? '';
         $variantSku = $variantData['variant_sku'] ?? '';
-        
+
         // Generate a clean parent name
         $parentName = app(GenerateParentName::class)->execute($productName, $variantSku);
-        
+
         // Generate unique slug
         $slug = app(GenerateProductSlug::class)->execute($parentName);
-        
+
         return Product::create([
             'name' => $parentName,
             'slug' => $slug,

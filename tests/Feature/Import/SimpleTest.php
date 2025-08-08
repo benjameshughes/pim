@@ -2,14 +2,14 @@
 
 use App\Actions\Import\GuessFieldMapping;
 use App\Actions\Import\ValidateImportRow;
-use App\Repositories\ProductRepository;
-use App\Repositories\ProductVariantRepository;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Repositories\ProductRepository;
+use App\Repositories\ProductVariantRepository;
 
 test('guess field mapping basic functionality', function () {
-    $action = new GuessFieldMapping();
-    
+    $action = new GuessFieldMapping;
+
     expect($action->execute('Product Name'))->toBe('product_name')
         ->and($action->execute('SKU'))->toBe('variant_sku')
         ->and($action->execute('Color'))->toBe('variant_color')
@@ -18,31 +18,31 @@ test('guess field mapping basic functionality', function () {
 });
 
 test('validate import row basic validation', function () {
-    $action = new ValidateImportRow();
-    
+    $action = new ValidateImportRow;
+
     // Valid row with SKU
     $result = $action->execute(['variant_sku' => 'TEST-001'], 1);
     expect($result->hasErrors())->toBeFalse();
-    
+
     // Invalid row with neither SKU nor name
     $result = $action->execute([], 1);
     expect($result->hasErrors())->toBeTrue();
 });
 
 test('product repository basic operations', function () {
-    $repository = new ProductRepository();
-    
+    $repository = new ProductRepository;
+
     // Test creation
     $product = $repository->create([
         'name' => 'Test Product',
         'slug' => 'test-product',
         'is_parent' => false,
-        'status' => 'active'
+        'status' => 'active',
     ]);
-    
+
     expect($product)->toBeInstanceOf(Product::class)
         ->and($product->name)->toBe('Test Product');
-    
+
     // Test finding by name
     $found = $repository->findByName('Test Product');
     expect($found)->not->toBeNull()
@@ -50,29 +50,29 @@ test('product repository basic operations', function () {
 });
 
 test('variant repository basic operations', function () {
-    $productRepo = new ProductRepository();
-    $variantRepo = new ProductVariantRepository();
-    
+    $productRepo = new ProductRepository;
+    $variantRepo = new ProductVariantRepository;
+
     // Create parent product
     $product = $productRepo->create([
         'name' => 'Parent Product',
         'slug' => 'parent-product',
         'is_parent' => true,
-        'status' => 'active'
+        'status' => 'active',
     ]);
-    
+
     // Create variant
     $variant = $variantRepo->create([
         'product_id' => $product->id,
         'sku' => 'TEST-001',
         'color' => 'Red',
         'size' => 'M',
-        'status' => 'active'
+        'status' => 'active',
     ]);
-    
+
     expect($variant)->toBeInstanceOf(ProductVariant::class)
         ->and($variant->sku)->toBe('TEST-001');
-    
+
     // Test finding by SKU
     $found = $variantRepo->findBySku('TEST-001');
     expect($found)->not->toBeNull()
@@ -85,7 +85,7 @@ test('services can be instantiated', function () {
     $mappingService = app(\App\Services\ColumnMappingService::class);
     $validationService = app(\App\Services\ImportValidationService::class);
     $productService = app(\App\Services\ProductImportService::class);
-    
+
     expect($importManager)->toBeInstanceOf(\App\Services\ImportManagerService::class)
         ->and($excelService)->toBeInstanceOf(\App\Services\ExcelProcessingService::class)
         ->and($mappingService)->toBeInstanceOf(\App\Services\ColumnMappingService::class)

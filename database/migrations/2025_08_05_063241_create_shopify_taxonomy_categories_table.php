@@ -24,7 +24,7 @@ return new class extends Migration
             $table->json('ancestor_ids')->nullable(); // Array of ancestor category IDs
             $table->json('attributes')->nullable(); // Category-specific attributes/metafields
             $table->timestamps();
-            
+
             $table->index('shopify_id');
             $table->index('parent_id');
             $table->index('is_leaf');

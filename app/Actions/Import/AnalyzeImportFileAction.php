@@ -2,13 +2,13 @@
 
 namespace App\Actions\Import;
 
-use App\Services\ImportManagerService;
-use App\Services\ImportDataCacheService;
 use App\Exceptions\Import\FileNotFoundException;
-use App\Exceptions\Import\InvalidFileFormatException;
 use App\Exceptions\Import\FileSizeException;
+use App\Exceptions\Import\InvalidFileFormatException;
 use App\Exceptions\Import\SecurityException;
 use App\Rules\SafeFileContentRule;
+use App\Services\ImportDataCacheService;
+use App\Services\ImportManagerService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -28,7 +28,7 @@ class AnalyzeImportFileAction
         Log::info('Starting file analysis', [
             'filename' => $file->getClientOriginalName(),
             'size' => $file->getSize(),
-            'mime_type' => $file->getMimeType()
+            'mime_type' => $file->getMimeType(),
         ]);
 
         // Step 1: Basic file validation
@@ -50,7 +50,7 @@ class AnalyzeImportFileAction
 
             Log::info('File analysis completed successfully', [
                 'cache_key' => $cacheKey,
-                'worksheets_found' => count($analysisArray['worksheets'] ?? [])
+                'worksheets_found' => count($analysisArray['worksheets'] ?? []),
             ]);
 
             return $cacheKey;
@@ -65,10 +65,10 @@ class AnalyzeImportFileAction
             Log::error('Unexpected error during file analysis', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'filename' => $file->getClientOriginalName()
+                'filename' => $file->getClientOriginalName(),
             ]);
-            
-            throw new \Exception('Failed to analyze file: ' . $e->getMessage(), 0, $e);
+
+            throw new \Exception('Failed to analyze file: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -78,7 +78,7 @@ class AnalyzeImportFileAction
     private function validateFileBasics(UploadedFile $file): void
     {
         // Check if file exists and is readable
-        if (!$file->isValid()) {
+        if (! $file->isValid()) {
             throw new FileNotFoundException($file->getClientOriginalName());
         }
 
@@ -91,8 +91,8 @@ class AnalyzeImportFileAction
         // Check file extension
         $allowedExtensions = ['xlsx', 'xls', 'csv'];
         $extension = strtolower($file->getClientOriginalExtension());
-        
-        if (!in_array($extension, $allowedExtensions)) {
+
+        if (! in_array($extension, $allowedExtensions)) {
             throw new InvalidFileFormatException($extension, $file->getClientOriginalName());
         }
     }
@@ -104,7 +104,7 @@ class AnalyzeImportFileAction
     {
         $validator = Validator::make(
             ['file' => $file],
-            ['file' => [new SafeFileContentRule()]]
+            ['file' => [new SafeFileContentRule]]
         );
 
         if ($validator->fails()) {
@@ -119,9 +119,9 @@ class AnalyzeImportFileAction
     private function validateFileIntegrity(UploadedFile $file): void
     {
         $filePath = $file->getRealPath();
-        
+
         // Check if file is readable
-        if (!is_readable($filePath)) {
+        if (! is_readable($filePath)) {
             throw new FileNotFoundException($file->getClientOriginalName());
         }
 
@@ -148,19 +148,19 @@ class AnalyzeImportFileAction
         try {
             // Try to create a reader for the file
             $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($filePath);
-            
+
             // Set read-only mode for faster validation
             $reader->setReadDataOnly(true);
-            
+
             // Try to get worksheet names (this will fail if file is corrupted)
             if ($extension !== 'csv') {
                 $worksheetNames = $reader->listWorksheetNames($filePath);
-                
+
                 if (empty($worksheetNames)) {
                     throw new InvalidFileFormatException($extension, basename($filePath));
                 }
             }
-            
+
         } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
             throw new InvalidFileFormatException($extension, basename($filePath), $e);
         }

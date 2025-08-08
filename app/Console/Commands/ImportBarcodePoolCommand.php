@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\BarcodePool;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class ImportBarcodePoolCommand extends Command
 {
@@ -21,19 +20,20 @@ class ImportBarcodePoolCommand extends Command
         $chunkSize = (int) $this->option('chunk');
         $clearExisting = $this->option('clear');
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $this->error("File not found: {$filePath}");
+
             return self::FAILURE;
         }
 
-        $this->info("Starting barcode pool import...");
+        $this->info('Starting barcode pool import...');
         $this->info("File: {$filePath}");
         $this->info("Chunk size: {$chunkSize}");
 
         if ($clearExisting) {
-            $this->info("Clearing existing barcode pool...");
+            $this->info('Clearing existing barcode pool...');
             BarcodePool::truncate();
-            $this->info("Pool cleared.");
+            $this->info('Pool cleared.');
         }
 
         $startTime = microtime(true);
@@ -44,9 +44,10 @@ class ImportBarcodePoolCommand extends Command
 
         // Open file handle for memory-efficient reading
         $handle = fopen($filePath, 'r');
-        
-        if (!$handle) {
+
+        if (! $handle) {
             $this->error("Could not open file: {$filePath}");
+
             return self::FAILURE;
         }
 
@@ -56,13 +57,13 @@ class ImportBarcodePoolCommand extends Command
         $chunk = [];
         $lineNumber = 1;
 
-        $this->info("Processing file in chunks...");
+        $this->info('Processing file in chunks...');
         $progressBar = $this->output->createProgressBar();
 
         while (($row = fgetcsv($handle)) !== false) {
             $lineNumber++;
-            
-            if (!empty($row[0])) {
+
+            if (! empty($row[0])) {
                 $chunk[] = [
                     'barcode' => trim($row[0]),
                     'barcode_type' => $row[1] ?? 'EAN13',
@@ -72,7 +73,7 @@ class ImportBarcodePoolCommand extends Command
                     'legacy_product_name' => $row[5] ?? '',
                     'legacy_brand' => $row[6] ?? '',
                     'legacy_updated' => $row[7] ?? '',
-                    'import_batch_id' => $row[8] ?? "cmd_import_" . date('Y_m_d_H_i_s'),
+                    'import_batch_id' => $row[8] ?? 'cmd_import_'.date('Y_m_d_H_i_s'),
                     'notes' => $row[9] ?? '',
                 ];
             }
@@ -84,20 +85,20 @@ class ImportBarcodePoolCommand extends Command
                 $legacyCount += $result['legacy'];
                 $availableCount += $result['available'];
                 $skippedCount += $result['skipped'];
-                
+
                 $progressBar->advance($result['processed']);
                 $chunk = [];
             }
         }
 
         // Process remaining records
-        if (!empty($chunk)) {
+        if (! empty($chunk)) {
             $result = $this->processChunk($chunk);
             $totalProcessed += $result['processed'];
             $legacyCount += $result['legacy'];
             $availableCount += $result['available'];
             $skippedCount += $result['skipped'];
-            
+
             $progressBar->advance($result['processed']);
         }
 
@@ -108,7 +109,7 @@ class ImportBarcodePoolCommand extends Command
         $duration = round($endTime - $startTime, 2);
 
         $this->newLine(2);
-        $this->info("Import completed successfully!");
+        $this->info('Import completed successfully!');
         $this->info("Duration: {$duration} seconds");
         $this->info("Total processed: {$totalProcessed}");
         $this->info("Legacy archived: {$legacyCount}");
@@ -127,7 +128,7 @@ class ImportBarcodePoolCommand extends Command
 
         // Extract barcodes for duplicate checking
         $barcodes = array_column($chunk, 'barcode');
-        
+
         // Check for existing barcodes in one query
         $existing = BarcodePool::whereIn('barcode', $barcodes)
             ->pluck('barcode')
@@ -139,11 +140,12 @@ class ImportBarcodePoolCommand extends Command
             // Skip if barcode already exists
             if (in_array($item['barcode'], $existing)) {
                 $skipped++;
+
                 continue;
             }
 
             $isLegacy = $item['status'] === 'legacy_archive';
-            
+
             $insertData[] = [
                 'barcode' => $item['barcode'],
                 'barcode_type' => $item['barcode_type'],
@@ -164,12 +166,12 @@ class ImportBarcodePoolCommand extends Command
             } else {
                 $available++;
             }
-            
+
             $processed++;
         }
 
         // Bulk insert with ignore duplicates
-        if (!empty($insertData)) {
+        if (! empty($insertData)) {
             try {
                 BarcodePool::insert($insertData);
             } catch (\Exception $e) {
@@ -201,27 +203,27 @@ class ImportBarcodePoolCommand extends Command
     private function buildLegacyNotes(array $item): ?string
     {
         $notes = [];
-        
-        if (!empty($item['legacy_sku'])) {
+
+        if (! empty($item['legacy_sku'])) {
             $notes[] = "Legacy SKU: {$item['legacy_sku']}";
         }
-        
-        if (!empty($item['legacy_product_name'])) {
+
+        if (! empty($item['legacy_product_name'])) {
             $notes[] = "Product: {$item['legacy_product_name']}";
         }
-        
-        if (!empty($item['legacy_brand'])) {
+
+        if (! empty($item['legacy_brand'])) {
             $notes[] = "Brand: {$item['legacy_brand']}";
         }
-        
-        if (!empty($item['legacy_updated'])) {
+
+        if (! empty($item['legacy_updated'])) {
             $notes[] = "Last Updated: {$item['legacy_updated']}";
         }
-        
-        if (!empty($item['legacy_status'])) {
+
+        if (! empty($item['legacy_status'])) {
             $notes[] = "Original Status: {$item['legacy_status']}";
         }
-        
-        return !empty($notes) ? implode(' | ', $notes) : null;
+
+        return ! empty($notes) ? implode(' | ', $notes) : null;
     }
 }

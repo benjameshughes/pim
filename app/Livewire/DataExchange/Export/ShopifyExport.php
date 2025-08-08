@@ -2,21 +2,26 @@
 
 namespace App\Livewire\DataExchange\Export;
 
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use App\Services\ShopifyExportService;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Illuminate\Support\Facades\Storage;
 
 #[Layout('components.layouts.app')]
 class ShopifyExport extends Component
 {
     public $selectedProducts = [];
+
     public $selectedCategories = [];
+
     public $includeInactive = false;
+
     public $exportFormat = 'csv';
+
     public $isProcessing = false;
+
     public $lastExportInfo = null;
 
     protected $shopifyService;
@@ -74,14 +79,14 @@ class ShopifyExport extends Component
 
             // Export to Shopify format
             $shopifyProducts = $this->shopifyService->exportProducts($products);
-            
+
             // Generate CSV
             $csvContent = $this->shopifyService->generateCSV($shopifyProducts);
-            
+
             // Save to storage
-            $filename = 'shopify-export-' . now()->format('Y-m-d-H-i-s') . '.csv';
+            $filename = 'shopify-export-'.now()->format('Y-m-d-H-i-s').'.csv';
             Storage::disk('public')->put("exports/{$filename}", $csvContent);
-            
+
             // Store export info for download
             $this->lastExportInfo = [
                 'filename' => $filename,
@@ -93,9 +98,9 @@ class ShopifyExport extends Component
             ];
 
             session()->flash('message', 'Shopify export completed successfully!');
-            
+
         } catch (\Exception $e) {
-            session()->flash('error', 'Export failed: ' . $e->getMessage());
+            session()->flash('error', 'Export failed: '.$e->getMessage());
         } finally {
             $this->isProcessing = false;
         }
@@ -103,15 +108,17 @@ class ShopifyExport extends Component
 
     public function downloadExport()
     {
-        if (!$this->lastExportInfo) {
+        if (! $this->lastExportInfo) {
             session()->flash('error', 'No export file available for download.');
+
             return;
         }
 
         $path = $this->lastExportInfo['path'];
-        
-        if (!Storage::disk('public')->exists($path)) {
+
+        if (! Storage::disk('public')->exists($path)) {
             session()->flash('error', 'Export file not found.');
+
             return;
         }
 
@@ -122,6 +129,7 @@ class ShopifyExport extends Component
     {
         if (empty($this->selectedProducts)) {
             session()->flash('error', 'Please select at least one product to preview.');
+
             return;
         }
 
@@ -141,14 +149,14 @@ class ShopifyExport extends Component
         $query = Product::with(['variants', 'categories']);
 
         // Filter by categories if selected
-        if (!empty($this->selectedCategories)) {
-            $query->whereHas('categories', function($q) {
+        if (! empty($this->selectedCategories)) {
+            $query->whereHas('categories', function ($q) {
                 $q->whereIn('categories.id', $this->selectedCategories);
             });
         }
 
         // Filter by status
-        if (!$this->includeInactive) {
+        if (! $this->includeInactive) {
             $query->where('status', 'active');
         }
 

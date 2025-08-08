@@ -56,6 +56,7 @@ class DeletedProductVariant extends Model
     public function getVariantDisplayNameAttribute(): string
     {
         $parts = array_filter([$this->color, $this->width, $this->drop]);
+
         return empty($parts) ? 'No Variants' : implode(' × ', $parts);
     }
 
@@ -68,7 +69,7 @@ class DeletedProductVariant extends Model
     {
         // Get the primary barcode for this variant
         $primaryBarcode = $variant->barcodes()->where('is_primary', true)->first();
-        
+
         // Get color, width, drop from attributes system
         $color = $variant->attributes()->byKey('color')->first()?->attribute_value;
         $width = $variant->attributes()->byKey('width')->first()?->attribute_value;

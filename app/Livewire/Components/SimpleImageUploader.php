@@ -2,12 +2,11 @@
 
 namespace App\Livewire\Components;
 
-use App\Models\ProductImage;
 use App\Jobs\ProcessImageToR2;
+use App\Models\ProductImage;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 class SimpleImageUploader extends Component
 {
@@ -15,34 +14,48 @@ class SimpleImageUploader extends Component
 
     // Basic properties
     public $files = [];
+
     public $imageType = 'general';
+
     public $maxFiles = 10;
+
     public $maxSize = 5120; // KB
+
     public $acceptTypes = ['jpg', 'jpeg', 'png', 'webp'];
+
     public $multiple = true;
+
     public $showUploadArea = true;
+
     public $showExistingImages = true;
+
     public $processImmediately = true;
+
     public $showPreview = true;
+
     public $allowReorder = false;
+
     public $uploadText = 'Upload files';
 
     // Model binding
     public $modelType = null;
+
     public $modelId = null;
 
     // State properties
     public $uploading = false;
+
     public $acceptTypesString = '';
+
     public $sessionId;
 
     public function mount()
     {
-        $this->acceptTypesString = implode(',', array_map(fn($type) => ".{$type}", $this->acceptTypes));
+        $this->acceptTypesString = implode(',', array_map(fn ($type) => ".{$type}", $this->acceptTypes));
         $this->sessionId = (string) Str::uuid();
-        
+
         // Validate image type
-        if (!in_array($this->imageType, ['main', 'detail', 'swatch', 'lifestyle', 'installation', 'general'])) {
+        if (! in_array($this->imageType, ['main', 'detail', 'swatch', 'lifestyle', 'installation', 'general'])) {
             $this->imageType = 'general';
         }
     }
@@ -50,7 +63,7 @@ class SimpleImageUploader extends Component
     // Computed property for upload capability
     public function getCanUploadProperty()
     {
-        return !empty($this->files) && count($this->files) <= $this->maxFiles && !$this->uploading;
+        return ! empty($this->files) && count($this->files) <= $this->maxFiles && ! $this->uploading;
     }
 
     public function removeFile($index)
@@ -63,7 +76,7 @@ class SimpleImageUploader extends Component
 
     public function uploadFiles()
     {
-        if (!$this->canUpload) {
+        if (! $this->canUpload) {
             return;
         }
 
@@ -76,9 +89,9 @@ class SimpleImageUploader extends Component
                     'required',
                     'file',
                     'image',
-                    'mimes:' . implode(',', $this->acceptTypes),
-                    'max:' . $this->maxSize,
-                    'dimensions:min_width=300,min_height=300'
+                    'mimes:'.implode(',', $this->acceptTypes),
+                    'max:'.$this->maxSize,
+                    'dimensions:min_width=300,min_height=300',
                 ],
             ]);
 
@@ -88,7 +101,7 @@ class SimpleImageUploader extends Component
             foreach ($this->files as $file) {
                 // Store file to temporary location
                 $path = $file->store('product-images/temp', 'public');
-                
+
                 // Get image dimensions for metadata
                 $dimensions = null;
                 try {
@@ -117,7 +130,7 @@ class SimpleImageUploader extends Component
                         'uploader_session_id' => $this->sessionId,
                         'uploaded_at' => now()->toISOString(),
                         'uploader_component' => 'SimpleImageUploader',
-                    ]
+                    ],
                 ]);
 
                 // Dispatch processing job if enabled
@@ -131,13 +144,13 @@ class SimpleImageUploader extends Component
 
             // Clear files after successful upload
             $this->files = [];
-            
+
             // Create success message with job information
             $message = "Uploaded {$uploadedCount} images successfully!";
             if ($processedCount > 0) {
                 $message .= " {$processedCount} images queued for background processing.";
             }
-            
+
             session()->flash('message', $message);
 
             // Dispatch events for parent components
@@ -146,13 +159,13 @@ class SimpleImageUploader extends Component
                 'processed' => $processedCount,
                 'model_type' => $this->modelType,
                 'model_id' => $this->modelId,
-                'session_id' => $this->sessionId
+                'session_id' => $this->sessionId,
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            session()->flash('error', 'Validation failed: ' . implode(', ', $e->validator->errors()->all()));
+            session()->flash('error', 'Validation failed: '.implode(', ', $e->validator->errors()->all()));
         } catch (\Exception $e) {
-            session()->flash('error', 'Upload failed: ' . $e->getMessage());
+            session()->flash('error', 'Upload failed: '.$e->getMessage());
         } finally {
             $this->uploading = false;
         }
@@ -161,7 +174,7 @@ class SimpleImageUploader extends Component
     private function getNextSortOrder(): int
     {
         $maxSort = 0;
-        
+
         if ($this->modelType === 'product' && $this->modelId) {
             $maxSort = ProductImage::where('product_id', $this->modelId)
                 ->where('image_type', $this->imageType)
@@ -171,23 +184,23 @@ class SimpleImageUploader extends Component
                 ->where('image_type', $this->imageType)
                 ->max('sort_order') ?? 0;
         }
-        
+
         return $maxSort + 1;
     }
 
     public function getExistingImagesProperty()
     {
         $query = ProductImage::query();
-        
+
         if ($this->modelType === 'product' && $this->modelId) {
             $query->forProduct($this->modelId);
         } elseif ($this->modelType === 'variant' && $this->modelId) {
             $query->forVariant($this->modelId);
-        } elseif (!$this->modelType) {
+        } elseif (! $this->modelType) {
             // Show unassigned images
             $query->whereNull('product_id')->whereNull('variant_id');
         }
-        
+
         return $query->byType($this->imageType)->ordered()->get();
     }
 

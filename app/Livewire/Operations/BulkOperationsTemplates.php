@@ -24,11 +24,13 @@ class BulkOperationsTemplates extends Component
 
     // Template state
     public $titleTemplate = '';
+
     public $descriptionTemplate = '';
+
     public $showTitlePreview = false;
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [
@@ -74,7 +76,7 @@ class BulkOperationsTemplates extends Component
         // Initialize default templates
         $this->titleTemplate = '[Brand] [ProductName] - [Color] [Size] | Premium Quality [Material]';
         $this->descriptionTemplate = 'High-quality [Material] [ProductName] in [Color]. Perfect for [RoomType]. [Features]';
-        
+
         // Load default marketplaces
         if (empty($this->selectedMarketplaces)) {
             $this->selectedMarketplaces = Marketplace::active()->pluck('id')->toArray();
@@ -96,21 +98,22 @@ class BulkOperationsTemplates extends Component
     public function generateTitles()
     {
         $selectedVariants = $this->getSelectedVariants();
-        
+
         if (empty($selectedVariants)) {
             session()->flash('error', 'Please select variants from the Overview tab first.');
+
             return;
         }
 
         // In a real implementation, this would generate titles for selected variants
-        session()->flash('message', 'Generated titles for ' . count($selectedVariants) . ' variants.');
+        session()->flash('message', 'Generated titles for '.count($selectedVariants).' variants.');
     }
 
     public function render()
     {
         $selectedVariants = $this->getSelectedVariants();
         $marketplaces = Marketplace::active()->get();
-        
+
         $previewVariantModel = null;
         if ($this->previewVariant) {
             $previewVariantModel = ProductVariant::with(['product', 'attributes'])->find($this->previewVariant);

@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class Category extends Model
@@ -66,12 +66,12 @@ class Category extends Model
     {
         $names = [];
         $category = $this;
-        
+
         while ($category) {
             array_unshift($names, $category->name);
             $category = $category->parent;
         }
-        
+
         return implode(' > ', $names);
     }
 
@@ -79,12 +79,12 @@ class Category extends Model
     {
         $depth = 0;
         $category = $this->parent;
-        
+
         while ($category) {
             $depth++;
             $category = $category->parent;
         }
-        
+
         return $depth;
     }
 
@@ -107,7 +107,7 @@ class Category extends Model
     public function setNameAttribute($value)
     {
         $this->attributes['name'] = $value;
-        
+
         if (empty($this->attributes['slug'])) {
             $this->attributes['slug'] = $this->generateUniqueSlug($value);
         }
@@ -118,12 +118,12 @@ class Category extends Model
         $baseSlug = Str::slug($name);
         $slug = $baseSlug;
         $counter = 1;
-        
+
         while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
-            $slug = $baseSlug . '-' . $counter;
+            $slug = $baseSlug.'-'.$counter;
             $counter++;
         }
-        
+
         return $slug;
     }
 
@@ -131,12 +131,12 @@ class Category extends Model
     public function getAllDescendants(): \Illuminate\Database\Eloquent\Collection
     {
         $descendants = collect();
-        
+
         foreach ($this->children as $child) {
             $descendants->push($child);
             $descendants = $descendants->merge($child->getAllDescendants());
         }
-        
+
         return $descendants;
     }
 
@@ -145,12 +145,12 @@ class Category extends Model
     {
         $ancestors = collect();
         $category = $this->parent;
-        
+
         while ($category) {
             $ancestors->push($category);
             $category = $category->parent;
         }
-        
+
         return $ancestors->reverse();
     }
 }

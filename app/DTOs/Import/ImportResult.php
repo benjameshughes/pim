@@ -5,10 +5,15 @@ namespace App\DTOs\Import;
 class ImportResult
 {
     public int $productsCreated = 0;
+
     public int $productsUpdated = 0;
+
     public int $variantsCreated = 0;
+
     public int $variantsUpdated = 0;
+
     public array $errors = [];
+
     public array $warnings = [];
 
     public function incrementProductsCreated(): void
@@ -43,12 +48,12 @@ class ImportResult
 
     public function hasErrors(): bool
     {
-        return !empty($this->errors);
+        return ! empty($this->errors);
     }
 
     public function hasWarnings(): bool
     {
-        return !empty($this->warnings);
+        return ! empty($this->warnings);
     }
 
     public function toArray(): array

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->json('images')->nullable();
         });
-        
+
         Schema::table('product_variants', function (Blueprint $table) {
             $table->json('images')->nullable();
         });
@@ -28,7 +28,7 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn('images');
         });
-        
+
         Schema::table('product_variants', function (Blueprint $table) {
             $table->dropColumn('images');
         });

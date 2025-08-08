@@ -42,9 +42,9 @@ class ImageStatsCommand extends Command
             $this->info('📊 Image Processing Statistics (Refreshing every 2 seconds)');
             $this->info('Press Ctrl+C to exit');
             $this->newLine();
-            
+
             $this->showStats($processingService);
-            
+
             sleep(2);
         }
     }
@@ -58,29 +58,29 @@ class ImageStatsCommand extends Command
             ['Status', 'Count', 'Percentage'],
             [
                 [
-                    'Total Images', 
-                    $stats['total'], 
-                    '100%'
+                    'Total Images',
+                    $stats['total'],
+                    '100%',
                 ],
                 [
-                    '⏳ Pending', 
-                    $stats['pending'], 
-                    $stats['total'] > 0 ? round(($stats['pending'] / $stats['total']) * 100, 1) . '%' : '0%'
+                    '⏳ Pending',
+                    $stats['pending'],
+                    $stats['total'] > 0 ? round(($stats['pending'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
                 [
-                    '🔄 Processing', 
-                    $stats['processing'], 
-                    $stats['total'] > 0 ? round(($stats['processing'] / $stats['total']) * 100, 1) . '%' : '0%'
+                    '🔄 Processing',
+                    $stats['processing'],
+                    $stats['total'] > 0 ? round(($stats['processing'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
                 [
-                    '✅ Completed', 
-                    $stats['completed'], 
-                    $stats['total'] > 0 ? round(($stats['completed'] / $stats['total']) * 100, 1) . '%' : '0%'
+                    '✅ Completed',
+                    $stats['completed'],
+                    $stats['total'] > 0 ? round(($stats['completed'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
                 [
-                    '❌ Failed', 
-                    $stats['failed'], 
-                    $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100, 1) . '%' : '0%'
+                    '❌ Failed',
+                    $stats['failed'],
+                    $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
             ]
         );
@@ -93,16 +93,16 @@ class ImageStatsCommand extends Command
         if ($storageStats->isNotEmpty()) {
             $this->newLine();
             $this->info('💾 Storage Distribution:');
-            
+
             $storageTable = [];
             foreach ($storageStats as $stat) {
                 $storageTable[] = [
                     $stat->storage_disk ?: 'public',
                     $stat->processing_status,
-                    $stat->count
+                    $stat->count,
                 ];
             }
-            
+
             $this->table(['Storage Disk', 'Status', 'Count'], $storageTable);
         }
 
@@ -115,7 +115,7 @@ class ImageStatsCommand extends Command
         if ($recentFailures->isNotEmpty()) {
             $this->newLine();
             $this->error('❌ Recent Failures (Latest 5):');
-            
+
             $failureTable = [];
             foreach ($recentFailures as $failure) {
                 $error = $failure->metadata['processing_error'] ?? 'Unknown error';
@@ -123,11 +123,11 @@ class ImageStatsCommand extends Command
                     $failure->id,
                     basename($failure->image_path),
                     $failure->image_type,
-                    substr($error, 0, 50) . (strlen($error) > 50 ? '...' : ''),
-                    $failure->updated_at->diffForHumans()
+                    substr($error, 0, 50).(strlen($error) > 50 ? '...' : ''),
+                    $failure->updated_at->diffForHumans(),
                 ];
             }
-            
+
             $this->table(['ID', 'File', 'Type', 'Error', 'When'], $failureTable);
         }
 
@@ -136,14 +136,14 @@ class ImageStatsCommand extends Command
             $processed = $stats['completed'] + $stats['failed'];
             $remaining = $stats['pending'] + $stats['processing'];
             $progressPercent = round(($processed / $stats['total']) * 100, 1);
-            
+
             $this->newLine();
             $this->info("🎯 Progress: {$processed}/{$stats['total']} images processed ({$progressPercent}%)");
-            
+
             if ($remaining > 0) {
                 $this->info("⏱️  Remaining: {$remaining} images");
             } else {
-                $this->info("🎉 All images processed!");
+                $this->info('🎉 All images processed!');
             }
         }
     }

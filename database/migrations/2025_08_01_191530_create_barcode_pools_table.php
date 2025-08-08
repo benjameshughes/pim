@@ -20,7 +20,7 @@ return new class extends Migration
             $table->timestamp('assigned_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            
+
             $table->index(['status', 'barcode_type']);
             $table->index('assigned_to_variant_id');
         });

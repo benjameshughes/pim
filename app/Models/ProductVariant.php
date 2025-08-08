@@ -13,6 +13,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class ProductVariant extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia;
+
     protected $fillable = [
         'product_id',
         'sku',
@@ -136,50 +137,53 @@ class ProductVariant extends Model implements HasMedia
         $this->addMediaCollection('images')
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
     }
-    
+
     /**
      * Accessor methods for core attributes stored in the attribute system
      * These provide seamless access to attributes as if they were direct properties
      */
-    
     public function getColorAttribute(): ?string
     {
         $attribute = $this->attributes()->byKey('color')->first();
+
         return $attribute ? $attribute->attribute_value : null;
     }
-    
+
     public function getWidthAttribute(): ?string
     {
         $attribute = $this->attributes()->byKey('width')->first();
+
         return $attribute ? $attribute->attribute_value : null;
     }
-    
-    public function getDropAttribute(): ?string  
+
+    public function getDropAttribute(): ?string
     {
         $attribute = $this->attributes()->byKey('drop')->first();
+
         return $attribute ? $attribute->attribute_value : null;
     }
-    
+
     /**
      * Helper method to get any variant attribute value by key
      */
     public function getVariantAttributeValue(string $key): mixed
     {
         $attribute = $this->attributes()->byKey($key)->first();
+
         return $attribute ? $attribute->typed_value : null;
     }
-    
+
     /**
-     * Helper method to set any variant attribute value  
+     * Helper method to set any variant attribute value
      */
     public function setVariantAttributeValue(string $key, $value, string $dataType = 'text', ?string $category = null): void
     {
         \App\Models\VariantAttribute::setValue($this->id, $key, $value, $dataType, $category);
-        
+
         // Clear the relationship cache so fresh data is loaded
         unset($this->relations['attributes']);
     }
-    
+
     /**
      * Get formatted display string for dimensions
      */
@@ -187,7 +191,7 @@ class ProductVariant extends Model implements HasMedia
     {
         $width = $this->width;
         $drop = $this->drop;
-        
+
         if ($width && $drop) {
             return "{$width} × {$drop}";
         } elseif ($width) {
@@ -195,10 +199,10 @@ class ProductVariant extends Model implements HasMedia
         } elseif ($drop) {
             return "{$drop} drop";
         }
-        
+
         return null;
     }
-    
+
     /**
      * Backward compatibility - get size as formatted dimensions
      * This allows existing views using $variant->size to work
@@ -214,9 +218,9 @@ class ProductVariant extends Model implements HasMedia
     public function getImageUrlAttribute(): ?string
     {
         if ($this->images && count($this->images) > 0) {
-            return asset('storage/' . $this->images[0]);
+            return asset('storage/'.$this->images[0]);
         }
-        
+
         // Try variant images relationship
         if ($this->variantImages->isNotEmpty()) {
             $mainImage = $this->variantImages->where('image_type', 'main')->first();
@@ -224,7 +228,7 @@ class ProductVariant extends Model implements HasMedia
                 return \Storage::url($mainImage->image_path);
             }
         }
-        
+
         return null;
     }
 
@@ -257,47 +261,40 @@ class ProductVariant extends Model implements HasMedia
                 ->update([
                     'status' => 'available',
                     'assigned_to_variant_id' => null,
-                    'assigned_at' => null
+                    'assigned_at' => null,
                 ]);
         });
     }
-    
+
     /**
      * Create a new variant builder instance
-     * 
-     * @return \App\Builders\Variants\VariantBuilder
      */
     public static function build(): \App\Builders\Variants\VariantBuilder
     {
         return \App\Builders\Variants\VariantBuilder::create();
     }
-    
+
     /**
      * Create variant builder for specific product
-     * 
-     * @param Product $product
-     * @return \App\Builders\Variants\VariantBuilder  
      */
     public static function buildFor(Product $product): \App\Builders\Variants\VariantBuilder
     {
         return \App\Builders\Variants\VariantBuilder::for($product);
     }
-    
+
     /**
      * Get variant builder for editing this variant
-     * 
-     * @return \App\Builders\Variants\VariantBuilder
      */
     public function edit(): \App\Builders\Variants\VariantBuilder
     {
         $builder = \App\Builders\Variants\VariantBuilder::create();
-        
+
         // Pre-populate with current variant data
         $builder->productId($this->product_id)
-                ->sku($this->sku)
-                ->status($this->status ?? 'active')
-                ->stockLevel($this->stock_level ?? 0);
-                
+            ->sku($this->sku)
+            ->status($this->status ?? 'active')
+            ->stockLevel($this->stock_level ?? 0);
+
         // Add dimensions if available
         if ($this->package_length) {
             $builder->dimensions(
@@ -307,34 +304,34 @@ class ProductVariant extends Model implements HasMedia
                 $this->package_weight
             );
         }
-        
+
         // Add current attributes
         $attributes = [];
         foreach ($this->attributes as $attribute) {
             $attributes[$attribute->attribute_key] = $attribute->attribute_value;
         }
-        if (!empty($attributes)) {
+        if (! empty($attributes)) {
             $builder->attributes($attributes);
         }
-        
+
         return $builder;
     }
-    
+
     /**
      * Query scope for active variants
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
     }
-    
+
     /**
      * Query scope with common relationships
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeWithCommon($query)
@@ -343,43 +340,37 @@ class ProductVariant extends Model implements HasMedia
             'product:id,name,parent_sku',
             'barcodes:id,product_variant_id,barcode,is_primary',
             'pricing:id,product_variant_id,retail_price,marketplace',
-            'attributes:id,variant_id,attribute_key,attribute_value'
+            'attributes:id,variant_id,attribute_key,attribute_value',
         ]);
     }
-    
+
     /**
      * Check if variant has primary barcode
-     * 
-     * @return bool
      */
     public function hasPrimaryBarcode(): bool
     {
         return $this->barcodes()->where('is_primary', true)->exists();
     }
-    
+
     /**
      * Check if variant has pricing
-     * 
-     * @return bool
      */
     public function hasPricing(): bool
     {
         return $this->pricing()->exists();
     }
-    
+
     /**
      * Get display name with product name and attributes
-     * 
-     * @return string
      */
     public function getDisplayNameAttribute(): string
     {
         $parts = array_filter([
             $this->product->name ?? 'Product',
             $this->color,
-            $this->dimensions ?? $this->size
+            $this->dimensions ?? $this->size,
         ]);
-        
+
         return implode(' - ', $parts);
     }
 }

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('identifier_value'); // The actual ASIN, item ID, etc.
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->unique(['variant_id', 'marketplace_id', 'identifier_type']);
             $table->index(['marketplace_id', 'identifier_type', 'is_active']);
             $table->index('identifier_value');

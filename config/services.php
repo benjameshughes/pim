@@ -59,7 +59,7 @@ return [
     'ebay' => [
         'environment' => env('EBAY_ENVIRONMENT', 'SANDBOX'), // SANDBOX or PRODUCTION
         'client_id' => env('EBAY_CLIENT_ID'), // App ID from eBay Developer Account
-        'client_secret' => env('EBAY_CLIENT_SECRET'), // Client Secret from eBay Developer Account  
+        'client_secret' => env('EBAY_CLIENT_SECRET'), // Client Secret from eBay Developer Account
         'dev_id' => env('EBAY_DEV_ID'), // Dev ID from eBay Developer Account
         'redirect_uri' => env('EBAY_REDIRECT_URI', 'http://localhost:8001/sync/ebay/oauth/callback'), // OAuth redirect URI
         // Business Policies (required for listings)

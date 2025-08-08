@@ -5,6 +5,7 @@ namespace App\Models;
 class ProductMetaAccessor
 {
     protected $product;
+
     protected $metadata;
 
     public function __construct(Product $product)
@@ -24,7 +25,7 @@ class ProductMetaAccessor
             ['key' => $key],
             ['value' => $value]
         );
-        
+
         $this->metadata[$key] = $value;
     }
 

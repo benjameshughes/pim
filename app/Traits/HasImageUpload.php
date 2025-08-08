@@ -55,7 +55,7 @@ trait HasImageUpload
                 'allow_reorder' => true,
             ],
             'detail' => [
-                'label' => 'Detail Images', 
+                'label' => 'Detail Images',
                 'description' => 'Close-up and detailed views of the product',
                 'max_files' => 10,
                 'allow_reorder' => true,
@@ -89,7 +89,7 @@ trait HasImageUpload
     {
         $defaultConfig = $this->getImageUploaderConfig();
         $mergedConfig = array_merge($defaultConfig, $config);
-        
+
         return view('livewire.components.image-uploader', $mergedConfig)->render();
     }
 
@@ -102,13 +102,13 @@ trait HasImageUpload
         if (method_exists($this, 'handleImageUpload')) {
             $this->handleImageUpload($data);
         }
-        
+
         // Refresh component data
         $this->dispatch('$refresh');
     }
 
     /**
-     * Handle image deletion event  
+     * Handle image deletion event
      */
     public function onImageDeleted(array $data): void
     {
@@ -116,7 +116,7 @@ trait HasImageUpload
         if (method_exists($this, 'handleImageDeletion')) {
             $this->handleImageDeletion($data);
         }
-        
+
         // Refresh component data
         $this->dispatch('$refresh');
     }
@@ -130,7 +130,7 @@ trait HasImageUpload
         if (method_exists($this, 'handleImageReorder')) {
             $this->handleImageReorder($data);
         }
-        
+
         // Refresh component data
         $this->dispatch('$refresh');
     }
@@ -140,7 +140,7 @@ trait HasImageUpload
      */
     public function getImageStats(?Model $model = null): array
     {
-        if (!$model) {
+        if (! $model) {
             return [
                 'total' => 0,
                 'by_type' => [],
@@ -149,12 +149,12 @@ trait HasImageUpload
                     'processing' => 0,
                     'completed' => 0,
                     'failed' => 0,
-                ]
+                ],
             ];
         }
 
         $query = ProductImage::query();
-        
+
         if ($model instanceof \App\Models\Product) {
             $query->where('product_id', $model->id)->whereNull('variant_id');
         } elseif ($model instanceof \App\Models\ProductVariant) {
@@ -162,7 +162,7 @@ trait HasImageUpload
         }
 
         $images = $query->get();
-        
+
         return [
             'total' => $images->count(),
             'by_type' => $images->groupBy('image_type')->map->count()->toArray(),
@@ -171,7 +171,7 @@ trait HasImageUpload
                 'processing' => $images->where('processing_status', ProductImage::PROCESSING_IN_PROGRESS)->count(),
                 'completed' => $images->where('processing_status', ProductImage::PROCESSING_COMPLETED)->count(),
                 'failed' => $images->where('processing_status', ProductImage::PROCESSING_FAILED)->count(),
-            ]
+            ],
         ];
     }
 }

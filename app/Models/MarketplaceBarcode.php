@@ -48,6 +48,6 @@ class MarketplaceBarcode extends Model
 
     public function getDisplayNameAttribute(): string
     {
-        return strtoupper($this->identifier_type) . ': ' . $this->identifier_value;
+        return strtoupper($this->identifier_type).': '.$this->identifier_value;
     }
 }

@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\ProductAttribute;
 use App\Models\ProductVariant;
 use App\Models\User;
-use App\Models\VariantAttribute;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -18,7 +17,7 @@ class BulkOperationsAttributesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create and authenticate a user
         $user = User::factory()->create();
         $this->actingAs($user);
@@ -87,7 +86,7 @@ class BulkOperationsAttributesTest extends TestCase
         // Create test data
         $product = Product::factory()->create();
         $variant = ProductVariant::factory()->create(['product_id' => $product->id]);
-        
+
         // Create existing attribute
         ProductAttribute::create([
             'product_id' => $product->id,

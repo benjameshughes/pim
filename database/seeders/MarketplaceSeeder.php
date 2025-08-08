@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class MarketplaceSeeder extends Seeder
@@ -22,8 +21,8 @@ class MarketplaceSeeder extends Seeder
                     'shipping_cost' => 5.35,
                     'default_category' => 'Home & Garden',
                     'return_policy' => '30 days',
-                    'dispatch_time' => '1 business day'
-                ]
+                    'dispatch_time' => '1 business day',
+                ],
             ],
             [
                 'name' => 'eBay BMS',
@@ -34,8 +33,8 @@ class MarketplaceSeeder extends Seeder
                     'shipping_cost' => 5.35,
                     'default_category' => 'Home & Garden',
                     'return_policy' => '30 days',
-                    'dispatch_time' => '1 business day'
-                ]
+                    'dispatch_time' => '1 business day',
+                ],
             ],
             [
                 'name' => 'Amazon Business Outlet',
@@ -45,8 +44,8 @@ class MarketplaceSeeder extends Seeder
                 'default_settings' => [
                     'fulfillment_method' => 'FBM',
                     'default_category' => 'Home & Kitchen',
-                    'handling_time' => 1
-                ]
+                    'handling_time' => 1,
+                ],
             ],
             [
                 'name' => 'Amazon FBA',
@@ -56,8 +55,8 @@ class MarketplaceSeeder extends Seeder
                 'default_settings' => [
                     'fulfillment_method' => 'FBA',
                     'default_category' => 'Home & Kitchen',
-                    'handling_time' => 0
-                ]
+                    'handling_time' => 0,
+                ],
             ],
             [
                 'name' => 'Amazon B2B',
@@ -67,8 +66,8 @@ class MarketplaceSeeder extends Seeder
                 'default_settings' => [
                     'fulfillment_method' => 'FBA',
                     'business_only' => true,
-                    'quantity_discounts' => true
-                ]
+                    'quantity_discounts' => true,
+                ],
             ],
             [
                 'name' => 'Wayfair',
@@ -77,8 +76,8 @@ class MarketplaceSeeder extends Seeder
                 'status' => 'active',
                 'default_settings' => [
                     'default_category' => 'Window Treatments',
-                    'lead_time' => '3-5 business days'
-                ]
+                    'lead_time' => '3-5 business days',
+                ],
             ],
             [
                 'name' => 'Direct Sales',
@@ -87,8 +86,8 @@ class MarketplaceSeeder extends Seeder
                 'status' => 'active',
                 'default_settings' => [
                     'shipping_cost' => 4.95,
-                    'free_shipping_threshold' => 50.00
-                ]
+                    'free_shipping_threshold' => 50.00,
+                ],
             ],
             [
                 'name' => 'Shopify Store',
@@ -99,9 +98,9 @@ class MarketplaceSeeder extends Seeder
                     'auto_publish' => true,
                     'inventory_tracking' => true,
                     'seo_optimization' => true,
-                    'metafields_enabled' => true
-                ]
-            ]
+                    'metafields_enabled' => true,
+                ],
+            ],
         ];
 
         foreach ($marketplaces as $marketplace) {

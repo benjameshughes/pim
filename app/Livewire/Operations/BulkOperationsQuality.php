@@ -19,10 +19,11 @@ class BulkOperationsQuality extends Component
 
     // Local state
     public $qualityResults = [];
+
     public $qualityScanning = false;
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [
@@ -68,27 +69,27 @@ class BulkOperationsQuality extends Component
     {
         $this->qualityScanning = true;
         $this->qualityResults = [];
-        
+
         try {
             // Check missing marketplace variants
             $variantsWithoutMarketplace = ProductVariant::whereDoesntHave('marketplaceVariants')->count();
-            
+
             // Check missing attributes
             $productsWithoutAttributes = Product::whereDoesntHave('attributes')->count();
             $variantsWithoutAttributes = ProductVariant::whereDoesntHave('attributes')->count();
-            
+
             // Check missing marketplace identifiers
-            $variantsWithoutASIN = ProductVariant::whereDoesntHave('marketplaceBarcodes', function($query) {
+            $variantsWithoutASIN = ProductVariant::whereDoesntHave('marketplaceBarcodes', function ($query) {
                 $query->where('identifier_type', 'asin');
             })->count();
-            
+
             // Check duplicate ASINs
             $duplicateASINs = MarketplaceBarcode::where('identifier_type', 'asin')
                 ->select('identifier_value')
                 ->groupBy('identifier_value')
                 ->havingRaw('COUNT(*) > 1')
                 ->count();
-            
+
             // Check incomplete titles
             $incompleteTitles = MarketplaceVariant::where('title', 'LIKE', '%[%]%')->count();
 
@@ -107,7 +108,7 @@ class BulkOperationsQuality extends Component
 
             // Check missing parent SKUs
             $productsWithoutSKUs = Product::whereNull('parent_sku')->orWhere('parent_sku', '')->count();
-            
+
             $this->qualityResults = [
                 'missing_marketplace_variants' => $variantsWithoutMarketplace,
                 'products_without_attributes' => $productsWithoutAttributes,
@@ -124,12 +125,12 @@ class BulkOperationsQuality extends Component
                 'total_variants' => ProductVariant::count(),
                 'total_products' => Product::count(),
             ];
-            
+
         } catch (\Exception $e) {
             Log::error('Data quality scan failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Quality scan failed: ' . $e->getMessage());
+            session()->flash('error', 'Quality scan failed: '.$e->getMessage());
         }
-        
+
         $this->qualityScanning = false;
     }
 

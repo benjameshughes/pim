@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class WindowShadeAttributeSeeder extends Seeder
@@ -39,7 +38,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'category' => 'functional',
                 'applies_to' => 'product',
                 'validation_rules' => [
-                    'options' => ['sidewinder', 'spring', 'chain', 'motorized', 'cordless']
+                    'options' => ['sidewinder', 'spring', 'chain', 'motorized', 'cordless'],
                 ],
                 'sort_order' => 30,
             ],
@@ -50,11 +49,11 @@ class WindowShadeAttributeSeeder extends Seeder
                 'category' => 'physical',
                 'applies_to' => 'product',
                 'validation_rules' => [
-                    'options' => ['polyester', 'fabric', 'wood', 'metal', 'pvc', 'aluminum']
+                    'options' => ['polyester', 'fabric', 'wood', 'metal', 'pvc', 'aluminum'],
                 ],
                 'sort_order' => 40,
             ],
-            
+
             // Functional features - Product level
             [
                 'key' => 'opacity_level',
@@ -63,7 +62,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'category' => 'functional',
                 'applies_to' => 'product',
                 'validation_rules' => [
-                    'options' => ['100% blackout', '95% light filtering', 'sheer', 'semi-opaque']
+                    'options' => ['100% blackout', '95% light filtering', 'sheer', 'semi-opaque'],
                 ],
                 'sort_order' => 50,
             ],
@@ -92,7 +91,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'description' => 'Fire safety classification',
                 'sort_order' => 80,
             ],
-            
+
             // Installation - Product level
             [
                 'key' => 'fitting_type',
@@ -101,7 +100,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'category' => 'physical',
                 'applies_to' => 'product',
                 'validation_rules' => [
-                    'options' => ['face fix', 'top fix', 'recess', 'universal']
+                    'options' => ['face fix', 'top fix', 'recess', 'universal'],
                 ],
                 'sort_order' => 90,
             ],
@@ -114,7 +113,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'description' => 'Minimum depth required for installation (e.g., 10cm)',
                 'sort_order' => 100,
             ],
-            
+
             // Variant-specific attributes
             [
                 'key' => 'fabric_width_difference',
@@ -134,7 +133,7 @@ class WindowShadeAttributeSeeder extends Seeder
                 'description' => 'Actual width of fabric in cm',
                 'sort_order' => 120,
             ],
-            
+
             // Care & maintenance
             [
                 'key' => 'care_instructions',

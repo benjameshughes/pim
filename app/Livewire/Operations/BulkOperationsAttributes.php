@@ -45,7 +45,7 @@ class BulkOperationsAttributes extends Component
     public $existingAttributes = [];
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [
@@ -96,7 +96,6 @@ class BulkOperationsAttributes extends Component
         $this->getExistingAttributes();
     }
 
-
     public function getSelectedVariantsCountProperty()
     {
         return count($this->getSelectedVariants());
@@ -113,20 +112,22 @@ class BulkOperationsAttributes extends Component
 
         if (empty($selectedVariants)) {
             session()->flash('error', 'Please select variants from the Overview tab first.');
+
             return;
         }
-        
+
         if (empty($this->bulkAttributeKey) || empty($this->bulkAttributeValue)) {
             session()->flash('error', 'Please provide both attribute key and value.');
+
             return;
         }
-        
+
         DB::beginTransaction();
-        
+
         try {
             $applied = 0;
             $variants = ProductVariant::with('product')->whereIn('id', $selectedVariants)->get();
-            
+
             foreach ($variants as $variant) {
                 if ($this->bulkAttributeType === 'product') {
                     ProductAttribute::updateOrCreate(
@@ -155,16 +156,16 @@ class BulkOperationsAttributes extends Component
                 }
                 $applied++;
             }
-            
+
             DB::commit();
-            $message = "Applied '{$this->bulkAttributeKey}' attribute to {$applied} " . ($this->bulkAttributeType === 'product' ? 'products' : 'variants') . " successfully!";
+            $message = "Applied '{$this->bulkAttributeKey}' attribute to {$applied} ".($this->bulkAttributeType === 'product' ? 'products' : 'variants').' successfully!';
             session()->flash('message', $message);
             $this->resetBulkAttributeForm();
-            
+
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Bulk attribute application failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Failed to apply attributes: ' . $e->getMessage());
+            session()->flash('error', 'Failed to apply attributes: '.$e->getMessage());
         }
     }
 
@@ -174,25 +175,26 @@ class BulkOperationsAttributes extends Component
 
         if (empty($selectedVariants) || empty($this->selectedExistingAttribute) || empty($this->updateAttributeValue)) {
             session()->flash('error', 'Please select variants, an attribute, and provide a new value.');
+
             return;
         }
-        
+
         // Parse the selected attribute (format: "type:key")
         [$type, $key] = explode(':', $this->selectedExistingAttribute, 2);
-        
+
         DB::beginTransaction();
-        
+
         try {
             $updated = 0;
             $variants = ProductVariant::with('product')->whereIn('id', $selectedVariants)->get();
-            
+
             foreach ($variants as $variant) {
                 if ($type === 'product') {
                     // Find existing product attribute to get its data type and category
                     $existingAttr = ProductAttribute::where('product_id', $variant->product_id)
                         ->where('attribute_key', $key)
                         ->first();
-                    
+
                     ProductAttribute::updateOrCreate(
                         [
                             'product_id' => $variant->product_id,
@@ -209,7 +211,7 @@ class BulkOperationsAttributes extends Component
                     $existingAttr = VariantAttribute::where('variant_id', $variant->id)
                         ->where('attribute_key', $key)
                         ->first();
-                    
+
                     VariantAttribute::updateOrCreate(
                         [
                             'variant_id' => $variant->id,
@@ -224,19 +226,19 @@ class BulkOperationsAttributes extends Component
                 }
                 $updated++;
             }
-            
+
             DB::commit();
-            session()->flash('message', "Updated '{$key}' attribute for {$updated} " . ($type === 'product' ? 'products' : 'variants') . " successfully!");
-            
+            session()->flash('message', "Updated '{$key}' attribute for {$updated} ".($type === 'product' ? 'products' : 'variants').' successfully!');
+
             // Reset form and refresh existing attributes
             $this->selectedExistingAttribute = '';
             $this->updateAttributeValue = '';
             $this->getExistingAttributes();
-            
+
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Bulk attribute update failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Failed to update attribute: ' . $e->getMessage());
+            session()->flash('error', 'Failed to update attribute: '.$e->getMessage());
         }
     }
 
@@ -246,76 +248,77 @@ class BulkOperationsAttributes extends Component
 
         if (empty($selectedVariants)) {
             $this->existingAttributes = [];
+
             return [];
         }
-        
+
         $variants = ProductVariant::with(['product.attributes', 'attributes'])
             ->whereIn('id', $selectedVariants)
             ->get();
-        
+
         $productAttributes = [];
         $variantAttributes = [];
-        
+
         foreach ($variants as $variant) {
             // Collect product attributes
             foreach ($variant->product->attributes as $attr) {
                 $key = $attr->attribute_key;
-                if (!isset($productAttributes[$key])) {
+                if (! isset($productAttributes[$key])) {
                     $productAttributes[$key] = [
                         'key' => $key,
                         'values' => [],
                         'data_type' => $attr->data_type,
                         'category' => $attr->category,
                         'type' => 'product',
-                        'count' => 0
+                        'count' => 0,
                     ];
                 }
                 $productAttributes[$key]['values'][] = $attr->attribute_value;
                 $productAttributes[$key]['count']++;
             }
-            
+
             // Collect variant attributes
             foreach ($variant->attributes as $attr) {
                 $key = $attr->attribute_key;
-                if (!isset($variantAttributes[$key])) {
+                if (! isset($variantAttributes[$key])) {
                     $variantAttributes[$key] = [
                         'key' => $key,
                         'values' => [],
                         'data_type' => $attr->data_type,
                         'category' => $attr->category,
                         'type' => 'variant',
-                        'count' => 0
+                        'count' => 0,
                     ];
                 }
                 $variantAttributes[$key]['values'][] = $attr->attribute_value;
                 $variantAttributes[$key]['count']++;
             }
         }
-        
+
         // Process unique values and add summary info
         foreach ($productAttributes as $key => $data) {
             $uniqueValues = array_unique($data['values']);
             $productAttributes[$key]['unique_values'] = $uniqueValues;
             $productAttributes[$key]['is_consistent'] = count($uniqueValues) === 1;
-            $productAttributes[$key]['summary'] = count($uniqueValues) === 1 
-                ? $uniqueValues[0] 
-                : count($uniqueValues) . ' different values';
+            $productAttributes[$key]['summary'] = count($uniqueValues) === 1
+                ? $uniqueValues[0]
+                : count($uniqueValues).' different values';
         }
-        
+
         foreach ($variantAttributes as $key => $data) {
             $uniqueValues = array_unique($data['values']);
             $variantAttributes[$key]['unique_values'] = $uniqueValues;
             $variantAttributes[$key]['is_consistent'] = count($uniqueValues) === 1;
-            $variantAttributes[$key]['summary'] = count($uniqueValues) === 1 
-                ? $uniqueValues[0] 
-                : count($uniqueValues) . ' different values';
+            $variantAttributes[$key]['summary'] = count($uniqueValues) === 1
+                ? $uniqueValues[0]
+                : count($uniqueValues).' different values';
         }
-        
+
         $this->existingAttributes = [
             'product' => $productAttributes,
-            'variant' => $variantAttributes
+            'variant' => $variantAttributes,
         ];
-        
+
         return $this->existingAttributes;
     }
 

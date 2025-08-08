@@ -9,119 +9,129 @@ namespace App\DTOs\Import;
 class DataTransformationResult
 {
     private array $transformedData = [];
+
     private array $errors = [];
+
     private int $successCount = 0;
+
     private int $errorCount = 0;
+
     private array $warnings = [];
+
     private array $statistics = [];
+
     private array $securityThreats = [];
+
     private array $transformationSummary = [];
+
     private float $processingTime = 0.0;
+
     private int $memoryUsed = 0;
-    
+
     public function setTransformedData(array $data): void
     {
         $this->transformedData = $data;
     }
-    
+
     public function getTransformedData(): array
     {
         return $this->transformedData;
     }
-    
+
     public function addError(int $rowNumber, string $message, array $rawData = []): void
     {
         $this->errors[] = [
             'row_number' => $rowNumber,
             'message' => $message,
             'raw_data' => $rawData,
-            'timestamp' => now()
+            'timestamp' => now(),
         ];
         $this->errorCount++;
     }
-    
+
     public function getErrors(): array
     {
         return $this->errors;
     }
-    
+
     public function hasErrors(): bool
     {
-        return !empty($this->errors);
+        return ! empty($this->errors);
     }
-    
+
     public function getErrorCount(): int
     {
         return $this->errorCount;
     }
-    
+
     public function incrementSuccessCount(): void
     {
         $this->successCount++;
     }
-    
+
     public function getSuccessCount(): int
     {
         return $this->successCount;
     }
-    
+
     public function addWarning(string $warning): void
     {
         $this->warnings[] = [
             'message' => $warning,
-            'timestamp' => now()
+            'timestamp' => now(),
         ];
     }
-    
+
     public function getWarnings(): array
     {
         return $this->warnings;
     }
-    
+
     public function hasWarnings(): bool
     {
-        return !empty($this->warnings);
+        return ! empty($this->warnings);
     }
-    
+
     public function addStatistic(string $key, $value): void
     {
         $this->statistics[$key] = $value;
     }
-    
+
     public function getStatistics(): array
     {
         return $this->statistics;
     }
-    
+
     public function getTotalProcessed(): int
     {
         return $this->successCount + $this->errorCount;
     }
-    
+
     public function getSuccessRate(): float
     {
         $total = $this->getTotalProcessed();
+
         return $total > 0 ? ($this->successCount / $total) * 100 : 0;
     }
-    
+
     public function isSuccessful(): bool
     {
         return $this->errorCount === 0;
     }
-    
+
     /**
      * Add security threat
      */
-    public function addSecurityThreat(string $type, string $description, int $rowNumber = null): void
+    public function addSecurityThreat(string $type, string $description, ?int $rowNumber = null): void
     {
         $this->securityThreats[] = [
             'type' => $type,
             'description' => $description,
             'row_number' => $rowNumber,
-            'timestamp' => microtime(true)
+            'timestamp' => microtime(true),
         ];
     }
-    
+
     /**
      * Get security threats
      */
@@ -129,15 +139,15 @@ class DataTransformationResult
     {
         return $this->securityThreats;
     }
-    
+
     /**
      * Check if security threats were detected
      */
     public function hasSecurityThreats(): bool
     {
-        return !empty($this->securityThreats);
+        return ! empty($this->securityThreats);
     }
-    
+
     /**
      * Set transformation summary
      */
@@ -145,7 +155,7 @@ class DataTransformationResult
     {
         $this->transformationSummary = $summary;
     }
-    
+
     /**
      * Get transformation summary
      */
@@ -153,7 +163,7 @@ class DataTransformationResult
     {
         return $this->transformationSummary;
     }
-    
+
     /**
      * Set processing metrics
      */
@@ -162,7 +172,7 @@ class DataTransformationResult
         $this->processingTime = $processingTime;
         $this->memoryUsed = $memoryUsed;
     }
-    
+
     /**
      * Get processing time
      */
@@ -170,7 +180,7 @@ class DataTransformationResult
     {
         return $this->processingTime;
     }
-    
+
     /**
      * Get memory used
      */
@@ -178,62 +188,62 @@ class DataTransformationResult
     {
         return $this->memoryUsed;
     }
-    
+
     /**
      * Add a transformed row to the result
      */
     public function addTransformedRow(TransformedRow $row): void
     {
         $this->transformedData[] = $row;
-        
+
         if ($row->isValid()) {
             $this->successCount++;
         } else {
             $this->errorCount++;
         }
-        
+
         // Add row warnings to result warnings
         foreach ($row->getWarnings() as $warning) {
             $this->addWarning($warning);
         }
-        
+
         // Add row errors to result errors
         foreach ($row->getErrors() as $error) {
             $this->addError(
-                $row->getRowNumber(), 
-                $error['message'], 
+                $row->getRowNumber(),
+                $error['message'],
                 $error['value'] ?? []
             );
         }
     }
-    
+
     /**
      * Get all transformed rows that are valid
      */
     public function getValidTransformedRows(): array
     {
-        return array_filter($this->transformedData, function($row) {
+        return array_filter($this->transformedData, function ($row) {
             return $row instanceof TransformedRow && $row->isValid();
         });
     }
-    
+
     /**
      * Get all transformed rows that have errors
      */
     public function getInvalidTransformedRows(): array
     {
-        return array_filter($this->transformedData, function($row) {
-            return $row instanceof TransformedRow && !$row->isValid();
+        return array_filter($this->transformedData, function ($row) {
+            return $row instanceof TransformedRow && ! $row->isValid();
         });
     }
-    
+
     /**
      * Get summary of field transformations
      */
     public function getFieldTransformationSummary(): array
     {
         $fieldStats = [];
-        
+
         foreach ($this->transformedData as $row) {
             if ($row instanceof TransformedRow && $row->wasTransformed()) {
                 foreach ($row->getTransformedFields() as $field) {
@@ -241,10 +251,10 @@ class DataTransformationResult
                 }
             }
         }
-        
+
         return $fieldStats;
     }
-    
+
     /**
      * Get comprehensive quality metrics
      */
@@ -253,14 +263,14 @@ class DataTransformationResult
         $total = $this->getTotalProcessed();
         $validRows = count($this->getValidTransformedRows());
         $transformedFieldsCount = count($this->getFieldTransformationSummary());
-        
+
         return [
             'data_quality_score' => $total > 0 ? ($validRows / $total) * 100 : 0,
             'transformation_rate' => $total > 0 ? ($transformedFieldsCount / $total) * 100 : 0,
             'security_threat_rate' => $total > 0 ? (count($this->securityThreats) / $total) * 100 : 0,
             'warning_rate' => $total > 0 ? (count($this->warnings) / $total) * 100 : 0,
             'processing_efficiency' => $total > 0 ? $total / max(0.001, $this->processingTime) : 0,
-            'memory_efficiency' => $total > 0 ? ($this->memoryUsed / 1024 / 1024) / $total : 0 // MB per row
+            'memory_efficiency' => $total > 0 ? ($this->memoryUsed / 1024 / 1024) / $total : 0, // MB per row
         ];
     }
 
@@ -282,10 +292,10 @@ class DataTransformationResult
             'processing_metrics' => [
                 'processing_time' => $this->processingTime,
                 'memory_used' => $this->memoryUsed,
-                'memory_used_mb' => round($this->memoryUsed / 1024 / 1024, 2)
+                'memory_used_mb' => round($this->memoryUsed / 1024 / 1024, 2),
             ],
             'quality_metrics' => $this->getQualityMetrics(),
-            'field_transformation_summary' => $this->getFieldTransformationSummary()
+            'field_transformation_summary' => $this->getFieldTransformationSummary(),
         ];
     }
 }

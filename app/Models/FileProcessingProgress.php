@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Support\Facades\Cache;
 
 class FileProcessingProgress extends Model
@@ -24,28 +24,36 @@ class FileProcessingProgress extends Model
         'result_data',
         'error_message',
         'started_at',
-        'completed_at'
+        'completed_at',
     ];
 
     protected $casts = [
         'result_data' => 'array',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
-        'progress_percent' => 'float'
+        'progress_percent' => 'float',
     ];
 
     // Status constants
     const STATUS_PENDING = 'pending';
+
     const STATUS_ANALYZING = 'analyzing';
+
     const STATUS_PROCESSING = 'processing';
+
     const STATUS_COMPLETED = 'completed';
+
     const STATUS_FAILED = 'failed';
+
     const STATUS_CANCELLED = 'cancelled';
 
     // Processing type constants
     const TYPE_FILE_ANALYSIS = 'file_analysis';
+
     const TYPE_SAMPLE_DATA = 'sample_data';
+
     const TYPE_DRY_RUN_DATA = 'dry_run_data';
+
     const TYPE_FULL_IMPORT_DATA = 'full_import_data';
 
     public function user()
@@ -56,14 +64,14 @@ class FileProcessingProgress extends Model
     /**
      * Update the progress status and optionally set message and result data
      */
-    public function updateStatus(string $status, string $message = null, array $resultData = null): void
+    public function updateStatus(string $status, ?string $message = null, ?array $resultData = null): void
     {
         $updates = ['status' => $status];
-        
+
         if ($message !== null) {
             $updates['message'] = $message;
         }
-        
+
         if ($resultData !== null) {
             $updates['result_data'] = $resultData;
         }
@@ -73,13 +81,13 @@ class FileProcessingProgress extends Model
         }
 
         if ($status === self::STATUS_ANALYZING || $status === self::STATUS_PROCESSING) {
-            if (!$this->started_at) {
+            if (! $this->started_at) {
                 $updates['started_at'] = now();
             }
         }
 
         $this->update($updates);
-        
+
         // Cache the progress for real-time updates
         $this->cacheProgress();
     }
@@ -87,12 +95,12 @@ class FileProcessingProgress extends Model
     /**
      * Update the progress percentage
      */
-    public function updateProgress(float $percent, string $message = null): void
+    public function updateProgress(float $percent, ?string $message = null): void
     {
         $updates = [
-            'progress_percent' => max(0, min(100, $percent))
+            'progress_percent' => max(0, min(100, $percent)),
         ];
-        
+
         if ($message !== null) {
             $updates['message'] = $message;
         }
@@ -109,9 +117,9 @@ class FileProcessingProgress extends Model
         $this->update([
             'status' => self::STATUS_FAILED,
             'error_message' => $errorMessage,
-            'completed_at' => now()
+            'completed_at' => now(),
         ]);
-        
+
         $this->cacheProgress();
     }
 
@@ -123,7 +131,7 @@ class FileProcessingProgress extends Model
         return in_array($this->status, [
             self::STATUS_PENDING,
             self::STATUS_ANALYZING,
-            self::STATUS_PROCESSING
+            self::STATUS_PROCESSING,
         ]);
     }
 
@@ -156,11 +164,12 @@ class FileProcessingProgress extends Model
      */
     public function getElapsedTime(): ?string
     {
-        if (!$this->started_at) {
+        if (! $this->started_at) {
             return null;
         }
 
         $endTime = $this->completed_at ?? now();
+
         return $this->started_at->diffForHumans($endTime, true);
     }
 
@@ -173,7 +182,7 @@ class FileProcessingProgress extends Model
             return "Step {$this->current_step} of {$this->total_steps}";
         }
 
-        return match($this->status) {
+        return match ($this->status) {
             self::STATUS_PENDING => 'Waiting to start...',
             self::STATUS_ANALYZING => 'Analyzing file...',
             self::STATUS_PROCESSING => 'Processing data...',
@@ -201,13 +210,13 @@ class FileProcessingProgress extends Model
             'has_failed' => $this->hasFailed(),
             'error_message' => $this->error_message,
             'result_data' => $this->result_data,
-            'updated_at' => $this->updated_at->toISOString()
+            'updated_at' => $this->updated_at->toISOString(),
         ];
 
         // Cache for 1 hour with user-specific key
         $cacheKey = "file_progress_{$this->user_id}_{$this->id}";
         Cache::put($cacheKey, $progressData, 3600);
-        
+
         // Also cache with a general key for the session
         Cache::put("file_progress_{$this->id}", $progressData, 3600);
     }
@@ -217,10 +226,10 @@ class FileProcessingProgress extends Model
      */
     public static function getCachedProgress(string $progressId, ?int $userId = null): ?array
     {
-        $cacheKey = $userId 
+        $cacheKey = $userId
             ? "file_progress_{$userId}_{$progressId}"
             : "file_progress_{$progressId}";
-            
+
         return Cache::get($cacheKey);
     }
 
@@ -236,7 +245,7 @@ class FileProcessingProgress extends Model
             'processing_type' => self::TYPE_FILE_ANALYSIS,
             'status' => self::STATUS_PENDING,
             'progress_percent' => 0,
-            'message' => 'Queued for file analysis...'
+            'message' => 'Queued for file analysis...',
         ]);
     }
 
@@ -248,7 +257,7 @@ class FileProcessingProgress extends Model
         $processingTypes = [
             'sample' => self::TYPE_SAMPLE_DATA,
             'dry_run' => self::TYPE_DRY_RUN_DATA,
-            'full' => self::TYPE_FULL_IMPORT_DATA
+            'full' => self::TYPE_FULL_IMPORT_DATA,
         ];
 
         return self::create([
@@ -257,7 +266,7 @@ class FileProcessingProgress extends Model
             'processing_type' => $processingTypes[$dataType] ?? self::TYPE_SAMPLE_DATA,
             'status' => self::STATUS_PENDING,
             'progress_percent' => 0,
-            'message' => "Queued for {$dataType} data loading..."
+            'message' => "Queued for {$dataType} data loading...",
         ]);
     }
 

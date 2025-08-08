@@ -23,8 +23,8 @@ return [
     */
 
     'hidden_columns' => [
-        'id', 'password', 'remember_token', 'email_verified_at', 
-        'created_at', 'updated_at', 'deleted_at'
+        'id', 'password', 'remember_token', 'email_verified_at',
+        'created_at', 'updated_at', 'deleted_at',
     ],
 
     /*
@@ -37,8 +37,8 @@ return [
     */
 
     'badge_columns' => [
-        'status', 'is_active', 'is_featured', 'is_published', 
-        'active', 'featured', 'published', 'enabled'
+        'status', 'is_active', 'is_featured', 'is_published',
+        'active', 'featured', 'published', 'enabled',
     ],
 
     /*
@@ -51,7 +51,7 @@ return [
     */
 
     'searchable_types' => [
-        'string', 'text', 'varchar'
+        'string', 'text', 'varchar',
     ],
 
     /*

@@ -9,6 +9,7 @@ use Illuminate\Support\Str;
 class ImportDataCacheService
 {
     private const CACHE_PREFIX = 'import_data_';
+
     private const DEFAULT_TTL = 3600; // 1 hour
 
     /**
@@ -16,7 +17,7 @@ class ImportDataCacheService
      */
     public function getImportSessionId(): string
     {
-        return session()->getId() . '_' . auth()->id() . '_' . now()->timestamp;
+        return session()->getId().'_'.auth()->id().'_'.now()->timestamp;
     }
 
     /**
@@ -24,15 +25,15 @@ class ImportDataCacheService
      */
     public function storeWorksheetAnalysis(array $analysis): string
     {
-        $cacheKey = self::CACHE_PREFIX . 'analysis_' . Str::random(16);
-        
+        $cacheKey = self::CACHE_PREFIX.'analysis_'.Str::random(16);
+
         Cache::put($cacheKey, $analysis, now()->addSeconds(self::DEFAULT_TTL));
-        
+
         Log::info('Stored worksheet analysis in cache', [
             'cache_key' => $cacheKey,
-            'worksheets_count' => count($analysis['worksheets'] ?? [])
+            'worksheets_count' => count($analysis['worksheets'] ?? []),
         ]);
-        
+
         return $cacheKey;
     }
 
@@ -49,15 +50,15 @@ class ImportDataCacheService
      */
     public function storeSampleData(array $sampleData): string
     {
-        $cacheKey = self::CACHE_PREFIX . 'sample_' . Str::random(16);
-        
+        $cacheKey = self::CACHE_PREFIX.'sample_'.Str::random(16);
+
         Cache::put($cacheKey, $sampleData, now()->addSeconds(self::DEFAULT_TTL));
-        
+
         Log::info('Stored sample data in cache', [
             'cache_key' => $cacheKey,
-            'worksheets_count' => count($sampleData)
+            'worksheets_count' => count($sampleData),
         ]);
-        
+
         return $cacheKey;
     }
 
@@ -74,15 +75,15 @@ class ImportDataCacheService
      */
     public function storeValidationResults(array $results): string
     {
-        $cacheKey = self::CACHE_PREFIX . 'validation_' . Str::random(16);
-        
+        $cacheKey = self::CACHE_PREFIX.'validation_'.Str::random(16);
+
         Cache::put($cacheKey, $results, now()->addSeconds(self::DEFAULT_TTL));
-        
+
         Log::info('Stored validation results in cache', [
             'cache_key' => $cacheKey,
-            'total_rows' => $results['total_rows'] ?? 0
+            'total_rows' => $results['total_rows'] ?? 0,
         ]);
-        
+
         return $cacheKey;
     }
 
@@ -99,8 +100,8 @@ class ImportDataCacheService
      */
     public function storeImportProgress(string $importId, array $progress): void
     {
-        $cacheKey = self::CACHE_PREFIX . 'progress_' . $importId;
-        
+        $cacheKey = self::CACHE_PREFIX.'progress_'.$importId;
+
         Cache::put($cacheKey, $progress, now()->addHours(2));
     }
 
@@ -109,8 +110,8 @@ class ImportDataCacheService
      */
     public function getImportProgress(string $importId): array
     {
-        $cacheKey = self::CACHE_PREFIX . 'progress_' . $importId;
-        
+        $cacheKey = self::CACHE_PREFIX.'progress_'.$importId;
+
         return Cache::get($cacheKey, []);
     }
 
@@ -124,7 +125,7 @@ class ImportDataCacheService
                 Cache::forget($key);
             }
         }
-        
+
         Log::info('Cleared import cache data', ['keys_cleared' => count(array_filter($cacheKeys))]);
     }
 
@@ -147,7 +148,7 @@ class ImportDataCacheService
         return [
             'cache_driver' => config('cache.default'),
             'prefix' => self::CACHE_PREFIX,
-            'default_ttl' => self::DEFAULT_TTL
+            'default_ttl' => self::DEFAULT_TTL,
         ];
     }
 }

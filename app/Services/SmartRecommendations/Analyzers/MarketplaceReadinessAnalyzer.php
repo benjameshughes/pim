@@ -2,11 +2,11 @@
 
 namespace App\Services\SmartRecommendations\Analyzers;
 
-use App\Models\ProductVariant;
 use App\Models\Marketplace;
+use App\Models\ProductVariant;
+use App\Services\SmartRecommendations\Actions\SuggestMissingAttributesAction;
 use App\Services\SmartRecommendations\Contracts\AnalyzerInterface;
 use App\Services\SmartRecommendations\DTOs\Recommendation;
-use App\Services\SmartRecommendations\Actions\SuggestMissingAttributesAction;
 use Illuminate\Support\Collection;
 
 class MarketplaceReadinessAnalyzer implements AnalyzerInterface
@@ -14,20 +14,20 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
     public function analyze(array $variantIds = []): Collection
     {
         $recommendations = collect();
-        
+
         // Get variants to analyze
         $variants = $this->getVariants($variantIds);
-        
+
         if ($variants->isEmpty()) {
             return $recommendations;
         }
 
         // Check marketplace-specific requirements
         $recommendations = $recommendations->merge($this->analyzeMarketplaceVariants($variants));
-        
+
         // Check marketplace identifiers (ASIN, etc.)
         $recommendations = $recommendations->merge($this->analyzeMarketplaceIdentifiers($variants));
-        
+
         // Check marketplace titles and descriptions
         $recommendations = $recommendations->merge($this->analyzeMarketplaceTitles($variants));
 
@@ -51,27 +51,27 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
             'marketplaceBarcodes',
             'product',
             'barcodes',
-            'pricing'
+            'pricing',
         ]);
-        
-        if (!empty($variantIds)) {
+
+        if (! empty($variantIds)) {
             $query->whereIn('id', $variantIds);
         }
-        
+
         return $query->get();
     }
 
     protected function analyzeMarketplaceVariants(Collection $variants): Collection
     {
-        $missingMarketplaceVariants = $variants->filter(fn($variant) => $variant->marketplaceVariants->isEmpty());
-        
+        $missingMarketplaceVariants = $variants->filter(fn ($variant) => $variant->marketplaceVariants->isEmpty());
+
         if ($missingMarketplaceVariants->isEmpty()) {
             return collect();
         }
 
         return collect([
             new Recommendation(
-                id: 'missing_marketplace_variants_' . now()->timestamp,
+                id: 'missing_marketplace_variants_'.now()->timestamp,
                 type: $this->getType(),
                 priority: 'high',
                 title: 'Variants Not Configured for Marketplaces',
@@ -85,22 +85,22 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
                     'available_marketplaces' => Marketplace::active()->pluck('name')->toArray(),
                 ],
                 action: new SuggestMissingAttributesAction('marketplace_setup'),
-            )
+            ),
         ]);
     }
 
     protected function analyzeMarketplaceIdentifiers(Collection $variants): Collection
     {
         $recommendations = collect();
-        
+
         // Check for missing ASINs (Amazon)
-        $missingASINs = $variants->filter(function($variant) {
+        $missingASINs = $variants->filter(function ($variant) {
             return $variant->marketplaceBarcodes->where('identifier_type', 'asin')->isEmpty();
         });
 
         if ($missingASINs->isNotEmpty()) {
             $recommendations->push(new Recommendation(
-                id: 'missing_asins_' . now()->timestamp,
+                id: 'missing_asins_'.now()->timestamp,
                 type: $this->getType(),
                 priority: 'medium',
                 title: 'Missing Amazon ASINs',
@@ -118,18 +118,18 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
         }
 
         // Check for duplicate marketplace identifiers
-        $duplicateIdentifiers = $variants->flatMap(fn($variant) => $variant->marketplaceBarcodes)
+        $duplicateIdentifiers = $variants->flatMap(fn ($variant) => $variant->marketplaceBarcodes)
             ->groupBy('identifier_value')
-            ->filter(fn($group) => $group->count() > 1);
+            ->filter(fn ($group) => $group->count() > 1);
 
         if ($duplicateIdentifiers->isNotEmpty()) {
             $recommendations->push(new Recommendation(
-                id: 'duplicate_identifiers_' . now()->timestamp,
+                id: 'duplicate_identifiers_'.now()->timestamp,
                 type: $this->getType(),
                 priority: 'critical',
                 title: 'Duplicate Marketplace Identifiers',
-                description: "Multiple variants share the same marketplace identifiers",
-                affectedCount: $duplicateIdentifiers->sum(fn($group) => $group->count()),
+                description: 'Multiple variants share the same marketplace identifiers',
+                affectedCount: $duplicateIdentifiers->sum(fn ($group) => $group->count()),
                 impactScore: 95, // Critical - causes marketplace conflicts
                 effortScore: 40, // Requires manual review and correction
                 metadata: [
@@ -146,22 +146,22 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
     protected function analyzeMarketplaceTitles(Collection $variants): Collection
     {
         $recommendations = collect();
-        
+
         // Find variants with incomplete titles (containing template placeholders)
-        $incompleteTitles = $variants->filter(function($variant) {
-            return $variant->marketplaceVariants->some(function($marketplaceVariant) {
-                return str_contains($marketplaceVariant->title ?? '', '[') || 
+        $incompleteTitles = $variants->filter(function ($variant) {
+            return $variant->marketplaceVariants->some(function ($marketplaceVariant) {
+                return str_contains($marketplaceVariant->title ?? '', '[') ||
                        str_contains($marketplaceVariant->description ?? '', '[');
             });
         });
 
         if ($incompleteTitles->isNotEmpty()) {
             $recommendations->push(new Recommendation(
-                id: 'incomplete_titles_' . now()->timestamp,
+                id: 'incomplete_titles_'.now()->timestamp,
                 type: $this->getType(),
                 priority: 'medium',
                 title: 'Incomplete Marketplace Titles',
-                description: "Titles contain unfilled template placeholders",
+                description: 'Titles contain unfilled template placeholders',
                 affectedCount: $incompleteTitles->count(),
                 impactScore: 60, // Affects marketplace presentation
                 effortScore: 25, // Easy to fix with template system
@@ -174,15 +174,15 @@ class MarketplaceReadinessAnalyzer implements AnalyzerInterface
         }
 
         // Find variants without any marketplace titles
-        $missingTitles = $variants->filter(function($variant) {
-            return $variant->marketplaceVariants->every(function($marketplaceVariant) {
+        $missingTitles = $variants->filter(function ($variant) {
+            return $variant->marketplaceVariants->every(function ($marketplaceVariant) {
                 return empty(trim($marketplaceVariant->title ?? ''));
             });
         });
 
         if ($missingTitles->isNotEmpty()) {
             $recommendations->push(new Recommendation(
-                id: 'missing_titles_' . now()->timestamp,
+                id: 'missing_titles_'.now()->timestamp,
                 type: $this->getType(),
                 priority: 'high',
                 title: 'Missing Marketplace Titles',

@@ -10,6 +10,7 @@ trait HasRouteTabs
     public function getCurrentTab(): string
     {
         $route = request()->route();
+
         return $route ? ($route->getName() ?? '') : '';
     }
 
@@ -37,12 +38,12 @@ trait HasRouteTabs
         $config = $this->getTabConfig();
         $baseRoute = $this->getBaseRoute();
         $currentRoute = $this->getCurrentTab();
-        
+
         $tabs = [];
-        
+
         foreach ($config['tabs'] as $tab) {
             $routeName = "{$baseRoute}.{$tab['key']}";
-            
+
             $tabs[] = [
                 'key' => $tab['key'],
                 'label' => $tab['label'],
@@ -52,7 +53,7 @@ trait HasRouteTabs
                 'url' => route($routeName, request()->query()),
             ];
         }
-        
+
         return $tabs;
     }
 
@@ -63,7 +64,7 @@ trait HasRouteTabs
     {
         $baseRoute = $this->getBaseRoute();
         $routeName = "{$baseRoute}.{$tabKey}";
-        
+
         $this->redirect(route($routeName, request()->query()), navigate: true);
     }
 
@@ -73,10 +74,10 @@ trait HasRouteTabs
     protected function getCurrentQueryParams(): array
     {
         $params = request()->query();
-        
+
         // Remove Laravel-specific parameters that shouldn't be preserved
         unset($params['_token'], $params['_method']);
-        
+
         return $params;
     }
 
@@ -105,7 +106,7 @@ trait HasRouteTabs
     public function redirectToDefaultTabIfNeeded(): void
     {
         $config = $this->getTabConfig();
-        
+
         if (empty($config['tabs'])) {
             return;
         }
@@ -113,7 +114,7 @@ trait HasRouteTabs
         // If we're on the index route, redirect to first tab
         $currentRoute = request()->route()->getName();
         $baseRoute = $this->getBaseRoute();
-        
+
         if ($currentRoute === $baseRoute) {
             $defaultTab = $config['tabs'][0]['key'];
             $this->navigateToTab($defaultTab);

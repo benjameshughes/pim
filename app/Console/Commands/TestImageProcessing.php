@@ -34,7 +34,7 @@ class TestImageProcessing extends Command
             ['name' => 'Test Product with Images'],
             [
                 'description' => 'Testing image processing flow',
-                'status' => 'active'
+                'status' => 'active',
             ]
         );
 
@@ -46,7 +46,7 @@ class TestImageProcessing extends Command
             'description' => 'Testing image processing flow',
             'image_url' => 'https://picsum.photos/400/300',
             'image_1' => 'https://picsum.photos/400/301',
-            'image_2' => 'https://picsum.photos/400/302'
+            'image_2' => 'https://picsum.photos/400/302',
         ];
 
         $this->info('Dispatching ProductImported event...');

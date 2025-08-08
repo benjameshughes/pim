@@ -2,16 +2,16 @@
 
 namespace App\Livewire\DataExchange\Sync;
 
-use App\Models\Product;
 use App\Models\EbayAccount;
+use App\Models\Product;
 use App\Services\EbayConnectService;
 use App\Services\EbayExportService;
 use App\Services\EbayOAuthService;
+use Exception;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\Log;
-use Exception;
 
 #[Layout('components.layouts.app')]
 class EbaySync extends Component
@@ -19,17 +19,29 @@ class EbaySync extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
+
     public $syncResults = [];
+
     public $isSyncing = false;
+
     public $connectionStatus = null;
+
     public $selectedProducts = [];
+
     public $selectAll = false;
+
     public $activeTab = 'export';
+
     public $selectedAccountId = null;
+
     public $showConnectModal = false;
+
     public $newAccountName = '';
+
     public $accounts = [];
+
     public $isConnecting = false;
 
     protected $queryString = ['search', 'statusFilter'];
@@ -58,32 +70,34 @@ class EbaySync extends Component
             ->get();
 
         // Auto-select first account if none selected
-        if (!$this->selectedAccountId && $this->accounts->isNotEmpty()) {
+        if (! $this->selectedAccountId && $this->accounts->isNotEmpty()) {
             $this->selectedAccountId = $this->accounts->first()->id;
         }
     }
 
     public function testConnection()
     {
-        if (!$this->selectedAccountId) {
+        if (! $this->selectedAccountId) {
             $this->connectionStatus = [
                 'success' => false,
                 'message' => 'No eBay account selected. Please connect an account first.',
             ];
+
             return;
         }
 
         try {
             $account = EbayAccount::find($this->selectedAccountId);
-            if (!$account) {
+            if (! $account) {
                 $this->connectionStatus = [
                     'success' => false,
                     'message' => 'Selected eBay account not found.',
                 ];
+
                 return;
             }
 
-            $oauthService = new EbayOAuthService();
+            $oauthService = new EbayOAuthService;
             $tokenResult = $oauthService->getValidAccessToken($account);
 
             if ($tokenResult['success']) {
@@ -101,7 +115,7 @@ class EbaySync extends Component
         } catch (Exception $e) {
             $this->connectionStatus = [
                 'success' => false,
-                'message' => 'Connection test failed: ' . $e->getMessage(),
+                'message' => 'Connection test failed: '.$e->getMessage(),
             ];
         }
     }
@@ -111,8 +125,8 @@ class EbaySync extends Component
         if ($this->selectAll) {
             $this->selectedProducts = Product::query()
                 ->when($this->search, function ($query) {
-                    $query->where('name', 'like', '%' . $this->search . '%')
-                          ->orWhere('parent_sku', 'like', '%' . $this->search . '%');
+                    $query->where('name', 'like', '%'.$this->search.'%')
+                        ->orWhere('parent_sku', 'like', '%'.$this->search.'%');
                 })
                 ->pluck('id')
                 ->toArray();
@@ -125,6 +139,7 @@ class EbaySync extends Component
     {
         if (empty($this->selectedProducts)) {
             session()->flash('error', 'Please select products to sync.');
+
             return;
         }
 
@@ -135,8 +150,8 @@ class EbaySync extends Component
     {
         $productIds = Product::query()
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                      ->orWhere('parent_sku', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('parent_sku', 'like', '%'.$this->search.'%');
             })
             ->pluck('id')
             ->toArray();
@@ -151,8 +166,9 @@ class EbaySync extends Component
 
     private function syncProducts(array $productIds)
     {
-        if (!$this->selectedAccountId) {
+        if (! $this->selectedAccountId) {
             session()->flash('error', 'Please select an eBay account first.');
+
             return;
         }
 
@@ -161,7 +177,7 @@ class EbaySync extends Component
 
         try {
             $account = EbayAccount::find($this->selectedAccountId);
-            if (!$account) {
+            if (! $account) {
                 throw new Exception('Selected eBay account not found.');
             }
 
@@ -175,7 +191,7 @@ class EbaySync extends Component
                 ->whereIn('id', $productIds)
                 ->get();
 
-            $ebayService = new EbayConnectService();
+            $ebayService = new EbayConnectService;
             $exportService = new EbayExportService($ebayService);
 
             $results = $exportService->exportProducts($products);
@@ -212,7 +228,7 @@ class EbaySync extends Component
                 'product_ids' => $productIds,
             ]);
 
-            session()->flash('error', 'Sync failed: ' . $e->getMessage());
+            session()->flash('error', 'Sync failed: '.$e->getMessage());
         }
 
         $this->isSyncing = false;
@@ -247,23 +263,23 @@ class EbaySync extends Component
     public function connectNewAccount()
     {
         $this->isConnecting = true;
-        
+
         try {
-            $oauthService = new EbayOAuthService();
+            $oauthService = new EbayOAuthService;
             $result = $oauthService->generateAuthorizationUrl($this->newAccountName ?: null);
-            
+
             Log::info('eBay OAuth authorization URL generated', [
                 'success' => $result['success'],
                 'url' => $result['authorization_url'] ?? null,
                 'error' => $result['error'] ?? null,
             ]);
-            
+
             if ($result['success']) {
                 // Store account name in session for the callback
                 if ($this->newAccountName) {
                     session(['ebay_oauth_account_name' => $this->newAccountName]);
                 }
-                
+
                 // Use Livewire's redirect method
                 $this->redirect($result['authorization_url'], navigate: false);
             } else {
@@ -275,7 +291,7 @@ class EbaySync extends Component
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            session()->flash('error', 'Failed to initiate eBay authorization: ' . $e->getMessage());
+            session()->flash('error', 'Failed to initiate eBay authorization: '.$e->getMessage());
             $this->hideConnectForm();
         }
     }
@@ -285,12 +301,12 @@ class EbaySync extends Component
         try {
             $account = EbayAccount::find($accountId);
             if ($account) {
-                $oauthService = new EbayOAuthService();
+                $oauthService = new EbayOAuthService;
                 $result = $oauthService->revokeAccount($account);
-                
+
                 if ($result['success']) {
                     session()->flash('message', "Account '{$account->name}' has been removed.");
-                    
+
                     // Reload accounts and reset selection if needed
                     $this->loadAccounts();
                     if ($this->selectedAccountId == $accountId) {
@@ -302,7 +318,7 @@ class EbaySync extends Component
                 }
             }
         } catch (Exception $e) {
-            session()->flash('error', 'Failed to remove account: ' . $e->getMessage());
+            session()->flash('error', 'Failed to remove account: '.$e->getMessage());
         }
     }
 
@@ -310,12 +326,12 @@ class EbaySync extends Component
     {
         // Refresh accounts in case they were updated via OAuth callback
         $this->loadAccounts();
-        
+
         $products = Product::query()
             ->with(['variants'])
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                      ->orWhere('parent_sku', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('parent_sku', 'like', '%'.$this->search.'%');
             })
             ->when($this->statusFilter, function ($query) {
                 switch ($this->statusFilter) {

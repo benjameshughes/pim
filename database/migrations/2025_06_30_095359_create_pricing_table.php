@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('shipping_cost', 10, 2)->nullable();
             $table->decimal('net_cost', 10, 2)->nullable();
             $table->timestamps();
-            
+
             $table->unique(['product_variant_id', 'marketplace']);
         });
     }

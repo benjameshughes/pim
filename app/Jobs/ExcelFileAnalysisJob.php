@@ -20,6 +20,7 @@ class ExcelFileAnalysisJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 600; // 10 minutes
+
     public int $maxExceptions = 3;
 
     public function __construct(
@@ -33,9 +34,10 @@ class ExcelFileAnalysisJob implements ShouldQueue
     public function handle(): void
     {
         $progress = FileProcessingProgress::find($this->progressId);
-        
-        if (!$progress) {
+
+        if (! $progress) {
             Log::error('File processing progress record not found', ['id' => $this->progressId]);
+
             return;
         }
 
@@ -43,40 +45,40 @@ class ExcelFileAnalysisJob implements ShouldQueue
             $progress->updateStatus('analyzing', 'Starting file analysis...');
 
             // Verify file exists
-            if (!Storage::disk('local')->exists($this->filePath)) {
-                throw new \Exception('File not found: ' . $this->filePath);
+            if (! Storage::disk('local')->exists($this->filePath)) {
+                throw new \Exception('File not found: '.$this->filePath);
             }
 
             $fullPath = Storage::disk('local')->path($this->filePath);
-            
+
             Log::info('Starting Excel file analysis', [
                 'file' => $this->originalFileName,
                 'path' => $this->filePath,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
             // Analyze the file
             $analysis = $this->analyzeExcelFile($fullPath, $progress);
-            
+
             // Store results
             $progress->updateStatus('completed', 'File analysis completed successfully', [
                 'analysis' => $analysis->toArray(),
-                'worksheets_found' => $analysis->getWorksheetCount()
+                'worksheets_found' => $analysis->getWorksheetCount(),
             ]);
 
             Log::info('Excel file analysis completed', [
                 'worksheets' => $analysis->getWorksheetCount(),
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Excel file analysis failed', [
                 'error' => $e->getMessage(),
                 'file' => $this->originalFileName,
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
 
-            $progress->updateStatus('failed', 'File analysis failed: ' . $e->getMessage());
+            $progress->updateStatus('failed', 'File analysis failed: '.$e->getMessage());
             throw $e;
         }
     }
@@ -85,7 +87,7 @@ class ExcelFileAnalysisJob implements ShouldQueue
     {
         try {
             $progress->updateStatus('analyzing', 'Detecting file format...');
-            
+
             // Detect file type and create appropriate reader
             $reader = IOFactory::createReaderForFile($filePath);
             $reader->setReadDataOnly(true);
@@ -98,14 +100,14 @@ class ExcelFileAnalysisJob implements ShouldQueue
                 $worksheetNames = $reader->listWorksheetNames($filePath);
             }
 
-            $progress->updateStatus('analyzing', "Found {count($worksheetNames)} worksheet(s), analyzing each...");
+            $progress->updateStatus('analyzing', 'Found '.count($worksheetNames).' worksheet(s), analyzing each...');
 
             $worksheets = [];
             $totalWorksheets = count($worksheetNames);
 
             foreach ($worksheetNames as $index => $name) {
-                $progress->updateStatus('analyzing', "Analyzing worksheet: {$name} ({$index + 1}/{$totalWorksheets})");
-                
+                $progress->updateStatus('analyzing', 'Analyzing worksheet: '.$name.' ('.($index + 1).'/'.$totalWorksheets.')');
+
                 $worksheetInfo = $this->analyzeWorksheetEfficiently($filePath, $index, $name);
                 if ($worksheetInfo) {
                     $worksheets[] = $worksheetInfo;
@@ -119,7 +121,7 @@ class ExcelFileAnalysisJob implements ShouldQueue
                 if (count($worksheets) >= 50) {
                     Log::warning('Limiting worksheet analysis to first 50 sheets', [
                         'total_found' => $totalWorksheets,
-                        'progress_id' => $this->progressId
+                        'progress_id' => $this->progressId,
                     ]);
                     break;
                 }
@@ -128,7 +130,7 @@ class ExcelFileAnalysisJob implements ShouldQueue
             return new WorksheetAnalysis($worksheets);
 
         } catch (ReaderException $e) {
-            throw new \Exception('Failed to read Excel file: ' . $e->getMessage());
+            throw new \Exception('Failed to read Excel file: '.$e->getMessage());
         }
     }
 
@@ -150,9 +152,9 @@ class ExcelFileAnalysisJob implements ShouldQueue
             // Get headers efficiently - limit to first 50 columns
             $headers = [];
             $headerRow = $worksheet->rangeToArray('A1:AX1', null, true, false, false)[0] ?? [];
-            
+
             foreach ($headerRow as $header) {
-                if (!empty($header)) {
+                if (! empty($header)) {
                     $headers[] = (string) $header;
                 } else {
                     break; // Stop at first empty header
@@ -185,8 +187,9 @@ class ExcelFileAnalysisJob implements ShouldQueue
             Log::warning('Failed to analyze worksheet', [
                 'name' => $name,
                 'error' => $e->getMessage(),
-                'progress_id' => $this->progressId
+                'progress_id' => $this->progressId,
             ]);
+
             return null;
         }
     }
@@ -201,31 +204,32 @@ class ExcelFileAnalysisJob implements ShouldQueue
         if ($highestRow <= 1000) {
             $rowCount = 0;
             $endColumn = chr(65 + max(0, $headerCount - 1));
-            
+
             for ($row = 2; $row <= $highestRow; $row++) {
                 $rowData = $worksheet->rangeToArray("A{$row}:{$endColumn}{$row}", null, true, false, false)[0] ?? [];
-                if (!empty(array_filter($rowData))) {
+                if (! empty(array_filter($rowData))) {
                     $rowCount++;
                 }
             }
+
             return $rowCount;
         }
 
         // For large files, use sampling to estimate
         $sampleSize = min(100, intval($highestRow * 0.1)); // Sample 10% or 100 rows, whichever is smaller
         $sampleInterval = max(1, intval(($highestRow - 1) / $sampleSize));
-        
+
         $nonEmptyRows = 0;
         $sampledRows = 0;
         $endColumn = chr(65 + max(0, $headerCount - 1));
 
         for ($row = 2; $row <= $highestRow; $row += $sampleInterval) {
             $rowData = $worksheet->rangeToArray("A{$row}:{$endColumn}{$row}", null, true, false, false)[0] ?? [];
-            if (!empty(array_filter($rowData))) {
+            if (! empty(array_filter($rowData))) {
                 $nonEmptyRows++;
             }
             $sampledRows++;
-            
+
             if ($sampledRows >= $sampleSize) {
                 break;
             }
@@ -233,14 +237,14 @@ class ExcelFileAnalysisJob implements ShouldQueue
 
         // Estimate total based on sample
         $estimatedRowCount = $sampledRows > 0 ? intval(($nonEmptyRows / $sampledRows) * ($highestRow - 1)) : 0;
-        
+
         Log::info('Estimated row count for large file', [
             'worksheet' => $worksheet->getTitle(),
             'highest_row' => $highestRow,
             'sampled_rows' => $sampledRows,
             'non_empty_samples' => $nonEmptyRows,
             'estimated_count' => $estimatedRowCount,
-            'progress_id' => $this->progressId
+            'progress_id' => $this->progressId,
         ]);
 
         return $estimatedRowCount;
@@ -251,11 +255,11 @@ class ExcelFileAnalysisJob implements ShouldQueue
         Log::error('ExcelFileAnalysisJob failed', [
             'file' => $this->originalFileName,
             'progress_id' => $this->progressId,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
 
         if ($progress = FileProcessingProgress::find($this->progressId)) {
-            $progress->updateStatus('failed', 'File analysis failed: ' . $exception->getMessage());
+            $progress->updateStatus('failed', 'File analysis failed: '.$exception->getMessage());
         }
     }
 }

@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Pim\Products\Management;
 
-use App\Models\Product;
 use App\Concerns\HasTabs;
 use App\Livewire\Concerns\HasImageUpload;
+use App\Models\Product;
 use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
 use Livewire\Attributes\Layout;
@@ -13,7 +13,7 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class ProductView extends Component
 {
-    use HasTabs, HasImageUpload;
+    use HasImageUpload, HasTabs;
 
     public Product $product;
 
@@ -40,23 +40,23 @@ class ProductView extends Component
                 Tab::make('variants')
                     ->label('Variants')
                     ->icon('layers')
-                    ->badge(fn() => $this->getVariantCount(), 'blue'),
+                    ->badge(fn () => $this->getVariantCount(), 'blue'),
 
                 Tab::make('images')
                     ->label('Images')
                     ->icon('image')
-                    ->badge(fn() => $this->getImageCount(), 'green'),
+                    ->badge(fn () => $this->getImageCount(), 'green'),
 
                 Tab::make('attributes')
                     ->label('Attributes')
                     ->icon('tag')
-                    ->badge(fn() => $this->getAttributeCount(), 'purple'),
+                    ->badge(fn () => $this->getAttributeCount(), 'purple'),
 
                 Tab::make('sync')
                     ->label('Marketplace Sync')
                     ->icon('globe')
-                    ->badge(fn() => $this->getSyncCount(), 'orange')
-                    ->hidden(fn() => !$this->hasSyncCapability()),
+                    ->badge(fn () => $this->getSyncCount(), 'orange')
+                    ->hidden(fn () => ! $this->hasSyncCapability()),
             ]);
     }
 
@@ -105,6 +105,7 @@ class ProductView extends Component
     public function getActiveTabProperty(): string
     {
         $activeTab = $this->getActiveTab();
+
         return $activeTab ? $activeTab->getKey() : 'overview';
     }
 
@@ -125,7 +126,7 @@ class ProductView extends Component
             'showPreview' => true,
             'allowReorder' => true,
             'showExistingImages' => true,
-            'uploadText' => 'Add product images'
+            'uploadText' => 'Add product images',
         ];
     }
 
@@ -137,7 +138,7 @@ class ProductView extends Component
         // Reload the product with images to show the new ones
         $this->product->refresh();
         $this->product->load(['productImages']);
-        
+
         $count = $data['count'] ?? 0;
         session()->flash('success', "Uploaded {$count} product images successfully!");
     }
@@ -149,7 +150,7 @@ class ProductView extends Component
     {
         $this->product->refresh();
         $this->product->load(['productImages']);
-        
+
         session()->flash('success', 'Product image deleted successfully.');
     }
 
@@ -160,20 +161,19 @@ class ProductView extends Component
     {
         $this->product->refresh();
         $this->product->load(['productImages']);
-        
+
         session()->flash('success', 'Image order updated successfully.');
     }
-
 
     public function render()
     {
         // Load relationships
         $this->product->load([
             'variants.pricing',
-            'variants.barcodes', 
+            'variants.barcodes',
             'variants.marketplaceVariants.marketplace',
             'productImages',
-            'attributes.attributeDefinition'
+            'attributes.attributeDefinition',
         ]);
 
         // Check if we should redirect to default tab

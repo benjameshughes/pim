@@ -4,18 +4,23 @@ namespace App\Services;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Exception;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 class MiraklConnectService
 {
     private string $baseUrl;
+
     private string $clientId;
+
     private string $clientSecret;
+
     private string $audience;
+
     private string $sellerId;
+
     private ?string $accessToken = null;
 
     public function __construct()
@@ -25,19 +30,19 @@ class MiraklConnectService
         $this->clientSecret = config('services.mirakl.client_secret');
         $this->audience = config('services.mirakl.audience');
         $this->sellerId = config('services.mirakl.seller_id');
-        
+
         if (empty($this->clientId)) {
             throw new Exception('Mirakl Connect client ID is not configured');
         }
-        
+
         if (empty($this->clientSecret)) {
             throw new Exception('Mirakl Connect client secret is not configured');
         }
-        
+
         if (empty($this->audience)) {
             throw new Exception('Mirakl Connect audience (company ID) is not configured');
         }
-        
+
         if (empty($this->sellerId)) {
             throw new Exception('Mirakl Connect seller ID is not configured');
         }
@@ -56,17 +61,17 @@ class MiraklConnectService
             'grant_type' => 'client_credentials',
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
-            'audience' => $this->audience
+            'audience' => $this->audience,
         ]);
 
-        if (!$response->successful()) {
-            throw new Exception('Failed to get access token: ' . $response->body());
+        if (! $response->successful()) {
+            throw new Exception('Failed to get access token: '.$response->body());
         }
 
         $data = $response->json();
         $this->accessToken = $data['access_token'] ?? null;
 
-        if (!$this->accessToken) {
+        if (! $this->accessToken) {
             throw new Exception('No access token received from Mirakl Connect');
         }
 
@@ -79,10 +84,10 @@ class MiraklConnectService
     private function getAuthHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer ' . $this->getAccessToken(),
+            'Authorization' => 'Bearer '.$this->getAccessToken(),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-            'X-Seller-Id' => $this->sellerId
+            'X-Seller-Id' => $this->sellerId,
         ];
     }
 
@@ -92,40 +97,40 @@ class MiraklConnectService
     public function pushProduct(Product $product): array
     {
         $results = [];
-        
+
         Log::info("Starting Mirakl push for product: {$product->name}", [
             'product_id' => $product->id,
-            'variants_count' => $product->variants->count()
+            'variants_count' => $product->variants->count(),
         ]);
 
         foreach ($product->variants as $variant) {
             try {
                 $productData = $this->mapProductData($product, $variant);
                 $response = $this->sendProductToMirakl($productData);
-                
+
                 $results[] = [
                     'variant_id' => $variant->id,
                     'variant_sku' => $variant->sku,
                     'success' => $response->successful(),
                     'status_code' => $response->status(),
-                    'response' => $response->json()
+                    'response' => $response->json(),
                 ];
 
                 if ($response->successful()) {
-                    Log::info("Successfully pushed variant to Mirakl", [
+                    Log::info('Successfully pushed variant to Mirakl', [
                         'variant_sku' => $variant->sku,
-                        'response' => $response->json()
+                        'response' => $response->json(),
                     ]);
                 } else {
-                    Log::error("Failed to push variant to Mirakl", [
+                    Log::error('Failed to push variant to Mirakl', [
                         'variant_sku' => $variant->sku,
                         'status' => $response->status(),
-                        'error' => $response->body()
+                        'error' => $response->body(),
                     ]);
-                    
+
                     // If rate limited, add delay before next request
                     if ($response->status() === 429) {
-                        Log::warning("Rate limited by Mirakl, waiting 2 seconds before next request");
+                        Log::warning('Rate limited by Mirakl, waiting 2 seconds before next request');
                         sleep(2);
                     }
                 }
@@ -134,16 +139,16 @@ class MiraklConnectService
                 usleep(200000); // 200ms delay
 
             } catch (Exception $e) {
-                Log::error("Exception pushing variant to Mirakl", [
+                Log::error('Exception pushing variant to Mirakl', [
                     'variant_sku' => $variant->sku,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
-                
+
                 $results[] = [
                     'variant_id' => $variant->id,
                     'variant_sku' => $variant->sku,
                     'success' => false,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ];
             }
         }
@@ -157,12 +162,12 @@ class MiraklConnectService
     public function pushProducts($products): array
     {
         $allResults = [];
-        
+
         foreach ($products as $product) {
             $productResults = $this->pushProduct($product);
             $allResults[$product->id] = [
                 'product_name' => $product->name,
-                'results' => $productResults
+                'results' => $productResults,
             ];
         }
 
@@ -188,21 +193,21 @@ class MiraklConnectService
             'titles' => [
                 [
                     'locale' => 'en_US',
-                    'value' => $this->generateProductTitle($product, $variant, $color, $width, $drop)
-                ]
+                    'value' => $this->generateProductTitle($product, $variant, $color, $width, $drop),
+                ],
             ],
             'descriptions' => [
                 [
-                    'locale' => 'en_US', 
-                    'value' => $this->generateDescription($product, $variant, $color, $width, $drop)
-                ]
+                    'locale' => 'en_US',
+                    'value' => $this->generateDescription($product, $variant, $color, $width, $drop),
+                ],
             ],
             'quantities' => [
                 [
-                    'available_quantity' => $variant->stock_level ?? 0
-                ]
+                    'available_quantity' => $variant->stock_level ?? 0,
+                ],
             ],
-            'brand' => 'BLINDS_OUTLET'
+            'brand' => 'BLINDS_OUTLET',
         ];
 
         // Add pricing if available
@@ -213,25 +218,25 @@ class MiraklConnectService
                     'scope' => null,
                     'price' => [
                         'amount' => $price['amount'],
-                        'currency' => $price['currency'] ?? 'GBP'
-                    ]
-                ]
+                        'currency' => $price['currency'] ?? 'GBP',
+                    ],
+                ],
             ];
         }
 
-        // Add barcode if available  
+        // Add barcode if available
         if ($primaryBarcode) {
             $productData['gtins'] = [
                 [
-                    'value' => $primaryBarcode->barcode
-                ]
+                    'value' => $primaryBarcode->barcode,
+                ],
             ];
         }
 
         // Add images if available
         $images = $this->getVariantImages($variant, $product);
-        if (!empty($images)) {
-            $productData['images'] = array_map(function($image) {
+        if (! empty($images)) {
+            $productData['images'] = array_map(function ($image) {
                 return ['url' => $image['url']];
             }, $images);
         }
@@ -241,33 +246,33 @@ class MiraklConnectService
         if ($color) {
             $attributes[] = [
                 'id' => 'color',
-                'name' => 'color', 
+                'name' => 'color',
                 'type' => 'STRING',
-                'value' => $color
+                'value' => $color,
             ];
         }
         if ($width) {
             // Extract numeric value from width (e.g., "60cm" -> 60)
-            $widthValue = (float)preg_replace('/[^0-9.]/', '', $width);
+            $widthValue = (float) preg_replace('/[^0-9.]/', '', $width);
             $attributes[] = [
                 'id' => 'width',
                 'name' => 'width',
-                'type' => 'NUMERIC', 
-                'value' => $widthValue
+                'type' => 'NUMERIC',
+                'value' => $widthValue,
             ];
         }
         if ($drop) {
             // Extract numeric value from drop (e.g., "120cm" -> 120)
-            $dropValue = (float)preg_replace('/[^0-9.]/', '', $drop);
+            $dropValue = (float) preg_replace('/[^0-9.]/', '', $drop);
             $attributes[] = [
                 'id' => 'drop',
                 'name' => 'drop',
                 'type' => 'NUMERIC',
-                'value' => $dropValue  
+                'value' => $dropValue,
             ];
         }
-        
-        if (!empty($attributes)) {
+
+        if (! empty($attributes)) {
             $productData['attributes'] = $attributes;
         }
 
@@ -282,14 +287,14 @@ class MiraklConnectService
     {
         // Wrap in products array as Mirakl expects
         $payload = [
-            'products' => [$productData]
+            'products' => [$productData],
         ];
 
         // Debug: Log the title being sent
         Log::info('Sending product to Mirakl', [
             'sku' => $productData['id'],
             'title' => $productData['titles'][0]['value'] ?? 'No title',
-            'full_payload' => $payload
+            'full_payload' => $payload,
         ]);
 
         return Http::withHeaders($this->getAuthHeaders())
@@ -303,11 +308,11 @@ class MiraklConnectService
     public function updateProduct(ProductVariant $variant): Response
     {
         $productData = $this->mapProductData($variant->product, $variant);
-        
+
         return Http::withHeaders($this->getAuthHeaders())
             ->timeout(30)
-            ->put($this->baseUrl . '/products/' . $variant->sku, array_merge($productData, [
-                'seller_id' => $this->sellerId
+            ->put($this->baseUrl.'/products/'.$variant->sku, array_merge($productData, [
+                'seller_id' => $this->sellerId,
             ]));
     }
 
@@ -318,7 +323,7 @@ class MiraklConnectService
     {
         return Http::withHeaders($this->getAuthHeaders())
             ->timeout(30)
-            ->delete($this->baseUrl . '/products/' . $sku . '?seller_id=' . $this->sellerId);
+            ->delete($this->baseUrl.'/products/'.$sku.'?seller_id='.$this->sellerId);
     }
 
     /**
@@ -328,7 +333,7 @@ class MiraklConnectService
     {
         $params = [
             'limit' => $limit,
-            'seller_id' => $this->sellerId
+            'seller_id' => $this->sellerId,
         ];
         if ($pageToken) {
             $params['page_token'] = $pageToken;
@@ -344,7 +349,7 @@ class MiraklConnectService
      */
     private function mapStatus(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'active' => 'ACTIVE',
             'inactive' => 'INACTIVE',
             'discontinued' => 'DISCONTINUED',
@@ -358,33 +363,35 @@ class MiraklConnectService
     private function generateProductTitle(Product $product, ProductVariant $variant, ?string $color, ?string $width, ?string $drop): string
     {
         $title = $product->name;
-        
+
         // Add color, width, and drop to title for better marketplace visibility
         $attributes = [];
-        if ($color) $attributes[] = $color;
-        
+        if ($color) {
+            $attributes[] = $color;
+        }
+
         // Handle width - check if it already contains 'cm'
         if ($width) {
             if (str_contains($width, 'cm')) {
                 $attributes[] = $width; // Already has cm
             } else {
-                $attributes[] = $width . 'cm'; // Add cm
+                $attributes[] = $width.'cm'; // Add cm
             }
         }
-        
-        // Handle drop - check if it already contains 'cm'  
+
+        // Handle drop - check if it already contains 'cm'
         if ($drop) {
             if (str_contains($drop, 'cm')) {
-                $attributes[] = 'Drop: ' . $drop; // Already has cm
+                $attributes[] = 'Drop: '.$drop; // Already has cm
             } else {
-                $attributes[] = 'Drop: ' . $drop . 'cm'; // Add cm
+                $attributes[] = 'Drop: '.$drop.'cm'; // Add cm
             }
         }
-        
-        if (!empty($attributes)) {
-            $title .= ' - ' . implode(' ', $attributes);
+
+        if (! empty($attributes)) {
+            $title .= ' - '.implode(' ', $attributes);
         }
-        
+
         return $title;
     }
 
@@ -399,18 +406,24 @@ class MiraklConnectService
 
         // Generate description from product name and attributes
         $description = $product->name;
-        
+
         $attributes = [];
-        if ($color) $attributes[] = "Color: {$color}";
-        if ($width) $attributes[] = "Width: {$width}cm";
-        if ($drop) $attributes[] = "Drop: {$drop}cm";
-        
-        if (!empty($attributes)) {
-            $description .= " - " . implode(', ', $attributes);
+        if ($color) {
+            $attributes[] = "Color: {$color}";
         }
-        
+        if ($width) {
+            $attributes[] = "Width: {$width}cm";
+        }
+        if ($drop) {
+            $attributes[] = "Drop: {$drop}cm";
+        }
+
+        if (! empty($attributes)) {
+            $description .= ' - '.implode(', ', $attributes);
+        }
+
         $description .= ". High-quality blind manufactured to order. SKU: {$variant->sku}";
-        
+
         return $description;
     }
 
@@ -421,22 +434,22 @@ class MiraklConnectService
     {
         // Check if variant has pricing relationships
         $pricing = $variant->pricing()->first();
-        
+
         if ($pricing && $pricing->retail_price > 0) {
             return [
-                'amount' => (float)$pricing->retail_price,
-                'currency' => $pricing->currency ?? 'GBP'
+                'amount' => (float) $pricing->retail_price,
+                'currency' => $pricing->currency ?? 'GBP',
             ];
         }
 
         // Fallback: generate a default price based on product name/attributes
         $basePrice = 25.99; // Default base price
-        
+
         // Adjust price based on width if available
         $width = $variant->attributes()->byKey('width')->first()?->attribute_value;
         if ($width) {
             // Extract number from width (e.g., "60cm" -> 60)
-            $widthValue = (float)preg_replace('/[^0-9.]/', '', $width);
+            $widthValue = (float) preg_replace('/[^0-9.]/', '', $width);
             if ($widthValue > 0) {
                 $basePrice += ($widthValue * 0.15); // Add £0.15 per cm width
             }
@@ -444,7 +457,7 @@ class MiraklConnectService
 
         return [
             'amount' => round($basePrice, 2),
-            'currency' => 'GBP'
+            'currency' => 'GBP',
         ];
     }
 
@@ -460,16 +473,16 @@ class MiraklConnectService
             foreach ($variant->images as $image) {
                 $images[] = [
                     'url' => url(\Storage::url($image)),
-                    'alt' => $variant->sku
+                    'alt' => $variant->sku,
                 ];
             }
-        } 
+        }
         // Fallback to product images
         elseif ($product->images && count($product->images) > 0) {
             foreach ($product->images as $image) {
                 $images[] = [
                     'url' => url(\Storage::url($image)),
-                    'alt' => $product->name
+                    'alt' => $product->name,
                 ];
             }
         }
@@ -484,8 +497,9 @@ class MiraklConnectService
     {
         return array_filter($data, function ($value) {
             if (is_array($value)) {
-                return !empty($this->removeNullValues($value));
+                return ! empty($this->removeNullValues($value));
             }
+
             return $value !== null && $value !== '';
         });
     }
@@ -497,20 +511,20 @@ class MiraklConnectService
     {
         try {
             $response = $this->getProducts(1);
-            
+
             return [
                 'success' => $response->successful(),
                 'status_code' => $response->status(),
-                'message' => $response->successful() 
+                'message' => $response->successful()
                     ? 'Successfully connected to Mirakl Connect'
                     : 'Failed to connect to Mirakl Connect',
-                'response' => $response->json()
+                'response' => $response->json(),
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Connection failed: ' . $e->getMessage(),
-                'error' => $e->getMessage()
+                'message' => 'Connection failed: '.$e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }

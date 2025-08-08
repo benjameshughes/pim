@@ -2,13 +2,11 @@
 
 namespace App\Actions\Import;
 
+use App\Exceptions\ImportException;
 use App\Models\BarcodePool;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Validator;
-use App\Exceptions\ImportException;
 
 class ImportBarcodePoolAction
 {
@@ -19,7 +17,7 @@ class ImportBarcodePoolAction
         array $options = []
     ): array {
         $batchId = Str::uuid()->toString();
-        
+
         // Set default options
         $options = array_merge([
             'clear_existing' => false,
@@ -29,7 +27,7 @@ class ImportBarcodePoolAction
         ], $options);
 
         DB::beginTransaction();
-        
+
         try {
             // Clear existing pool if requested
             if ($options['clear_existing']) {
@@ -38,7 +36,7 @@ class ImportBarcodePoolAction
 
             // Extract barcodes from file
             $barcodes = $this->extractBarcodesFromFile($filePath);
-            
+
             // Validate barcodes if requested
             if ($options['validate_format']) {
                 $barcodes = $this->validateBarcodes($barcodes, $barcodeType);
@@ -49,9 +47,9 @@ class ImportBarcodePoolAction
 
             // Apply Clean Slate Strategy
             $importResults = $this->applyCleanSlateStrategy(
-                $barcodes, 
-                $barcodeType, 
-                $legacyThreshold, 
+                $barcodes,
+                $barcodeType,
+                $legacyThreshold,
                 $batchId,
                 $options
             );
@@ -68,7 +66,7 @@ class ImportBarcodePoolAction
 
         } catch (\Exception $e) {
             DB::rollBack();
-            throw new ImportException("Barcode pool import failed: " . $e->getMessage(), 0, $e);
+            throw new ImportException('Barcode pool import failed: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -82,7 +80,7 @@ class ImportBarcodePoolAction
         array $options = []
     ): array {
         $batchId = Str::uuid()->toString();
-        
+
         // Set default options
         $options = array_merge([
             'clear_existing' => false,
@@ -92,7 +90,7 @@ class ImportBarcodePoolAction
         ], $options);
 
         DB::beginTransaction();
-        
+
         try {
             // Clear existing pool if requested
             if ($options['clear_existing']) {
@@ -121,7 +119,7 @@ class ImportBarcodePoolAction
 
         } catch (\Exception $e) {
             DB::rollBack();
-            throw new ImportException("Barcode pool import failed: " . $e->getMessage(), 0, $e);
+            throw new ImportException('Barcode pool import failed: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -136,13 +134,18 @@ class ImportBarcodePoolAction
         array $options,
         array &$results
     ): void {
-        Excel::import(new class($batchId, $barcodeType, $legacyThreshold, $options, $results) implements \Maatwebsite\Excel\Concerns\ToCollection, \Maatwebsite\Excel\Concerns\WithChunkReading {
-            
+        Excel::import(new class($batchId, $barcodeType, $legacyThreshold, $options, $results) implements \Maatwebsite\Excel\Concerns\ToCollection, \Maatwebsite\Excel\Concerns\WithChunkReading
+        {
             private $batchId;
+
             private $barcodeType;
+
             private $legacyThreshold;
+
             private $options;
+
             private $results;
+
             private $headerSkipped = false;
 
             public function __construct($batchId, $barcodeType, $legacyThreshold, $options, &$results)
@@ -158,18 +161,19 @@ class ImportBarcodePoolAction
             {
                 $insertData = [];
                 $barcodesToCheck = [];
-                
+
                 // First pass: collect all barcodes from this chunk
                 foreach ($collection as $row) {
                     // Skip header row on first chunk
-                    if (!$this->headerSkipped && $this->isHeaderRow($row->toArray())) {
+                    if (! $this->headerSkipped && $this->isHeaderRow($row->toArray())) {
                         $this->headerSkipped = true;
+
                         continue;
                     }
-                    
-                    if (!empty($row[0])) {
+
+                    if (! empty($row[0])) {
                         $barcode = trim((string) $row[0]);
-                        if (!empty($barcode)) {
+                        if (! empty($barcode)) {
                             $barcodesToCheck[] = $barcode;
                         }
                     }
@@ -182,9 +186,9 @@ class ImportBarcodePoolAction
 
                 // Second pass: process rows and build insert data
                 foreach ($collection as $row) {
-                    if (!empty($row[0])) {
+                    if (! empty($row[0])) {
                         $barcode = trim((string) $row[0]);
-                        if (!empty($barcode) && !in_array($barcode, $existingBarcodes)) {
+                        if (! empty($barcode) && ! in_array($barcode, $existingBarcodes)) {
                             // Enhanced CSV format
                             $barcodeData = [
                                 'barcode' => $barcode,
@@ -222,14 +226,14 @@ class ImportBarcodePoolAction
                             } else {
                                 $this->results['available']++;
                             }
-                            
+
                             $this->results['total_processed']++;
                         }
                     }
                 }
 
                 // Batch insert for performance
-                if (!empty($insertData)) {
+                if (! empty($insertData)) {
                     BarcodePool::insert($insertData);
                 }
             }
@@ -242,36 +246,36 @@ class ImportBarcodePoolAction
             private function isHeaderRow(array $row): bool
             {
                 $firstCell = strtolower(trim((string) ($row[0] ?? '')));
+
                 return in_array($firstCell, ['barcode', 'code', 'gtin', 'ean', 'upc', 'sku']);
             }
 
             private function buildLegacyNotes(array $barcodeData): ?string
             {
                 $notes = [];
-                
-                if (!empty($barcodeData['legacy_sku'])) {
+
+                if (! empty($barcodeData['legacy_sku'])) {
                     $notes[] = "Legacy SKU: {$barcodeData['legacy_sku']}";
                 }
-                
-                if (!empty($barcodeData['legacy_product_name'])) {
+
+                if (! empty($barcodeData['legacy_product_name'])) {
                     $notes[] = "Product: {$barcodeData['legacy_product_name']}";
                 }
-                
-                if (!empty($barcodeData['legacy_brand'])) {
+
+                if (! empty($barcodeData['legacy_brand'])) {
                     $notes[] = "Brand: {$barcodeData['legacy_brand']}";
                 }
-                
-                if (!empty($barcodeData['legacy_updated'])) {
+
+                if (! empty($barcodeData['legacy_updated'])) {
                     $notes[] = "Last Updated: {$barcodeData['legacy_updated']}";
                 }
-                
-                if (!empty($barcodeData['legacy_status'])) {
+
+                if (! empty($barcodeData['legacy_status'])) {
                     $notes[] = "Original Status: {$barcodeData['legacy_status']}";
                 }
-                
-                return !empty($notes) ? implode(' | ', $notes) : null;
-            }
 
+                return ! empty($notes) ? implode(' | ', $notes) : null;
+            }
         }, $filePath);
     }
 
@@ -293,10 +297,10 @@ class ImportBarcodePoolAction
                     if ($index === 0 && $this->isHeaderRow($row)) {
                         continue;
                     }
-                    
-                    if (is_array($row) && !empty($row[0])) {
+
+                    if (is_array($row) && ! empty($row[0])) {
                         $barcode = trim((string) $row[0]);
-                        if (!empty($barcode)) {
+                        if (! empty($barcode)) {
                             // Enhanced CSV format - capture additional fields
                             $barcodes[] = [
                                 'barcode' => $barcode,
@@ -320,7 +324,7 @@ class ImportBarcodePoolAction
                 $lines = explode("\n", $content);
                 foreach ($lines as $line) {
                     $barcode = trim($line);
-                    if (!empty($barcode)) {
+                    if (! empty($barcode)) {
                         $barcodes[] = $barcode;
                     }
                 }
@@ -331,7 +335,7 @@ class ImportBarcodePoolAction
         }
 
         if (empty($barcodes)) {
-            throw new ImportException("No valid barcodes found in file");
+            throw new ImportException('No valid barcodes found in file');
         }
 
         return $barcodes;
@@ -344,7 +348,7 @@ class ImportBarcodePoolAction
     {
         $firstCell = strtolower(trim((string) ($row[0] ?? '')));
         $headerIndicators = ['barcode', 'code', 'gtin', 'ean', 'upc', 'sku'];
-        
+
         return in_array($firstCell, $headerIndicators);
     }
 
@@ -362,12 +366,12 @@ class ImportBarcodePoolAction
             'CODE39' => '/^[A-Z0-9\-\.\$\/\+\%\s]+$/',
             'CODABAR' => '/^[A-D][0-9\-\$\:\/\.\+]+[A-D]$/i',
         ];
-        
+
         foreach ($barcodes as $barcodeData) {
             $barcode = is_array($barcodeData) ? $barcodeData['barcode'] : $barcodeData;
             $type = is_array($barcodeData) ? $barcodeData['barcode_type'] : $barcodeType;
             $pattern = $patterns[$type] ?? null;
-            
+
             if ($pattern) {
                 if (preg_match($pattern, $barcode)) {
                     $validBarcodes[] = $barcodeData;
@@ -389,7 +393,7 @@ class ImportBarcodePoolAction
         // Extract just barcode values for duplicate checking
         $barcodeValues = [];
         $barcodeMap = [];
-        
+
         foreach ($barcodes as $barcodeData) {
             $barcode = is_array($barcodeData) ? $barcodeData['barcode'] : $barcodeData;
             $barcodeValues[] = $barcode;
@@ -405,9 +409,9 @@ class ImportBarcodePoolAction
             ->toArray();
 
         $newBarcodeValues = array_diff($uniqueBarcodeValues, $existing);
-        
+
         // Return the full barcode data for new barcodes only
-        return array_map(function($barcode) use ($barcodeMap) {
+        return array_map(function ($barcode) use ($barcodeMap) {
             return $barcodeMap[$barcode];
         }, $newBarcodeValues);
     }
@@ -437,7 +441,7 @@ class ImportBarcodePoolAction
 
         // Process in chunks for better performance
         $chunks = array_chunk($barcodes, $options['chunk_size']);
-        
+
         foreach ($chunks as $chunk) {
             $this->processChunk($chunk, $barcodeType, $legacyThreshold, $batchId, $options, $results);
         }
@@ -452,10 +456,11 @@ class ImportBarcodePoolAction
     {
         $sample = array_slice($barcodes, 0, min(10, count($barcodes)));
         foreach ($sample as $barcode) {
-            if (!is_numeric($barcode)) {
+            if (! is_numeric($barcode)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -476,7 +481,7 @@ class ImportBarcodePoolAction
             try {
                 $barcode = is_array($barcodeData) ? $barcodeData['barcode'] : $barcodeData;
                 $isLegacy = $this->shouldMarkAsLegacy($barcode, $legacyThreshold);
-                
+
                 // Use enhanced data if available, otherwise fall back to defaults
                 if (is_array($barcodeData)) {
                     $insertData[] = [
@@ -519,12 +524,12 @@ class ImportBarcodePoolAction
                 }
 
             } catch (\Exception $e) {
-                $results['errors'][] = "Error processing barcode {$barcode}: " . $e->getMessage();
+                $results['errors'][] = "Error processing barcode {$barcode}: ".$e->getMessage();
             }
         }
 
         // Bulk insert for better performance
-        if (!empty($insertData)) {
+        if (! empty($insertData)) {
             BarcodePool::insert($insertData);
         }
     }
@@ -545,7 +550,7 @@ class ImportBarcodePoolAction
 
         // For non-numeric, try to extract numbers and compare
         $numericPart = preg_replace('/\D/', '', $barcode);
-        if (!empty($numericPart) && is_numeric($numericPart)) {
+        if (! empty($numericPart) && is_numeric($numericPart)) {
             return (int) $numericPart <= $legacyThreshold;
         }
 
@@ -567,28 +572,28 @@ class ImportBarcodePoolAction
     private function buildLegacyNotes(array $barcodeData): ?string
     {
         $notes = [];
-        
-        if (!empty($barcodeData['legacy_sku'])) {
+
+        if (! empty($barcodeData['legacy_sku'])) {
             $notes[] = "Legacy SKU: {$barcodeData['legacy_sku']}";
         }
-        
-        if (!empty($barcodeData['legacy_product_name'])) {
+
+        if (! empty($barcodeData['legacy_product_name'])) {
             $notes[] = "Product: {$barcodeData['legacy_product_name']}";
         }
-        
-        if (!empty($barcodeData['legacy_brand'])) {
+
+        if (! empty($barcodeData['legacy_brand'])) {
             $notes[] = "Brand: {$barcodeData['legacy_brand']}";
         }
-        
-        if (!empty($barcodeData['legacy_updated'])) {
+
+        if (! empty($barcodeData['legacy_updated'])) {
             $notes[] = "Last Updated: {$barcodeData['legacy_updated']}";
         }
-        
-        if (!empty($barcodeData['legacy_status'])) {
+
+        if (! empty($barcodeData['legacy_status'])) {
             $notes[] = "Original Status: {$barcodeData['legacy_status']}";
         }
-        
-        return !empty($notes) ? implode(' | ', $notes) : null;
+
+        return ! empty($notes) ? implode(' | ', $notes) : null;
     }
 
     /**
@@ -597,7 +602,7 @@ class ImportBarcodePoolAction
     private function generateSummary(array $results): array
     {
         $total = $results['legacy_archived'] + $results['available'];
-        
+
         return [
             'total_imported' => $total,
             'legacy_archived' => $results['legacy_archived'],

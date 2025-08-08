@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\WithStartRow;
 class ChunkedDataImport implements ToArray, WithLimit, WithStartRow
 {
     private int $limit;
+
     private int $startRow;
 
     public function __construct(int $limit = 100, int $startRow = 2)

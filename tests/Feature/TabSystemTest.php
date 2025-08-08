@@ -8,7 +8,6 @@ use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Component;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class TabSystemTest extends TestCase
@@ -33,7 +32,7 @@ class TabSystemTest extends TestCase
     {
         $tab = Tab::make('admin')
             ->label('Admin')
-            ->hidden(fn() => true);
+            ->hidden(fn () => true);
 
         $this->assertTrue($tab->isHidden());
 
@@ -82,7 +81,7 @@ class TabSystemTest extends TestCase
         $this->assertEquals('Overview', $navigation[0]['label']);
         $this->assertEquals('package', $navigation[0]['icon']);
         $this->assertEquals('/test/overview', $navigation[0]['url']);
-        
+
         $this->assertEquals('details', $navigation[1]['key']);
         $this->assertEquals(3, $navigation[1]['badge']);
         $this->assertEquals('/test/details', $navigation[1]['url']);
@@ -127,7 +126,7 @@ class TabSystemTest extends TestCase
         $product = Product::factory()->create();
 
         // Test the actual route that exists - we'll verify the logic by mocking the request
-        $this->get('/products/' . $product->id);
+        $this->get('/products/'.$product->id);
 
         $tabSet = TabSet::make()
             ->baseRoute('products.product')
@@ -203,7 +202,7 @@ class TestTabComponent extends Component
 
     public function mount($model = null)
     {
-        $this->model = $model ?? new \stdClass();
+        $this->model = $model ?? new \stdClass;
         $this->initializeTabs();
     }
 

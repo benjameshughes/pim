@@ -19,8 +19,8 @@ class RecommendationCollection
     public function all(): Collection
     {
         return $this->recommendations
-            ->sortByDesc(fn(Recommendation $r) => $r->getPriorityLevel())
-            ->sortByDesc(fn(Recommendation $r) => $r->getScore());
+            ->sortByDesc(fn (Recommendation $r) => $r->getPriorityLevel())
+            ->sortByDesc(fn (Recommendation $r) => $r->getScore());
     }
 
     /**
@@ -28,7 +28,7 @@ class RecommendationCollection
      */
     public function getCritical(): Collection
     {
-        return $this->recommendations->filter(fn(Recommendation $r) => $r->isCritical());
+        return $this->recommendations->filter(fn (Recommendation $r) => $r->isCritical());
     }
 
     /**
@@ -36,7 +36,7 @@ class RecommendationCollection
      */
     public function getQuickWins(): Collection
     {
-        return $this->recommendations->filter(fn(Recommendation $r) => $r->isQuickWin());
+        return $this->recommendations->filter(fn (Recommendation $r) => $r->isQuickWin());
     }
 
     /**
@@ -44,7 +44,7 @@ class RecommendationCollection
      */
     public function getByType(string $type): Collection
     {
-        return $this->recommendations->filter(fn(Recommendation $r) => $r->type === $type);
+        return $this->recommendations->filter(fn (Recommendation $r) => $r->type === $type);
     }
 
     /**
@@ -52,7 +52,7 @@ class RecommendationCollection
      */
     public function find(string $id): ?Recommendation
     {
-        return $this->recommendations->first(fn(Recommendation $r) => $r->id === $id);
+        return $this->recommendations->first(fn (Recommendation $r) => $r->id === $id);
     }
 
     /**
@@ -66,13 +66,13 @@ class RecommendationCollection
 
         $criticalCount = $this->getCritical()->count();
         $totalCount = $this->recommendations->count();
-        
+
         // Critical issues heavily impact score
         $criticalPenalty = $criticalCount * 20;
         $generalPenalty = ($totalCount - $criticalCount) * 5;
-        
+
         $score = 100 - min($criticalPenalty + $generalPenalty, 95);
-        
+
         return max($score, 5); // Minimum 5% health score
     }
 
@@ -88,7 +88,7 @@ class RecommendationCollection
             'health_score' => $this->calculateHealthScore(),
             'types' => $this->recommendations
                 ->groupBy('type')
-                ->map(fn(Collection $group) => $group->count())
+                ->map(fn (Collection $group) => $group->count())
                 ->toArray(),
         ];
     }
@@ -100,7 +100,7 @@ class RecommendationCollection
     {
         return [
             'summary' => $this->getSummary(),
-            'recommendations' => $this->all()->map(fn(Recommendation $r) => $r->toArray())->values(),
+            'recommendations' => $this->all()->map(fn (Recommendation $r) => $r->toArray())->values(),
         ];
     }
 

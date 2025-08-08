@@ -258,14 +258,14 @@ return [
             'theme' => 'default',
             'enable_spa' => true,
         ],
-        
+
         'api' => [
             'serializer' => 'default',
             'include_meta' => true,
             'include_links' => true,
             'pagination_type' => 'cursor', // or 'page'
         ],
-        
+
         'blade' => [
             'theme' => 'bootstrap', // or 'tailwind'
             'enable_ajax' => false,

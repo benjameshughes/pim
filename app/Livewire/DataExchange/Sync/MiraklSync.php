@@ -4,11 +4,11 @@ namespace App\Livewire\DataExchange\Sync;
 
 use App\Models\Product;
 use App\Services\MiraklConnectService;
+use Exception;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Facades\Log;
-use Exception;
 
 #[Layout('components.layouts.app')]
 class MiraklSync extends Component
@@ -16,11 +16,17 @@ class MiraklSync extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = '';
+
     public $syncResults = [];
+
     public $isSyncing = false;
+
     public $connectionStatus = null;
+
     public $selectedProducts = [];
+
     public $selectAll = false;
 
     protected $queryString = ['search', 'statusFilter'];
@@ -43,12 +49,12 @@ class MiraklSync extends Component
     public function testConnection()
     {
         try {
-            $service = new MiraklConnectService();
+            $service = new MiraklConnectService;
             $this->connectionStatus = $service->testConnection();
         } catch (Exception $e) {
             $this->connectionStatus = [
                 'success' => false,
-                'message' => 'Connection failed: ' . $e->getMessage()
+                'message' => 'Connection failed: '.$e->getMessage(),
             ];
         }
     }
@@ -66,6 +72,7 @@ class MiraklSync extends Component
     {
         if (empty($this->selectedProducts)) {
             session()->flash('error', 'Please select at least one product to sync.');
+
             return;
         }
 
@@ -95,46 +102,46 @@ class MiraklSync extends Component
         $this->syncResults = [];
 
         try {
-            $service = new MiraklConnectService();
+            $service = new MiraklConnectService;
             $products = Product::with(['variants.attributes', 'variants.barcodes', 'variants.pricing'])
                 ->whereIn('id', $productIds)
                 ->get();
-                
+
             // Debug logging
             Log::info('UI Sync starting', [
                 'product_ids' => $productIds,
                 'found_products' => $products->count(),
-                'product_names' => $products->pluck('name')->toArray()
+                'product_names' => $products->pluck('name')->toArray(),
             ]);
 
             $results = $service->pushProducts($products);
             $this->syncResults = $results;
 
-            $totalVariants = collect($results)->sum(fn($result) => count($result['results']));
-            $successfulVariants = collect($results)->sum(function($result) {
+            $totalVariants = collect($results)->sum(fn ($result) => count($result['results']));
+            $successfulVariants = collect($results)->sum(function ($result) {
                 return collect($result['results'])->where('success', true)->count();
             });
-            
+
             // Debug the results
             Log::info('UI Sync completed', [
                 'total_variants' => $totalVariants,
                 'successful_variants' => $successfulVariants,
-                'results_summary' => collect($results)->map(function($result) {
+                'results_summary' => collect($results)->map(function ($result) {
                     return [
                         'product' => $result['product_name'],
                         'success_count' => collect($result['results'])->where('success', true)->count(),
-                        'total_count' => count($result['results'])
+                        'total_count' => count($result['results']),
                     ];
-                })->toArray()
+                })->toArray(),
             ]);
 
-            session()->flash('message', 
+            session()->flash('message',
                 "Sync completed! {$successfulVariants}/{$totalVariants} variants successfully synced to Mirakl Connect."
             );
 
         } catch (Exception $e) {
             Log::error('UI Sync failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Sync failed: ' . $e->getMessage());
+            session()->flash('error', 'Sync failed: '.$e->getMessage());
         } finally {
             $this->isSyncing = false;
             $this->dispatch('sync-completed'); // Add event to refresh UI
@@ -145,8 +152,8 @@ class MiraklSync extends Component
     {
         return Product::withCount('variants')
             ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('description', 'like', '%' . $this->search . '%');
+                $query->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('description', 'like', '%'.$this->search.'%');
             })
             ->when($this->statusFilter, function ($query) {
                 $query->where('status', $this->statusFilter);
@@ -159,7 +166,7 @@ class MiraklSync extends Component
         $products = $this->getProducts()->paginate(10);
 
         return view('livewire.data-exchange.sync.mirakl-sync', [
-            'products' => $products
+            'products' => $products,
         ]);
     }
 }

@@ -12,14 +12,15 @@ use Illuminate\Database\Eloquent\Model;
 class SanitizedString implements CastsAttributes
 {
     private array $sanitizers;
+
     private ?int $maxLength;
-    
+
     public function __construct(array $sanitizers = [], ?int $maxLength = null)
     {
         $this->sanitizers = $sanitizers;
         $this->maxLength = $maxLength;
     }
-    
+
     /**
      * Cast the given value for storage
      */
@@ -28,17 +29,17 @@ class SanitizedString implements CastsAttributes
         if ($value === null) {
             return null;
         }
-        
+
         $sanitized = $this->sanitizeValue((string) $value);
-        
+
         // Apply length restriction if specified
         if ($this->maxLength && mb_strlen($sanitized) > $this->maxLength) {
             $sanitized = mb_substr($sanitized, 0, $this->maxLength);
         }
-        
+
         return $sanitized;
     }
-    
+
     /**
      * Cast the given value for retrieval
      */
@@ -47,11 +48,11 @@ class SanitizedString implements CastsAttributes
         if ($value === null) {
             return null;
         }
-        
+
         // Additional sanitization on retrieval if needed
         return $this->sanitizeValue((string) $value);
     }
-    
+
     /**
      * Apply sanitization rules
      */
@@ -59,18 +60,18 @@ class SanitizedString implements CastsAttributes
     {
         // Remove invisible characters
         $value = $this->removeInvisibleCharacters($value);
-        
+
         // Normalize whitespace
         $value = preg_replace('/\s+/', ' ', trim($value));
-        
+
         // Apply specific sanitizers
         foreach ($this->sanitizers as $sanitizer) {
             $value = $this->applySanitizer($value, $sanitizer);
         }
-        
+
         return $value;
     }
-    
+
     /**
      * Remove invisible characters
      */
@@ -83,16 +84,16 @@ class SanitizedString implements CastsAttributes
             "\xEF\xBB\xBF", // Byte order mark
             "\xC2\xA0",     // Non-breaking space
         ];
-        
+
         return str_replace($invisibleChars, '', $value);
     }
-    
+
     /**
      * Apply specific sanitizer
      */
     private function applySanitizer(string $value, string $sanitizer): string
     {
-        return match($sanitizer) {
+        return match ($sanitizer) {
             'alphanumeric' => preg_replace('/[^a-zA-Z0-9\s]/', '', $value),
             'alpha_only' => preg_replace('/[^a-zA-Z\s]/', '', $value),
             'uppercase' => strtoupper($value),

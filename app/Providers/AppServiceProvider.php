@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Events\ProductImported;
 use App\Events\ProductVariantImported;
 use App\Listeners\ProcessProductImagesListener;
-use App\Listeners\ProcessVariantImagesListener;
 use App\Listeners\ProcessVariantImagesWithMediaLibraryListener;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -23,9 +22,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register StackedListBuilder in container
         $this->app->bind('stacked-list', function () {
-            return new \App\StackedList\StackedListBuilder();
+            return new \App\StackedList\StackedListBuilder;
         });
-        
+
         // Register current Livewire component for easy access in StackedList classes
         $this->app->bind('stacked-list.component', function () {
             return app('livewire')->current();
@@ -68,7 +67,7 @@ class AppServiceProvider extends ServiceProvider
             ProductImported::class,
             ProcessProductImagesListener::class
         );
-        
+
         // Use the enhanced Media Library listener for better image processing
         Event::listen(
             ProductVariantImported::class,
@@ -86,5 +85,4 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
     }
-
 }

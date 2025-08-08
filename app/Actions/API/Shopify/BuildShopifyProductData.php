@@ -13,13 +13,13 @@ class BuildShopifyProductData
     public function execute(Product $product, string $color, array $variants): array
     {
         // Generate color-specific product title
-        $productTitle = $color === 'Default' 
-            ? $product->name 
-            : $product->name . ' - ' . $color;
+        $productTitle = $color === 'Default'
+            ? $product->name
+            : $product->name.' - '.$color;
 
         // Determine product options based on variant attributes (excluding color)
         $options = $this->determineProductOptions($variants);
-        
+
         // Build the main product data structure
         $productData = [
             'title' => $productTitle,
@@ -30,12 +30,12 @@ class BuildShopifyProductData
             'options' => $options,
             'variants' => $this->buildShopifyVariants($variants, $options),
             'category' => $this->determineProductCategory($product),
-            'metafields' => $this->buildProductMetafields($product, $color, $variants)
+            'metafields' => $this->buildProductMetafields($product, $color, $variants),
         ];
 
         // Add product images if available
         $images = $this->getProductImages($product, $variants);
-        if (!empty($images)) {
+        if (! empty($images)) {
             $productData['images'] = $images;
         }
 
@@ -65,14 +65,18 @@ class BuildShopifyProductData
             }
 
             if (count($nonColorAttrs) === 1) {
-                if (in_array('width', $nonColorAttrs)) $hasWidthOnly = true;
-                if (in_array('drop', $nonColorAttrs)) $hasDropOnly = true;
-            } else if (count($nonColorAttrs) > 1) {
+                if (in_array('width', $nonColorAttrs)) {
+                    $hasWidthOnly = true;
+                }
+                if (in_array('drop', $nonColorAttrs)) {
+                    $hasDropOnly = true;
+                }
+            } elseif (count($nonColorAttrs) > 1) {
                 $hasBoth = true;
             }
         }
 
-        // If we have mixed attribute patterns (some width-only, some drop-only), 
+        // If we have mixed attribute patterns (some width-only, some drop-only),
         // create a single "Size" option with combined values
         if (($hasWidthOnly && $hasDropOnly) || $hasBoth) {
             $sizeValues = [];
@@ -82,10 +86,10 @@ class BuildShopifyProductData
                     $sizeValues[] = $sizeValue;
                 }
             }
-            
+
             $options[] = [
                 'name' => 'Size',
-                'values' => array_unique($sizeValues) ?: ['Standard']
+                'values' => array_unique($sizeValues) ?: ['Standard'],
             ];
         } else {
             // Standard approach for consistent attribute patterns
@@ -93,7 +97,7 @@ class BuildShopifyProductData
             foreach ($variants as $variant) {
                 foreach ($variant->attributes as $attr) {
                     if ($attr->attribute_key !== 'color') {
-                        if (!isset($attributeValues[$attr->attribute_key])) {
+                        if (! isset($attributeValues[$attr->attribute_key])) {
                             $attributeValues[$attr->attribute_key] = [];
                         }
                         $attributeValues[$attr->attribute_key][] = $attr->attribute_value;
@@ -107,7 +111,7 @@ class BuildShopifyProductData
                 if ($optionIndex <= 3) {
                     $options[] = [
                         'name' => ucfirst($key),
-                        'values' => array_unique($values)
+                        'values' => array_unique($values),
                     ];
                     $optionIndex++;
                 }
@@ -118,7 +122,7 @@ class BuildShopifyProductData
         if (empty($options)) {
             $options[] = [
                 'name' => 'Size',
-                'values' => ['Standard']
+                'values' => ['Standard'],
             ];
         }
 
@@ -134,13 +138,13 @@ class BuildShopifyProductData
 
         foreach ($variants as $variant) {
             $variantTitle = $this->buildVariantTitle($variant);
-            
+
             $shopifyVariant = [
                 'title' => $variantTitle,
                 'sku' => $variant->sku,
                 'inventory_quantity' => $variant->stock_level ?? 0,
                 'inventory_management' => 'shopify',
-                'inventory_policy' => 'deny'
+                'inventory_policy' => 'deny',
             ];
 
             // Add pricing
@@ -153,10 +157,10 @@ class BuildShopifyProductData
             $optionIndex = 1;
             foreach ($options as $option) {
                 $optionName = strtolower($option['name']);
-                
+
                 if ($optionName === 'size') {
                     // For size option, use the variant title as the option value
-                    $shopifyVariant['option' . $optionIndex] = $variantTitle ?: 'Standard';
+                    $shopifyVariant['option'.$optionIndex] = $variantTitle ?: 'Standard';
                 } else {
                     // For other options, try to find matching attribute
                     $attrValue = null;
@@ -166,8 +170,8 @@ class BuildShopifyProductData
                             break;
                         }
                     }
-                    
-                    $shopifyVariant['option' . $optionIndex] = $attrValue ?: ($option['values'][0] ?? 'Standard');
+
+                    $shopifyVariant['option'.$optionIndex] = $attrValue ?: ($option['values'][0] ?? 'Standard');
                 }
                 $optionIndex++;
             }
@@ -190,12 +194,12 @@ class BuildShopifyProductData
     private function buildVariantTitle(ProductVariant $variant): string
     {
         $attributes = [];
-        
+
         foreach ($variant->attributes as $attr) {
             if ($attr->attribute_key !== 'color') { // Exclude color since it's in parent title
                 $value = $attr->attribute_value;
                 if ($attr->attribute_key === 'width' || $attr->attribute_key === 'drop') {
-                    $value = str_contains($value, 'cm') ? $value : $value . 'cm';
+                    $value = str_contains($value, 'cm') ? $value : $value.'cm';
                 }
                 $attributes[] = $value;
             }
@@ -210,14 +214,14 @@ class BuildShopifyProductData
     private function generateProductDescription(Product $product, string $color, array $variants): string
     {
         $description = $product->description ?? $product->name;
-        
+
         if ($color !== 'Default') {
-            $description .= "\n\nColor: " . $color;
+            $description .= "\n\nColor: ".$color;
         }
-        
+
         $description .= "\n\nHigh-quality blind manufactured to order.";
-        $description .= "\n\nAvailable in " . count($variants) . " different sizes.";
-        
+        $description .= "\n\nAvailable in ".count($variants).' different sizes.';
+
         return $description;
     }
 
@@ -227,11 +231,11 @@ class BuildShopifyProductData
     private function getVariantPrice(ProductVariant $variant): ?array
     {
         $pricing = $variant->pricing()->first();
-        
+
         if ($pricing && $pricing->retail_price > 0) {
             return [
-                'amount' => (float)$pricing->retail_price,
-                'currency' => $pricing->currency ?? 'GBP'
+                'amount' => (float) $pricing->retail_price,
+                'currency' => $pricing->currency ?? 'GBP',
             ];
         }
 
@@ -239,7 +243,7 @@ class BuildShopifyProductData
         $basePrice = 25.99;
         $width = $variant->attributes()->byKey('width')->first()?->attribute_value;
         if ($width) {
-            $widthValue = (float)preg_replace('/[^0-9.]/', '', $width);
+            $widthValue = (float) preg_replace('/[^0-9.]/', '', $width);
             if ($widthValue > 0) {
                 $basePrice += ($widthValue * 0.15);
             }
@@ -247,7 +251,7 @@ class BuildShopifyProductData
 
         return [
             'amount' => round($basePrice, 2),
-            'currency' => 'GBP'
+            'currency' => 'GBP',
         ];
     }
 
@@ -257,13 +261,23 @@ class BuildShopifyProductData
     private function determineProductType(Product $product): string
     {
         $name = strtolower($product->name);
-        
-        if (str_contains($name, 'blackout')) return 'Blackout Blinds';
-        if (str_contains($name, 'roller')) return 'Roller Blinds';
-        if (str_contains($name, 'vertical')) return 'Vertical Blinds';
-        if (str_contains($name, 'venetian')) return 'Venetian Blinds';
-        if (str_contains($name, 'roman')) return 'Roman Blinds';
-        
+
+        if (str_contains($name, 'blackout')) {
+            return 'Blackout Blinds';
+        }
+        if (str_contains($name, 'roller')) {
+            return 'Roller Blinds';
+        }
+        if (str_contains($name, 'vertical')) {
+            return 'Vertical Blinds';
+        }
+        if (str_contains($name, 'venetian')) {
+            return 'Venetian Blinds';
+        }
+        if (str_contains($name, 'roman')) {
+            return 'Roman Blinds';
+        }
+
         return 'Blinds';
     }
 
@@ -272,7 +286,7 @@ class BuildShopifyProductData
      */
     private function mapStatus(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'active' => 'active',
             'inactive' => 'draft',
             'discontinued' => 'archived',
@@ -293,7 +307,7 @@ class BuildShopifyProductData
                 foreach ($variant->images as $image) {
                     $images[] = [
                         'src' => url(\Storage::url($image)),
-                        'alt' => $variant->sku
+                        'alt' => $variant->sku,
                     ];
                 }
                 break; // Use first variant with images
@@ -305,7 +319,7 @@ class BuildShopifyProductData
             foreach ($product->images as $image) {
                 $images[] = [
                     'src' => url(\Storage::url($image)),
-                    'alt' => $product->name
+                    'alt' => $product->name,
                 ];
             }
         }
@@ -320,7 +334,7 @@ class BuildShopifyProductData
     {
         // Use the cached taxonomy to find the best match
         $category = \App\Models\ShopifyTaxonomyCategory::getBestMatchForProduct($product->name);
-        
+
         // For now, use the verified Home & Garden category until we can get full taxonomy
         return 'gid://shopify/TaxonomyCategory/hg'; // Home & Garden (verified category)
     }
@@ -334,18 +348,18 @@ class BuildShopifyProductData
 
         // Get category-specific metafields from taxonomy
         $category = \App\Models\ShopifyTaxonomyCategory::getBestMatchForProduct($product->name);
-        if ($category && !empty($category->attributes)) {
+        if ($category && ! empty($category->attributes)) {
             // Add category-specific metafields
             foreach ($category->attributes as $attribute) {
                 $key = strtolower(str_replace(' ', '_', $attribute['name']));
                 $value = $this->inferAttributeValue($attribute, $product, $color, $variants);
-                
+
                 if ($value) {
                     $metafields[] = [
                         'namespace' => 'taxonomy',
                         'key' => $key,
                         'value' => $value,
-                        'type' => 'single_line_text_field'
+                        'type' => 'single_line_text_field',
                     ];
                 }
             }
@@ -357,18 +371,18 @@ class BuildShopifyProductData
                 'namespace' => 'custom',
                 'key' => 'primary_color',
                 'value' => $color,
-                'type' => 'single_line_text_field'
+                'type' => 'single_line_text_field',
             ];
         }
 
         // Add dimensions information
         $dimensions = $this->extractDimensions($variants);
-        if (!empty($dimensions)) {
+        if (! empty($dimensions)) {
             $metafields[] = [
                 'namespace' => 'custom',
                 'key' => 'available_sizes',
                 'value' => implode(', ', $dimensions),
-                'type' => 'multi_line_text_field'
+                'type' => 'multi_line_text_field',
             ];
         }
 
@@ -377,17 +391,17 @@ class BuildShopifyProductData
             'namespace' => 'custom',
             'key' => 'care_instructions',
             'value' => 'Dust regularly with a soft cloth. For deeper cleaning, use a vacuum with brush attachment.',
-            'type' => 'multi_line_text_field'
+            'type' => 'multi_line_text_field',
         ];
 
         // Add product features based on type
         $features = $this->extractProductFeatures($product);
-        if (!empty($features)) {
+        if (! empty($features)) {
             $metafields[] = [
                 'namespace' => 'custom',
                 'key' => 'key_features',
                 'value' => implode(', ', $features),
-                'type' => 'multi_line_text_field'
+                'type' => 'multi_line_text_field',
             ];
         }
 
@@ -396,7 +410,7 @@ class BuildShopifyProductData
             'namespace' => 'custom',
             'key' => 'installation_type',
             'value' => 'Inside or outside window recess mounting',
-            'type' => 'single_line_text_field'
+            'type' => 'single_line_text_field',
         ];
 
         // Add warranty information
@@ -404,7 +418,7 @@ class BuildShopifyProductData
             'namespace' => 'custom',
             'key' => 'warranty',
             'value' => '2 year manufacturer warranty',
-            'type' => 'single_line_text_field'
+            'type' => 'single_line_text_field',
         ];
 
         return $metafields;
@@ -416,12 +430,12 @@ class BuildShopifyProductData
     private function extractDimensions(array $variants): array
     {
         $dimensions = [];
-        
+
         foreach ($variants as $variant) {
             foreach ($variant->attributes as $attr) {
                 if (in_array($attr->attribute_key, ['width', 'drop', 'size'])) {
                     $value = $attr->attribute_value;
-                    if (!str_contains($value, 'cm') && is_numeric($value)) {
+                    if (! str_contains($value, 'cm') && is_numeric($value)) {
                         $value .= 'cm';
                     }
                     $dimensions[] = $value;
@@ -476,11 +490,11 @@ class BuildShopifyProductData
     {
         $attributeName = strtolower($attribute['name']);
         $productName = strtolower($product->name);
-        
+
         switch ($attributeName) {
             case 'color':
                 return $color !== 'Default' ? $color : null;
-                
+
             case 'material':
                 // Try to detect material from product name
                 $materials = ['fabric', 'wood', 'aluminum', 'vinyl', 'bamboo', 'metal', 'plastic'];
@@ -489,11 +503,12 @@ class BuildShopifyProductData
                         return ucfirst($material);
                     }
                 }
+
                 return 'Fabric'; // Default for blinds
-                
+
             case 'mount type':
                 return 'Inside Mount'; // Default assumption
-                
+
             case 'light control':
                 if (str_contains($productName, 'blackout')) {
                     return 'Blackout';
@@ -502,16 +517,18 @@ class BuildShopifyProductData
                 } elseif (str_contains($productName, 'sheer')) {
                     return 'Sheer';
                 }
+
                 return 'Light Filtering'; // Default
-                
+
             case 'operating system':
                 if (str_contains($productName, 'cordless')) {
                     return 'Cordless';
                 } elseif (str_contains($productName, 'motorized')) {
                     return 'Motorized';
                 }
+
                 return 'Corded'; // Default
-                
+
             default:
                 return null;
         }

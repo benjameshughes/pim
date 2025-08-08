@@ -27,11 +27,11 @@ class CleanupFileProcessingData extends Command
     public function handle(AsyncExcelProcessingService $service)
     {
         $days = (int) $this->option('days');
-        
+
         $this->info("Cleaning up file processing data older than {$days} days...");
-        
+
         $service->cleanup($days);
-        
+
         $this->info('Cleanup completed successfully.');
     }
 }

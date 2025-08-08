@@ -21,13 +21,13 @@ return new class extends Migration
             $table->json('last_sync_data')->nullable(); // Store last synced data for comparison
             $table->timestamp('last_synced_at');
             $table->timestamps();
-            
+
             // Unique constraint to prevent duplicate syncs
             $table->unique(['product_id', 'color'], 'unique_product_color_sync');
             $table->index(['product_id', 'color']);
             $table->index('shopify_product_id');
             $table->index('sync_status');
-            
+
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }

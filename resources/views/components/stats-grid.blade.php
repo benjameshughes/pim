@@ -22,7 +22,7 @@
     };
 @endphp
 
-<div class="{{ $gridClasses }} {{ $gap }}" x-data="statsGrid({ loading: @js($loading), stats: @js($stats) })">
+<div class="{{ $gridClasses }} {{ $gap }}" data-testid="stats-grid" x-data="statsGrid({ loading: @js($loading), stats: @js($stats) })">
     {{-- Generated Stats Cards --}}
     @if(!empty($stats))
         @foreach($stats as $index => $stat)

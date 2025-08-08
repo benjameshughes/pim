@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('key');
             $table->text('value');
             $table->timestamps();
-            
+
             $table->unique(['product_id', 'key']);
         });
     }

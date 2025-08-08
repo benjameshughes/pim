@@ -3,7 +3,6 @@
 namespace App\Actions\Import;
 
 use App\Models\Product;
-use App\Actions\Import\GenerateUniqueSlug;
 use Illuminate\Support\Facades\Log;
 
 class ProcessParentRow
@@ -12,7 +11,7 @@ class ProcessParentRow
     {
         $name = $data['product_name'] ?? "Parent Product {$rowNumber}";
         $slug = app(GenerateUniqueSlug::class)->execute($name, 'product');
-        
+
         $product = Product::create([
             'name' => $name,
             'slug' => $slug,
@@ -30,13 +29,13 @@ class ProcessParentRow
             'product_details_4' => $data['product_details_4'] ?? null,
             'product_details_5' => $data['product_details_5'] ?? null,
         ]);
-        
-        Log::info("Created parent product", [
+
+        Log::info('Created parent product', [
             'id' => $product->id,
             'name' => $product->name,
-            'row' => $rowNumber
+            'row' => $rowNumber,
         ]);
-        
+
         return $product;
     }
 }

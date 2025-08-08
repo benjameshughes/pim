@@ -6,24 +6,22 @@ use App\Builders\Products\ProductBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Product Model
- * 
+ *
  * Enhanced for Builder Pattern compatibility with additional scopes and methods.
  * Supports fluent API for creation and updates.
  */
 class Product extends Model
 {
     use HasFactory;
-    
+
     /**
      * The attributes that are mass assignable.
-     * 
+     *
      * @var array<string>
      */
     protected $fillable = [
@@ -34,40 +32,32 @@ class Product extends Model
         'status',
         'auto_generated',
         'images',
-        'product_features_1',
-        'product_features_2',
-        'product_features_3',
-        'product_features_4',
-        'product_features_5',
-        'product_details_1',
-        'product_details_2',
-        'product_details_3',
-        'product_details_4',
-        'product_details_5',
+        // Note: Removed old numbered feature columns - now using ProductFeature relationship
     ];
 
     /**
      * The attributes that should be cast.
-     * 
+     *
      * @var array<string, string>
      */
     protected $casts = [
         'images' => 'array',
         'auto_generated' => 'boolean',
     ];
-    
+
     /**
      * Status constants for better type safety
      */
     const STATUS_DRAFT = 'draft';
+
     const STATUS_ACTIVE = 'active';
+
     const STATUS_INACTIVE = 'inactive';
+
     const STATUS_ARCHIVED = 'archived';
-    
+
     /**
      * Get all available status options
-     * 
-     * @return array
      */
     public static function getStatusOptions(): array
     {
@@ -78,21 +68,17 @@ class Product extends Model
             self::STATUS_ARCHIVED => 'Archived',
         ];
     }
-    
+
     /**
      * Create a new ProductBuilder instance for this model
-     * 
-     * @return ProductBuilder
      */
     public static function build(): ProductBuilder
     {
         return ProductBuilder::create();
     }
-    
+
     /**
      * Create a ProductBuilder instance for updating this product
-     * 
-     * @return ProductBuilder
      */
     public function edit(): ProductBuilder
     {
@@ -122,6 +108,21 @@ class Product extends Model
     public function allImages(): HasMany
     {
         return $this->hasMany(ProductImage::class);
+    }
+
+    public function features(): HasMany
+    {
+        return $this->hasMany(ProductFeature::class)->ordered();
+    }
+
+    public function productFeatures(): HasMany
+    {
+        return $this->features()->features();
+    }
+
+    public function productDetails(): HasMany
+    {
+        return $this->features()->details();
     }
 
     public function categories(): BelongsToMany
@@ -157,21 +158,21 @@ class Product extends Model
     public function getShopifySyncStatus(): array
     {
         $syncRecords = ShopifyProductSync::where('product_id', $this->id)->get();
-        
+
         if ($syncRecords->isEmpty()) {
             return [
                 'status' => 'not_synced',
                 'colors_synced' => 0,
                 'total_colors' => $this->variants->pluck('color')->filter()->unique()->count(),
                 'last_synced_at' => null,
-                'has_failures' => false
+                'has_failures' => false,
             ];
         }
-        
+
         $successfulSyncs = $syncRecords->where('sync_status', 'synced');
         $failedSyncs = $syncRecords->where('sync_status', 'failed');
         $pendingSyncs = $syncRecords->where('sync_status', 'pending');
-        
+
         // Determine overall status
         if ($pendingSyncs->isNotEmpty()) {
             $status = 'pending';
@@ -182,14 +183,14 @@ class Product extends Model
         } else {
             $status = 'not_synced';
         }
-        
+
         return [
             'status' => $status,
             'colors_synced' => $successfulSyncs->count(),
             'total_colors' => $this->variants->pluck('color')->filter()->unique()->count(),
             'last_synced_at' => $successfulSyncs->max('last_synced_at'),
             'has_failures' => $failedSyncs->isNotEmpty(),
-            'sync_records' => $syncRecords
+            'sync_records' => $syncRecords,
         ];
     }
 
@@ -200,253 +201,210 @@ class Product extends Model
     {
         return $this->hasMany(ShopifyProductSync::class);
     }
-    
+
     // =====================================
     // Builder Pattern Helper Methods
     // =====================================
-    
+
     /**
-     * Get product features as array
-     * 
-     * @return array
+     * Get product features as array (updated to use new normalized structure)
      */
     public function getFeaturesArray(): array
     {
-        return array_filter([
-            $this->product_features_1,
-            $this->product_features_2,
-            $this->product_features_3,
-            $this->product_features_4,
-            $this->product_features_5,
-        ]);
+        return $this->productFeatures->pluck('content')->toArray();
     }
-    
+
     /**
-     * Get product details as array
-     * 
-     * @return array
+     * Get product details as array (updated to use new normalized structure)
      */
     public function getDetailsArray(): array
     {
-        return array_filter([
-            $this->product_details_1,
-            $this->product_details_2,
-            $this->product_details_3,
-            $this->product_details_4,
-            $this->product_details_5,
-        ]);
+        return $this->productDetails->pluck('content')->toArray();
     }
-    
+
     /**
-     * Check if product has any features
-     * 
-     * @return bool
+     * Check if product has any features (updated to use new normalized structure)
      */
     public function hasFeatures(): bool
     {
-        return !empty($this->getFeaturesArray());
+        return $this->productFeatures()->exists();
     }
-    
+
     /**
-     * Check if product has any details
-     * 
-     * @return bool
+     * Check if product has any details (updated to use new normalized structure)
      */
     public function hasDetails(): bool
     {
-        return !empty($this->getDetailsArray());
+        return $this->productDetails()->exists();
     }
-    
+
+    /**
+     * Add a new feature to the product
+     */
+    public function addFeature(string $content, ?string $title = null, int $sortOrder = 0): ProductFeature
+    {
+        return $this->features()->create([
+            'type' => 'feature',
+            'content' => $content,
+            'title' => $title,
+            'sort_order' => $sortOrder ?: $this->productFeatures()->max('sort_order') + 1,
+        ]);
+    }
+
+    /**
+     * Add a new detail to the product
+     */
+    public function addDetail(string $content, ?string $title = null, int $sortOrder = 0): ProductFeature
+    {
+        return $this->features()->create([
+            'type' => 'detail',
+            'content' => $content,
+            'title' => $title,
+            'sort_order' => $sortOrder ?: $this->productDetails()->max('sort_order') + 1,
+        ]);
+    }
+
     /**
      * Get display status with proper formatting
-     * 
-     * @return string
      */
     public function getFormattedStatus(): string
     {
         return ucfirst($this->status);
     }
-    
+
     /**
      * Check if product is active
-     * 
-     * @return bool
      */
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE;
     }
-    
+
     /**
      * Check if product is draft
-     * 
-     * @return bool
      */
     public function isDraft(): bool
     {
         return $this->status === self::STATUS_DRAFT;
     }
-    
+
     /**
      * Check if product is inactive
-     * 
-     * @return bool
      */
     public function isInactive(): bool
     {
         return $this->status === self::STATUS_INACTIVE;
     }
-    
+
     /**
      * Check if product is archived
-     * 
-     * @return bool
      */
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
     }
-    
+
     // =====================================
     // Query Scopes
     // =====================================
-    
+
     /**
      * Scope a query to only include active products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ACTIVE);
     }
-    
+
     /**
      * Scope a query to only include draft products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_DRAFT);
     }
-    
+
     /**
      * Scope a query to only include inactive products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeInactive(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_INACTIVE);
     }
-    
+
     /**
      * Scope a query to only include archived products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeArchived(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_ARCHIVED);
     }
-    
+
     /**
      * Scope a query to filter by status
-     * 
-     * @param Builder $query
-     * @param string $status
-     * @return Builder
      */
     public function scopeWithStatus(Builder $query, string $status): Builder
     {
         return $query->where('status', $status);
     }
-    
+
     /**
      * Scope a query to search by name, SKU, or description
-     * 
-     * @param Builder $query
-     * @param string $search
-     * @return Builder
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
         return $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
-              ->orWhere('parent_sku', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%");
+                ->orWhere('parent_sku', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
         });
     }
-    
+
     /**
      * Scope a query to only include products with variants
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeWithVariants(Builder $query): Builder
     {
         return $query->has('variants');
     }
-    
+
     /**
      * Scope a query to only include products without variants
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeWithoutVariants(Builder $query): Builder
     {
         return $query->doesntHave('variants');
     }
-    
+
     /**
      * Scope a query to only include auto-generated products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeAutoGenerated(Builder $query): Builder
     {
         return $query->where('auto_generated', true);
     }
-    
+
     /**
      * Scope a query to only include manually created products
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeManuallyCreated(Builder $query): Builder
     {
         return $query->where('auto_generated', false);
     }
-    
+
     /**
      * Scope a query to include published products (active or inactive)
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopePublished(Builder $query): Builder
     {
         return $query->whereIn('status', [self::STATUS_ACTIVE, self::STATUS_INACTIVE]);
     }
-    
+
     /**
      * Scope a query to load common relationships
-     * 
-     * @param Builder $query
-     * @return Builder
      */
     public function scopeWithCommonRelations(Builder $query): Builder
     {
         return $query->with(['variants', 'productImages', 'categories']);
     }
-
 }

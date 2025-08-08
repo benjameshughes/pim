@@ -17,7 +17,7 @@ class LimitTo
     {
         return [
             'action' => self::class,
-            'limit' => 1
+            'limit' => 1,
         ];
     }
 
@@ -25,7 +25,7 @@ class LimitTo
     {
         return [
             'action' => self::class,
-            'limit' => $limit
+            'limit' => $limit,
         ];
     }
 }

@@ -27,7 +27,7 @@ class AsyncExcelProcessingService
         // Store file temporarily
         $fileName = $file->getClientOriginalName();
         $filePath = $this->storeFileTemporarily($file);
-        
+
         // Create progress tracking record
         $progress = FileProcessingProgress::createForFileAnalysis(
             Auth::id(),
@@ -37,11 +37,11 @@ class AsyncExcelProcessingService
 
         // Dispatch background job
         ExcelFileAnalysisJob::dispatch($filePath, $fileName, $progress->id);
-        
+
         Log::info('File analysis job dispatched', [
             'file' => $fileName,
             'progress_id' => $progress->id,
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
         ]);
 
         return $progress->id;
@@ -54,7 +54,7 @@ class AsyncExcelProcessingService
     {
         $fileName = $file->getClientOriginalName();
         $filePath = $this->storeFileTemporarily($file);
-        
+
         $progress = FileProcessingProgress::createForDataLoading(
             Auth::id(),
             $fileName,
@@ -74,7 +74,7 @@ class AsyncExcelProcessingService
         Log::info('Sample data loading job dispatched', [
             'file' => $fileName,
             'worksheets' => count($selectedWorksheets),
-            'progress_id' => $progress->id
+            'progress_id' => $progress->id,
         ]);
 
         return $progress->id;
@@ -87,7 +87,7 @@ class AsyncExcelProcessingService
     {
         $fileName = $file->getClientOriginalName();
         $filePath = $this->storeFileTemporarily($file);
-        
+
         $progress = FileProcessingProgress::createForDataLoading(
             Auth::id(),
             $fileName,
@@ -107,7 +107,7 @@ class AsyncExcelProcessingService
             'file' => $fileName,
             'worksheets' => count($selectedWorksheets),
             'max_rows' => $maxRows,
-            'progress_id' => $progress->id
+            'progress_id' => $progress->id,
         ]);
 
         return $progress->id;
@@ -120,7 +120,7 @@ class AsyncExcelProcessingService
     {
         $fileName = $file->getClientOriginalName();
         $filePath = $this->storeFileTemporarily($file);
-        
+
         $progress = FileProcessingProgress::createForDataLoading(
             Auth::id(),
             $fileName,
@@ -138,7 +138,7 @@ class AsyncExcelProcessingService
         Log::info('Full import data loading job dispatched', [
             'file' => $fileName,
             'worksheets' => count($selectedWorksheets),
-            'progress_id' => $progress->id
+            'progress_id' => $progress->id,
         ]);
 
         return $progress->id;
@@ -151,15 +151,15 @@ class AsyncExcelProcessingService
     {
         // Try to get from cache first for real-time updates
         $cachedProgress = FileProcessingProgress::getCachedProgress($progressId, Auth::id());
-        
+
         if ($cachedProgress) {
             return $cachedProgress;
         }
 
         // Fall back to database
         $progress = FileProcessingProgress::find($progressId);
-        
-        if (!$progress || $progress->user_id !== Auth::id()) {
+
+        if (! $progress || $progress->user_id !== Auth::id()) {
             return null;
         }
 
@@ -175,7 +175,7 @@ class AsyncExcelProcessingService
             'has_failed' => $progress->hasFailed(),
             'error_message' => $progress->error_message,
             'result_data' => $progress->result_data,
-            'updated_at' => $progress->updated_at->toISOString()
+            'updated_at' => $progress->updated_at->toISOString(),
         ];
     }
 
@@ -185,17 +185,17 @@ class AsyncExcelProcessingService
     public function getAnalysisResults(string $progressId): ?WorksheetAnalysis
     {
         $progress = FileProcessingProgress::find($progressId);
-        
-        if (!$progress || 
-            $progress->user_id !== Auth::id() || 
-            !$progress->isCompleted() ||
+
+        if (! $progress ||
+            $progress->user_id !== Auth::id() ||
+            ! $progress->isCompleted() ||
             $progress->processing_type !== FileProcessingProgress::TYPE_FILE_ANALYSIS) {
             return null;
         }
 
         $resultData = $progress->result_data;
-        
-        if (!isset($resultData['analysis']['worksheets'])) {
+
+        if (! isset($resultData['analysis']['worksheets'])) {
             return null;
         }
 
@@ -220,10 +220,10 @@ class AsyncExcelProcessingService
     public function getDataResults(string $progressId): ?array
     {
         $progress = FileProcessingProgress::find($progressId);
-        
-        if (!$progress || 
-            $progress->user_id !== Auth::id() || 
-            !$progress->isCompleted()) {
+
+        if (! $progress ||
+            $progress->user_id !== Auth::id() ||
+            ! $progress->isCompleted()) {
             return null;
         }
 
@@ -233,13 +233,13 @@ class AsyncExcelProcessingService
         switch ($progress->processing_type) {
             case FileProcessingProgress::TYPE_SAMPLE_DATA:
                 return $resultData['sample_data'] ?? [];
-                
+
             case FileProcessingProgress::TYPE_DRY_RUN_DATA:
                 return $this->loadTemporaryData($resultData['validation_data_key'] ?? null);
-                
+
             case FileProcessingProgress::TYPE_FULL_IMPORT_DATA:
                 return $this->loadTemporaryData($resultData['import_data_key'] ?? null);
-                
+
             default:
                 return null;
         }
@@ -251,11 +251,11 @@ class AsyncExcelProcessingService
     public function extractHeadersSync(UploadedFile $file, array $selectedWorksheets): array
     {
         $filePath = $file->getRealPath();
-        
+
         try {
             Log::info('Extracting headers synchronously', [
                 'file' => $file->getClientOriginalName(),
-                'worksheets' => count($selectedWorksheets)
+                'worksheets' => count($selectedWorksheets),
             ]);
 
             $reader = IOFactory::createReaderForFile($filePath);
@@ -283,7 +283,7 @@ class AsyncExcelProcessingService
 
             // Extract headers efficiently
             $headers = $this->extractHeaders($worksheet);
-            
+
             // Get a small sample of data for preview
             $sampleData = $this->peekSampleData($worksheet, $headers, 3);
 
@@ -293,16 +293,16 @@ class AsyncExcelProcessingService
 
             return [
                 'headers' => $headers,
-                'sampleData' => $sampleData
+                'sampleData' => $sampleData,
             ];
 
         } catch (\Exception $e) {
             Log::error('Synchronous header extraction failed', [
                 'file' => $file->getClientOriginalName(),
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
-            throw new \Exception('Failed to extract headers: ' . $e->getMessage());
+
+            throw new \Exception('Failed to extract headers: '.$e->getMessage());
         }
     }
 
@@ -312,22 +312,22 @@ class AsyncExcelProcessingService
     public function cancelJob(string $progressId): bool
     {
         $progress = FileProcessingProgress::find($progressId);
-        
-        if (!$progress || $progress->user_id !== Auth::id()) {
+
+        if (! $progress || $progress->user_id !== Auth::id()) {
             return false;
         }
 
         if ($progress->isActive()) {
             $progress->updateStatus(FileProcessingProgress::STATUS_CANCELLED, 'Job cancelled by user');
-            
+
             // Note: We can't actually stop the running job, but we mark it as cancelled
             // The job should check for cancellation status periodically
-            
+
             Log::info('Job cancellation requested', [
                 'progress_id' => $progressId,
-                'user_id' => Auth::id()
+                'user_id' => Auth::id(),
             ]);
-            
+
             return true;
         }
 
@@ -341,11 +341,11 @@ class AsyncExcelProcessingService
     {
         // Clean up old progress records
         $deletedRecords = FileProcessingProgress::cleanupOldRecords($daysOld);
-        
+
         // Clean up temporary files
         $tempFiles = Storage::disk('local')->files('temp_uploads');
         $deletedFiles = 0;
-        
+
         foreach ($tempFiles as $file) {
             $lastModified = Storage::disk('local')->lastModified($file);
             if ($lastModified < now()->subDays($daysOld)->timestamp) {
@@ -353,11 +353,11 @@ class AsyncExcelProcessingService
                 $deletedFiles++;
             }
         }
-        
+
         // Clean up temporary data files
         $tempDataFiles = Storage::disk('local')->files('temp_data');
         $deletedDataFiles = 0;
-        
+
         foreach ($tempDataFiles as $file) {
             $lastModified = Storage::disk('local')->lastModified($file);
             if ($lastModified < now()->subDays($daysOld)->timestamp) {
@@ -370,7 +370,7 @@ class AsyncExcelProcessingService
             'deleted_progress_records' => $deletedRecords,
             'deleted_temp_files' => $deletedFiles,
             'deleted_data_files' => $deletedDataFiles,
-            'days_old' => $daysOld
+            'days_old' => $daysOld,
         ]);
     }
 
@@ -379,15 +379,15 @@ class AsyncExcelProcessingService
      */
     private function storeFileTemporarily(UploadedFile $file): string
     {
-        $fileName = 'temp_uploads/' . Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $fileName = 'temp_uploads/'.Str::uuid().'.'.$file->getClientOriginalExtension();
         $path = $file->storeAs($fileName, Storage::disk('local'));
-        
+
         Log::info('File stored temporarily', [
             'original_name' => $file->getClientOriginalName(),
             'temp_path' => $path,
-            'size' => $file->getSize()
+            'size' => $file->getSize(),
         ]);
-        
+
         return $path;
     }
 
@@ -396,25 +396,28 @@ class AsyncExcelProcessingService
      */
     private function loadTemporaryData(?string $dataKey): ?array
     {
-        if (!$dataKey) {
+        if (! $dataKey) {
             return null;
         }
 
         $fileName = "temp_data/{$dataKey}.json";
-        
-        if (!Storage::disk('local')->exists($fileName)) {
+
+        if (! Storage::disk('local')->exists($fileName)) {
             Log::warning('Temporary data file not found', ['key' => $dataKey]);
+
             return null;
         }
 
         try {
             $jsonContent = Storage::disk('local')->get($fileName);
+
             return json_decode($jsonContent, true);
         } catch (\Exception $e) {
             Log::error('Failed to load temporary data', [
                 'key' => $dataKey,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -425,7 +428,7 @@ class AsyncExcelProcessingService
     public function getActiveJobs(): array
     {
         $activeProgress = FileProcessingProgress::getActiveForUser(Auth::id());
-        
+
         return $activeProgress->map(function ($progress) {
             return [
                 'id' => $progress->id,
@@ -435,7 +438,7 @@ class AsyncExcelProcessingService
                 'progress_percent' => $progress->getProgressPercentage(),
                 'message' => $progress->message,
                 'elapsed_time' => $progress->getElapsedTime(),
-                'created_at' => $progress->created_at->toISOString()
+                'created_at' => $progress->created_at->toISOString(),
             ];
         })->toArray();
     }

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('data_type', ['string', 'number', 'boolean', 'json'])->default('string');
             $table->string('category')->nullable(); // physical, functional, compliance
             $table->timestamps();
-            
+
             $table->unique(['product_id', 'attribute_key']);
             $table->index(['attribute_key', 'category']);
         });

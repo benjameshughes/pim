@@ -3,13 +3,13 @@
 namespace App\Livewire\Pim\Barcodes\Pool;
 
 use App\Actions\Import\ImportBarcodePoolAction;
+use App\Exceptions\ImportException;
 use App\Models\BarcodePool;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use App\Exceptions\ImportException;
-use Illuminate\Support\Facades\Storage;
 
 #[Layout('components.layouts.app')]
 class BarcodePoolImport extends Component
@@ -38,14 +38,20 @@ class BarcodePoolImport extends Component
 
     // UI state
     public $importing = false;
+
     public $importComplete = false;
+
     public $importResults = [];
+
     public $showAdvanced = false;
+
     public $progressMessage = '';
+
     public $progressPercent = 0;
 
     // Statistics
     public $poolStats = [];
+
     public $batchStats = [];
 
     public function mount()
@@ -61,7 +67,7 @@ class BarcodePoolImport extends Component
 
     public function toggleAdvanced()
     {
-        $this->showAdvanced = !$this->showAdvanced;
+        $this->showAdvanced = ! $this->showAdvanced;
     }
 
     public function importBarcodes()
@@ -78,7 +84,7 @@ class BarcodePoolImport extends Component
             $fullPath = Storage::disk('local')->path($filePath);
 
             // Execute the chunked import action for memory efficiency
-            $action = new ImportBarcodePoolAction();
+            $action = new ImportBarcodePoolAction;
             $this->importResults = $action->executeChunked(
                 filePath: $fullPath,
                 barcodeType: $this->barcodeType,
@@ -99,17 +105,17 @@ class BarcodePoolImport extends Component
 
             // Flash success message
             $summary = $this->importResults['summary'];
-            session()->flash('success', 
-                "Import completed successfully! " .
-                "Total: {$summary['total_imported']}, " .
-                "Available: {$summary['available_for_assignment']}, " .
+            session()->flash('success',
+                'Import completed successfully! '.
+                "Total: {$summary['total_imported']}, ".
+                "Available: {$summary['available_for_assignment']}, ".
                 "Legacy Archived: {$summary['legacy_archived']}"
             );
 
         } catch (ImportException $e) {
-            session()->flash('error', 'Import failed: ' . $e->getMessage());
+            session()->flash('error', 'Import failed: '.$e->getMessage());
         } catch (\Exception $e) {
-            session()->flash('error', 'An unexpected error occurred: ' . $e->getMessage());
+            session()->flash('error', 'An unexpected error occurred: '.$e->getMessage());
         } finally {
             $this->importing = false;
             $this->file = null;
@@ -128,12 +134,12 @@ class BarcodePoolImport extends Component
         try {
             $deletedCount = BarcodePool::where('status', '!=', 'assigned')->count();
             BarcodePool::where('status', '!=', 'assigned')->delete();
-            
+
             $this->refreshStats();
-            
+
             session()->flash('success', "Cleared {$deletedCount} barcodes from pool (kept assigned barcodes).");
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to clear pool: ' . $e->getMessage());
+            session()->flash('error', 'Failed to clear pool: '.$e->getMessage());
         }
     }
 
@@ -148,7 +154,7 @@ class BarcodePoolImport extends Component
         ];
 
         $filename = 'barcode_sample.csv';
-        $content = "Barcode\n" . implode("\n", $sampleData);
+        $content = "Barcode\n".implode("\n", $sampleData);
 
         return response()->streamDownload(function () use ($content) {
             echo $content;
@@ -160,7 +166,7 @@ class BarcodePoolImport extends Component
         return view('livewire.pim.barcodes.pool.barcode-pool-import', [
             'barcodeTypes' => [
                 'EAN13' => 'EAN-13 (13 digits)',
-                'EAN8' => 'EAN-8 (8 digits)', 
+                'EAN8' => 'EAN-8 (8 digits)',
                 'UPC' => 'UPC (12 digits)',
                 'CODE128' => 'Code 128',
                 'CODE39' => 'Code 39',

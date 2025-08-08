@@ -7,12 +7,13 @@ use Exception;
 abstract class ImportException extends Exception
 {
     protected string $userMessage;
+
     protected array $context;
 
-    public function __construct(string $message = "", string $userMessage = "", array $context = [], int $code = 0, ?Throwable $previous = null)
+    public function __construct(string $message = '', string $userMessage = '', array $context = [], int $code = 0, ?Throwable $previous = null)
     {
         parent::__construct($message, $code, $previous);
-        
+
         $this->userMessage = $userMessage ?: $message;
         $this->context = $context;
     }

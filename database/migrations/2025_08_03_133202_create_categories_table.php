@@ -20,11 +20,11 @@ return new class extends Migration
             $table->integer('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->foreign('parent_id')->references('id')->on('categories')->onDelete('cascade');
             $table->index(['parent_id', 'sort_order']);
         });
-        
+
         // Create pivot table for product categories (many-to-many)
         Schema::create('product_categories', function (Blueprint $table) {
             $table->id();
@@ -32,7 +32,7 @@ return new class extends Migration
             $table->foreignId('category_id')->constrained()->onDelete('cascade');
             $table->boolean('is_primary')->default(false); // One primary category per product
             $table->timestamps();
-            
+
             $table->unique(['product_id', 'category_id']);
             $table->index(['category_id', 'is_primary']);
         });

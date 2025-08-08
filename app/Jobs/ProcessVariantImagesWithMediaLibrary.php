@@ -10,14 +10,13 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Throwable;
 
 class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * The number of times the job may be attempted.
@@ -47,7 +46,7 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
     {
         Log::info("Processing images with Media Library for variant: {$this->variant->sku}", [
             'variant_id' => $this->variant->id,
-            'image_count' => count($this->imageUrls)
+            'image_count' => count($this->imageUrls),
         ]);
 
         $processedCount = 0;
@@ -63,7 +62,7 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
             Log::info("Successfully processed images with Media Library for variant: {$this->variant->sku}", [
                 'variant_id' => $this->variant->id,
                 'processed_count' => $processedCount,
-                'total_media_items' => $this->variant->getMedia('images')->count()
+                'total_media_items' => $this->variant->getMedia('images')->count(),
             ]);
         }
     }
@@ -74,31 +73,31 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
     private function downloadAndStoreImageWithMediaLibrary(string $imageUrl, int $index): bool
     {
         // Validate URL format
-        if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+        if (! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
             throw ImageProcessingException::downloadFailed($imageUrl, 'Invalid URL format');
         }
 
         // Download image with timeout and browser user agent
         $response = Http::timeout(30)
             ->withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent' => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             ])
             ->get($imageUrl);
-        
-        if (!$response->successful()) {
+
+        if (! $response->successful()) {
             throw ImageProcessingException::downloadFailed($imageUrl, "HTTP {$response->status()} error");
         }
 
         // Validate content type
         $contentType = $response->header('Content-Type');
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-        
-        if (!in_array($contentType, $allowedTypes)) {
+
+        if (! in_array($contentType, $allowedTypes)) {
             throw ImageProcessingException::invalidImageFormat($imageUrl, $contentType);
         }
 
         // Generate filename
-        $extension = match($contentType) {
+        $extension = match ($contentType) {
             'image/jpeg', 'image/jpg' => 'jpg',
             'image/png' => 'png',
             'image/gif' => 'gif',
@@ -107,13 +106,13 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
         };
 
         // Create temporary file
-        $tempPath = storage_path('app/temp/') . Str::uuid() . '.' . $extension;
-        
+        $tempPath = storage_path('app/temp/').Str::uuid().'.'.$extension;
+
         // Ensure temp directory exists
-        if (!is_dir(dirname($tempPath))) {
+        if (! is_dir(dirname($tempPath))) {
             mkdir(dirname($tempPath), 0755, true);
         }
-        
+
         // Save to temp file
         file_put_contents($tempPath, $response->body());
 
@@ -121,7 +120,7 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
         $mediaItem = $this->variant
             ->addMedia($tempPath)
             ->usingName(basename(parse_url($imageUrl, PHP_URL_PATH)) ?: "imported_image_{$index}.{$extension}")
-            ->usingFileName("variant_{$this->variant->id}_image_{$index}_" . time() . ".{$extension}")
+            ->usingFileName("variant_{$this->variant->id}_image_{$index}_".time().".{$extension}")
             ->withCustomProperties([
                 'source' => 'import',
                 'imported_from' => $imageUrl,
@@ -136,11 +135,11 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
             unlink($tempPath);
         }
 
-        Log::info("Successfully stored image with Media Library", [
+        Log::info('Successfully stored image with Media Library', [
             'variant_id' => $this->variant->id,
             'media_id' => $mediaItem->id,
             'original_url' => $imageUrl,
-            'conversions' => ['thumb', 'medium', 'large', 'webp']
+            'conversions' => ['thumb', 'medium', 'large', 'webp'],
         ]);
 
         return true;
@@ -155,7 +154,7 @@ class ProcessVariantImagesWithMediaLibrary implements ShouldQueue
             'variant_sku' => $this->variant->sku,
             'image_urls' => $this->imageUrls,
             'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString()
+            'trace' => $exception->getTraceAsString(),
         ]);
     }
 }

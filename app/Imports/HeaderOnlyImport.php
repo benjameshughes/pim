@@ -2,10 +2,10 @@
 
 namespace App\Imports;
 
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 use Maatwebsite\Excel\Concerns\WithLimit;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
-class HeaderOnlyImport implements WithMultipleSheets, WithLimit
+class HeaderOnlyImport implements WithLimit, WithMultipleSheets
 {
     public function limit(): int
     {

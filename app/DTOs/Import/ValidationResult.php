@@ -5,15 +5,25 @@ namespace App\DTOs\Import;
 class ValidationResult
 {
     public int $validRows = 0;
+
     public int $errorRows = 0;
+
     public array $errors = [];
+
     public array $warnings = [];
+
     public int $productsToCreate = 0;
+
     public int $productsToUpdate = 0;
+
     public int $productsToSkip = 0;
+
     public int $variantsToCreate = 0;
+
     public int $variantsToUpdate = 0;
+
     public int $variantsToSkip = 0;
+
     public int $barcodesNeeded = 0;
 
     public function addError(string $error): void
@@ -83,12 +93,12 @@ class ValidationResult
 
     public function hasErrors(): bool
     {
-        return !empty($this->errors);
+        return ! empty($this->errors);
     }
 
     public function hasWarnings(): bool
     {
-        return !empty($this->warnings);
+        return ! empty($this->warnings);
     }
 
     public function finalize(): void

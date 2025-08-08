@@ -15,14 +15,14 @@
                         @if($index === 0 && isset($item['icon']))
                             {!! $item['icon'] !!}
                         @endif
-                        {{ $item['name'] }}
+                        {{ $item['name'] ?? '' }}
                     </a>
                 @else
                     <span class="inline-flex items-center text-sm font-medium text-zinc-500 dark:text-zinc-400">
                         @if($index === 0 && isset($item['icon']))
                             {!! $item['icon'] !!}
                         @endif
-                        {{ $item['name'] }}
+                        {{ $item['name'] ?? '' }}
                     </span>
                 @endif
             </li>

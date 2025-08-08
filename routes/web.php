@@ -1,33 +1,23 @@
 <?php
 
-use App\Livewire\Dashboard;
 // Legacy framework navigation disabled
-use App\Livewire\Pim\Products\Management\ProductForm;
-use App\Livewire\Pim\Products\Variants\VariantIndex;
-use App\Livewire\Pim\Products\Variants\VariantForm;
-use App\Livewire\Pim\Products\Variants\VariantView;
-use App\Livewire\Pim\Products\Variants\VariantEdit;
-use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Livewire\DataExchange\Import\ImportData;
-use App\Livewire\DataExchange\Import\ImportDataRefactored;
-use App\Livewire\DataExchange\Import\BulkOperations;
-use App\Livewire\Pim\Barcodes\BarcodeIndex;
-use App\Livewire\Pim\Barcodes\Pool\PoolManager;
-use App\Livewire\Pim\Barcodes\Pool\BarcodePoolImport;
-use App\Livewire\Pim\Pricing\PricingManager;
-use App\Livewire\Pim\Media\ImageManager;
-use App\Livewire\Pim\Attributes\AttributeDefinitionsManager;
 use App\Livewire\DataExchange\Export\ShopifyExport;
-use App\Livewire\Pim\Products\Management\DeleteProduct;
-use App\Livewire\Pim\Products\Variants\DeleteVariant;
-use App\Livewire\Archive\DeletedProductsArchive;
+use App\Livewire\DataExchange\Import\ImportDataRefactored;
+use App\Livewire\DataExchange\Sync\EbaySync;
 use App\Livewire\DataExchange\Sync\MiraklSync;
 use App\Livewire\DataExchange\Sync\ShopifySync;
-use App\Livewire\DataExchange\Sync\EbaySync;
+use App\Livewire\Pim\Attributes\AttributeDefinitionsManager;
+use App\Livewire\Pim\Barcodes\Pool\BarcodePoolImport;
+use App\Livewire\Pim\Barcodes\Pool\PoolManager;
+use App\Livewire\Pim\Products\Management\DeleteProduct;
+use App\Livewire\Pim\Products\Variants\DeleteVariant;
+use App\Livewire\Pim\Products\Variants\VariantEdit;
+use App\Livewire\Pim\Products\Variants\VariantIndex;
+use App\Livewire\Pim\Products\Variants\VariantView;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
+use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -36,7 +26,9 @@ Route::get('/', function () {
 
 // Legacy test navigation routes removed
 
-Route::get('dashboard', Dashboard::class)
+Route::get('dashboard', function () {
+    return view('dashboard');
+})
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
@@ -50,8 +42,10 @@ Route::middleware(['auth'])->group(function () {
     // Barcode management routes
     Route::prefix('barcodes')->name('barcodes.')->group(function () {
         // Barcode management component
-        Route::get('/', BarcodeIndex::class)->name('index');
-        
+        Route::get('/', function () {
+            return view('barcodes.index');
+        })->name('index');
+
         // Pool management routes
         Route::prefix('pool')->name('pool.')->group(function () {
             Route::get('/', \App\Livewire\Pim\Barcodes\Pool\PoolManagerLite::class)->name('index');
@@ -61,22 +55,59 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Pricing management route
-    Route::get('/pricing', PricingManager::class)->name('pricing.index');
+    Route::get('/pricing', function () {
+        return view('pricing.index');
+    })->name('pricing.index');
 
     // Images management route
-    Route::get('/images', ImageManager::class)->name('images.index');
+    Route::get('/images', function () {
+        return view('images.index');
+    })->name('images.index');
 
-    // Import/Export routes
-    Route::get('/import', ImportData::class)->name('import');
+    // Import/Export routes - New System
+    Route::prefix('import')->name('import.')->group(function () {
+        // Main import dashboard and create
+        Route::get('/', [\App\Http\Controllers\ImportController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\ImportController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\ImportController::class, 'store'])->name('store');
+        
+        // Session-specific routes
+        Route::get('/{sessionId}', [\App\Http\Controllers\ImportController::class, 'show'])->name('show');
+        Route::get('/{sessionId}/status', [\App\Http\Controllers\ImportController::class, 'status'])->name('status');
+        
+        // Column mapping
+        Route::get('/{sessionId}/mapping', [\App\Http\Controllers\ImportController::class, 'mapping'])->name('mapping');
+        Route::post('/{sessionId}/mapping', [\App\Http\Controllers\ImportController::class, 'saveMapping'])->name('save-mapping');
+        
+        // Processing control
+        Route::post('/{sessionId}/start', [\App\Http\Controllers\ImportController::class, 'startProcessing'])->name('start-processing');
+        Route::post('/{sessionId}/cancel', [\App\Http\Controllers\ImportController::class, 'cancel'])->name('cancel');
+        
+        // Downloads
+        Route::get('/{sessionId}/download/{type?}', [\App\Http\Controllers\ImportController::class, 'download'])->name('download');
+        
+        // Session management
+        Route::delete('/{sessionId}', [\App\Http\Controllers\ImportController::class, 'destroy'])->name('destroy');
+    });
+
+    // Legacy Import Routes (for backwards compatibility)
+    Route::get('/import-legacy', function () {
+        return view('import.legacy');
+    })->name('import.legacy');
     Route::get('/import-v2', ImportDataRefactored::class)->name('import.v2');
-    Route::get('/export', function () { return 'Export Data - Coming Soon'; })->name('export');
+    Route::get('/import/test', function () {
+        return view('import.test');
+    })->name('import.test');
+    Route::get('/export', function () {
+        return view('export.index');
+    })->name('export');
 
     // Marketplace Sync routes
     Route::prefix('sync')->name('sync.')->group(function () {
         Route::get('/mirakl', MiraklSync::class)->name('mirakl');
         Route::get('/shopify', ShopifySync::class)->name('shopify');
         Route::get('/ebay', EbaySync::class)->name('ebay');
-        
+
         // eBay OAuth Routes
         Route::prefix('ebay/oauth')->name('ebay.oauth.')->group(function () {
             Route::post('authorize', [App\Http\Controllers\EbayOAuthController::class, 'authorize'])->name('authorize');
@@ -90,7 +121,7 @@ Route::middleware(['auth'])->group(function () {
     // Operations routes
     Route::prefix('operations')->name('operations.')->group(function () {
         Route::get('/bulk', \App\Livewire\Operations\BulkOperationsIndex::class)->name('bulk');
-        
+
         Route::prefix('bulk')->name('bulk.')->group(function () {
             Route::get('/overview', \App\Livewire\Operations\BulkOperationsOverview::class)->name('overview');
             Route::get('/templates', \App\Livewire\Operations\BulkOperationsTemplates::class)->name('templates');
@@ -107,43 +138,45 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Archive route
-    Route::get('/archive', DeletedProductsArchive::class)->name('archive');
+    Route::get('/archive', function () {
+        return view('archive.index');
+    })->name('archive');
 
     // Clean Product Management Routes - Builder Pattern + Actions Pattern
     Route::resource('products', \App\Http\Controllers\Products\ProductController::class);
-    
+
     // Additional product routes
     Route::prefix('products')->name('products.')->group(function () {
         Route::post('{product}/restore', [\App\Http\Controllers\Products\ProductController::class, 'restore'])->name('restore');
         Route::delete('{product}/force', [\App\Http\Controllers\Products\ProductController::class, 'forceDestroy'])->name('force-destroy');
     });
-    
+
     // Legacy routes that still need manual registration
     Route::prefix('products')->name('products.')->group(function () {
         // ProductWizard - Enhanced with Builder patterns
         Route::get('wizard', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('wizard');
-        
+
         // Variants
         Route::get('variants', VariantIndex::class)->name('variants.index');
         Route::get('variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create');
         Route::get('{product}/variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create-for-product');
-        
+
         // Variant tabs - specific routes MUST come before wildcard
         Route::get('variants/{variant}/details', VariantView::class)->name('variants.details');
         Route::get('variants/{variant}/inventory', VariantView::class)->name('variants.inventory');
         Route::get('variants/{variant}/attributes', VariantView::class)->name('variants.attributes');
         Route::get('variants/{variant}/data', VariantView::class)->name('variants.data');
         Route::get('variants/{variant}/images', VariantView::class)->name('variants.images');
-        
+
         Route::get('variants/{variant}', VariantView::class)->name('variants.view');
         Route::get('variants/{variant}/edit', VariantEdit::class)->name('variants.edit');
 
         Route::get('export/shopify', ShopifyExport::class)->name('export.shopify');
-        
+
         // Deletion routes (keep under products as they're product-specific)
         Route::get('{product}/delete', DeleteProduct::class)->name('delete');
         Route::get('variants/{variant}/delete', DeleteVariant::class)->name('variants.delete');
-        
+
         // Product view routes - organized like bulk operations
         Route::prefix('{product}')->name('product.')->group(function () {
             Route::get('/overview', \App\Livewire\Pim\Products\Management\ProductView::class)->name('overview');
@@ -151,9 +184,11 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/images', \App\Livewire\Pim\Products\Management\ProductView::class)->name('images');
             Route::get('/attributes', \App\Livewire\Pim\Products\Management\ProductView::class)->name('attributes');
             Route::get('/sync', \App\Livewire\Pim\Products\Management\ProductView::class)->name('sync');
-            Route::get('/edit', function(Product $product) { return view('products.products.edit', compact('product')); })->name('edit');
+            Route::get('/edit', function (Product $product) {
+                return view('products.products.edit', compact('product'));
+            })->name('edit');
         });
-        
+
         // Wildcard routes MUST come last
         Route::get('{product}', \App\Livewire\Pim\Products\Management\ProductView::class)->name('view');
     });
@@ -171,13 +206,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('variant/{variant}/images', \App\Livewire\Examples\VariantImageManager::class)->name('variant.images');
         Route::get('product-creation', \App\Livewire\Examples\ProductCreationWithImages::class)->name('product.creation');
         Route::get('toast-demo', \App\Livewire\Examples\ToastDemo::class)->name('toast.demo');
+        Route::get('attributes-demo', \App\Livewire\Attributes\AttributeDemo::class)->name('attributes.demo');
         // Route::get('stacked-list', \App\Livewire\ExampleStackedList::class)->name('stacked.list'); // Removed with old system
     });
 
     // Admin Routes
     Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('users', function () { return 'Users Management - Coming Soon'; })->name('users.index');
-        Route::get('roles', function () { return 'Roles Management - Coming Soon'; })->name('roles.index');
+        Route::get('users', function () {
+            return view('admin.users.index');
+        })->name('users.index');
+        Route::get('roles', function () {
+            return view('admin.roles.index');
+        })->name('roles.index');
     });
 });
 

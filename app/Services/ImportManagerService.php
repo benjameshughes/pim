@@ -2,13 +2,10 @@
 
 namespace App\Services;
 
-use App\Services\ExcelProcessingService;
-use App\Services\ColumnMappingService;
-use App\Services\ImportValidationService;
 use App\DTOs\Import\ImportRequest;
 use App\DTOs\Import\ImportResult;
-use App\DTOs\Import\WorksheetAnalysis;
 use App\DTOs\Import\ValidationResult;
+use App\DTOs\Import\WorksheetAnalysis;
 use Illuminate\Support\Facades\Log;
 
 class ImportManagerService
@@ -26,7 +23,7 @@ class ImportManagerService
     public function analyzeFile($file): WorksheetAnalysis
     {
         Log::info('Starting file analysis', ['filename' => $file->getClientOriginalName()]);
-        
+
         return $this->excelService->analyzeFile($file);
     }
 
@@ -47,17 +44,17 @@ class ImportManagerService
 
         // Load all data for validation
         $worksheetData = $this->excelService->loadDataForDryRun($request);
-        
+
         // Apply column mappings
         $mappedData = $this->mappingService->mapAllRows($worksheetData, $request->columnMapping, $request->originalHeaders);
-        
+
         // Run validation
         $result = $this->validationService->validateImportData($mappedData, $request);
-        
+
         Log::info('Dry run completed', [
             'valid_rows' => $result->validRows,
             'error_rows' => $result->errorRows,
-            'warnings' => count($result->warnings)
+            'warnings' => count($result->warnings),
         ]);
 
         return $result;
@@ -66,23 +63,23 @@ class ImportManagerService
     /**
      * Execute the actual import process
      */
-    public function executeImport(ImportRequest $request, callable $progressCallback = null): ImportResult
+    public function executeImport(ImportRequest $request, ?callable $progressCallback = null): ImportResult
     {
         Log::info('Starting actual import process');
 
         // Load all data for import
         $worksheetData = $this->excelService->loadAllDataForImport($request);
-        
+
         // Apply column mappings
         $mappedData = $this->mappingService->mapAllRows($worksheetData, $request->columnMapping, $request->originalHeaders);
-        
+
         // Execute the import with progress tracking
         $result = $this->productService->importProducts($mappedData, $request, $progressCallback);
-        
+
         Log::info('Import process completed', [
             'products_created' => $result->productsCreated,
             'variants_created' => $result->variantsCreated,
-            'errors' => count($result->errors)
+            'errors' => count($result->errors),
         ]);
 
         return $result;
@@ -118,7 +115,7 @@ class ImportManagerService
     public function loadSampleDataForConfiguration(ImportRequest $request): array
     {
         Log::info('Loading sample data for configuration');
-        
+
         // Load sample data from selected worksheets
         return $this->excelService->loadSampleData($request->file, $request->selectedWorksheets);
     }
@@ -138,9 +135,9 @@ class ImportManagerService
         if (empty($firstWorksheetData)) {
             return [];
         }
-        
+
         $headers = array_keys($firstWorksheetData[0] ?? []);
-        
+
         return $this->mappingService->guessColumnMappings($headers);
     }
 }

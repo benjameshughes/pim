@@ -20,7 +20,7 @@ return new class extends Migration
             $table->bigInteger('file_size')->unsigned()->nullable()->after('storage_disk');
             $table->string('mime_type')->nullable()->after('file_size');
             $table->json('dimensions')->nullable()->after('mime_type');
-            
+
             // Add indexes for processing status and storage disk
             $table->index('processing_status');
             $table->index(['storage_disk', 'processing_status']);
@@ -37,11 +37,11 @@ return new class extends Migration
             $table->dropIndex(['processing_status']);
             $table->dropColumn([
                 'original_filename',
-                'processing_status', 
+                'processing_status',
                 'storage_disk',
                 'file_size',
                 'mime_type',
-                'dimensions'
+                'dimensions',
             ]);
         });
     }

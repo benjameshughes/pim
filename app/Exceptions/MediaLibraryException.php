@@ -43,7 +43,7 @@ class MediaLibraryException extends Exception
                 'message' => $this->getMessage(),
             ], 500);
         }
-        
+
         // For browser requests, return null to let Laravel/Flare handle it
         return null;
     }

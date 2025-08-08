@@ -1,15 +1,13 @@
 <?php
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use App\Services\AutoParentCreator;
-use App\Services\ProductAttributeExtractor;
 
 test('creates parent from SKU pattern 001-001', function () {
     $variantData = [
         'variant_sku' => '001-002',
         'product_name' => 'Blackout Roller Blind Blue 60cm',
-        'description' => 'A blue roller blind'
+        'description' => 'A blue roller blind',
     ];
 
     $parent = AutoParentCreator::createParentFromVariant($variantData);
@@ -24,7 +22,7 @@ test('finds existing parent by SKU pattern', function () {
     // Create existing parent
     $existingParent = Product::factory()->create([
         'parent_sku' => '001',
-        'name' => 'Existing Parent Product'
+        'name' => 'Existing Parent Product',
     ]);
 
     $variantData = [
@@ -42,7 +40,7 @@ test('creates parent from name when SKU pattern fails', function () {
     $variantData = [
         'variant_sku' => 'INVALID-SKU-FORMAT',
         'product_name' => 'Smart TV 55inch QLED Black',
-        'description' => 'A black smart TV'
+        'description' => 'A black smart TV',
     ];
 
     $parent = AutoParentCreator::createParentFromVariant($variantData);
@@ -69,7 +67,7 @@ test('smart grouping creates parent from multiple variants', function () {
     $variantGroup = [
         ['product_name' => 'iPhone 15 Pro Blue 128GB', 'variant_sku' => '001-001'],
         ['product_name' => 'iPhone 15 Pro Red 256GB', 'variant_sku' => '001-002'],
-        ['product_name' => 'iPhone 15 Pro Black 512GB', 'variant_sku' => '001-003']
+        ['product_name' => 'iPhone 15 Pro Black 512GB', 'variant_sku' => '001-003'],
     ];
 
     $parent = AutoParentCreator::createParentFromVariantGroup($variantGroup);

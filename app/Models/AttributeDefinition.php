@@ -52,14 +52,14 @@ class AttributeDefinition extends Model
 
     public function validateValue($value): bool
     {
-        if (!$this->validation_rules) {
+        if (! $this->validation_rules) {
             return true;
         }
 
         $rules = $this->validation_rules;
 
         // Type validation
-        if (!$this->validateType($value)) {
+        if (! $this->validateType($value)) {
             return false;
         }
 
@@ -72,7 +72,7 @@ class AttributeDefinition extends Model
             return false;
         }
 
-        if (isset($rules['options']) && !in_array($value, $rules['options'])) {
+        if (isset($rules['options']) && ! in_array($value, $rules['options'])) {
             return false;
         }
 

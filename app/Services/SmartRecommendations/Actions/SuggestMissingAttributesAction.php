@@ -12,12 +12,12 @@ class SuggestMissingAttributesAction extends BaseRecommendationAction
 
     public function getType(): string
     {
-        return 'suggest_missing_' . $this->attributeType;
+        return 'suggest_missing_'.$this->attributeType;
     }
 
     public function getName(): string
     {
-        return 'Suggest Missing ' . ucfirst($this->attributeType);
+        return 'Suggest Missing '.ucfirst($this->attributeType);
     }
 
     public function getPreview(array $variantIds): array
@@ -32,7 +32,7 @@ class SuggestMissingAttributesAction extends BaseRecommendationAction
             'affected_variants' => count($variantIds),
             'type' => $this->attributeType,
             'note' => 'This action provides suggestions - you decide what to implement',
-            'sample_variants' => $variants->map(fn($variant) => [
+            'sample_variants' => $variants->map(fn ($variant) => [
                 'sku' => $variant->sku,
                 'product' => $variant->product->name,
                 'suggestion' => $this->generateSuggestion($variant),
@@ -42,7 +42,7 @@ class SuggestMissingAttributesAction extends BaseRecommendationAction
 
     public function canExecute(array $variantIds): bool
     {
-        return !empty($variantIds);
+        return ! empty($variantIds);
     }
 
     protected function performAction(array $variantIds): bool
@@ -67,13 +67,13 @@ class SuggestMissingAttributesAction extends BaseRecommendationAction
     protected function extractColorFromName(string $name): ?string
     {
         $colors = ['black', 'white', 'grey', 'gray', 'brown', 'beige', 'cream', 'blue', 'red', 'green'];
-        
+
         foreach ($colors as $color) {
             if (str_contains(strtolower($name), $color)) {
                 return ucfirst($color);
             }
         }
-        
+
         return null;
     }
 
@@ -83,15 +83,15 @@ class SuggestMissingAttributesAction extends BaseRecommendationAction
         if (preg_match('/(\d+)\s*(cm|mm)/', $name, $matches)) {
             $value = $matches[1];
             $unit = $matches[2];
-            
+
             if ($unit === 'mm') {
                 $value = $value / 10; // Convert mm to cm
                 $unit = 'cm';
             }
-            
-            return $value . $unit;
+
+            return $value.$unit;
         }
-        
+
         return null;
     }
 }

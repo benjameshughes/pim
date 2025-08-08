@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->enum('status', ['active', 'inactive', 'discontinued'])->default('active');
             $table->timestamps();
-            
+
             $table->unique(['subcategory_id', 'slug']);
         });
     }

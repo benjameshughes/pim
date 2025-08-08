@@ -23,7 +23,7 @@ return new class extends Migration
             $table->json('marketplace_data')->nullable(); // Platform-specific fields
             $table->timestamp('last_synced_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['variant_id', 'marketplace_id']);
             $table->index(['marketplace_id', 'status']);
             $table->index('last_synced_at');

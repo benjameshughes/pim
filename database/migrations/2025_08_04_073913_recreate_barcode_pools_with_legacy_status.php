@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -15,10 +15,10 @@ return new class extends Migration
         // For SQLite, we need to recreate the table to change the enum constraint
         // First, backup existing data
         $existingData = DB::table('barcode_pools')->get();
-        
+
         // Drop the table (this will also drop indexes)
         Schema::dropIfExists('barcode_pools');
-        
+
         // Recreate with new enum values
         Schema::create('barcode_pools', function (Blueprint $table) {
             $table->id();
@@ -33,13 +33,13 @@ return new class extends Migration
             $table->boolean('is_legacy')->default(false);
             $table->string('import_batch_id', 50)->nullable();
             $table->timestamps();
-            
+
             $table->index(['status', 'barcode_type']);
             $table->index('assigned_to_variant_id');
             $table->index(['status', 'is_legacy']);
             $table->index('import_batch_id');
         });
-        
+
         // Restore existing data
         foreach ($existingData as $row) {
             DB::table('barcode_pools')->insert((array) $row);
@@ -53,10 +53,10 @@ return new class extends Migration
     {
         // Backup existing data
         $existingData = DB::table('barcode_pools')->get();
-        
+
         // Drop the table
         Schema::dropIfExists('barcode_pools');
-        
+
         // Recreate with original enum values
         Schema::create('barcode_pools', function (Blueprint $table) {
             $table->id();
@@ -67,11 +67,11 @@ return new class extends Migration
             $table->timestamp('assigned_at')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
-            
+
             $table->index(['status', 'barcode_type']);
             $table->index('assigned_to_variant_id');
         });
-        
+
         // Restore existing data (filter out legacy_archive records)
         foreach ($existingData as $row) {
             $rowArray = (array) $row;
@@ -81,7 +81,7 @@ return new class extends Migration
                 unset($rowArray['date_first_used']);
                 unset($rowArray['is_legacy']);
                 unset($rowArray['import_batch_id']);
-                
+
                 DB::table('barcode_pools')->insert($rowArray);
             }
         }

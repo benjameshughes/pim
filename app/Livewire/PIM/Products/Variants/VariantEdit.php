@@ -2,142 +2,156 @@
 
 namespace App\Livewire\Pim\Products\Variants;
 
+use App\Livewire\Concerns\HasImageUpload;
+use App\Models\AttributeDefinition;
 use App\Models\Barcode;
 use App\Models\BarcodePool;
+use App\Models\Marketplace;
+use App\Models\MarketplaceBarcode;
+use App\Models\MarketplaceVariant;
+use App\Models\Pricing;
 use App\Models\Product;
+use App\Models\ProductAttribute;
 use App\Models\ProductVariant;
 use App\Models\SalesChannel;
-use App\Models\Pricing;
-use App\Models\Marketplace;
-use App\Models\MarketplaceVariant;
-use App\Models\MarketplaceBarcode;
-use App\Models\AttributeDefinition;
-use App\Models\ProductAttribute;
 use App\Models\VariantAttribute;
 use App\Services\BarcodeDetector;
-use App\Livewire\Concerns\HasImageUpload;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 #[Layout('components.layouts.app')]
 class VariantEdit extends Component
 {
-    use WithFileUploads, HasImageUpload;
-    
+    use HasImageUpload, WithFileUploads;
+
     public ?ProductVariant $variant = null;
+
     public $isEditing = false;
-    
+
     // Basic Information
     #[Validate('required|exists:products,id')]
     public $product_id = '';
-    
+
     #[Validate('required|string|max:255')]
     public $color = '';
-    
+
     #[Validate('required|string|max:255')]
     public $size = '';
-    
+
     #[Validate('required|string|max:255')]
     public $sku = '';
-    
+
     #[Validate('required|in:active,inactive,out_of_stock')]
     public $status = 'active';
-    
+
     #[Validate('nullable|integer|min:0')]
     public $stock_level = 0;
-    
+
     // Package Information
     #[Validate('nullable|numeric|min:0')]
     public $package_length = '';
-    
+
     #[Validate('nullable|numeric|min:0')]
     public $package_width = '';
-    
+
     #[Validate('nullable|numeric|min:0')]
     public $package_height = '';
-    
+
     #[Validate('nullable|numeric|min:0')]
     public $package_weight = '';
-    
+
     // Images - now handled by ImageUploader component
     public $showImageUploader = true;
-    
+
     // Barcode Management
     public $barcodes = [];
+
     public $newBarcode = '';
+
     public $newBarcodeType = 'EAN13';
-    
+
     // Pricing Management
     public $pricing = [];
+
     public $newPricing = [
         'sales_channel_id' => '',
         'retail_price' => '',
-        'cost_price' => ''
+        'cost_price' => '',
     ];
-    
+
     // Marketplace Management
     public $marketplaceVariants = [];
+
     public $newMarketplaceVariant = [
         'marketplace_id' => '',
         'title' => '',
         'description' => '',
         'price_override' => '',
-        'marketplace_data' => []
+        'marketplace_data' => [],
     ];
-    
+
     // Marketplace Barcodes
     public $marketplaceBarcodes = [];
+
     public $newMarketplaceBarcode = [
         'marketplace_id' => '',
         'identifier_type' => 'asin',
-        'identifier_value' => ''
+        'identifier_value' => '',
     ];
-    
+
     // Product/Variant Attributes
     public $productAttributes = [];
+
     public $variantAttributes = [];
+
     public $newProductAttribute = [
         'attribute_key' => '',
         'attribute_value' => '',
         'data_type' => 'string',
-        'category' => ''
+        'category' => '',
     ];
+
     public $newVariantAttribute = [
         'attribute_key' => '',
         'attribute_value' => '',
-        'data_type' => 'string', 
-        'category' => ''
+        'data_type' => 'string',
+        'category' => '',
     ];
-    
+
     // UI State
     public $activeTab = 'basic';
+
     public $showBarcodeModal = false;
+
     public $showPricingModal = false;
+
     public $showMarketplaceVariantModal = false;
+
     public $showMarketplaceBarcodeModal = false;
+
     public $showProductAttributeModal = false;
+
     public $showVariantAttributeModal = false;
+
     public $showDeleteConfirmation = false;
-    
+
     public function mount(?ProductVariant $variant = null)
     {
         if ($variant && $variant->exists) {
             $this->variant = $variant->load([
-                'product', 
-                'barcodes', 
+                'product',
+                'barcodes',
                 'pricing.salesChannel',
                 'marketplaceVariants.marketplace',
                 'marketplaceBarcodes.marketplace',
                 'attributes',
                 'product.attributes',
-                'images'
+                'images',
             ]);
             $this->isEditing = true;
-            
+
             // Load basic information
             $this->product_id = $variant->product_id;
             $this->color = $variant->color;
@@ -145,15 +159,15 @@ class VariantEdit extends Component
             $this->sku = $variant->sku;
             $this->status = $variant->status;
             $this->stock_level = $variant->stock_level ?? 0;
-            
+
             // Load package information
             $this->package_length = $variant->package_length;
             $this->package_width = $variant->package_width;
             $this->package_height = $variant->package_height;
             $this->package_weight = $variant->package_weight;
-            
+
             // Images are now handled by the ImageUploader component
-            
+
             // Load barcodes
             $this->barcodes = $variant->barcodes->map(function ($barcode) {
                 return [
@@ -163,7 +177,7 @@ class VariantEdit extends Component
                     'is_primary' => $barcode->is_primary,
                 ];
             })->toArray();
-            
+
             // Load pricing
             $this->pricing = $variant->pricing->map(function ($price) {
                 return [
@@ -171,10 +185,10 @@ class VariantEdit extends Component
                     'sales_channel_id' => $price->sales_channel_id,
                     'retail_price' => $price->retail_price,
                     'cost_price' => $price->cost_price,
-                    'channel_name' => $price->salesChannel->name ?? 'Default'
+                    'channel_name' => $price->salesChannel->name ?? 'Default',
                 ];
             })->toArray();
-            
+
             // Load marketplace variants
             $this->marketplaceVariants = $variant->marketplaceVariants->map(function ($mv) {
                 return [
@@ -185,10 +199,10 @@ class VariantEdit extends Component
                     'description' => $mv->description,
                     'price_override' => $mv->price_override,
                     'status' => $mv->status,
-                    'marketplace_data' => $mv->marketplace_data ?? []
+                    'marketplace_data' => $mv->marketplace_data ?? [],
                 ];
             })->toArray();
-            
+
             // Load marketplace barcodes
             $this->marketplaceBarcodes = $variant->marketplaceBarcodes->map(function ($mb) {
                 return [
@@ -197,10 +211,10 @@ class VariantEdit extends Component
                     'marketplace_name' => $mb->marketplace->name,
                     'identifier_type' => $mb->identifier_type,
                     'identifier_value' => $mb->identifier_value,
-                    'is_active' => $mb->is_active
+                    'is_active' => $mb->is_active,
                 ];
             })->toArray();
-            
+
             // Load variant attributes
             $this->variantAttributes = $variant->attributes->map(function ($attr) {
                 return [
@@ -208,10 +222,10 @@ class VariantEdit extends Component
                     'attribute_key' => $attr->attribute_key,
                     'attribute_value' => $attr->attribute_value,
                     'data_type' => $attr->data_type,
-                    'category' => $attr->category
+                    'category' => $attr->category,
                 ];
             })->toArray();
-            
+
             // Load product attributes
             $this->productAttributes = $variant->product->attributes->map(function ($attr) {
                 return [
@@ -219,25 +233,25 @@ class VariantEdit extends Component
                     'attribute_key' => $attr->attribute_key,
                     'attribute_value' => $attr->attribute_value,
                     'data_type' => $attr->data_type,
-                    'category' => $attr->category
+                    'category' => $attr->category,
                 ];
             })->toArray();
         } else {
-            $this->variant = new ProductVariant();
+            $this->variant = new ProductVariant;
             $this->isEditing = false;
-            
+
             // Pre-fill product_id if provided
             if (request()->has('product')) {
                 $this->product_id = request()->get('product');
             }
         }
     }
-    
+
     public function setActiveTab($tab)
     {
         $this->activeTab = $tab;
     }
-    
+
     /**
      * Get image uploader configuration for variant images
      */
@@ -255,7 +269,7 @@ class VariantEdit extends Component
             'showPreview' => true,
             'allowReorder' => true,
             'showExistingImages' => true,
-            'uploadText' => 'Upload variant images'
+            'uploadText' => 'Upload variant images',
         ];
     }
 
@@ -269,7 +283,7 @@ class VariantEdit extends Component
             $this->variant->refresh();
             $this->variant->load(['images']);
         }
-        
+
         $count = $data['count'] ?? 0;
         session()->flash('success', "Uploaded {$count} variant images successfully!");
     }
@@ -283,64 +297,64 @@ class VariantEdit extends Component
             $this->variant->refresh();
             $this->variant->load(['images']);
         }
-        
+
         session()->flash('success', 'Variant image deleted successfully.');
     }
-    
+
     // Barcode Management
     public function addBarcode()
     {
         $this->validate([
             'newBarcode' => 'required|string|max:255',
-            'newBarcodeType' => 'required|string'
+            'newBarcodeType' => 'required|string',
         ]);
-        
+
         // Auto-detect barcode type if not manually set
         $detectedType = BarcodeDetector::detectBarcodeType($this->newBarcode);
         $barcodeInfo = BarcodeDetector::getBarcodeInfo($this->newBarcode);
-        
+
         $this->barcodes[] = [
             'id' => null,
             'barcode' => $this->newBarcode,
             'barcode_type' => $this->newBarcodeType ?: $detectedType,
             'is_primary' => count($this->barcodes) === 0,
-            'is_valid' => $barcodeInfo['is_valid']
+            'is_valid' => $barcodeInfo['is_valid'],
         ];
-        
+
         $this->newBarcode = '';
         $this->newBarcodeType = 'EAN13';
         $this->showBarcodeModal = false;
-        
+
         session()->flash('message', 'Barcode added successfully.');
     }
-    
+
     public function removeBarcode($index)
     {
         unset($this->barcodes[$index]);
         $this->barcodes = array_values($this->barcodes);
-        
+
         // Ensure we have a primary barcode
-        if (count($this->barcodes) > 0 && !collect($this->barcodes)->where('is_primary', true)->count()) {
+        if (count($this->barcodes) > 0 && ! collect($this->barcodes)->where('is_primary', true)->count()) {
             $this->barcodes[0]['is_primary'] = true;
         }
     }
-    
+
     public function setPrimaryBarcode($index)
     {
         foreach ($this->barcodes as $key => $barcode) {
             $this->barcodes[$key]['is_primary'] = ($key === $index);
         }
     }
-    
+
     public function generateBarcode()
     {
         $this->newBarcode = Barcode::generateRandomBarcode($this->newBarcodeType);
     }
-    
+
     public function assignFromPool()
     {
         $poolBarcode = BarcodePool::getNextAvailable($this->newBarcodeType);
-        
+
         if ($poolBarcode) {
             $this->newBarcode = $poolBarcode->barcode;
             session()->flash('message', 'Barcode assigned from GS1 pool.');
@@ -348,55 +362,55 @@ class VariantEdit extends Component
             session()->flash('error', "No available {$this->newBarcodeType} barcodes in pool.");
         }
     }
-    
+
     // Pricing Management
     public function addPricing()
     {
         $this->validate([
             'newPricing.retail_price' => 'required|numeric|min:0',
-            'newPricing.cost_price' => 'nullable|numeric|min:0'
+            'newPricing.cost_price' => 'nullable|numeric|min:0',
         ]);
-        
+
         $salesChannel = null;
         if ($this->newPricing['sales_channel_id']) {
             $salesChannel = SalesChannel::find($this->newPricing['sales_channel_id']);
         }
-        
+
         $this->pricing[] = [
             'id' => null,
             'sales_channel_id' => $this->newPricing['sales_channel_id'] ?: null,
             'retail_price' => $this->newPricing['retail_price'],
             'cost_price' => $this->newPricing['cost_price'] ?: null,
-            'channel_name' => $salesChannel->name ?? 'Default'
+            'channel_name' => $salesChannel->name ?? 'Default',
         ];
-        
+
         $this->newPricing = [
             'sales_channel_id' => '',
             'retail_price' => '',
-            'cost_price' => ''
+            'cost_price' => '',
         ];
-        
+
         $this->showPricingModal = false;
         session()->flash('message', 'Pricing added successfully.');
     }
-    
+
     public function removePricing($index)
     {
         unset($this->pricing[$index]);
         $this->pricing = array_values($this->pricing);
     }
-    
+
     // Marketplace Variant Management
     public function addMarketplaceVariant()
     {
         $this->validate([
             'newMarketplaceVariant.marketplace_id' => 'required|exists:marketplaces,id',
             'newMarketplaceVariant.title' => 'required|string|max:255',
-            'newMarketplaceVariant.price_override' => 'nullable|numeric|min:0'
+            'newMarketplaceVariant.price_override' => 'nullable|numeric|min:0',
         ]);
-        
+
         $marketplace = Marketplace::find($this->newMarketplaceVariant['marketplace_id']);
-        
+
         $this->marketplaceVariants[] = [
             'id' => null,
             'marketplace_id' => $this->newMarketplaceVariant['marketplace_id'],
@@ -405,130 +419,130 @@ class VariantEdit extends Component
             'description' => $this->newMarketplaceVariant['description'],
             'price_override' => $this->newMarketplaceVariant['price_override'] ?: null,
             'status' => 'active',
-            'marketplace_data' => $this->newMarketplaceVariant['marketplace_data'] ?? []
+            'marketplace_data' => $this->newMarketplaceVariant['marketplace_data'] ?? [],
         ];
-        
+
         $this->newMarketplaceVariant = [
             'marketplace_id' => '',
             'title' => '',
             'description' => '',
             'price_override' => '',
-            'marketplace_data' => []
+            'marketplace_data' => [],
         ];
-        
+
         $this->showMarketplaceVariantModal = false;
         session()->flash('message', 'Marketplace variant added successfully.');
     }
-    
+
     public function removeMarketplaceVariant($index)
     {
         unset($this->marketplaceVariants[$index]);
         $this->marketplaceVariants = array_values($this->marketplaceVariants);
     }
-    
+
     // Marketplace Barcode Management
     public function addMarketplaceBarcode()
     {
         $this->validate([
             'newMarketplaceBarcode.marketplace_id' => 'required|exists:marketplaces,id',
             'newMarketplaceBarcode.identifier_type' => 'required|string',
-            'newMarketplaceBarcode.identifier_value' => 'required|string|max:255'
+            'newMarketplaceBarcode.identifier_value' => 'required|string|max:255',
         ]);
-        
+
         $marketplace = Marketplace::find($this->newMarketplaceBarcode['marketplace_id']);
-        
+
         $this->marketplaceBarcodes[] = [
             'id' => null,
             'marketplace_id' => $this->newMarketplaceBarcode['marketplace_id'],
             'marketplace_name' => $marketplace->name,
             'identifier_type' => $this->newMarketplaceBarcode['identifier_type'],
             'identifier_value' => $this->newMarketplaceBarcode['identifier_value'],
-            'is_active' => true
+            'is_active' => true,
         ];
-        
+
         $this->newMarketplaceBarcode = [
             'marketplace_id' => '',
             'identifier_type' => 'asin',
-            'identifier_value' => ''
+            'identifier_value' => '',
         ];
-        
+
         $this->showMarketplaceBarcodeModal = false;
         session()->flash('message', 'Marketplace identifier added successfully.');
     }
-    
+
     public function removeMarketplaceBarcode($index)
     {
         unset($this->marketplaceBarcodes[$index]);
         $this->marketplaceBarcodes = array_values($this->marketplaceBarcodes);
     }
-    
+
     // Attribute Management
     public function addProductAttribute()
     {
         $this->validate([
             'newProductAttribute.attribute_key' => 'required|string|max:255',
             'newProductAttribute.attribute_value' => 'required|string',
-            'newProductAttribute.data_type' => 'required|in:string,number,boolean,json'
+            'newProductAttribute.data_type' => 'required|in:string,number,boolean,json',
         ]);
-        
+
         $this->productAttributes[] = [
             'id' => null,
             'attribute_key' => $this->newProductAttribute['attribute_key'],
             'attribute_value' => $this->newProductAttribute['attribute_value'],
             'data_type' => $this->newProductAttribute['data_type'],
-            'category' => $this->newProductAttribute['category']
+            'category' => $this->newProductAttribute['category'],
         ];
-        
+
         $this->newProductAttribute = [
             'attribute_key' => '',
             'attribute_value' => '',
             'data_type' => 'string',
-            'category' => ''
+            'category' => '',
         ];
-        
+
         $this->showProductAttributeModal = false;
         session()->flash('message', 'Product attribute added successfully.');
     }
-    
+
     public function removeProductAttribute($index)
     {
         unset($this->productAttributes[$index]);
         $this->productAttributes = array_values($this->productAttributes);
     }
-    
+
     public function addVariantAttribute()
     {
         $this->validate([
             'newVariantAttribute.attribute_key' => 'required|string|max:255',
             'newVariantAttribute.attribute_value' => 'required|string',
-            'newVariantAttribute.data_type' => 'required|in:string,number,boolean,json'
+            'newVariantAttribute.data_type' => 'required|in:string,number,boolean,json',
         ]);
-        
+
         $this->variantAttributes[] = [
             'id' => null,
             'attribute_key' => $this->newVariantAttribute['attribute_key'],
             'attribute_value' => $this->newVariantAttribute['attribute_value'],
             'data_type' => $this->newVariantAttribute['data_type'],
-            'category' => $this->newVariantAttribute['category']
+            'category' => $this->newVariantAttribute['category'],
         ];
-        
+
         $this->newVariantAttribute = [
             'attribute_key' => '',
             'attribute_value' => '',
             'data_type' => 'string',
-            'category' => ''
+            'category' => '',
         ];
-        
+
         $this->showVariantAttributeModal = false;
         session()->flash('message', 'Variant attribute added successfully.');
     }
-    
+
     public function removeVariantAttribute($index)
     {
         unset($this->variantAttributes[$index]);
         $this->variantAttributes = array_values($this->variantAttributes);
     }
-    
+
     // Main Save Function
     public function save()
     {
@@ -537,8 +551,8 @@ class VariantEdit extends Component
             'product_id' => 'required|exists:products,id',
             'color' => 'required|string|max:255',
             'size' => 'required|string|max:255',
-            'sku' => $this->isEditing 
-                ? 'required|string|max:255|unique:product_variants,sku,' . $this->variant->id
+            'sku' => $this->isEditing
+                ? 'required|string|max:255|unique:product_variants,sku,'.$this->variant->id
                 : 'required|string|max:255|unique:product_variants,sku',
             'status' => 'required|in:active,inactive,out_of_stock',
             'stock_level' => 'nullable|integer|min:0',
@@ -547,37 +561,37 @@ class VariantEdit extends Component
             'package_height' => 'nullable|numeric|min:0',
             'package_weight' => 'nullable|numeric|min:0',
         ]);
-        
+
         // Images are now handled by the ImageUploader component
-        
+
         // Save or update variant
         if ($this->isEditing) {
             $this->variant->update($validatedData);
         } else {
             $this->variant = ProductVariant::create($validatedData);
         }
-        
+
         // Handle barcodes
         $this->saveBarcodes();
-        
+
         // Handle pricing
         $this->savePricing();
-        
+
         // Handle marketplace variants
         $this->saveMarketplaceVariants();
-        
+
         // Handle marketplace barcodes
         $this->saveMarketplaceBarcodes();
-        
+
         // Handle attributes
         $this->saveAttributes();
-        
+
         $message = $this->isEditing ? 'Variant updated successfully.' : 'Variant created successfully.';
         session()->flash('message', $message);
-        
+
         return $this->redirect(route('products.variants.view', $this->variant));
     }
-    
+
     private function saveBarcodes()
     {
         if ($this->isEditing) {
@@ -585,7 +599,7 @@ class VariantEdit extends Component
             $currentBarcodeIds = collect($this->barcodes)->pluck('id')->filter();
             $this->variant->barcodes()->whereNotIn('id', $currentBarcodeIds)->delete();
         }
-        
+
         foreach ($this->barcodes as $barcodeData) {
             if ($barcodeData['id']) {
                 // Update existing barcode
@@ -605,7 +619,7 @@ class VariantEdit extends Component
             }
         }
     }
-    
+
     private function savePricing()
     {
         if ($this->isEditing) {
@@ -613,7 +627,7 @@ class VariantEdit extends Component
             $currentPricingIds = collect($this->pricing)->pluck('id')->filter();
             $this->variant->pricing()->whereNotIn('id', $currentPricingIds)->delete();
         }
-        
+
         foreach ($this->pricing as $pricingData) {
             if ($pricingData['id']) {
                 // Update existing pricing
@@ -633,7 +647,7 @@ class VariantEdit extends Component
             }
         }
     }
-    
+
     private function saveMarketplaceVariants()
     {
         if ($this->isEditing) {
@@ -641,7 +655,7 @@ class VariantEdit extends Component
             $currentIds = collect($this->marketplaceVariants)->pluck('id')->filter();
             $this->variant->marketplaceVariants()->whereNotIn('id', $currentIds)->delete();
         }
-        
+
         foreach ($this->marketplaceVariants as $mvData) {
             if ($mvData['id']) {
                 // Update existing marketplace variant
@@ -667,7 +681,7 @@ class VariantEdit extends Component
             }
         }
     }
-    
+
     private function saveMarketplaceBarcodes()
     {
         if ($this->isEditing) {
@@ -675,7 +689,7 @@ class VariantEdit extends Component
             $currentIds = collect($this->marketplaceBarcodes)->pluck('id')->filter();
             $this->variant->marketplaceBarcodes()->whereNotIn('id', $currentIds)->delete();
         }
-        
+
         foreach ($this->marketplaceBarcodes as $mbData) {
             if ($mbData['id']) {
                 // Update existing marketplace barcode
@@ -697,7 +711,7 @@ class VariantEdit extends Component
             }
         }
     }
-    
+
     private function saveAttributes()
     {
         // Save product attributes
@@ -707,7 +721,7 @@ class VariantEdit extends Component
                 ->whereNotIn('id', $currentProductAttrIds)
                 ->delete();
         }
-        
+
         foreach ($this->productAttributes as $attrData) {
             if ($attrData['id']) {
                 // Update existing product attribute
@@ -728,13 +742,13 @@ class VariantEdit extends Component
                 ]);
             }
         }
-        
+
         // Save variant attributes
         if ($this->isEditing) {
             $currentVariantAttrIds = collect($this->variantAttributes)->pluck('id')->filter();
             $this->variant->attributes()->whereNotIn('id', $currentVariantAttrIds)->delete();
         }
-        
+
         foreach ($this->variantAttributes as $attrData) {
             if ($attrData['id']) {
                 // Update existing variant attribute
@@ -756,7 +770,7 @@ class VariantEdit extends Component
             }
         }
     }
-    
+
     public function cancel()
     {
         if ($this->isEditing) {
@@ -765,41 +779,41 @@ class VariantEdit extends Component
             return $this->redirect(route('products.variants.index'));
         }
     }
-    
+
     public function render()
     {
         $products = Product::query()
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
-            
+
         $salesChannels = SalesChannel::orderBy('name')->get();
         $barcodeTypes = Barcode::BARCODE_TYPES;
         $poolStats = BarcodePool::getStats();
-        
+
         $marketplaces = Marketplace::active()->orderBy('name')->get();
         $identifierTypes = [
             'asin' => 'Amazon ASIN',
             'item_id' => 'eBay Item ID',
             'listing_id' => 'Listing ID',
             'sku' => 'Marketplace SKU',
-            'product_id' => 'Product ID'
+            'product_id' => 'Product ID',
         ];
-        
+
         $attributeDefinitions = AttributeDefinition::active()->ordered()->get();
         $dataTypes = [
             'string' => 'Text',
             'number' => 'Number',
             'boolean' => 'Yes/No',
-            'json' => 'JSON Data'
+            'json' => 'JSON Data',
         ];
-        
+
         $categories = [
             'physical' => 'Physical',
             'functional' => 'Functional',
-            'compliance' => 'Compliance'
+            'compliance' => 'Compliance',
         ];
-        
+
         return view('livewire.pim.products.variants.variant-edit', [
             'products' => $products,
             'salesChannels' => $salesChannels,

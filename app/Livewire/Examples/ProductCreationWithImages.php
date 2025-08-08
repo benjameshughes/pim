@@ -18,29 +18,34 @@ class ProductCreationWithImages extends Component
     // Product Data
     #[Validate('required|string|max:255')]
     public string $name = '';
-    
+
     #[Validate('required|string|max:10')]
     public string $sku = '';
-    
+
     #[Validate('nullable|string')]
     public string $description = '';
-    
+
     #[Validate('required|numeric|min:0')]
     public float $price = 0;
-    
+
     // Variant Data
     #[Validate('nullable|string|max:50')]
     public string $color = '';
-    
+
     #[Validate('nullable|string|max:20')]
     public string $size = '';
 
     // State
     public Product $product;
+
     public ProductVariant $variant;
+
     public bool $productCreated = false;
+
     public bool $variantCreated = false;
+
     public string $currentStep = 'product'; // 'product', 'variant', 'images'
+
     public array $uploadedImages = [];
 
     public function createProduct(): void
@@ -63,10 +68,10 @@ class ProductCreationWithImages extends Component
 
             $this->productCreated = true;
             $this->currentStep = 'variant';
-            
+
             session()->flash('success', 'Product created successfully!');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to create product: ' . $e->getMessage());
+            session()->flash('error', 'Failed to create product: '.$e->getMessage());
         }
     }
 
@@ -83,9 +88,10 @@ class ProductCreationWithImages extends Component
                 ->where('color', $this->color)
                 ->where('size', $this->size)
                 ->first();
-                
+
             if ($existing) {
                 session()->flash('error', 'A variant with this color and size already exists.');
+
                 return;
             }
 
@@ -99,10 +105,10 @@ class ProductCreationWithImages extends Component
 
             $this->variantCreated = true;
             $this->currentStep = 'images';
-            
+
             session()->flash('success', 'Variant created successfully! Now add some images.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to create variant: ' . $e->getMessage());
+            session()->flash('error', 'Failed to create variant: '.$e->getMessage());
         }
     }
 
@@ -121,20 +127,20 @@ class ProductCreationWithImages extends Component
     public function handleImageUpload(array $data): void
     {
         $this->uploadedImages[] = $data;
-        
-        session()->flash('success', 
-            "Uploaded {$data['count']} images successfully! " . 
-            "Total images uploaded: " . collect($this->uploadedImages)->sum('count')
+
+        session()->flash('success',
+            "Uploaded {$data['count']} images successfully! ".
+            'Total images uploaded: '.collect($this->uploadedImages)->sum('count')
         );
     }
 
     public function completeCreation(): void
     {
         $totalImages = collect($this->uploadedImages)->sum('count');
-        
-        session()->flash('success', 
-            "Product creation completed! Created product with " . 
-            ($this->variantCreated ? "1 variant and " : "") . 
+
+        session()->flash('success',
+            'Product creation completed! Created product with '.
+            ($this->variantCreated ? '1 variant and ' : '').
             "{$totalImages} images."
         );
 

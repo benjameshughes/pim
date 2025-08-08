@@ -16,7 +16,7 @@ class BulkOperationsCheckboxTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create and authenticate a user
         $user = User::factory()->create();
         $this->actingAs($user);

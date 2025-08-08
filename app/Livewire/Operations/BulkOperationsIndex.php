@@ -12,7 +12,7 @@ class BulkOperationsIndex extends Component
     use HasRouteTabs;
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [

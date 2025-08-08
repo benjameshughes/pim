@@ -33,30 +33,32 @@ class ProcessVariantImagesListener implements ShouldQueue
         try {
             // Refresh the variant model to ensure it exists in the database
             $variant = $event->variant->fresh();
-            
-            if (!$variant) {
-                Log::error("ProductVariant not found in database", [
-                    'variant_id' => $event->variant->id
+
+            if (! $variant) {
+                Log::error('ProductVariant not found in database', [
+                    'variant_id' => $event->variant->id,
                 ]);
+
                 return;
             }
 
-            Log::info("Processing ProductVariantImported event", [
+            Log::info('Processing ProductVariantImported event', [
                 'variant_id' => $variant->id,
-                'variant_sku' => $variant->sku
+                'variant_sku' => $variant->sku,
             ]);
 
             // Extract image URLs from imported data
             $imageUrls = $this->extractImageUrls($event->importedData);
-            
+
             if (empty($imageUrls)) {
                 Log::info("No image URLs found for variant: {$variant->sku}");
+
                 return;
             }
 
-            Log::info("Found image URLs for variant processing", [
+            Log::info('Found image URLs for variant processing', [
                 'variant_id' => $variant->id,
-                'urls' => $imageUrls
+                'urls' => $imageUrls,
             ]);
 
             // Dispatch the image processing job with fresh variant instance
@@ -68,13 +70,13 @@ class ProcessVariantImagesListener implements ShouldQueue
 
             Log::info("Dispatched variant image processing job for variant: {$variant->sku}", [
                 'variant_id' => $variant->id,
-                'image_count' => count($imageUrls)
+                'image_count' => count($imageUrls),
             ]);
         } catch (\Throwable $e) {
-            Log::error("Failed to handle ProductVariantImported event", [
+            Log::error('Failed to handle ProductVariantImported event', [
                 'variant_id' => $event->variant->id ?? 'unknown',
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
@@ -86,17 +88,17 @@ class ProcessVariantImagesListener implements ShouldQueue
     private function extractImageUrls(array $importedData): array
     {
         $imageUrls = [];
-        
+
         // Look for image URL fields in imported data
         $imageFields = [
             'image_url', 'image_urls', 'image_1', 'image_2', 'image_3', 'image_4', 'image_5',
-            'main_image', 'product_image', 'photo_url', 'picture_url', 'images'
+            'main_image', 'product_image', 'photo_url', 'picture_url', 'images',
         ];
-        
+
         foreach ($imageFields as $field) {
-            if (!empty($importedData[$field])) {
+            if (! empty($importedData[$field])) {
                 $value = $importedData[$field];
-                
+
                 // Handle comma-separated URLs
                 if (is_string($value) && str_contains($value, ',')) {
                     $urls = array_map('trim', explode(',', $value));
@@ -116,7 +118,7 @@ class ProcessVariantImagesListener implements ShouldQueue
                 }
             }
         }
-        
+
         return array_unique($imageUrls);
     }
 
@@ -127,6 +129,7 @@ class ProcessVariantImagesListener implements ShouldQueue
     {
         // Only queue if there are potential image URLs to process
         $imageUrls = $this->extractImageUrls($event->importedData);
-        return !empty($imageUrls);
+
+        return ! empty($imageUrls);
     }
 }

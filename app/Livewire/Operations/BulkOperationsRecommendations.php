@@ -15,11 +15,13 @@ class BulkOperationsRecommendations extends Component
 
     // Local state
     public $recommendations = [];
+
     public $recommendationsLoaded = false;
+
     public $loadingRecommendations = false;
 
     protected $baseRoute = 'operations.bulk';
-    
+
     protected $tabConfig = [
         'tabs' => [
             [
@@ -63,20 +65,20 @@ class BulkOperationsRecommendations extends Component
     public function loadSmartRecommendations()
     {
         $this->loadingRecommendations = true;
-        
+
         try {
             $selectedVariants = $this->getSelectedVariants();
-            
+
             // Mock recommendations service - in a real app this would be a proper service
             $this->recommendations = $this->generateMockRecommendations($selectedVariants);
             $this->recommendationsLoaded = true;
-            
+
         } catch (\Exception $e) {
             Log::error('Smart recommendations loading failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Failed to load smart recommendations: ' . $e->getMessage());
+            session()->flash('error', 'Failed to load smart recommendations: '.$e->getMessage());
             $this->recommendations = [];
         }
-        
+
         $this->loadingRecommendations = false;
     }
 
@@ -93,9 +95,9 @@ class BulkOperationsRecommendations extends Component
                 'title' => 'Optimize Product Titles',
                 'description' => 'Improve SEO and conversion rates by optimizing product titles with keywords and features.',
                 'impact' => 'High - Can increase click-through rates by 15-25%',
-                'action' => 'Generate optimized titles for ' . count($selectedVariants) . ' selected variants',
+                'action' => 'Generate optimized titles for '.count($selectedVariants).' selected variants',
                 'estimated_time' => '5 minutes',
-                'category' => 'SEO & Marketing'
+                'category' => 'SEO & Marketing',
             ];
 
             $recommendations[] = [
@@ -107,7 +109,7 @@ class BulkOperationsRecommendations extends Component
                 'impact' => 'Medium - Improves customer experience and reduces returns',
                 'action' => 'Add standardized attributes to products',
                 'estimated_time' => '10 minutes',
-                'category' => 'Data Quality'
+                'category' => 'Data Quality',
             ];
 
             $recommendations[] = [
@@ -119,7 +121,7 @@ class BulkOperationsRecommendations extends Component
                 'impact' => 'High - Can increase profit margins by 5-10%',
                 'action' => 'Review and adjust pricing for selected products',
                 'estimated_time' => '15 minutes',
-                'category' => 'Pricing'
+                'category' => 'Pricing',
             ];
         }
 
@@ -133,7 +135,7 @@ class BulkOperationsRecommendations extends Component
             'impact' => 'Medium - Required for most marketplaces',
             'action' => 'Auto-assign barcodes from available pool',
             'estimated_time' => '2 minutes',
-            'category' => 'Compliance'
+            'category' => 'Compliance',
         ];
 
         $recommendations[] = [
@@ -145,7 +147,7 @@ class BulkOperationsRecommendations extends Component
             'impact' => 'Medium - Better images increase conversion rates',
             'action' => 'Review and optimize product images',
             'estimated_time' => '20 minutes',
-            'category' => 'Marketing'
+            'category' => 'Marketing',
         ];
 
         $recommendations[] = [
@@ -157,7 +159,7 @@ class BulkOperationsRecommendations extends Component
             'impact' => 'High - Increases sales channels and revenue potential',
             'action' => 'Configure and sync to new marketplaces',
             'estimated_time' => '30 minutes',
-            'category' => 'Distribution'
+            'category' => 'Distribution',
         ];
 
         return $recommendations;
@@ -167,9 +169,10 @@ class BulkOperationsRecommendations extends Component
     {
         try {
             $recommendation = collect($this->recommendations)->firstWhere('id', $recommendationId);
-            
-            if (!$recommendation) {
+
+            if (! $recommendation) {
                 session()->flash('error', 'Recommendation not found.');
+
                 return;
             }
 
@@ -177,44 +180,44 @@ class BulkOperationsRecommendations extends Component
             switch ($recommendationId) {
                 case 'optimize-titles':
                     return redirect()->route('operations.bulk.templates');
-                
+
                 case 'add-missing-attributes':
                     return redirect()->route('operations.bulk.attributes');
-                
+
                 case 'pricing-optimization':
                     return redirect()->route('pricing');
-                
+
                 case 'barcode-assignment':
                     return redirect()->route('barcodes.pool.index');
-                
+
                 case 'image-optimization':
                     return redirect()->route('images');
-                
+
                 case 'marketplace-sync':
                     return redirect()->route('sync.amazon');
-                
+
                 default:
-                    session()->flash('message', 'Recommendation "' . $recommendation['title'] . '" has been noted for future implementation.');
+                    session()->flash('message', 'Recommendation "'.$recommendation['title'].'" has been noted for future implementation.');
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Recommendation execution failed', ['error' => $e->getMessage()]);
-            session()->flash('error', 'Error executing recommendation: ' . $e->getMessage());
+            session()->flash('error', 'Error executing recommendation: '.$e->getMessage());
         }
     }
 
     public function dismissRecommendation($recommendationId)
     {
-        $this->recommendations = array_filter($this->recommendations, function($rec) use ($recommendationId) {
+        $this->recommendations = array_filter($this->recommendations, function ($rec) use ($recommendationId) {
             return $rec['id'] !== $recommendationId;
         });
-        
+
         session()->flash('message', 'Recommendation dismissed.');
     }
 
     public function getPriorityColor($priority)
     {
-        return match($priority) {
+        return match ($priority) {
             'high' => 'red',
             'medium' => 'amber',
             'low' => 'blue',
@@ -224,7 +227,7 @@ class BulkOperationsRecommendations extends Component
 
     public function getPriorityIcon($priority)
     {
-        return match($priority) {
+        return match ($priority) {
             'high' => 'exclamation-triangle',
             'medium' => 'exclamation-circle',
             'low' => 'information-circle',

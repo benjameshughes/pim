@@ -3,24 +3,25 @@
 namespace App\Livewire\Pim\Barcodes;
 
 use App\Models\Barcode;
-use App\Models\ProductVariant;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+// Layout handled by wrapper template
 class BarcodeIndex extends Component
 {
     use WithPagination;
-    
+
     public string $search = '';
+
     public string $typeFilter = '';
+
     public int $perPage = 25;
-    
+
     protected $listeners = [
-        'refreshList' => '$refresh'
+        'refreshList' => '$refresh',
     ];
-    
+
     /**
      * Update search and reset pagination
      */
@@ -28,7 +29,7 @@ class BarcodeIndex extends Component
     {
         $this->resetPage();
     }
-    
+
     /**
      * Update filter and reset pagination
      */
@@ -36,7 +37,7 @@ class BarcodeIndex extends Component
     {
         $this->resetPage();
     }
-    
+
     /**
      * Get barcodes query with filters
      */
@@ -44,23 +45,23 @@ class BarcodeIndex extends Component
     {
         $query = Barcode::query()
             ->with(['variant.product:id,name']);
-        
-        if (!empty($this->search)) {
+
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('barcode', 'like', "%{$this->search}%")
-                  ->orWhereHas('variant.product', function ($productQuery) {
-                      $productQuery->where('name', 'like', "%{$this->search}%");
-                  });
+                    ->orWhereHas('variant.product', function ($productQuery) {
+                        $productQuery->where('name', 'like', "%{$this->search}%");
+                    });
             });
         }
-        
-        if (!empty($this->typeFilter)) {
+
+        if (! empty($this->typeFilter)) {
             $query->where('barcode_type', $this->typeFilter);
         }
-        
+
         return $query->latest()->paginate($this->perPage);
     }
-    
+
     /**
      * Render the component
      */

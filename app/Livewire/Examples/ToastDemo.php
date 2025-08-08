@@ -10,11 +10,17 @@ use Livewire\Component;
 class ToastDemo extends Component
 {
     public string $customTitle = 'Custom Toast Title';
+
     public string $customBody = 'This is a custom toast message with detailed content.';
+
     public string $selectedType = 'info';
+
     public string $selectedPosition = 'top-right';
+
     public int $customDuration = 4000;
+
     public bool $closable = true;
+
     public bool $persistent = false;
 
     /**
@@ -65,9 +71,9 @@ class ToastDemo extends Component
     public function showPositionDemo()
     {
         $positions = ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
-        
+
         foreach ($positions as $index => $position) {
-            Toast::info("Position Demo", "This toast is positioned at: {$position}")
+            Toast::info('Position Demo', "This toast is positioned at: {$position}")
                 ->position($position)
                 ->duration(3000 + ($index * 500)) // Staggered duration
                 ->send($this);
@@ -98,7 +104,7 @@ class ToastDemo extends Component
     {
         // Using our new Toast system
         Toast::success('Helper Success', 'This toast was created using the new Toast system.')->send($this);
-        
+
         // Using the main toast helper
         Toast::info('Helper Info', 'This toast was created using the Toast class.')->send($this);
     }
@@ -124,7 +130,7 @@ class ToastDemo extends Component
         Toast::clear();
         $this->dispatch('toast-added'); // Trigger refresh
     }
-    
+
     /**
      * Demo navigation persistence.
      */
@@ -134,12 +140,12 @@ class ToastDemo extends Component
             ->persist() // This makes it survive navigation
             ->duration(15000) // Long duration to test
             ->send($this);
-            
+
         Toast::info('I disappear on navigation', 'I\'m a regular toast that won\'t survive page changes.')
             ->duration(15000)
             ->send($this);
     }
-    
+
     /**
      * Demo both persist() and persistent().
      */

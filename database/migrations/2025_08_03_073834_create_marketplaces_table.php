@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->json('default_settings')->nullable(); // Platform-specific defaults
             $table->timestamps();
-            
+
             $table->index(['platform', 'status']);
         });
     }

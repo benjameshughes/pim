@@ -14,7 +14,7 @@ trait HasImageUpload
     {
         // Refresh the component to show new images
         $this->dispatch('$refresh');
-        
+
         // Call custom handler if it exists
         if (method_exists($this, 'handleImagesUploaded')) {
             $this->handleImagesUploaded($data);
@@ -29,7 +29,7 @@ trait HasImageUpload
     {
         // Refresh the component to reflect deletion
         $this->dispatch('$refresh');
-        
+
         // Call custom handler if it exists
         if (method_exists($this, 'handleImageDeleted')) {
             $this->handleImageDeleted($data);
@@ -44,7 +44,7 @@ trait HasImageUpload
     {
         // Refresh the component to reflect new order
         $this->dispatch('$refresh');
-        
+
         // Call custom handler if it exists
         if (method_exists($this, 'handleImagesReordered')) {
             $this->handleImagesReordered($data);
@@ -59,7 +59,7 @@ trait HasImageUpload
     {
         // Refresh the component to show processing completion
         $this->dispatch('$refresh');
-        
+
         // Call custom handler if it exists
         if (method_exists($this, 'handleImageProcessed')) {
             $this->handleImageProcessed($imageData);
@@ -74,7 +74,7 @@ trait HasImageUpload
     {
         // Refresh the component to show processing failure
         $this->dispatch('$refresh');
-        
+
         // Call custom handler if it exists
         if (method_exists($this, 'handleImageProcessingFailed')) {
             $this->handleImageProcessingFailed($imageData);
@@ -99,7 +99,7 @@ trait HasImageUpload
             'showPreview' => true,
             'allowReorder' => true,
             'showExistingImages' => true,
-            'uploadText' => 'Drag & drop images here or click to browse'
+            'uploadText' => 'Drag & drop images here or click to browse',
         ];
     }
 
@@ -109,10 +109,10 @@ trait HasImageUpload
     protected function getImageUploaderConfigForType(string $imageType): array
     {
         $baseConfig = $this->getImageUploaderConfig();
-        
+
         return array_merge($baseConfig, [
             'imageType' => $imageType,
-            'uploadText' => "Upload {$imageType} images"
+            'uploadText' => "Upload {$imageType} images",
         ]);
     }
 

@@ -19,7 +19,7 @@ class WorksheetInfo
             'name' => $this->name,
             'headers' => count($this->headers),
             'rows' => $this->rowCount,
-            'preview' => $this->preview
+            'preview' => $this->preview,
         ];
     }
 }

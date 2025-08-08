@@ -2,13 +2,14 @@
 
 namespace App\Services;
 
-use PHPShopify\ShopifySDK;
-use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Support\Facades\Log;
+use PHPShopify\ShopifySDK;
 
 class ShopifyConnectService
 {
     private ShopifySDK $shopify;
+
     private array $config;
 
     public function __construct()
@@ -18,11 +19,11 @@ class ShopifyConnectService
             'AccessToken' => config('services.shopify.access_token'),
             'ApiVersion' => config('services.shopify.api_version', '2024-07'),
         ];
-        
+
         if (empty($this->config['ShopUrl'])) {
             throw new Exception('Shopify store URL is not configured');
         }
-        
+
         if (empty($this->config['AccessToken'])) {
             throw new Exception('Shopify access token is not configured');
         }
@@ -38,27 +39,27 @@ class ShopifyConnectService
         Log::info('Creating Shopify product', [
             'title' => $productData['product']['title'] ?? 'Unknown',
             'variants_count' => count($productData['product']['variants'] ?? []),
-            'payload' => $productData
+            'payload' => $productData,
         ]);
 
         try {
             // Use the SDK to create the product
             $product = $this->shopify->Product->post($productData['product']);
-            
+
             return [
                 'success' => true,
                 'product_id' => $product['id'] ?? null,
-                'response' => ['product' => $product]
+                'response' => ['product' => $product],
             ];
         } catch (Exception $e) {
             Log::error('Shopify product creation failed', [
                 'error' => $e->getMessage(),
-                'payload' => $productData
+                'payload' => $productData,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -70,16 +71,16 @@ class ShopifyConnectService
     {
         try {
             $product = $this->shopify->Product($productId)->put($productData['product']);
-            
+
             return [
                 'success' => true,
                 'product_id' => $product['id'] ?? null,
-                'response' => ['product' => $product]
+                'response' => ['product' => $product],
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -91,15 +92,15 @@ class ShopifyConnectService
     {
         try {
             $result = $this->shopify->Product($productId)->delete();
-            
+
             return [
                 'success' => true,
-                'response' => $result
+                'response' => $result,
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -111,23 +112,23 @@ class ShopifyConnectService
     {
         try {
             $params = ['limit' => $limit];
-            
+
             if ($pageInfo) {
                 parse_str($pageInfo, $pageParams);
                 $params = array_merge($params, $pageParams);
             }
 
             $products = $this->shopify->Product->get($params);
-            
+
             return [
                 'success' => true,
                 'data' => ['products' => $products],
-                'pagination' => null // SDK handles pagination differently
+                'pagination' => null, // SDK handles pagination differently
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -139,15 +140,15 @@ class ShopifyConnectService
     {
         try {
             $product = $this->shopify->Product($productId)->get();
-            
+
             return [
                 'success' => true,
-                'data' => ['product' => $product]
+                'data' => ['product' => $product],
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -159,17 +160,17 @@ class ShopifyConnectService
     {
         try {
             $shop = $this->shopify->Shop->get();
-            
+
             return [
                 'success' => true,
                 'message' => 'Successfully connected to Shopify store',
-                'response' => ['shop' => $shop]
+                'response' => ['shop' => $shop],
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => 'Connection failed: ' . $e->getMessage(),
-                'error' => $e->getMessage()
+                'message' => 'Connection failed: '.$e->getMessage(),
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -201,17 +202,17 @@ Query;
 
         try {
             $response = $this->shopify->GraphQL->post($graphQL);
-            
+
             return [
                 'success' => true,
-                'data' => $response['data'] ?? []
+                'data' => $response['data'] ?? [],
             ];
         } catch (Exception $e) {
             Log::error('Failed to get taxonomy categories', ['error' => $e->getMessage()]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -242,17 +243,17 @@ Query;
 
         try {
             $response = $this->shopify->GraphQL->post($graphQL);
-            
+
             return [
                 'success' => true,
-                'data' => $response['data'] ?? []
+                'data' => $response['data'] ?? [],
             ];
         } catch (Exception $e) {
             Log::error('Failed to search taxonomy categories', ['error' => $e->getMessage()]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -264,25 +265,25 @@ Query;
     {
         try {
             $results = [];
-            
+
             foreach ($metafields as $metafield) {
                 $result = $this->shopify->Product($productId)->Metafield->post($metafield);
                 $results[] = $result;
             }
-            
+
             return [
                 'success' => true,
-                'data' => $results
+                'data' => $results,
             ];
         } catch (Exception $e) {
             Log::error('Failed to create product metafields', [
                 'product_id' => $productId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -317,21 +318,21 @@ Query;
 
         try {
             $response = $this->shopify->GraphQL->post($graphQL);
-            
+
             return [
                 'success' => true,
-                'data' => $response['data'] ?? []
+                'data' => $response['data'] ?? [],
             ];
         } catch (Exception $e) {
             Log::error('Failed to update product category', [
                 'product_gid' => $productGid,
                 'category_id' => $categoryId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }
@@ -343,65 +344,65 @@ Query;
     {
         // Build the metafields array for GraphQL
         $metafieldsGraphQL = '';
-        if (!empty($productInput['metafields'])) {
+        if (! empty($productInput['metafields'])) {
             $metafields = [];
             foreach ($productInput['metafields'] as $metafield) {
                 $metafields[] = '{
-                    namespace: "' . $metafield['namespace'] . '"
-                    key: "' . $metafield['key'] . '"
-                    value: "' . addslashes($metafield['value']) . '"
-                    type: "' . $metafield['type'] . '"
+                    namespace: "'.$metafield['namespace'].'"
+                    key: "'.$metafield['key'].'"
+                    value: "'.addslashes($metafield['value']).'"
+                    type: "'.$metafield['type'].'"
                 }';
             }
-            $metafieldsGraphQL = 'metafields: [' . implode(',', $metafields) . ']';
+            $metafieldsGraphQL = 'metafields: ['.implode(',', $metafields).']';
         }
 
         // Build category input
-        $categoryInput = !empty($productInput['category']) ? 'category: "' . $productInput['category'] . '"' : '';
+        $categoryInput = ! empty($productInput['category']) ? 'category: "'.$productInput['category'].'"' : '';
 
         // Build variants array
         $variantsGraphQL = '';
-        if (!empty($productInput['variants'])) {
+        if (! empty($productInput['variants'])) {
             $variants = [];
             foreach ($productInput['variants'] as $variant) {
                 $variantFields = [];
-                $variantFields[] = 'sku: "' . addslashes($variant['sku']) . '"';
-                $variantFields[] = 'price: "' . $variant['price'] . '"';
-                
-                if (!empty($variant['barcode'])) {
-                    $variantFields[] = 'barcode: "' . $variant['barcode'] . '"';
+                $variantFields[] = 'sku: "'.addslashes($variant['sku']).'"';
+                $variantFields[] = 'price: "'.$variant['price'].'"';
+
+                if (! empty($variant['barcode'])) {
+                    $variantFields[] = 'barcode: "'.$variant['barcode'].'"';
                 }
-                
-                if (!empty($variant['inventory_quantity'])) {
-                    $variantFields[] = 'inventoryQuantities: [{availableQuantity: ' . $variant['inventory_quantity'] . ', locationId: "gid://shopify/Location/1"}]';
+
+                if (! empty($variant['inventory_quantity'])) {
+                    $variantFields[] = 'inventoryQuantities: [{availableQuantity: '.$variant['inventory_quantity'].', locationId: "gid://shopify/Location/1"}]';
                 }
 
                 // Add option values
                 for ($i = 1; $i <= 3; $i++) {
-                    if (!empty($variant["option{$i}"])) {
-                        $variantFields[] = "option{$i}: \"" . addslashes($variant["option{$i}"]) . '"';
+                    if (! empty($variant["option{$i}"])) {
+                        $variantFields[] = "option{$i}: \"".addslashes($variant["option{$i}"]).'"';
                     }
                 }
 
-                $variants[] = '{' . implode(', ', $variantFields) . '}';
+                $variants[] = '{'.implode(', ', $variantFields).'}';
             }
-            $variantsGraphQL = 'variants: [' . implode(',', $variants) . ']';
+            $variantsGraphQL = 'variants: ['.implode(',', $variants).']';
         }
 
         // Build options array with proper GraphQL structure
         $optionsGraphQL = '';
-        if (!empty($productInput['options'])) {
+        if (! empty($productInput['options'])) {
             $options = [];
             foreach ($productInput['options'] as $option) {
-                $values = array_map(function($value) {
-                    return '{name: "' . addslashes($value) . '"}';
+                $values = array_map(function ($value) {
+                    return '{name: "'.addslashes($value).'"}';
                 }, $option['values']);
                 $options[] = '{
-                    name: "' . addslashes($option['name']) . '"
-                    values: [' . implode(',', $values) . ']
+                    name: "'.addslashes($option['name']).'"
+                    values: ['.implode(',', $values).']
                 }';
             }
-            $optionsGraphQL = 'productOptions: [' . implode(',', $options) . ']';
+            $optionsGraphQL = 'productOptions: ['.implode(',', $options).']';
         }
 
         $graphQL = <<<Query
@@ -449,24 +450,24 @@ Query;
             Log::info('Creating product with category and metafields via GraphQL', [
                 'title' => $productInput['title'],
                 'category' => $productInput['category'] ?? null,
-                'metafields_count' => count($productInput['metafields'] ?? [])
+                'metafields_count' => count($productInput['metafields'] ?? []),
             ]);
 
             $response = $this->shopify->GraphQL->post($graphQL);
-            
+
             return [
                 'success' => true,
-                'data' => $response['data'] ?? []
+                'data' => $response['data'] ?? [],
             ];
         } catch (Exception $e) {
             Log::error('Failed to create product with category and metafields', [
                 'error' => $e->getMessage(),
-                'graphql' => $graphQL
+                'graphql' => $graphQL,
             ]);
-            
+
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         }
     }

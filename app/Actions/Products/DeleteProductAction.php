@@ -10,38 +10,37 @@ use InvalidArgumentException;
 
 /**
  * Delete Product Action
- * 
+ *
  * Handles safe deletion of products with cascading cleanup.
  * Manages related data removal and maintains referential integrity.
- * 
- * @package App\Actions\Products
  */
 class DeleteProductAction extends BaseAction
 {
     /**
      * Execute product deletion
-     * 
-     * @param Product $product Product to delete
-     * @param bool $forceDelete Whether to force delete (bypass soft delete if implemented)
+     *
+     * @param  Product  $product  Product to delete
+     * @param  bool  $forceDelete  Whether to force delete (bypass soft delete if implemented)
      * @return bool Success status
+     *
      * @throws InvalidArgumentException If product is invalid
      */
     public function execute(...$params): bool
     {
         $product = $params[0];
         $forceDelete = $params[1] ?? false;
-        
-        if (!$product instanceof Product) {
+
+        if (! $product instanceof Product) {
             throw new InvalidArgumentException('First parameter must be a Product instance');
         }
-        
+
         return DB::transaction(function () use ($product, $forceDelete) {
             // Handle pre-deletion cleanup
             $this->handlePreDeletion($product);
-            
+
             // Delete related data first to maintain referential integrity
             $this->deleteRelatedData($product);
-            
+
             // Delete the product itself
             if ($forceDelete) {
                 return $product->forceDelete();
@@ -50,13 +49,13 @@ class DeleteProductAction extends BaseAction
             }
         });
     }
-    
+
     /**
      * Handle pre-deletion validation and preparation
-     * 
-     * @param Product $product Product to be deleted
+     *
+     * @param  Product  $product  Product to be deleted
+     *
      * @throws InvalidArgumentException If product cannot be deleted
-     * @return void
      */
     protected function handlePreDeletion(Product $product): void
     {
@@ -66,43 +65,41 @@ class DeleteProductAction extends BaseAction
             // You might want to prevent deletion or handle variants differently
             // For now, we'll cascade delete them, but this could be configurable
         }
-        
+
         // Additional business logic checks can be added here
         // For example, checking if product is part of active orders, etc.
     }
-    
+
     /**
      * Delete related data in proper order
-     * 
-     * @param Product $product Product instance
-     * @return void
+     *
+     * @param  Product  $product  Product instance
      */
     protected function deleteRelatedData(Product $product): void
     {
         // Delete variants first (they depend on product)
         $this->deleteVariants($product);
-        
+
         // Delete product images
         $this->deleteImages($product);
-        
+
         // Delete product attributes
         $product->attributes()->delete();
-        
+
         // Delete product metadata
         $product->metadata()->delete();
-        
+
         // Detach categories (many-to-many relationship)
         $product->categories()->detach();
-        
+
         // Handle any other related data
         $this->deleteAdditionalRelatedData($product);
     }
-    
+
     /**
      * Delete product variants and their related data
-     * 
-     * @param Product $product Product instance
-     * @return void
+     *
+     * @param  Product  $product  Product instance
      */
     protected function deleteVariants(Product $product): void
     {
@@ -113,24 +110,23 @@ class DeleteProductAction extends BaseAction
             $variant->attributes()->delete();
             $variant->marketplaceVariants()->delete();
             $variant->marketplaceBarcodes()->delete();
-            
+
             // Delete variant images
             $this->deleteVariantImages($variant);
-            
+
             // Set deletion reason for archiving (if implemented)
             $variant->deletion_reason = 'parent_product_deleted';
             $variant->deletion_notes = "Deleted due to parent product '{$product->name}' deletion";
-            
+
             // Delete the variant
             $variant->delete();
         }
     }
-    
+
     /**
      * Delete product images from storage
-     * 
-     * @param Product $product Product instance
-     * @return void
+     *
+     * @param  Product  $product  Product instance
      */
     protected function deleteImages(Product $product): void
     {
@@ -142,7 +138,7 @@ class DeleteProductAction extends BaseAction
                 }
             }
         }
-        
+
         // Delete product images from relationship
         foreach ($product->productImages as $productImage) {
             if (Storage::exists($productImage->image_path)) {
@@ -150,7 +146,7 @@ class DeleteProductAction extends BaseAction
             }
             $productImage->delete();
         }
-        
+
         // Delete all related images (including variant images)
         foreach ($product->allImages as $image) {
             if (Storage::exists($image->image_path)) {
@@ -159,12 +155,11 @@ class DeleteProductAction extends BaseAction
             $image->delete();
         }
     }
-    
+
     /**
      * Delete variant images from storage
-     * 
-     * @param \App\Models\ProductVariant $variant Variant instance
-     * @return void
+     *
+     * @param  \App\Models\ProductVariant  $variant  Variant instance
      */
     protected function deleteVariantImages($variant): void
     {
@@ -176,7 +171,7 @@ class DeleteProductAction extends BaseAction
                 }
             }
         }
-        
+
         // Delete variant images from relationship
         foreach ($variant->variantImages as $variantImage) {
             if (Storage::exists($variantImage->image_path)) {
@@ -184,18 +179,17 @@ class DeleteProductAction extends BaseAction
             }
             $variantImage->delete();
         }
-        
+
         // Delete media library images if using Spatie Media Library
         if (method_exists($variant, 'clearMediaCollection')) {
             $variant->clearMediaCollection('images');
         }
     }
-    
+
     /**
      * Delete additional related data
-     * 
-     * @param Product $product Product instance
-     * @return void
+     *
+     * @param  Product  $product  Product instance
      */
     protected function deleteAdditionalRelatedData(Product $product): void
     {
@@ -203,19 +197,18 @@ class DeleteProductAction extends BaseAction
         if (class_exists('App\Models\ShopifyProductSync')) {
             $product->shopifySyncs()->delete();
         }
-        
+
         // Handle any other marketplace sync records
         // This can be extended as needed
-        
+
         // Handle any cached data
         $this->clearProductCache($product);
     }
-    
+
     /**
      * Clear any cached data related to the product
-     * 
-     * @param Product $product Product instance
-     * @return void
+     *
+     * @param  Product  $product  Product instance
      */
     protected function clearProductCache(Product $product): void
     {
@@ -225,11 +218,11 @@ class DeleteProductAction extends BaseAction
             "product.slug.{$product->slug}",
             "product.{$product->parent_sku}",
         ];
-        
+
         foreach ($cacheKeys as $key) {
             \Cache::forget($key);
         }
-        
+
         // Clear any tags-based cache if implemented
         if (method_exists(\Cache::class, 'tags')) {
             \Cache::tags(['products', "product.{$product->id}"])->flush();

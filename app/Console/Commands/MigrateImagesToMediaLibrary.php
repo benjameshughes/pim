@@ -6,9 +6,6 @@ use App\Exceptions\MediaLibraryException;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
 
 class MigrateImagesToMediaLibrary extends Command
 {
@@ -32,7 +29,7 @@ class MigrateImagesToMediaLibrary extends Command
     public function handle()
     {
         $isDryRun = $this->option('dry-run');
-        
+
         if ($isDryRun) {
             $this->info('🔍 DRY RUN MODE - No changes will be made');
         } else {
@@ -48,11 +45,12 @@ class MigrateImagesToMediaLibrary extends Command
     private function migrateProductImages(bool $isDryRun)
     {
         $this->info('📦 Processing Product images...');
-        
+
         $products = Product::whereNotNull('images')->get();
-        
+
         if ($products->isEmpty()) {
             $this->line('   No products with images found.');
+
             return;
         }
 
@@ -61,14 +59,14 @@ class MigrateImagesToMediaLibrary extends Command
 
         foreach ($products as $product) {
             $images = $product->images ?? [];
-            
+
             foreach ($images as $index => $imageData) {
                 $this->migrateImage($product, $imageData, $index, $isDryRun, 'Product');
             }
-            
+
             $progressBar->advance();
         }
-        
+
         $progressBar->finish();
         $this->newLine();
     }
@@ -76,11 +74,12 @@ class MigrateImagesToMediaLibrary extends Command
     private function migrateVariantImages(bool $isDryRun)
     {
         $this->info('🎨 Processing ProductVariant images...');
-        
+
         $variants = ProductVariant::whereNotNull('images')->get();
-        
+
         if ($variants->isEmpty()) {
             $this->line('   No variants with images found.');
+
             return;
         }
 
@@ -89,26 +88,28 @@ class MigrateImagesToMediaLibrary extends Command
 
         foreach ($variants as $variant) {
             $images = $variant->images ?? [];
-            
+
             // Handle both array and string formats
             if (is_string($images)) {
                 $this->line("   ⚠️  Variant {$variant->id}: Images stored as string, skipping");
+
                 continue;
             }
-            
+
             foreach ($images as $index => $imageData) {
                 // Ensure imageData is an array
                 if (is_string($imageData)) {
                     $this->line("   ⚠️  Variant {$variant->id}: Image data is string: {$imageData}");
+
                     continue;
                 }
-                
+
                 $this->migrateImage($variant, $imageData, $index, $isDryRun, 'Variant');
             }
-            
+
             $progressBar->advance();
         }
-        
+
         $progressBar->finish();
         $this->newLine();
     }
@@ -120,18 +121,19 @@ class MigrateImagesToMediaLibrary extends Command
         $url = $imageData['url'] ?? null;
         $originalUrl = $imageData['imported_from'] ?? null;
 
-        if (!$path) {
+        if (! $path) {
             throw MediaLibraryException::fileNotFound("Missing path for {$modelType} {$model->id} image {$index}");
         }
 
-        $fullPath = storage_path('app/public/' . $path);
-        
-        if (!file_exists($fullPath)) {
+        $fullPath = storage_path('app/public/'.$path);
+
+        if (! file_exists($fullPath)) {
             throw MediaLibraryException::fileNotFound($path);
         }
 
         if ($isDryRun) {
             $this->line("   📋 Would migrate: {$path} for {$modelType} {$model->id}");
+
             return;
         }
 

@@ -34,7 +34,7 @@ abstract class BaseRecommendationAction implements RecommendationActionInterface
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return false;
         }
     }
@@ -44,7 +44,7 @@ abstract class BaseRecommendationAction implements RecommendationActionInterface
      */
     public function canExecute(array $variantIds): bool
     {
-        return !empty($variantIds);
+        return ! empty($variantIds);
     }
 
     /**

@@ -31,11 +31,11 @@ class BulkDeleteJob implements ShouldQueue
             $deleted = $this->modelClass::whereIn('id', $chunk)->delete();
             $totalDeleted += $deleted;
 
-            Log::info("Bulk delete operation", [
+            Log::info('Bulk delete operation', [
                 'model' => $this->modelClass,
                 'ids_count' => count($chunk),
                 'deleted_count' => $deleted,
-                'user_id' => $this->userId
+                'user_id' => $this->userId,
             ]);
         }
 

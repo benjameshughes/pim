@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Exceptions\BarcodeException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
@@ -142,15 +141,17 @@ class BarcodePool extends Model
         foreach ($barcodes as $barcode) {
             try {
                 $barcode = trim($barcode);
-                
+
                 if (empty($barcode)) {
                     $skipped++;
+
                     continue;
                 }
 
                 // Check if barcode already exists
                 if (self::where('barcode', $barcode)->exists()) {
                     $skipped++;
+
                     continue;
                 }
 
@@ -162,7 +163,7 @@ class BarcodePool extends Model
 
                 $imported++;
             } catch (\Exception $e) {
-                $errors[] = "Error importing barcode {$barcode}: " . $e->getMessage();
+                $errors[] = "Error importing barcode {$barcode}: ".$e->getMessage();
                 $skipped++;
             }
         }
@@ -221,7 +222,7 @@ class BarcodePool extends Model
     public static function getBatchStats(?string $batchId = null): array
     {
         $query = self::query();
-        
+
         if ($batchId) {
             $query->where('import_batch_id', $batchId);
         }
@@ -268,7 +269,7 @@ class BarcodePool extends Model
      */
     public function canBeAssigned(): bool
     {
-        return $this->status === 'available' && !$this->is_legacy;
+        return $this->status === 'available' && ! $this->is_legacy;
     }
 
     /**
@@ -279,6 +280,7 @@ class BarcodePool extends Model
         if ($this->date_first_used === null) {
             return $this->update(['date_first_used' => now()]);
         }
+
         return true;
     }
 }

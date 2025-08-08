@@ -15,14 +15,14 @@ class WorksheetAnalysis
 
     public function hasWorksheets(): bool
     {
-        return !empty($this->worksheets);
+        return ! empty($this->worksheets);
     }
 
     public function toArray(): array
     {
         return [
-            'worksheets' => array_map(fn($worksheet) => $worksheet->toArray(), $this->worksheets),
-            'total_count' => $this->getWorksheetCount()
+            'worksheets' => array_map(fn ($worksheet) => $worksheet->toArray(), $this->worksheets),
+            'total_count' => $this->getWorksheetCount(),
         ];
     }
 }

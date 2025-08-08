@@ -4,17 +4,14 @@ namespace App\Livewire;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\BarcodePool;
-use App\Models\Pricing;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('components.layouts.app')]
+// Layout handled by wrapper template
 class Dashboard extends Component
 {
     public $refreshInterval = 30000; // 30 seconds
-    
+
     public function getPimMetricsProperty()
     {
         return [
@@ -41,7 +38,7 @@ class Dashboard extends Component
                 'channel_sync_status' => $this->getChannelSyncStatus(),
                 'localization_progress' => $this->getLocalizationProgress(),
                 'compliance_score' => $this->getComplianceScore(),
-            ]
+            ],
         ];
     }
 
@@ -69,14 +66,16 @@ class Dashboard extends Component
     private function getCatalogCompletenessScore(): float
     {
         $totalVariants = ProductVariant::count();
-        if ($totalVariants === 0) return 100.0;
-        
+        if ($totalVariants === 0) {
+            return 100.0;
+        }
+
         $completeVariants = ProductVariant::whereNotNull('color')
             ->whereNotNull('size')
             ->whereHas('barcodes')
             ->whereHas('pricing')
             ->count();
-            
+
         return round(($completeVariants / $totalVariants) * 100, 1);
     }
 
@@ -101,6 +100,7 @@ class Dashboard extends Component
     {
         $thisWeek = $this->getCatalogCompletenessScore();
         $lastWeek = 85.0; // Mock historical data
+
         return $thisWeek > $lastWeek ? 'improving' : ($thisWeek < $lastWeek ? 'declining' : 'stable');
     }
 
@@ -110,13 +110,15 @@ class Dashboard extends Component
         $recentProducts = Product::where('created_at', '>=', now()->subMonth())
             ->where('status', 'active')
             ->get();
-            
-        if ($recentProducts->isEmpty()) return 0.0;
-        
+
+        if ($recentProducts->isEmpty()) {
+            return 0.0;
+        }
+
         $avgDays = $recentProducts->avg(function ($product) {
             return $product->created_at->diffInDays($product->updated_at ?? $product->created_at);
         });
-        
+
         return round($avgDays ?? 3.5, 1);
     }
 
@@ -124,7 +126,7 @@ class Dashboard extends Component
     {
         $totalProducts = Product::count();
         $productsWithVariants = Product::has('variants', '>', 1)->count();
-        
+
         return $totalProducts > 0 ? round(($productsWithVariants / $totalProducts) * 100, 1) : 0.0;
     }
 
@@ -132,7 +134,7 @@ class Dashboard extends Component
     {
         $totalVariants = ProductVariant::count();
         $autoAssignedBarcodes = ProductVariant::whereHas('barcodes')->count();
-        
+
         return $totalVariants > 0 ? round(($autoAssignedBarcodes / $totalVariants) * 100, 1) : 0.0;
     }
 
@@ -160,9 +162,12 @@ class Dashboard extends Component
     private function getImageCoverage(): float
     {
         $totalProducts = Product::count();
-        if ($totalProducts === 0) return 100.0;
-        
+        if ($totalProducts === 0) {
+            return 100.0;
+        }
+
         $productsWithImages = $this->getProductsWithImages();
+
         return round(($productsWithImages / $totalProducts) * 100, 1);
     }
 
@@ -173,7 +178,7 @@ class Dashboard extends Component
             ->whereNotNull('size')
             ->whereHas('barcodes')
             ->whereHas('pricing')
-            ->whereHas('product', function($query) {
+            ->whereHas('product', function ($query) {
                 $query->whereNotNull('images')->where('images', '!=', '[]');
             })
             ->count();
@@ -183,13 +188,20 @@ class Dashboard extends Component
     {
         $readyProducts = $this->getReadyForExport();
         $totalProducts = ProductVariant::count();
-        
-        if ($totalProducts === 0) return 'synced';
-        
+
+        if ($totalProducts === 0) {
+            return 'synced';
+        }
+
         $percentage = ($readyProducts / $totalProducts) * 100;
-        
-        if ($percentage >= 95) return 'synced';
-        if ($percentage >= 80) return 'partial';
+
+        if ($percentage >= 95) {
+            return 'synced';
+        }
+        if ($percentage >= 80) {
+            return 'partial';
+        }
+
         return 'pending';
     }
 
@@ -204,12 +216,14 @@ class Dashboard extends Component
         $variantsWithBarcodes = ProductVariant::whereHas('barcodes')->count();
         $variantsWithPricing = ProductVariant::whereHas('pricing')->count();
         $totalVariants = ProductVariant::count();
-        
-        if ($totalVariants === 0) return 100.0;
-        
+
+        if ($totalVariants === 0) {
+            return 100.0;
+        }
+
         $barcodeCompliance = ($variantsWithBarcodes / $totalVariants) * 50;
         $pricingCompliance = ($variantsWithPricing / $totalVariants) * 50;
-        
+
         return round($barcodeCompliance + $pricingCompliance, 1);
     }
 
@@ -227,32 +241,32 @@ class Dashboard extends Component
     private function getDataQualityAlerts(): array
     {
         $alerts = [];
-        
+
         $missingBarcodes = $this->getMissingBarcodes();
         if ($missingBarcodes > 0) {
             $alerts[] = ['type' => 'warning', 'message' => "{$missingBarcodes} variants missing barcodes", 'action' => 'assign_barcodes'];
         }
-        
+
         $pricingGaps = $this->getPricingGaps();
         if ($pricingGaps > 0) {
             $alerts[] = ['type' => 'error', 'message' => "{$pricingGaps} variants missing pricing", 'action' => 'add_pricing'];
         }
-        
+
         $completenessScore = $this->getCatalogCompletenessScore();
         if ($completenessScore < 80) {
-            $alerts[] = ['type' => 'info', 'message' => "Catalog completeness below 80%", 'action' => 'enrich_data'];
+            $alerts[] = ['type' => 'info', 'message' => 'Catalog completeness below 80%', 'action' => 'enrich_data'];
         }
-        
+
         return $alerts;
     }
 
     private function getPendingEnrichment(): int
     {
-        return ProductVariant::where(function($query) {
+        return ProductVariant::where(function ($query) {
             $query->whereNull('color')
-                  ->orWhereNull('size')
-                  ->orWhereNull('package_weight')
-                  ->orWhereNull('package_length');
+                ->orWhereNull('size')
+                ->orWhereNull('package_weight')
+                ->orWhereNull('package_length');
         })->count();
     }
 
@@ -288,6 +302,7 @@ class Dashboard extends Component
             $count = ProductVariant::whereDate('created_at', $date)->count();
             $velocity[$date] = $count;
         }
+
         return $velocity;
     }
 
@@ -297,7 +312,7 @@ class Dashboard extends Component
             'ready' => $this->getReadyForExport(),
             'pending_images' => ProductVariant::whereHas('barcodes')
                 ->whereHas('pricing')
-                ->whereDoesntHave('product', function($query) {
+                ->whereDoesntHave('product', function ($query) {
                     $query->whereNotNull('images')->where('images', '!=', '[]');
                 })->count(),
             'pending_data' => $this->getPendingEnrichment(),
@@ -322,12 +337,12 @@ class Dashboard extends Component
         $this->getPimMetricsProperty();
         $this->getPimWorkflowProperty();
         $this->getPimChartsProperty();
-        
+
         // Show success toast using helper function
         toast_success('Dashboard Refreshed', 'All metrics have been updated successfully.')
             ->duration(3000)
             ->send();
-        
+
         $this->dispatch('data-refreshed');
     }
 

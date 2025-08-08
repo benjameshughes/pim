@@ -9,9 +9,10 @@
     'stats' => null,
 ])
 
-<div class="max-w-{{ $maxWidth }} mx-auto @if($withPadding) space-y-6 @endif" 
-     x-data="{ loading: @js($loading) }"
-     x-bind:class="{ 'opacity-50 pointer-events-none': loading }">
+<flux:main>
+    <div class="max-w-{{ $maxWidth }} mx-auto @if($withPadding) space-y-6 @endif" 
+         x-data="{ loading: @js($loading) }"
+         x-bind:class="{ 'opacity-50 pointer-events-none': loading }">
      
     {{-- Page Header --}}
     <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm">
@@ -122,7 +123,8 @@
             </div>
         </div>
     </div>
-</div>
+    </div>
+</flux:main>
 
 {{-- Alpine.js integration for dynamic loading states --}}
 @push('scripts')

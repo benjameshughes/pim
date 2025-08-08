@@ -10,49 +10,40 @@ use InvalidArgumentException;
 
 /**
  * Product Builder
- * 
+ *
  * Fluent API builder for creating and updating products.
  * Provides a clean, readable interface for product construction.
- * 
- * @package App\Builders\Products
  */
 class ProductBuilder extends BaseBuilder
 {
     /**
      * Required fields for product creation
-     * 
-     * @var array
      */
     protected array $required = ['name'];
-    
+
     /**
      * Product instance for updates (null for new products)
-     * 
-     * @var Product|null
      */
     protected ?Product $product = null;
-    
+
     /**
      * Create a new product builder instance
-     * 
-     * @return static
      */
     public static function create(): static
     {
-        return new static();
+        return new static;
     }
-    
+
     /**
      * Create a builder instance for updating an existing product
-     * 
-     * @param Product $product Product to update
-     * @return static
+     *
+     * @param  Product  $product  Product to update
      */
     public static function update(Product $product): static
     {
-        $builder = new static();
+        $builder = new static;
         $builder->product = $product;
-        
+
         // Pre-populate with existing data for easy modification
         $builder->data = [
             'name' => $product->name,
@@ -62,15 +53,15 @@ class ProductBuilder extends BaseBuilder
             'status' => $product->status,
             'auto_generated' => $product->auto_generated,
         ];
-        
+
         return $builder;
     }
-    
+
     /**
      * Set product name
-     * 
-     * @param string $name Product name
-     * @return static
+     *
+     * @param  string  $name  Product name
+     *
      * @throws InvalidArgumentException If name is empty
      */
     public function name(string $name): static
@@ -78,130 +69,117 @@ class ProductBuilder extends BaseBuilder
         if (empty($name)) {
             throw new InvalidArgumentException('Product name cannot be empty');
         }
-        
+
         return $this->set('name', $name);
     }
-    
+
     /**
      * Set product slug
-     * 
-     * @param string $slug Product slug
-     * @return static
+     *
+     * @param  string  $slug  Product slug
      */
     public function slug(string $slug): static
     {
         return $this->set('slug', $slug);
     }
-    
+
     /**
      * Set product parent SKU
-     * 
-     * @param string $parentSku Parent SKU
-     * @return static
+     *
+     * @param  string  $parentSku  Parent SKU
      */
     public function sku(string $parentSku): static
     {
         return $this->set('parent_sku', $parentSku);
     }
-    
+
     /**
      * Set product parent SKU (alias for sku)
-     * 
-     * @param string $parentSku Parent SKU
-     * @return static
+     *
+     * @param  string  $parentSku  Parent SKU
      */
     public function parentSku(string $parentSku): static
     {
         return $this->sku($parentSku);
     }
-    
+
     /**
      * Set product description
-     * 
-     * @param string|null $description Product description
-     * @return static
+     *
+     * @param  string|null  $description  Product description
      */
     public function description(?string $description): static
     {
         return $this->set('description', $description);
     }
-    
+
     /**
      * Set product status
-     * 
-     * @param string $status Product status (draft, active, inactive, archived)
-     * @return static
+     *
+     * @param  string  $status  Product status (draft, active, inactive, archived)
+     *
      * @throws InvalidArgumentException If status is invalid
      */
     public function status(string $status): static
     {
         $validStatuses = ['draft', 'active', 'inactive', 'archived'];
-        
-        if (!in_array($status, $validStatuses)) {
+
+        if (! in_array($status, $validStatuses)) {
             throw new InvalidArgumentException(
-                'Invalid status. Must be one of: ' . implode(', ', $validStatuses)
+                'Invalid status. Must be one of: '.implode(', ', $validStatuses)
             );
         }
-        
+
         return $this->set('status', $status);
     }
-    
+
     /**
      * Mark product as draft
-     * 
-     * @return static
      */
     public function draft(): static
     {
         return $this->status('draft');
     }
-    
+
     /**
      * Mark product as active
-     * 
-     * @return static
      */
     public function active(): static
     {
         return $this->status('active');
     }
-    
+
     /**
      * Mark product as inactive
-     * 
-     * @return static
      */
     public function inactive(): static
     {
         return $this->status('inactive');
     }
-    
+
     /**
      * Mark product as archived
-     * 
-     * @return static
      */
     public function archived(): static
     {
         return $this->status('archived');
     }
-    
+
     /**
      * Mark product as auto-generated
-     * 
-     * @param bool $autoGenerated Whether product is auto-generated
-     * @return static
+     *
+     * @param  bool  $autoGenerated  Whether product is auto-generated
      */
     public function autoGenerated(bool $autoGenerated = true): static
     {
         return $this->set('auto_generated', $autoGenerated);
     }
-    
+
     /**
      * Set product features
-     * 
-     * @param array $features Array of feature strings (up to 5)
-     * @return static
+     *
+     * @param  array  $features  Array of feature strings (up to 5)
+     *
      * @throws InvalidArgumentException If more than 5 features provided
      */
     public function features(array $features): static
@@ -209,19 +187,19 @@ class ProductBuilder extends BaseBuilder
         if (count($features) > 5) {
             throw new InvalidArgumentException('Maximum 5 product features allowed');
         }
-        
+
         for ($i = 1; $i <= 5; $i++) {
             $this->set("product_features_{$i}", $features[$i - 1] ?? null);
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Set product details
-     * 
-     * @param array $details Array of detail strings (up to 5)
-     * @return static
+     *
+     * @param  array  $details  Array of detail strings (up to 5)
+     *
      * @throws InvalidArgumentException If more than 5 details provided
      */
     public function details(array $details): static
@@ -229,67 +207,63 @@ class ProductBuilder extends BaseBuilder
         if (count($details) > 5) {
             throw new InvalidArgumentException('Maximum 5 product details allowed');
         }
-        
+
         for ($i = 1; $i <= 5; $i++) {
             $this->set("product_details_{$i}", $details[$i - 1] ?? null);
         }
-        
+
         return $this;
     }
-    
+
     /**
      * Set product images
-     * 
-     * @param array $images Array of image paths/URLs
-     * @return static
+     *
+     * @param  array  $images  Array of image paths/URLs
      */
     public function images(array $images): static
     {
         return $this->set('images', $images);
     }
-    
+
     /**
      * Add categories to the product
-     * 
-     * @param array $categories Array of category IDs or associative array with is_primary flags
-     * @return static
+     *
+     * @param  array  $categories  Array of category IDs or associative array with is_primary flags
      */
     public function categories(array $categories): static
     {
         return $this->set('categories', $categories);
     }
-    
+
     /**
      * Set product attributes
-     * 
-     * @param array $attributes Associative array of attribute key-value pairs
-     * @return static
+     *
+     * @param  array  $attributes  Associative array of attribute key-value pairs
      */
     public function attributes(array $attributes): static
     {
         return $this->set('attributes', $attributes);
     }
-    
+
     /**
      * Set product metadata
-     * 
-     * @param array $metadata Associative array of metadata key-value pairs
-     * @return static
+     *
+     * @param  array  $metadata  Associative array of metadata key-value pairs
      */
     public function metadata(array $metadata): static
     {
         return $this->set('metadata', $metadata);
     }
-    
+
     /**
      * Execute the builder and create/update the product
-     * 
+     *
      * @return Product The created or updated product
      */
     public function execute(): Product
     {
         $this->validate();
-        
+
         if ($this->product) {
             // Update existing product
             return app(UpdateProductAction::class)->execute($this->product, $this->data);
@@ -298,37 +272,36 @@ class ProductBuilder extends BaseBuilder
             return app(CreateProductAction::class)->execute($this->data);
         }
     }
-    
+
     /**
      * Save (alias for execute)
-     * 
+     *
      * @return Product The created or updated product
      */
     public function save(): Product
     {
         return $this->execute();
     }
-    
+
     /**
      * Custom validation for product builder
-     * 
+     *
      * @throws InvalidArgumentException If validation fails
-     * @return void
      */
     protected function customValidation(): void
     {
         // Validate parent_sku format if provided
         if ($this->has('parent_sku')) {
             $parentSku = $this->get('parent_sku');
-            if (!empty($parentSku) && !preg_match('/^[A-Z0-9\-_]+$/i', $parentSku)) {
+            if (! empty($parentSku) && ! preg_match('/^[A-Z0-9\-_]+$/i', $parentSku)) {
                 throw new InvalidArgumentException('Parent SKU can only contain letters, numbers, hyphens, and underscores');
             }
         }
-        
+
         // Validate slug format if provided
         if ($this->has('slug')) {
             $slug = $this->get('slug');
-            if (!empty($slug) && !preg_match('/^[a-z0-9\-]+$/', $slug)) {
+            if (! empty($slug) && ! preg_match('/^[a-z0-9\-]+$/', $slug)) {
                 throw new InvalidArgumentException('Slug can only contain lowercase letters, numbers, and hyphens');
             }
         }

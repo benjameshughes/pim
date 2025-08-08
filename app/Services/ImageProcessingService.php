@@ -3,23 +3,24 @@
 namespace App\Services;
 
 use App\Models\ProductImage;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class ImageProcessingService
 {
     private ImageManager $manager;
+
     private string $tempPath;
 
     public function __construct()
     {
-        $this->manager = new ImageManager(new Driver());
+        $this->manager = new ImageManager(new Driver);
         $this->tempPath = storage_path('app/temp/images');
-        
+
         // Ensure temp directory exists
-        if (!is_dir($this->tempPath)) {
+        if (! is_dir($this->tempPath)) {
             mkdir($this->tempPath, 0755, true);
         }
     }
@@ -35,8 +36,8 @@ class ImageProcessingService
             // Download original image to temp location
             $originalDisk = $productImage->storage_disk ?: 'public';
             $originalPath = $this->downloadToTemp($originalDisk, $productImage->image_path);
-            
-            if (!$originalPath) {
+
+            if (! $originalPath) {
                 throw new \Exception('Failed to download original image');
             }
 
@@ -51,7 +52,7 @@ class ImageProcessingService
             $variants = $this->createVariants($originalPath, $basePath);
 
             // Upload original to R2
-            $originalR2Path = $basePath . '/' . basename($productImage->image_path);
+            $originalR2Path = $basePath.'/'.basename($productImage->image_path);
             $this->uploadToR2($originalPath, $originalR2Path);
 
             // Update database with processing results
@@ -66,27 +67,27 @@ class ImageProcessingService
                     'variants_created' => array_keys($variants),
                     'processed_at' => now()->toISOString(),
                     'original_dimensions' => $dimensions,
-                ])
+                ]),
             ]);
 
             // Clean up temp files
             $this->cleanupTempFiles($originalPath, $variants);
 
-            Log::info("Successfully processed image", [
+            Log::info('Successfully processed image', [
                 'image_id' => $productImage->id,
                 'variants_created' => count($variants),
-                'storage_disk' => 'images'
+                'storage_disk' => 'images',
             ]);
 
             return true;
 
         } catch (\Exception $e) {
             $productImage->markAsFailed($e->getMessage());
-            
-            Log::error("Image processing failed", [
+
+            Log::error('Image processing failed', [
                 'image_id' => $productImage->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return false;
@@ -99,11 +100,11 @@ class ImageProcessingService
     private function createVariants(string $originalPath, string $basePath): array
     {
         $variants = [];
-        
+
         foreach (ProductImage::SIZES as $sizeName => $config) {
             try {
                 $image = $this->manager->read($originalPath);
-                
+
                 // Resize image maintaining aspect ratio
                 $image = $image->scaleDown(
                     width: $config['width'],
@@ -111,7 +112,7 @@ class ImageProcessingService
                 );
 
                 // Apply quality settings
-                $tempVariantPath = $this->tempPath . '/' . uniqid() . '_' . $sizeName . '.jpg';
+                $tempVariantPath = $this->tempPath.'/'.uniqid().'_'.$sizeName.'.jpg';
                 $image->toJpeg(quality: $config['quality'])->save($tempVariantPath);
 
                 // Upload to R2
@@ -122,13 +123,13 @@ class ImageProcessingService
                 $variants[$sizeName] = [
                     'temp_path' => $tempVariantPath,
                     'r2_path' => $variantR2Path,
-                    'dimensions' => ['width' => $image->width(), 'height' => $image->height()]
+                    'dimensions' => ['width' => $image->width(), 'height' => $image->height()],
                 ];
 
             } catch (\Exception $e) {
-                Log::warning("Failed to create variant", [
+                Log::warning('Failed to create variant', [
                     'size' => $sizeName,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
         }
@@ -142,21 +143,22 @@ class ImageProcessingService
     private function downloadToTemp(string $disk, string $path): ?string
     {
         try {
-            if (!Storage::disk($disk)->exists($path)) {
+            if (! Storage::disk($disk)->exists($path)) {
                 return null;
             }
 
-            $tempPath = $this->tempPath . '/' . uniqid() . '_' . basename($path);
+            $tempPath = $this->tempPath.'/'.uniqid().'_'.basename($path);
             $content = Storage::disk($disk)->get($path);
             file_put_contents($tempPath, $content);
 
             return $tempPath;
         } catch (\Exception $e) {
-            Log::error("Failed to download image to temp", [
+            Log::error('Failed to download image to temp', [
                 'disk' => $disk,
                 'path' => $path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -168,13 +170,15 @@ class ImageProcessingService
     {
         try {
             $content = file_get_contents($localPath);
+
             return Storage::disk('images')->put($r2Path, $content);
         } catch (\Exception $e) {
-            Log::error("Failed to upload to R2", [
+            Log::error('Failed to upload to R2', [
                 'local_path' => $localPath,
                 'r2_path' => $r2Path,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -186,15 +190,15 @@ class ImageProcessingService
     {
         $year = now()->year;
         $month = now()->format('m');
-        
+
         if ($productImage->product_id) {
             return "products/{$year}/{$month}/product-{$productImage->product_id}";
         }
-        
+
         if ($productImage->variant_id) {
             return "products/{$year}/{$month}/variant-{$productImage->variant_id}";
         }
-        
+
         return "products/{$year}/{$month}/unassigned";
     }
 
@@ -224,13 +228,14 @@ class ImageProcessingService
         $results = [
             'processed' => 0,
             'failed' => 0,
-            'errors' => []
+            'errors' => [],
         ];
 
         foreach ($imageIds as $imageId) {
             $image = ProductImage::find($imageId);
-            if (!$image) {
+            if (! $image) {
                 $results['errors'][] = "Image {$imageId} not found";
+
                 continue;
             }
 
@@ -250,7 +255,7 @@ class ImageProcessingService
     public function reprocessFailed(): array
     {
         $failedImages = ProductImage::where('processing_status', ProductImage::PROCESSING_FAILED)->get();
-        
+
         return $this->processBatch($failedImages->pluck('id')->toArray());
     }
 

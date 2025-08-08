@@ -2,40 +2,45 @@
 
 namespace App\Livewire\Pim\Media;
 
-use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Models\ProductImage;
 use App\Jobs\ProcessImageToR2;
-use App\Services\ImageProcessingService;
 use App\Livewire\Concerns\HasImageUpload;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Product;
+use App\Models\ProductImage;
+use App\Models\ProductVariant;
+use App\Services\ImageProcessingService;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+// Layout handled by wrapper template
 class ImageManager extends Component
 {
-    use WithFileUploads, WithPagination, HasImageUpload;
+    use HasImageUpload, WithFileUploads, WithPagination;
 
     public $search = '';
+
     public $filterType = ''; // 'product', 'variant', 'unassigned', 'processing', 'failed'
+
     public $selectedImages = [];
+
     public $bulkEditMode = false;
-    
+
     // Upload properties for the integrated uploader
     public $defaultImageType = 'main'; // 'main', 'detail', 'swatch', 'lifestyle', 'installation'
+
     public $showImageUploader = true;
-    
+
     // Assignment properties
     public $assignmentMode = false;
+
     public $selectedProductId = '';
+
     public $selectedVariantId = '';
-    
+
     // Processing properties
     public $processingStats = [];
+
     public $showProcessingStats = false;
 
     public function updatingSearch()
@@ -50,13 +55,13 @@ class ImageManager extends Component
 
     public function toggleBulkEdit()
     {
-        $this->bulkEditMode = !$this->bulkEditMode;
+        $this->bulkEditMode = ! $this->bulkEditMode;
         $this->selectedImages = [];
     }
 
     public function toggleAssignmentMode()
     {
-        $this->assignmentMode = !$this->assignmentMode;
+        $this->assignmentMode = ! $this->assignmentMode;
         $this->selectedProductId = '';
         $this->selectedVariantId = '';
     }
@@ -76,7 +81,7 @@ class ImageManager extends Component
 
     public function toggleImageUploader()
     {
-        $this->showImageUploader = !$this->showImageUploader;
+        $this->showImageUploader = ! $this->showImageUploader;
     }
 
     /**
@@ -86,21 +91,21 @@ class ImageManager extends Component
     {
         // Reset pagination to show newly uploaded images
         $this->resetPage();
-        
+
         // Update filter if it makes sense
-        if ($this->filterType === 'unassigned' && !empty($data['model_id'])) {
+        if ($this->filterType === 'unassigned' && ! empty($data['model_id'])) {
             // Clear filter to show newly assigned images
             $this->filterType = '';
         }
-        
+
         $count = $data['count'] ?? 0;
         $processed = $data['processed'] ?? 0;
-        
+
         $message = "Uploaded {$count} images successfully!";
         if ($processed > 0) {
             $message .= " {$processed} images queued for processing.";
         }
-        
+
         session()->flash('success', $message);
     }
 
@@ -114,15 +119,16 @@ class ImageManager extends Component
 
     public function assignImagesToProduct()
     {
-        if (empty($this->selectedImages) || !$this->selectedProductId) {
+        if (empty($this->selectedImages) || ! $this->selectedProductId) {
             session()->flash('error', 'Please select images and a product.');
+
             return;
         }
 
         $assignedCount = 0;
         foreach ($this->selectedImages as $imageId) {
             $image = ProductImage::find($imageId);
-            if ($image && !$image->product_id && !$image->variant_id) {
+            if ($image && ! $image->product_id && ! $image->variant_id) {
                 $image->update([
                     'product_id' => $this->selectedProductId,
                     'sort_order' => ProductImage::where('product_id', $this->selectedProductId)->max('sort_order') + 1,
@@ -130,22 +136,23 @@ class ImageManager extends Component
                 $assignedCount++;
             }
         }
-        
+
         $this->selectedImages = [];
         session()->flash('success', "Assigned {$assignedCount} images to product successfully!");
     }
 
     public function assignImagesToVariant()
     {
-        if (empty($this->selectedImages) || !$this->selectedVariantId) {
+        if (empty($this->selectedImages) || ! $this->selectedVariantId) {
             session()->flash('error', 'Please select images and a variant.');
+
             return;
         }
 
         $assignedCount = 0;
         foreach ($this->selectedImages as $imageId) {
             $image = ProductImage::find($imageId);
-            if ($image && !$image->product_id && !$image->variant_id) {
+            if ($image && ! $image->product_id && ! $image->variant_id) {
                 $image->update([
                     'variant_id' => $this->selectedVariantId,
                     'sort_order' => ProductImage::where('variant_id', $this->selectedVariantId)->max('sort_order') + 1,
@@ -153,7 +160,7 @@ class ImageManager extends Component
                 $assignedCount++;
             }
         }
-        
+
         $this->selectedImages = [];
         session()->flash('success', "Assigned {$assignedCount} images to variant successfully!");
     }
@@ -165,7 +172,7 @@ class ImageManager extends Component
             'product_id' => null,
             'sort_order' => 0,
         ]);
-        
+
         session()->flash('success', 'Image removed from product.');
     }
 
@@ -176,7 +183,7 @@ class ImageManager extends Component
             'variant_id' => null,
             'sort_order' => 0,
         ]);
-        
+
         session()->flash('success', 'Image removed from variant.');
     }
 
@@ -184,6 +191,7 @@ class ImageManager extends Component
     {
         if (empty($this->selectedImages)) {
             session()->flash('error', 'Please select images to delete.');
+
             return;
         }
 
@@ -215,13 +223,14 @@ class ImageManager extends Component
     {
         if (empty($this->selectedImages)) {
             session()->flash('error', 'Please select images to process.');
+
             return;
         }
 
         $processedCount = 0;
         foreach ($this->selectedImages as $imageId) {
             $image = ProductImage::find($imageId);
-            if ($image && !$image->isProcessed()) {
+            if ($image && ! $image->isProcessed()) {
                 ProcessImageToR2::dispatch($image);
                 $processedCount++;
             }
@@ -234,7 +243,7 @@ class ImageManager extends Component
     public function reprocessFailedImages()
     {
         $failedImages = ProductImage::where('processing_status', ProductImage::PROCESSING_FAILED)->get();
-        
+
         $processedCount = 0;
         foreach ($failedImages as $image) {
             // Reset status and requeue
@@ -248,8 +257,8 @@ class ImageManager extends Component
 
     public function toggleProcessingStats()
     {
-        $this->showProcessingStats = !$this->showProcessingStats;
-        
+        $this->showProcessingStats = ! $this->showProcessingStats;
+
         if ($this->showProcessingStats) {
             $this->loadProcessingStats();
         }
@@ -257,7 +266,7 @@ class ImageManager extends Component
 
     public function loadProcessingStats()
     {
-        $service = new ImageProcessingService();
+        $service = new ImageProcessingService;
         $this->processingStats = $service->getProcessingStats();
     }
 
@@ -300,7 +309,7 @@ class ImageManager extends Component
             'showPreview' => true,
             'allowReorder' => false, // Not applicable for unassigned
             'showExistingImages' => false, // We show these separately
-            'uploadText' => 'Drag & drop images here or click to browse'
+            'uploadText' => 'Drag & drop images here or click to browse',
         ];
     }
 
@@ -311,14 +320,14 @@ class ImageManager extends Component
         // Apply search filter
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('image_path', 'like', '%' . $this->search . '%')
-                  ->orWhere('alt_text', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('product', function ($productQuery) {
-                      $productQuery->where('name', 'like', '%' . $this->search . '%');
-                  })
-                  ->orWhereHas('variant.product', function ($productQuery) {
-                      $productQuery->where('name', 'like', '%' . $this->search . '%');
-                  });
+                $q->where('image_path', 'like', '%'.$this->search.'%')
+                    ->orWhere('alt_text', 'like', '%'.$this->search.'%')
+                    ->orWhereHas('product', function ($productQuery) {
+                        $productQuery->where('name', 'like', '%'.$this->search.'%');
+                    })
+                    ->orWhereHas('variant.product', function ($productQuery) {
+                        $productQuery->where('name', 'like', '%'.$this->search.'%');
+                    });
             });
         }
 
@@ -359,8 +368,8 @@ class ImageManager extends Component
             'images' => $images,
             'stats' => $stats,
             'products' => Product::orderBy('name')->get(),
-            'variants' => $this->selectedProductId ? 
-                ProductVariant::where('product_id', $this->selectedProductId)->with('product')->get() : 
+            'variants' => $this->selectedProductId ?
+                ProductVariant::where('product_id', $this->selectedProductId)->with('product')->get() :
                 collect(),
         ]);
     }

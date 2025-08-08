@@ -22,7 +22,7 @@ class Barcode extends Model
 
     public const BARCODE_TYPES = [
         'EAN13' => 'EAN-13',
-        'EAN8' => 'EAN-8', 
+        'EAN8' => 'EAN-8',
         'UPC' => 'UPC-A',
         'CODE128' => 'Code 128',
         'CODE39' => 'Code 39',
@@ -43,7 +43,7 @@ class Barcode extends Model
         if ($this->barcode_type === 'QRCODE') {
             return (new DNS2D)->getBarcodeHTML($this->barcode, 'QRCODE', $width, $height);
         }
-        
+
         return (new DNS1D)->getBarcodeHTML($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
     }
 
@@ -55,7 +55,7 @@ class Barcode extends Model
         if ($this->barcode_type === 'QRCODE') {
             return (new DNS2D)->getBarcodePNG($this->barcode, 'QRCODE', $width, $height);
         }
-        
+
         return (new DNS1D)->getBarcodePNG($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
     }
 
@@ -67,7 +67,7 @@ class Barcode extends Model
         if ($this->barcode_type === 'QRCODE') {
             return (new DNS2D)->getBarcodeSVG($this->barcode, 'QRCODE', $width, $height);
         }
-        
+
         return (new DNS1D)->getBarcodeSVG($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
     }
 

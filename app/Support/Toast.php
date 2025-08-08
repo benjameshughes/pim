@@ -4,29 +4,37 @@ namespace App\Support;
 
 /**
  * Toast Notification Helper
- * 
+ *
  * Fluent API for creating user-friendly toast notifications with
  * enhanced error handling and user feedback.
  */
 class Toast
 {
     protected string $type;
+
     protected string $title;
+
     protected string $message;
+
     protected array $actions = [];
+
     protected int $duration = 5000;
+
     protected string $position = 'top-right';
+
     protected bool $dismissible = true;
+
     protected bool $persistent = false;
+
     protected array $data = [];
-    
+
     protected function __construct(string $type, string $title, string $message = '')
     {
         $this->type = $type;
         $this->title = $title;
         $this->message = $message;
     }
-    
+
     /**
      * Create success toast
      */
@@ -34,7 +42,7 @@ class Toast
     {
         return new static('success', $title, $message);
     }
-    
+
     /**
      * Create error toast
      */
@@ -42,7 +50,7 @@ class Toast
     {
         return new static('error', $title, $message);
     }
-    
+
     /**
      * Create warning toast
      */
@@ -50,7 +58,7 @@ class Toast
     {
         return new static('warning', $title, $message);
     }
-    
+
     /**
      * Create info toast
      */
@@ -58,25 +66,27 @@ class Toast
     {
         return new static('info', $title, $message);
     }
-    
+
     /**
      * Set toast duration in milliseconds
      */
     public function duration(int $milliseconds): static
     {
         $this->duration = $milliseconds;
+
         return $this;
     }
-    
+
     /**
      * Set toast position
      */
     public function position(string $position): static
     {
         $this->position = $position;
+
         return $this;
     }
-    
+
     /**
      * Make toast persistent (won't auto-dismiss)
      */
@@ -84,9 +94,10 @@ class Toast
     {
         $this->persistent = true;
         $this->duration = 0;
+
         return $this;
     }
-    
+
     /**
      * Add action button to toast
      */
@@ -97,9 +108,10 @@ class Toast
             'action' => $action,
             'params' => $params,
         ];
+
         return $this;
     }
-    
+
     /**
      * Add URL action to toast
      */
@@ -110,9 +122,10 @@ class Toast
             'url' => $url,
             'newTab' => $newTab,
         ];
+
         return $this;
     }
-    
+
     /**
      * Add retry action
      */
@@ -120,25 +133,27 @@ class Toast
     {
         return $this->action('Retry', $method, $params);
     }
-    
+
     /**
      * Add suggestions as additional data
      */
     public function withSuggestions(array $suggestions): static
     {
         $this->data['suggestions'] = $suggestions;
+
         return $this;
     }
-    
+
     /**
      * Add additional contextual data
      */
     public function withData(array $data): static
     {
         $this->data = array_merge($this->data, $data);
+
         return $this;
     }
-    
+
     /**
      * Convert to array for JSON serialization
      */
@@ -157,7 +172,7 @@ class Toast
             'timestamp' => now()->toISOString(),
         ];
     }
-    
+
     /**
      * Dispatch toast to Livewire component
      */
@@ -170,7 +185,7 @@ class Toast
             session()->flash('toast', $this->toArray());
         }
     }
-    
+
     /**
      * Create toast from exception with enhanced error handling
      */
@@ -183,25 +198,25 @@ class Toast
             )
                 ->withSuggestions($exception->getSuggestedActions())
                 ->actionUrl('Import Barcodes', '/barcodes/pool/import'),
-                
+
             'App\Exceptions\DuplicateSkuException' => static::error(
                 'Duplicate SKU',
                 $exception->getUserMessage()
             )
                 ->withSuggestions($exception->getSuggestedSkus())
                 ->retry(),
-                
+
             default => static::error(
                 'An error occurred',
                 $exception->getMessage()
             )
                 ->retry(),
         };
-        
+
         if ($component) {
             $toast->send($component);
         }
-        
+
         return $toast;
     }
 }

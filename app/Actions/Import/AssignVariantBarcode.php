@@ -2,8 +2,8 @@
 
 namespace App\Actions\Import;
 
-use App\Models\ProductVariant;
 use App\Models\Barcode;
+use App\Models\ProductVariant;
 
 class AssignVariantBarcode
 {
@@ -11,7 +11,7 @@ class AssignVariantBarcode
     {
         // Detect barcode type
         $barcodeType = $this->detectBarcodeType($barcodeValue);
-        
+
         // Create barcode record
         Barcode::create([
             'variant_id' => $variant->id,
@@ -20,12 +20,12 @@ class AssignVariantBarcode
             'auto_detected' => true,
         ]);
     }
-    
+
     private function detectBarcodeType(string $barcode): string
     {
         $length = strlen($barcode);
-        
-        return match($length) {
+
+        return match ($length) {
             8 => 'EAN8',
             12 => 'UPC-A',
             13 => 'EAN13',

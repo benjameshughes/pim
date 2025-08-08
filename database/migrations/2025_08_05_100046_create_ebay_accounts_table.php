@@ -25,7 +25,7 @@ return new class extends Migration
             $table->json('oauth_data')->nullable(); // Store additional OAuth response data
             $table->timestamp('last_used_at')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['ebay_user_id', 'environment']); // One account per user per environment
         });
     }

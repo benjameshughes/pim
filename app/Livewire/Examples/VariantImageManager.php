@@ -14,7 +14,9 @@ class VariantImageManager extends Component
     use HasImageUpload;
 
     public ProductVariant $variant;
+
     public string $activeImageType = 'main';
+
     public array $imageStats = [];
 
     public function mount(ProductVariant $variant): void
@@ -37,9 +39,9 @@ class VariantImageManager extends Component
     public function handleImageUpload(array $data): void
     {
         $this->loadImageStats();
-        
-        session()->flash('success', 
-            "Uploaded {$data['count']} images successfully! " . 
+
+        session()->flash('success',
+            "Uploaded {$data['count']} images successfully! ".
             "{$data['processed']} images queued for processing."
         );
     }
@@ -61,11 +63,11 @@ class VariantImageManager extends Component
     {
         $imageTypes = $this->getImageTypes();
         $uploaderConfig = $this->getImageUploaderConfig($this->activeImageType, $this->variant);
-        
+
         // Customize config for variant context
         $uploaderConfig['max_files'] = $imageTypes[$this->activeImageType]['max_files'] ?? 10;
         $uploaderConfig['allow_reorder'] = $imageTypes[$this->activeImageType]['allow_reorder'] ?? true;
-        
+
         if ($this->activeImageType === 'swatch') {
             $uploaderConfig['max_size'] = $imageTypes['swatch']['max_size'];
             $uploaderConfig['allow_reorder'] = false;

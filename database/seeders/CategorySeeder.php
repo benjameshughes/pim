@@ -22,7 +22,7 @@ class CategorySeeder extends Seeder
 
         $venetianBlinds = Category::create([
             'name' => 'Venetian Blinds',
-            'slug' => 'venetian-blinds', 
+            'slug' => 'venetian-blinds',
             'description' => 'Classic venetian blind window treatments',
             'sort_order' => 2,
         ]);
