@@ -102,27 +102,7 @@
                 @if(!empty($headerActions))
                     <div class="flex items-center gap-2">
                         @foreach($headerActions as $action)
-                            @if($action['type'] === 'button')
-                                <flux:button 
-                                    wire:click="{{ $action['action'] }}"
-                                    variant="{{ $action['variant'] ?? 'outline' }}"
-                                    size="{{ $action['size'] ?? 'sm' }}"
-                                    @if(isset($action['icon'])) icon="{{ $action['icon'] }}" @endif
-                                    @if(isset($action['loading'])) wire:loading.attr="disabled" @endif
-                                >
-                                    {{ $action['label'] }}
-                                </flux:button>
-                            @elseif($action['type'] === 'link')
-                                <flux:button 
-                                    href="{{ $action['href'] }}"
-                                    variant="{{ $action['variant'] ?? 'outline' }}"
-                                    size="{{ $action['size'] ?? 'sm' }}"
-                                    @if(isset($action['icon'])) icon="{{ $action['icon'] }}" @endif
-                                    @if($action['navigate'] ?? false) wire:navigate @endif
-                                >
-                                    {{ $action['label'] }}
-                                </flux:button>
-                            @endif
+                            @include('components.partials.table-action-button', ['action' => $action])
                         @endforeach
                         
                         {{-- Pagination Size Selector --}}
@@ -175,15 +155,7 @@
                 </span>
                 <div class="flex items-center gap-2">
                     @foreach($bulkActions as $action)
-                        <flux:button 
-                            x-on:click="executeBulkAction('{{ $action['key'] }}', selectedItems)"
-                            variant="{{ $action['variant'] ?? 'outline' }}"
-                            size="sm"
-                            @if(isset($action['icon'])) icon="{{ $action['icon'] }}" @endif
-                            @if(($action['danger'] ?? false)) class="text-red-600 border-red-300 hover:bg-red-50" @endif
-                        >
-                            {{ $action['label'] }}
-                        </flux:button>
+                        @include('components.partials.bulk-action-button', ['action' => $action])
                     @endforeach
                     <flux:button 
                         x-on:click="clearSelection" 
@@ -240,11 +212,11 @@
                                             <div class="flex flex-col">
                                                 <flux:icon 
                                                     name="chevron-up" 
-                                                    class="h-3 w-3 transition-colors {{ isset($this->sortField) && $this->sortField === $column['key'] && $this->sortDirection === 'asc' ? 'text-indigo-600' : 'text-zinc-300 group-hover:text-zinc-400' }}"
+                                                    class="h-3 w-3 transition-colors text-zinc-300 group-hover:text-zinc-400"
                                                 />
                                                 <flux:icon 
                                                     name="chevron-down" 
-                                                    class="h-3 w-3 -mt-1 transition-colors {{ isset($this->sortField) && $this->sortField === $column['key'] && $this->sortDirection === 'desc' ? 'text-indigo-600' : 'text-zinc-300 group-hover:text-zinc-400' }}"
+                                                    class="h-3 w-3 -mt-1 transition-colors text-zinc-300 group-hover:text-zinc-400"
                                                 />
                                             </div>
                                         </button>
@@ -370,26 +342,7 @@
                                                     $isVisible = !isset($action['visible']) || $action['visible']($item);
                                                 @endphp
                                                 @if($isVisible)
-                                                    @if($action['type'] === 'link')
-                                                        <flux:button 
-                                                            href="{{ $action['href']($item) }}"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            icon="{{ $action['icon'] ?? 'eye' }}"
-                                                            @if($action['navigate'] ?? false) wire:navigate @endif
-                                                            aria-label="{{ $action['label'] }}"
-                                                        />
-                                                    @else
-                                                        <flux:button 
-                                                            wire:click="{{ $action['action'] }}({{ $item->id }})"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            icon="{{ $action['icon'] ?? 'pencil' }}"
-                                                            @if(isset($action['loading'])) wire:loading.attr="disabled" @endif
-                                                            @if($action['danger'] ?? false) class="text-red-600 hover:text-red-800" @endif
-                                                            aria-label="{{ $action['label'] }}"
-                                                        />
-                                                    @endif
+                                                    @include('components.partials.row-action-button', ['action' => $action, 'item' => $item])
                                                 @endif
                                             @endforeach
                                         </div>

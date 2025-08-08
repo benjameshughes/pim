@@ -181,7 +181,7 @@
         </div>
         
         {{-- Additional Content Slot --}}
-        @if($slot->isNotEmpty())
+        @if($slot && !empty(trim($slot)))
             <div class="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-700">
                 {{ $slot }}
             </div>

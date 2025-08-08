@@ -14,7 +14,7 @@
     'cancelHref' => null,
     'method' => 'POST',
     'action' => null,
-    'wire:submit' => null,
+    'wireSubmit' => null,
     'validationSummary' => false,
 ])
 
@@ -114,7 +114,7 @@
     <div class="bg-white dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm p-6 space-y-6">
         <form 
             @if($action) action="{{ $action }}" @endif
-            @if($wire:submit) wire:submit="{{ $wire:submit }}" @endif
+            @if($wireSubmit) wire:submit="{{ $wireSubmit }}" @endif
             method="{{ $method }}"
             @if($method === 'POST') 
                 @csrf 
@@ -154,8 +154,8 @@
                             wire:loading.attr="disabled"
                             class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <span wire:loading.remove wire:target="{{ $wire:submit ?? 'save' }}">{{ $submitText }}</span>
-                            <span wire:loading wire:target="{{ $wire:submit ?? 'save' }}" class="flex items-center">
+                            <span wire:loading.remove wire:target="{{ $wireSubmit ?? 'save' }}">{{ $submitText }}</span>
+                            <span wire:loading wire:target="{{ $wireSubmit ?? 'save' }}" class="flex items-center">
                                 <div class="w-4 h-4 border-2 border-indigo-200 border-t-white rounded-full animate-spin mr-2"></div>
                                 Processing...
                             </span>
