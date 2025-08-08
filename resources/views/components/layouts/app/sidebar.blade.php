@@ -11,49 +11,185 @@
                 <x-app-logo />
             </a>
 
-            {{-- 🚀 Universal Navigation Element - Auto-detects everything! --}}
-            @if(isset($this) && method_exists($this, 'getNavigationProperty'))
-                {{ $this->navigation }}
-            @else
-                {{-- Fallback navigation for non-Livewire contexts --}}
-                <flux:navlist variant="outline">
-                    @php
-                        try {
-                            $navigationGroups = \App\Atom\Navigation\NavigationManager::getGroupedItems();
-                        } catch (\Exception $e) {
-                            $navigationGroups = collect();
-                        }
-                    @endphp
+            {{-- Clean FluxUI Navigation - Builder + Actions Pattern Architecture --}}
+            <flux:navlist variant="outline">
+                {{-- Dashboard --}}
+                <flux:navlist.item 
+                    icon="squares-2x2" 
+                    href="{{ route('dashboard') }}" 
+                    current="{{ request()->routeIs('dashboard') }}" 
+                    wire:navigate
+                >
+                    Dashboard
+                </flux:navlist.item>
+
+                {{-- Product Management Group --}}
+                <flux:navlist.group heading="Product Management" class="grid">
+                    <flux:navlist.item 
+                        icon="cube" 
+                        href="{{ route('products.index') }}" 
+                        current="{{ request()->routeIs('products.*') }}" 
+                        wire:navigate
+                    >
+                        Products
+                    </flux:navlist.item>
                     
-                    @foreach($navigationGroups as $groupName => $group)
-                        @if($groupName === '_ungrouped')
-                            @foreach($group->getItems() as $item)
-                                <flux:navlist.item 
-                                    icon="{{ $item->getIcon() ?? 'circle' }}" 
-                                    href="{{ $item->getUrl() }}" 
-                                    current="{{ \App\Atom\Navigation\NavigationManager::isNavigationActive($item) }}" 
-                                    wire:navigate
-                                >
-                                    {{ $item->getLabel() }}
-                                </flux:navlist.item>
-                            @endforeach
-                        @else
-                            <flux:navlist.group heading="{{ $groupName }}" class="grid">
-                                @foreach($group->getItems() as $item)
-                                    <flux:navlist.item 
-                                        icon="{{ $item->getIcon() ?? 'circle' }}" 
-                                        href="{{ $item->getUrl() }}" 
-                                        current="{{ \App\Atom\Navigation\NavigationManager::isNavigationActive($item) }}" 
-                                        wire:navigate
-                                    >
-                                        {{ $item->getLabel() }}
-                                    </flux:navlist.item>
-                                @endforeach
-                            </flux:navlist.group>
-                        @endif
-                    @endforeach
-                </flux:navlist>
-            @endif
+                    <flux:navlist.item 
+                        icon="tag" 
+                        href="{{ route('products.variants.index') }}" 
+                        current="{{ request()->routeIs('products.variants.*') }}" 
+                        wire:navigate
+                    >
+                        Variants
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="sparkles" 
+                        href="{{ route('products.wizard') }}" 
+                        current="{{ request()->routeIs('products.wizard') }}" 
+                        wire:navigate
+                    >
+                        Product Wizard
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Data Management Group --}}
+                <flux:navlist.group heading="Data Management" class="grid">
+                    <flux:navlist.item 
+                        icon="qr-code" 
+                        href="{{ route('barcodes.index') }}" 
+                        current="{{ request()->routeIs('barcodes.*') }}" 
+                        wire:navigate
+                    >
+                        Barcodes
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="currency-pound" 
+                        href="{{ route('pricing.index') }}" 
+                        current="{{ request()->routeIs('pricing.*') }}" 
+                        wire:navigate
+                    >
+                        Pricing
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="photo" 
+                        href="{{ route('images.index') }}" 
+                        current="{{ request()->routeIs('images.*') }}" 
+                        wire:navigate
+                    >
+                        Images
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Data Exchange Group --}}
+                <flux:navlist.group heading="Data Exchange" class="grid">
+                    <flux:navlist.item 
+                        icon="arrow-down-tray" 
+                        href="{{ route('import') }}" 
+                        current="{{ request()->routeIs('import*') }}" 
+                        wire:navigate
+                    >
+                        Import Data
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="arrow-up-tray" 
+                        href="{{ route('export') }}" 
+                        current="{{ request()->routeIs('export*') }}" 
+                        wire:navigate
+                    >
+                        Export Data
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Marketplace Sync Group --}}
+                <flux:navlist.group heading="Marketplace Sync" class="grid">
+                    <flux:navlist.item 
+                        icon="shopping-bag" 
+                        href="{{ route('sync.shopify') }}" 
+                        current="{{ request()->routeIs('sync.shopify') }}" 
+                        wire:navigate
+                    >
+                        Shopify
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="building-storefront" 
+                        href="{{ route('sync.ebay') }}" 
+                        current="{{ request()->routeIs('sync.ebay') }}" 
+                        wire:navigate
+                    >
+                        eBay
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="globe-alt" 
+                        href="{{ route('sync.mirakl') }}" 
+                        current="{{ request()->routeIs('sync.mirakl') }}" 
+                        wire:navigate
+                    >
+                        Mirakl
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Operations Group --}}
+                <flux:navlist.group heading="Operations" class="grid">
+                    <flux:navlist.item 
+                        icon="wrench-screwdriver" 
+                        href="{{ route('operations.bulk') }}" 
+                        current="{{ request()->routeIs('operations.*') }}" 
+                        wire:navigate
+                    >
+                        Bulk Operations
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="archive-box" 
+                        href="{{ route('archive') }}" 
+                        current="{{ request()->routeIs('archive') }}" 
+                        wire:navigate
+                    >
+                        Archive
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Configuration Group --}}
+                <flux:navlist.group heading="Configuration" class="grid">
+                    <flux:navlist.item 
+                        icon="adjustments-horizontal" 
+                        href="{{ route('attributes.definitions') }}" 
+                        current="{{ request()->routeIs('attributes.*') }}" 
+                        wire:navigate
+                    >
+                        Attributes
+                    </flux:navlist.item>
+                    
+                    <flux:navlist.item 
+                        icon="users" 
+                        href="{{ route('admin.users.index') }}" 
+                        current="{{ request()->routeIs('admin.users.*') }}" 
+                        wire:navigate
+                    >
+                        User Management
+                    </flux:navlist.item>
+                </flux:navlist.group>
+
+                {{-- Examples Group (Development) --}}
+                @if(app()->environment('local'))
+                <flux:navlist.group heading="Examples" class="grid">
+                    <flux:navlist.item 
+                        icon="beaker" 
+                        href="{{ route('examples.toast.demo') }}" 
+                        current="{{ request()->routeIs('examples.*') }}" 
+                        wire:navigate
+                    >
+                        Toast Demo
+                    </flux:navlist.item>
+                </flux:navlist.group>
+                @endif
+            </flux:navlist>
 
             <flux:spacer />
 
