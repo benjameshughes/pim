@@ -2,7 +2,6 @@
 
 // Legacy framework navigation disabled
 use App\Livewire\DataExchange\Export\ShopifyExport;
-use App\Livewire\DataExchange\Import\ImportDataRefactored;
 use App\Livewire\DataExchange\Sync\EbaySync;
 use App\Livewire\DataExchange\Sync\MiraklSync;
 use App\Livewire\DataExchange\Sync\ShopifySync;
@@ -90,11 +89,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{sessionId}', [\App\Http\Controllers\ImportController::class, 'destroy'])->name('destroy');
     });
 
-    // Legacy Import Routes (for backwards compatibility)
-    Route::get('/import-legacy', function () {
-        return view('import.legacy');
-    })->name('import.legacy');
-    Route::get('/import-v2', ImportDataRefactored::class)->name('import.v2');
+    // Legacy Import Routes removed - using new import system
     Route::get('/import/test', function () {
         return view('import.test');
     })->name('import.test');

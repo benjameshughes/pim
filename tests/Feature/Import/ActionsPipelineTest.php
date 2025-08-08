@@ -29,8 +29,8 @@ describe('Actions Pipeline', function () {
             
             $context->setMetadata('key', 'value');
             
-            expect($context->getMetadata('key'))->toBe('value');
-            expect($context->getMetadata('missing', 'default'))->toBe('default');
+            expect($context->getMetadataValue('key'))->toBe('value');
+            expect($context->getMetadataValue('missing', 'default'))->toBe('default');
         });
 
         it('updates data correctly', function () {
@@ -39,7 +39,9 @@ describe('Actions Pipeline', function () {
             
             $context->updateData(['new' => 'value', 'original' => 'updated']);
             
-            expect($context->data)->toBe(['new' => 'value', 'original' => 'updated']);
+            expect($context->data)->toHaveCount(2)
+                ->and($context->data['new'])->toBe('value')
+                ->and($context->data['original'])->toBe('updated');
         });
 
         it('adds configuration correctly', function () {
