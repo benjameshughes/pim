@@ -157,6 +157,7 @@ class Product extends Model
      */
     public function getShopifySyncStatus(): array
     {
+        // ✨ ENHANCED with our LEGENDARY sync status system! ✨
         $syncRecords = ShopifyProductSync::where('product_id', $this->id)->get();
 
         if ($syncRecords->isEmpty()) {
@@ -166,6 +167,10 @@ class Product extends Model
                 'total_colors' => $this->variants->pluck('color')->filter()->unique()->count(),
                 'last_synced_at' => null,
                 'has_failures' => false,
+                'health_score' => 0,
+                'health_grade' => 'N/A',
+                'needs_attention' => true,
+                'sync_summary' => 'Product has never been synced to Shopify',
             ];
         }
 
@@ -184,6 +189,16 @@ class Product extends Model
             $status = 'not_synced';
         }
 
+        // ✨ Calculate comprehensive health metrics using our LEGENDARY system! ✨
+        $mainSync = ShopifyProductSync::getMainSyncRecord($this->id);
+        $healthScore = $mainSync ? $mainSync->calculateSyncHealth() : 0;
+        $healthGrade = $this->getHealthGrade($healthScore);
+        $syncSummary = $this->generateSyncSummary($status, $successfulSyncs, $failedSyncs);
+        $needsAttention = $status !== 'synced' || $healthScore < 80;
+        
+        // Get shopify URLs for admin links
+        $shopifyUrls = $successfulSyncs->map(fn($sync) => $sync->getShopifyAdminUrl())->filter()->unique();
+
         return [
             'status' => $status,
             'colors_synced' => $successfulSyncs->count(),
@@ -191,7 +206,55 @@ class Product extends Model
             'last_synced_at' => $successfulSyncs->max('last_synced_at'),
             'has_failures' => $failedSyncs->isNotEmpty(),
             'sync_records' => $syncRecords,
+            // 💎 NEW LEGENDARY FEATURES 💎
+            'health_score' => $healthScore,
+            'health_grade' => $healthGrade,
+            'needs_attention' => $needsAttention,
+            'sync_summary' => $syncSummary,
+            'shopify_urls' => $shopifyUrls->values()->toArray(),
+            'drift_score' => $mainSync?->data_drift_score ?? 0,
+            'variants_synced' => $mainSync?->variants_synced ?? 0,
+            'sync_method' => $mainSync?->sync_method ?? 'unknown',
         ];
+    }
+
+    /**
+     * 💅 SASSILLA'S HELPER METHODS FOR LEGENDARY SYNC STATUS 💅
+     */
+    
+    /**
+     * Convert health score to letter grade (because we're CLASSY!)
+     */
+    private function getHealthGrade(int $health): string
+    {
+        return match(true) {
+            $health >= 95 => 'A+',
+            $health >= 90 => 'A',
+            $health >= 85 => 'A-',
+            $health >= 80 => 'B+',
+            $health >= 75 => 'B',
+            $health >= 70 => 'B-',
+            $health >= 65 => 'C+',
+            $health >= 60 => 'C',
+            $health >= 55 => 'C-',
+            $health >= 50 => 'D',
+            $health > 0 => 'F',
+            default => 'N/A'
+        };
+    }
+    
+    /**
+     * Generate user-friendly sync summary message
+     */
+    private function generateSyncSummary(string $status, $successfulSyncs, $failedSyncs): string
+    {
+        return match($status) {
+            'not_synced' => 'Product has never been synced to Shopify',
+            'pending' => 'Sync operation in progress',
+            'failed' => 'Sync failed - ' . $failedSyncs->count() . ' color variant(s) need attention',
+            'synced' => $successfulSyncs->count() . ' color variant(s) successfully synced to Shopify',
+            default => 'Unknown sync status'
+        };
     }
 
     /**

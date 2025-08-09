@@ -17,36 +17,42 @@ use InvalidArgumentException;
 class CreateProductAction extends BaseAction
 {
     /**
-     * Execute product creation
+     * Perform the actual product creation action
      *
      * @param  array  $data  Product data
-     * @return Product The created product
+     * @return array Action result with created product
      *
      * @throws InvalidArgumentException If required data is missing
      */
-    public function execute(...$params): Product
+    protected function performAction(...$params): array
     {
         $data = $params[0] ?? [];
 
         $this->validateProductData($data);
 
-        return DB::transaction(function () use ($data) {
-            // Auto-generate slug if not provided
-            if (empty($data['slug']) && ! empty($data['name'])) {
-                $data['slug'] = $this->generateUniqueSlug($data['name']);
-            }
+        // Auto-generate slug if not provided
+        if (empty($data['slug']) && ! empty($data['name'])) {
+            $data['slug'] = $this->generateUniqueSlug($data['name']);
+        }
 
-            // Set default status if not provided
-            $data['status'] = $data['status'] ?? 'draft';
+        // Set default status if not provided
+        $data['status'] = $data['status'] ?? 'draft';
 
-            // Create the product
-            $product = Product::create($data);
+        // Create the product
+        $product = Product::create($data);
 
-            // Handle any additional post-creation logic
-            $this->handlePostCreation($product, $data);
+        // Handle any additional post-creation logic
+        $this->handlePostCreation($product, $data);
 
-            return $product->fresh();
-        });
+        $product = $product->fresh();
+
+        // Return standardized array format while maintaining access to the product
+        return [
+            'success' => true,
+            'product' => $product,
+            'message' => "Product '{$product->name}' created successfully",
+            'product_id' => $product->id,
+        ];
     }
 
     /**

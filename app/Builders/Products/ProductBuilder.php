@@ -266,10 +266,12 @@ class ProductBuilder extends BaseBuilder
 
         if ($this->product) {
             // Update existing product
-            return app(UpdateProductAction::class)->execute($this->product, $this->data);
+            $result = app(UpdateProductAction::class)->execute($this->product, $this->data);
+            return $result['product'] ?? $result; // Handle both array and direct product returns
         } else {
             // Create new product
-            return app(CreateProductAction::class)->execute($this->data);
+            $result = app(CreateProductAction::class)->execute($this->data);
+            return $result['product'] ?? $result; // Extract product from action result array
         }
     }
 

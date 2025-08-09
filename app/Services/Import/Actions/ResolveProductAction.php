@@ -60,7 +60,7 @@ class ResolveProductAction extends ImportAction
                 'was_created' => $product->wasRecentlyCreated,
             ]);
 
-            return ActionResult::success([
+            return ActionResult::success($context, 'Product resolved successfully')->withData([
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'was_created' => $product->wasRecentlyCreated,

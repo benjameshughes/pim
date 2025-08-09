@@ -49,7 +49,7 @@ class ValidateRowAction extends ImportAction
             'row_number' => $context->getRowNumber(),
         ]);
 
-        return ActionResult::success([
+        return ActionResult::success($context, 'Validation passed')->withData([
             'validation_passed' => true,
             'validated_fields' => array_keys($this->rules),
         ]);

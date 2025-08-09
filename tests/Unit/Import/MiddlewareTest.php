@@ -23,7 +23,7 @@ describe('Import Middleware', function () {
             ]);
 
             $context = new ActionContext(['test' => 'data'], 1);
-            $result = ActionResult::success(['result' => 'success']);
+            $result = ActionResult::success($context, 'Pipeline succeeded')->withData(['result' => 'success']);
 
             Log::shouldReceive('info')
                 ->with('Action pipeline succeeded', \Mockery::type('array'))
@@ -150,7 +150,7 @@ describe('Import Middleware', function () {
             ]);
 
             $context = new ActionContext(['test' => 'data'], 1);
-            $expected = ActionResult::success(['first_try' => true]);
+            $expected = ActionResult::success(null, 'Success on first try')->withData(['first_try' => true]);
 
             $result = $middleware->handle($context, function () use ($expected) {
                 return $expected;
@@ -179,7 +179,7 @@ describe('Import Middleware', function () {
                         new \Exception('Connection timeout')
                     );
                 }
-                return ActionResult::success(['attempts' => $attempts]);
+                return ActionResult::success(null, 'Success after attempts')->withData(['attempts' => $attempts]);
             });
 
             expect($result->isSuccess())->toBeTrue();

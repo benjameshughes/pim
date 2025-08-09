@@ -99,7 +99,7 @@ class HandleConflictsAction extends ImportAction
 
                 // If resolution says to skip or fail, do so
                 if ($resolution->shouldSkip()) {
-                    return ActionResult::success([
+                    return ActionResult::success($context, 'Row skipped due to conflict resolution')->withData([
                         'action_taken' => 'skipped',
                         'reason' => $resolution->getReason(),
                         'resolution_history' => $resolutionHistory,
@@ -156,7 +156,7 @@ class HandleConflictsAction extends ImportAction
         $this->handleBarcodes($variant, $data);
         $this->handlePricing($variant, $data);
 
-        return ActionResult::success([
+        return ActionResult::success($context, 'Variant processing completed successfully')->withData([
             'variant_id' => $variant->id,
             'variant_sku' => $variant->sku,
             'created' => $variant->wasRecentlyCreated,

@@ -64,7 +64,7 @@ class ExtractAttributesAction extends ImportAction
             }
         }
 
-        return ActionResult::success([
+        return ActionResult::success($context, 'Attributes extracted successfully')->withData([
             'attributes_extracted' => count($extractedData),
             'extracted_fields' => array_keys($extractedData),
         ])->withContextUpdates($extractedData);

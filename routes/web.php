@@ -102,15 +102,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/mirakl', MiraklSync::class)->name('mirakl');
         Route::get('/shopify', ShopifySync::class)->name('shopify');
         Route::get('/ebay', EbaySync::class)->name('ebay');
+    });
 
-        // eBay OAuth Routes
-        Route::prefix('ebay/oauth')->name('ebay.oauth.')->group(function () {
-            Route::post('authorize', [App\Http\Controllers\EbayOAuthController::class, 'authorize'])->name('authorize');
-            Route::get('callback', [App\Http\Controllers\EbayOAuthController::class, 'callback'])->name('callback');
-            Route::get('accounts', [App\Http\Controllers\EbayOAuthController::class, 'accounts'])->name('accounts');
-            Route::delete('accounts/{account}/revoke', [App\Http\Controllers\EbayOAuthController::class, 'revoke'])->name('revoke');
-            Route::post('accounts/{account}/test', [App\Http\Controllers\EbayOAuthController::class, 'test'])->name('test');
-        });
+    // ✨ LEGENDARY SHOPIFY DASHBOARDS ✨
+    Route::get('/shopify-dashboard', \App\Livewire\ShopifyDashboard::class)->name('shopify.dashboard');
+    Route::get('/shopify-webhooks', \App\Livewire\Shopify\WebhookDashboard::class)->name('shopify.webhooks');
+
+    // eBay OAuth Routes
+    Route::prefix('ebay/oauth')->name('ebay.oauth.')->group(function () {
+        Route::post('authorize', [App\Http\Controllers\EbayOAuthController::class, 'authorize'])->name('authorize');
+        Route::get('callback', [App\Http\Controllers\EbayOAuthController::class, 'callback'])->name('callback');
+        Route::get('accounts', [App\Http\Controllers\EbayOAuthController::class, 'accounts'])->name('accounts');
+        Route::delete('accounts/{account}/revoke', [App\Http\Controllers\EbayOAuthController::class, 'revoke'])->name('revoke');
+        Route::post('accounts/{account}/test', [App\Http\Controllers\EbayOAuthController::class, 'test'])->name('test');
     });
 
     // Operations routes
@@ -218,6 +222,25 @@ Route::middleware(['auth'])->group(function () {
         Route::get('roles', function () {
             return view('admin.roles.index');
         })->name('roles.index');
+    });
+});
+
+// 🎭 LEGENDARY SHOPIFY WEBHOOK ROUTES 🎭
+// These routes handle incoming Shopify webhooks with MAXIMUM SASS!
+Route::prefix('webhooks/shopify')->name('webhooks.shopify.')->group(function () {
+    // Main webhook handler (public endpoint for Shopify)
+    Route::post('/', [App\Http\Controllers\Shopify\WebhookController::class, 'handle'])
+         ->middleware(['shopify.webhook'])
+         ->name('handle');
+    
+    // Health check endpoint (public for monitoring)
+    Route::get('/health', [App\Http\Controllers\Shopify\WebhookController::class, 'health'])
+         ->name('health');
+    
+    // Admin routes (protected)
+    Route::middleware(['auth'])->group(function () {
+        Route::post('/register', [App\Http\Controllers\Shopify\WebhookController::class, 'register'])
+             ->name('register');
     });
 });
 

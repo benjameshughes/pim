@@ -54,6 +54,7 @@ return [
         'api_version' => env('SHOPIFY_API_VERSION', '2024-07'),
         'api_key' => env('SHOPIFY_API_KEY'), // From custom app (optional, for OAuth apps)
         'api_secret' => env('SHOPIFY_API_SECRET'), // From custom app (optional, for OAuth apps)
+        'webhook_secret' => env('SHOPIFY_WEBHOOK_SECRET'), // 🎭 LEGENDARY webhook signature verification
     ],
 
     'ebay' => [

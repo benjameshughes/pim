@@ -237,32 +237,125 @@
 
     <flux:heading size="lg">Marketplace Sync Status</flux:heading>
     <div class="space-y-6">
-        <!-- Shopify Status -->
-        <div class="border-b border-zinc-100 dark:border-zinc-800 pb-6">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center">
-                        <flux:icon name="shopping-bag" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+        <!-- ✨ LEGENDARY SHOPIFY SYNC STATUS with SASSILLA'S ENHANCEMENTS ✨ -->
+        <div class="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-800 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900 rounded-xl flex items-center justify-center">
+                        <flux:icon name="shopping-bag" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span class="text-lg font-medium text-zinc-900 dark:text-zinc-100">Shopify</span>
+                    <div>
+                        <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Shopify Sync Status</h3>
+                        <p class="text-sm text-zinc-600 dark:text-zinc-400">{{ $shopifyStatus['sync_summary'] }}</p>
+                    </div>
                 </div>
-                <flux:button variant="outline" size="sm">
-                    <flux:icon name="refresh-cw" class="w-4 h-4 mr-2" />
-                    Sync Now
-                </flux:button>
+                
+                <!-- 💎 HEALTH GRADE DISPLAY 💎 -->
+                <div class="flex items-center gap-4">
+                    <!-- Health Grade Badge -->
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-{{ $shopifyStatus['health_score'] >= 80 ? 'emerald' : ($shopifyStatus['health_score'] >= 60 ? 'yellow' : 'red') }}-600">
+                            {{ $shopifyStatus['health_grade'] }}
+                        </div>
+                        <div class="text-xs text-zinc-500 dark:text-zinc-400">Health Grade</div>
+                    </div>
+                    
+                    <!-- Circular Progress -->
+                    <div class="w-16 h-16 relative">
+                        <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" stroke-width="2" 
+                                    class="text-zinc-200 dark:text-zinc-700"></circle>
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" stroke-width="2" 
+                                    class="text-{{ $shopifyStatus['health_score'] >= 80 ? 'emerald' : ($shopifyStatus['health_score'] >= 60 ? 'yellow' : 'red') }}-500"
+                                    stroke-dasharray="{{ $shopifyStatus['health_score'] }}, 100"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">{{ $shopifyStatus['health_score'] }}%</span>
+                        </div>
+                    </div>
+                    
+                    <flux:button variant="{{ $shopifyStatus['needs_attention'] ? 'primary' : 'outline' }}" size="sm">
+                        <flux:icon name="refresh-cw" class="w-4 h-4 mr-2" />
+                        {{ $shopifyStatus['needs_attention'] ? 'Sync Now' : 'Refresh' }}
+                    </flux:button>
+                </div>
             </div>
-            <x-sync-status-badge 
-                :status="$shopifyStatus['status']"
-                :last-synced-at="$shopifyStatus['last_synced_at'] ? \Carbon\Carbon::parse($shopifyStatus['last_synced_at']) : null"
-                marketplace="Shopify"
-                size="md"
-            />
-            @if($shopifyStatus['total_colors'] > 0)
-                <div class="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    {{ $shopifyStatus['colors_synced'] }}/{{ $shopifyStatus['total_colors'] }} color variants synced
-                    @if($shopifyStatus['has_failures'])
-                        <span class="text-red-500 ml-2">• Has failures</span>
-                    @endif
+            
+            <!-- 📊 Enhanced Status Information -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <!-- Sync Status Badge -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4">
+                    <x-sync-status-badge 
+                        :status="$shopifyStatus['status']"
+                        :last-synced-at="$shopifyStatus['last_synced_at'] ? \Carbon\Carbon::parse($shopifyStatus['last_synced_at']) : null"
+                        marketplace="Shopify"
+                        size="md"
+                    />
+                </div>
+                
+                <!-- Variants Progress -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Variants</span>
+                        <span class="text-sm text-zinc-600 dark:text-zinc-400">
+                            {{ $shopifyStatus['colors_synced'] }}/{{ $shopifyStatus['total_colors'] }}
+                        </span>
+                    </div>
+                    <div class="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
+                        <div class="h-2 bg-emerald-500 rounded-full" 
+                             style="width: {{ $shopifyStatus['total_colors'] > 0 ? round(($shopifyStatus['colors_synced'] / $shopifyStatus['total_colors']) * 100) : 0 }}%"></div>
+                    </div>
+                </div>
+                
+                <!-- Data Drift Indicator -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">Data Drift</span>
+                        <flux:badge variant="outline" class="bg-{{ ($shopifyStatus['drift_score'] ?? 0) > 5 ? 'red' : (($shopifyStatus['drift_score'] ?? 0) > 2 ? 'yellow' : 'emerald') }}-50 text-{{ ($shopifyStatus['drift_score'] ?? 0) > 5 ? 'red' : (($shopifyStatus['drift_score'] ?? 0) > 2 ? 'yellow' : 'emerald') }}-700">
+                            {{ ($shopifyStatus['drift_score'] ?? 0) > 5 ? 'High' : (($shopifyStatus['drift_score'] ?? 0) > 2 ? 'Medium' : 'Low') }}
+                        </flux:badge>
+                    </div>
+                    <div class="text-xs text-zinc-500 dark:text-zinc-400">
+                        Score: {{ number_format($shopifyStatus['drift_score'] ?? 0, 1) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔗 Shopify Admin Links -->
+            @if(!empty($shopifyStatus['shopify_urls']))
+                <div class="flex items-center gap-2 text-sm">
+                    <flux:icon name="external-link" class="w-4 h-4 text-emerald-600" />
+                    <span class="text-zinc-600 dark:text-zinc-400">View in Shopify:</span>
+                    @foreach($shopifyStatus['shopify_urls'] as $url)
+                        <a href="{{ $url }}" target="_blank" class="text-emerald-600 hover:text-emerald-700 hover:underline">
+                            Product {{ $loop->iteration }}
+                        </a>
+                    @endforeach
+                </div>
+            @endif
+
+            <!-- 🚨 Attention Indicators -->
+            @if($shopifyStatus['has_failures'])
+                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div class="flex items-center gap-2 text-red-700 dark:text-red-300">
+                        <flux:icon name="triangle-alert" class="w-4 h-4" />
+                        <span class="font-medium">Sync Issues Detected</span>
+                    </div>
+                    <p class="text-sm text-red-600 dark:text-red-400 mt-1">
+                        Some color variants failed to sync. Review sync records and retry.
+                    </p>
+                </div>
+            @endif
+
+            @if($shopifyStatus['needs_attention'] && !$shopifyStatus['has_failures'])
+                <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div class="flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
+                        <flux:icon name="info" class="w-4 h-4" />
+                        <span class="font-medium">Sync Recommended</span>
+                    </div>
+                    <p class="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                        Product data may be out of sync. Consider refreshing to ensure accuracy.
+                    </p>
                 </div>
             @endif
         </div>

@@ -17,20 +17,20 @@ use InvalidArgumentException;
 class CreateVariantAction extends BaseAction
 {
     /**
-     * Execute variant creation
+     * Perform variant creation action
      *
      * @param  array  $data  Variant data
-     * @return ProductVariant The created variant
+     * @return array Action result with created variant
      *
      * @throws InvalidArgumentException If required data is missing
      */
-    public function execute(...$params): ProductVariant
+    protected function performAction(...$params): array
     {
         $data = $params[0] ?? [];
 
         $this->validateVariantData($data);
 
-        return DB::transaction(function () use ($data) {
+        $variant = DB::transaction(function () use ($data) {
             // Create the variant
             $variant = ProductVariant::create($data);
 
@@ -39,6 +39,15 @@ class CreateVariantAction extends BaseAction
 
             return $variant->fresh();
         });
+
+        // Return standardized array format while maintaining access to the variant
+        return [
+            'success' => true,
+            'variant' => $variant,
+            'product' => $variant, // For backward compatibility with builder expectations
+            'message' => "Variant '{$variant->sku}' created successfully",
+            'variant_id' => $variant->id,
+        ];
     }
 
     /**

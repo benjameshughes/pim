@@ -80,6 +80,129 @@
         </div>
     @endif
 
+    <!-- ✨ LEGENDARY SYNC STATUS OVERVIEW ✨ -->
+    <div class="mb-6 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg shadow-emerald-500/10 dark:border-emerald-700 dark:from-emerald-900/20 dark:to-green-900/20">
+        <div class="border-b border-emerald-200 dark:border-emerald-700 p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                        <flux:icon name="activity" class="w-6 h-6" />
+                        Sync Status Overview
+                    </h3>
+                    <p class="text-sm text-emerald-600 dark:text-emerald-400 mt-1">Real-time health monitoring with LEGENDARY intelligence</p>
+                </div>
+                <flux:button variant="ghost" size="sm" href="/shopify-dashboard" wire:navigate class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-800 dark:text-emerald-200">
+                    <flux:icon name="external-link" class="w-4 h-4 mr-2" />
+                    Full Dashboard
+                </flux:button>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Health Metrics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                @php
+                    $syncedProducts = \App\Models\ShopifyProductSync::with('product')->get();
+                    $totalProducts = \App\Models\Product::count();
+                    $healthScores = $syncedProducts->map(fn($sync) => $sync->calculateSyncHealth())->filter();
+                    $averageHealth = $healthScores->count() > 0 ? round($healthScores->average()) : 0;
+                    $healthyProducts = $healthScores->filter(fn($score) => $score >= 80)->count();
+                    $needsAttention = $healthScores->filter(fn($score) => $score < 80)->count();
+                    $recentActivity = $syncedProducts->where('last_synced_at', '>=', now()->subDay())->count();
+                @endphp
+
+                <!-- Average Health -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4 border border-white/50">
+                    <div class="flex items-center justify-between">
+                        <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center">
+                            <flux:icon name="heart" class="w-5 h-5 text-white" />
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-{{ $averageHealth >= 80 ? 'emerald' : ($averageHealth >= 60 ? 'yellow' : 'red') }}-600">
+                                {{ $averageHealth }}%
+                            </div>
+                            <div class="text-xs text-zinc-500">Avg Health</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Synced -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4 border border-white/50">
+                    <div class="flex items-center justify-between">
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <flux:icon name="package" class="w-5 h-5 text-white" />
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-blue-600">{{ $syncedProducts->count() }}</div>
+                            <div class="text-xs text-zinc-500">Total Synced</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Healthy Products -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4 border border-white/50">
+                    <div class="flex items-center justify-between">
+                        <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center">
+                            <flux:icon name="check-circle" class="w-5 h-5 text-white" />
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-emerald-600">{{ $healthyProducts }}</div>
+                            <div class="text-xs text-zinc-500">Healthy</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Needs Attention -->
+                <div class="bg-white/60 dark:bg-zinc-800/60 rounded-lg p-4 border border-white/50">
+                    <div class="flex items-center justify-between">
+                        <div class="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
+                            <flux:icon name="exclamation-triangle" class="w-5 h-5 text-white" />
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-{{ $needsAttention > 0 ? 'red' : 'emerald' }}-600">{{ $needsAttention }}</div>
+                            <div class="text-xs text-zinc-500">Need Attention</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Bar -->
+            @if($needsAttention > 0)
+                <div class="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <flux:icon name="info" class="w-5 h-5 text-yellow-600" />
+                        <div>
+                            <span class="font-medium text-yellow-800 dark:text-yellow-200">{{ $needsAttention }} products need attention</span>
+                            <span class="text-sm text-yellow-600 dark:text-yellow-400 block">Sync health is below optimal levels</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <flux:button variant="outline" size="sm" href="/shopify-dashboard" wire:navigate class="text-yellow-700 border-yellow-300 hover:bg-yellow-100">
+                            View Details
+                        </flux:button>
+                        @if($needsAttention <= 10)
+                            <flux:button variant="primary" size="sm" class="bg-yellow-600 hover:bg-yellow-700">
+                                <flux:icon name="zap" class="w-4 h-4 mr-2" />
+                                Sync {{ $needsAttention }} Products
+                            </flux:button>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            <!-- Recent Activity Preview -->
+            @if($recentActivity > 0)
+                <div class="mt-4 text-center">
+                    <div class="inline-flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400">
+                        <flux:icon name="clock" class="w-4 h-4" />
+                        {{ $recentActivity }} products synced in the last 24 hours
+                        <a href="/shopify-dashboard" wire:navigate class="underline hover:no-underline">View all activity →</a>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <!-- Two-Tab System: Export and Import -->
     <div class="mb-6 rounded-xl border border-zinc-200 bg-white shadow-lg shadow-zinc-900/5 dark:border-zinc-700 dark:bg-zinc-800/50">
         <div class="border-b border-zinc-200 dark:border-zinc-700">

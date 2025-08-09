@@ -754,13 +754,12 @@ class ProductWizard extends Component
             $this->currentStep = $i;
             if (! $this->validateCurrentStep()) {
                 session()->flash('error', "Please complete step {$i} before creating the product.");
-
                 return;
             }
         }
 
         try {
-            DB::transaction(function () {
+            $product = DB::transaction(function () {
                 // Create the product using our beautiful ProductBuilder! 🚀
                 $builder = Product::build()
                     ->name($this->form->name)
@@ -811,10 +810,13 @@ class ProductWizard extends Component
                 // Handle variants using our new Builder pattern
                 $this->handleProductVariants($product);
 
-                session()->flash('message', 'Product created successfully with all variants using Builder patterns!');
-
-                return redirect()->route('products.view', $product);
+                return $product;
             });
+
+            // Success: Set flash message and redirect using proper Livewire method
+            session()->flash('message', 'Product created successfully with all variants using Builder patterns!');
+            $this->redirectRoute('products.view', $product);
+
         } catch (\Exception $e) {
             session()->flash('error', 'Error creating product: '.$e->getMessage());
             \Log::error('Product creation failed in wizard: '.$e->getMessage(), [
@@ -822,6 +824,7 @@ class ProductWizard extends Component
                 'parent_sku' => $this->parentSku,
                 'variants_count' => count($this->generateVariants ? $this->variantMatrix : $this->customVariants),
             ]);
+            return;
         }
     }
 

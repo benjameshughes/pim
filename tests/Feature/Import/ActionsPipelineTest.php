@@ -50,8 +50,8 @@ describe('Actions Pipeline', function () {
             
             $context->addConfiguration('setting', 'value');
             
-            expect($context->getConfiguration('setting'))->toBe('value');
-            expect($context->getConfiguration('missing', 'default'))->toBe('default');
+            expect($context->getConfig('setting'))->toBe('value');
+            expect($context->getConfig('missing', 'default'))->toBe('default');
         });
     });
 

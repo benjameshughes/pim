@@ -457,11 +457,13 @@ class VariantBuilder extends BaseBuilder
 
         // Use comprehensive action if we have complex data (barcodes, marketplace pricing, images)
         if ($this->hasComplexData()) {
-            return app(CreateVariantWithBarcodeAction::class)->execute($this->data);
+            $result = app(CreateVariantWithBarcodeAction::class)->execute($this->data);
+            return $result['variant'] ?? $result['product'] ?? $result;
         }
 
         // Use simple action for basic variants
-        return app(CreateVariantAction::class)->execute($this->data);
+        $result = app(CreateVariantAction::class)->execute($this->data);
+        return $result['variant'] ?? $result['product'] ?? $result;
     }
 
     /**

@@ -142,7 +142,7 @@ class ActionPipeline
             }
         }
         
-        return ActionResult::success([
+        return ActionResult::success($context, 'Pipeline execution completed successfully')->withData([
             'actions_executed' => array_keys($results),
             'action_results' => $results,
             'final_context_data' => $context->getData(),

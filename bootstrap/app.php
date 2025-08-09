@@ -15,7 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // 🎭 LEGENDARY webhook middleware registration
+        $middleware->alias([
+            'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
