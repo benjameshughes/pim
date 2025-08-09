@@ -86,25 +86,53 @@ class ShopifyTaxonomyCategory extends Model
     }
 
     /**
-     * Get the best matching category for a product
+     * Get the best matching category for a product (ENHANCED SASSY VERSION)
      */
     public static function getBestMatchForProduct(string $productName): ?self
     {
         $productName = strtolower($productName);
 
-        // Define keyword priority (more specific first)
+        // PRIORITY 1: Check for specific Window Treatment categories we found!
+        $windowTreatmentCategory = static::where('shopify_id', 'gid://shopify/TaxonomyCategory/hg-3-74')->first(); // Home & Garden > Decor > Window Treatments
+        
+        if ($windowTreatmentCategory) {
+            // Any product with blind/shade/curtain/treatment should use this category
+            $blindKeywords = ['blind', 'shade', 'curtain', 'window treatment', 'blackout', 'roller', 'venetian', 'roman', 'vertical'];
+            
+            foreach ($blindKeywords as $keyword) {
+                if (str_contains($productName, $keyword)) {
+                    return $windowTreatmentCategory; // Perfect match!
+                }
+            }
+        }
+
+        // PRIORITY 2: Define keyword priority (more specific first) for fallback matching
         $keywordMap = [
-            'blackout blind' => ['blackout', 'blind'],
-            'roller blind' => ['roller', 'blind'],
-            'vertical blind' => ['vertical', 'blind'],
-            'venetian blind' => ['venetian', 'blind'],
-            'roman blind' => ['roman', 'blind'],
-            'day night blind' => ['day night', 'blind'],
+            'blackout blind' => ['blackout', 'blind', 'window treatment'],
+            'roller blind' => ['roller', 'blind', 'window treatment'],  
+            'vertical blind' => ['vertical', 'blind', 'window treatment'],
+            'venetian blind' => ['venetian', 'blind', 'window treatment'],
+            'roman blind' => ['roman', 'blind', 'window treatment'],
+            'day night blind' => ['day night', 'blind', 'window treatment'],
             'blind' => ['blind', 'shade', 'window treatment'],
+            'shade' => ['shade', 'blind', 'window treatment'],
+            'curtain' => ['curtain', 'window treatment'],
         ];
 
         foreach ($keywordMap as $pattern => $keywords) {
             if (str_contains($productName, $pattern)) {
+                // First try to find our specific window treatment categories
+                $windowCategories = static::where('full_name', 'LIKE', '%Window Treatment%')->get();
+                if ($windowCategories->isNotEmpty()) {
+                    // Prefer leaf categories (most specific)
+                    $leafCategory = $windowCategories->where('is_leaf', true)->first();
+                    if ($leafCategory) {
+                        return $leafCategory;
+                    }
+                    return $windowCategories->first();
+                }
+
+                // Fallback to general keyword search
                 $categories = static::findByKeywords($keywords);
 
                 // Prefer leaf categories (most specific)
@@ -118,8 +146,9 @@ class ShopifyTaxonomyCategory extends Model
             }
         }
 
-        // Default fallback - find any window treatment category
-        return static::findByKeywords(['blind', 'shade', 'window'])->first();
+        // PRIORITY 3: No blind/window keywords found - use generic fallback
+        // Default to Home & Garden for non-window treatment products
+        return static::where('shopify_id', 'gid://shopify/TaxonomyCategory/hg')->first();
     }
 
     /**

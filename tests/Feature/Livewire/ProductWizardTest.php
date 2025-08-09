@@ -94,10 +94,15 @@ describe('ProductWizard 💫 - The Sassy Chronicles', function () {
             $image = UploadedFile::fake()->image('gorgeous.jpg');
             
             Livewire::test(ProductWizard::class)
+                // First complete step 1 requirements
+                ->set('form.name', 'Test Product')
+                ->set('parentSku', '999')
+                ->call('nextStep') // Go to step 2
+                // Now test image functionality
                 ->set('newImages.0', $image)
                 ->assertSet('imageType', 'gallery')
-                ->call('nextStep')
-                ->assertSet('currentStep', 2); // Images are optional, should stay
+                ->call('nextStep') // Should advance to step 3
+                ->assertSet('currentStep', 3); // Images are optional, should advance to step 3
         });
 
         it('removes images like a decluttering guru', function () {

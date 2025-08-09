@@ -335,8 +335,8 @@ class BuildShopifyProductData
         // Use the cached taxonomy to find the best match
         $category = \App\Models\ShopifyTaxonomyCategory::getBestMatchForProduct($product->name);
 
-        // For now, use the verified Home & Garden category until we can get full taxonomy
-        return 'gid://shopify/TaxonomyCategory/hg'; // Home & Garden (verified category)
+        // Return the intelligent match, with fallback to Home & Garden if no match found
+        return $category?->shopify_id ?? 'gid://shopify/TaxonomyCategory/hg';
     }
 
     /**

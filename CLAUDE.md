@@ -218,19 +218,6 @@ if (preg_match('/\b' . preg_quote($variation, '/') . '\b/i', $text)) {
 - Name-based extraction with smart cleaning
 - Fallback to generic parent creation
 
-### Import Data Component (`app/Livewire/Products/ImportData.php`)
-
-#### Features
-- **Column Auto-mapping**: Intelligent field detection using pattern matching
-- **Dry Run Validation**: Comprehensive constraint checking before import
-- **Event-driven Processing**: ProductImported events for background tasks
-- **Multi-mode Support**: All three import modes with proper constraint handling
-
-#### Key Methods
-- `predictVariantAction()`: Predicts create/update/skip actions
-- `handleVariantImport()`: Core variant import logic with constraint handling
-- `runDryRun()`: Enhanced dry run with color/size constraint detection
-
 ### Testing Framework
 
 #### Comprehensive Test Coverage
@@ -249,40 +236,14 @@ test('handles duplicate color/size combination gracefully in create_only mode', 
 ```
 
 ### Development Tools
-
-#### Nuclear Reset Command (`app/Console/Commands/ClearAllProductData.php`)
-- Safely deletes all product data with confirmation prompts
-- Resets barcode pool usage and auto-increment counters
-- Clears product images from storage
-- Development-only tool for clean testing iterations
+ ### Pest and LaraStan
+- Use Pest to run test to check if there are code errors
+- Use LaraStan to check code types and code quality
 
 ```bash
 php artisan clear:products          # With confirmations
 php artisan clear:products --force  # Skip confirmations
 ```
-
-### Recent Improvements
-
-#### Session Achievements
-1. **Complete PIM Integration**: All three data management sections (Barcodes, Pricing, Images) properly integrated
-2. **Smart Import System**: Enhanced column mapping and attribute extraction
-3. **Constraint Resolution**: Fixed all UNIQUE constraint violations
-4. **Auto-Parent Creation**: Implemented lazy programmer solution for parent generation
-5. **Comprehensive Testing**: Full test coverage with Pest framework
-6. **Development Tooling**: Nuclear reset tool for clean iterations
-
-#### Technical Debt Removed
-- Completely removed style/subcategory references from entire codebase
-- Fixed color extraction false positives ("blackout" → "black")
-- Resolved barcode and variant constraint violations
-- Enhanced dry run logic to match actual import behavior
-
-### Best Practices
-- Always use constraint-aware import logic
-- Test with nuclear reset tool between iterations
-- Use smart attribute extraction for missing color/size data
-- Leverage auto-parent creation for variant-heavy imports
-- Run comprehensive tests before deployment
 
 ## Marketplace Integration System
 
@@ -362,170 +323,14 @@ SHOPIFY_API_VERSION=2024-07
 ### Flux UI Memories
 - Flux UI select dropdown is flux::select.option not flux::option
 
-## Atom Framework - Universal Laravel UI Toolkit
-
-The Atom framework is now a complete, universal Laravel UI toolkit that works with any Laravel project out of the box. It provides a drop-in resource management system with intelligent layout and CSS framework detection.
-
-### Universal Element System 🚀
-
-The framework provides magic `{{ $this->element }}` properties that work in any Blade template:
-
-```blade
-{{-- Drop into ANY Laravel project --}}
-<div>
-    {{ $this->navigation }}      {{-- Auto-detects layout & styling --}}
-    {{ $this->breadcrumbs }}     {{-- Smart breadcrumbs --}}
-    {{ $this->search }}          {{-- Global search --}}
-    {{ $this->actions }}         {{-- Context buttons --}}
-    {{ $this->filters }}         {{-- Table filters --}}
-    {{ $this->table }}           {{-- Resource table --}}
-    {{ $this->pagination }}      {{-- Smart pagination --}}
-    {{ $this->stats }}           {{-- Stats cards --}}
-    {{ $this->subNavigation }}   {{-- Tabs/sub menus --}}
-    {{ $this->userMenu }}        {{-- Profile dropdown --}}
-    {{ $this->notifications }}   {{-- Toast notifications --}}
-</div>
-```
-
-### Smart Auto-Detection
-
-Each element automatically:
-- **Detects Layout**: Tries common Laravel layouts (`components.layouts.app`, `layouts.app`, `app`, etc.)
-- **Detects CSS Framework**: Auto-detects Tailwind, Bootstrap, or falls back to minimal HTML
-- **Graceful Fallbacks**: Multiple view layers ensure compatibility
-- **Zero Configuration**: Works immediately after installation
-
-### Element Rendering Chain
-
-1. `atom.elements.navigation.main` (user's custom view)
-2. `atom::elements.navigation.main` (framework default)
-3. `atom::elements.tailwind.navigation.main` (framework + detected CSS)
-4. Simple HTML fallback
-
-### Framework Architecture
-
-- **`App\Atom\Adapters\LivewireResourceAdapter`** - Core dynamic component that handles all resource pages
-- **`App\Atom\Resources\`** - Resource definitions and table configurations
-- **`App\Atom\Navigation\`** - Auto-discovery navigation system
-- **`App\Atom\Tables\`** - Intelligent table rendering system
-
-### Drop-In Compatibility
-
-The framework works with:
-- ✅ Any Laravel version (11+, 10+, etc.)
-- ✅ Any starter kit (Breeze, Jetstream, custom)
-- ✅ Any CSS framework (Tailwind, Bootstrap, custom)
-- ✅ Any UI library (Flux, Blade UI, Livewire UI, custom)
-
-### Console Commands
-
-The Atom framework includes powerful console commands for resource generation:
-
-#### `php artisan atom:resource {name}`
-
-Generate new Atom resources with intelligent naming:
-
-```bash
-# Simple usage - automatically appends "Resource"
-php artisan atom:resource Product    # → ProductResource.php  
-php artisan atom:resource User       # → UserResource.php
-php artisan atom:resource Order      # → OrderResource.php
-
-# Still works with full names (no duplication)
-php artisan atom:resource ProductResource  # → ProductResource.php
-```
-
-**Command Features:**
-- ✅ **Smart Naming**: Auto-appends "Resource" suffix if not provided
-- ✅ **Correct Namespace**: Creates in `App\Atom\Resources` with proper imports
-- ✅ **Model Detection**: Automatically infers model name and creates proper references
-- ✅ **Full Template**: Generates complete resource with table configuration, actions, and bulk operations
-- ✅ **No Conflicts**: Uses `atom:resource` to avoid Laravel's default `make:resource`
-
-**Options:**
-- `--model=ModelName` - Specify different model name
-- `--model-namespace=Namespace` - Custom model namespace (default: App\Models)
-- `--force` - Overwrite existing resource
-- `--simple` - Generate minimal configuration
-- `--generate` - Auto-generate based on model (coming soon)
-
-**Generated Structure:**
-```php
-<?php
-
-namespace App\Atom\Resources;
-
-use \App\Models\Product;
-use App\Atom\Resources\Resource;
-// ... other imports
-
-class ProductResource extends Resource
-{
-    protected static ?string $model = \App\Models\Product::class;
-    protected static ?string $navigationLabel = 'Products';
-    protected static ?string $navigationIcon = 'cube';
-    
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([...])
-            ->actions([...])
-            ->bulkActions([...]);
-    }
-}
-```
-
-### Configuration
-
-Customize the framework through dedicated configuration classes:
-
-#### Navigation Configuration (`app/Atom/Config/NavigationConfig.php`)
-```php
-// Add your application's navigation items
-Navigation::make()
-    ->label('Products')
-    ->route('products.index')
-    ->icon('package')
-    ->group('Catalog')
-    ->sort(10)
-    ->register();
-```
-
-#### Framework Configuration (`app/Atom/Config/AtomConfig.php`)
-```php
-// Customize framework behavior
-public static function getDefaultLayouts(): array
-{
-    return [
-        'components.layouts.app',    // Try these layouts in order
-        'layouts.app',
-        'app',
-    ];
-}
-```
+### Flux Icons
+- Uses lucide dev for icons
+- Icons should be in the flux tag as a directive
 
 ## Design Patterns & Architecture
 
 ### Builder Pattern / Fluent API
 When creating services or utilities that require configuration, use the **Builder Pattern with Fluent API**:
-
-```php
-// Example: Toast notification system
-Toast::success('Title', 'Message')
-    ->position('top-right')
-    ->duration(5000)
-    ->persist()      // Method chaining
-    ->persistent()   // Each method returns $this
-    ->action(ToastAction::make('Undo')->url('/undo'))
-    ->send();
-```
-
-**Key Principles:**
-- Each configuration method returns `$this` for chaining
-- Use descriptive method names that read naturally
-- Provide sensible defaults in constructor
-- Terminal methods (like `send()`) execute the action
-- Static factory methods for common presets (`::success()`, `::error()`)
 
 ### Alpine.js Integration with Livewire
 
@@ -577,81 +382,9 @@ window.addEventListener('event-name', (event) => {
 });
 ```
 
-### Navigation Persistence (wire:navigate)
-
-For elements that should persist across SPA navigation:
-```blade
-@persist('unique-name')
-    <!-- Element that survives page changes -->
-@endpersist
-```
-
-**Toast Persistence Pattern:**
-- Use `->persist()` for navigation persistence
-- Use `->persistent()` for auto-dismiss control
-- Listen for `livewire:navigate` events to filter non-persistent items
-- Wrap container in `@persist` directive
-
-### Testing with Pest
-
-**Test Structure:**
-```php
-beforeEach(function () {
-    // Setup for each test
-});
-
-it('describes what it tests', function () {
-    // Arrange
-    $model = Model::factory()->create();
-    
-    // Act
-    $result = $model->doSomething();
-    
-    // Assert
-    expect($result)->toBe($expected);
-});
-
-describe('Feature Group', function () {
-    it('tests specific feature', function () {
-        // Grouped related tests
-    });
-});
-```
-
-**Key Principles:**
-- Use descriptive test names that explain the behavior
-- Group related tests with `describe()`
-- Use `beforeEach()` for common setup
-- Prefer `expect()` syntax over traditional assertions
-- Test uses in-memory SQLite database (`:memory:`)
-- Tests are non-destructive to development database
-
-### State Management Best Practices
-
-**Session State (Server):**
-- Use for data that must persist across requests
-- Store minimal data (IDs, not full objects)
-- Reconstruct objects from session data when needed
-
-**Alpine State (Client):**
-- Use for UI state (open/closed, animations, timers)
-- Keep reactive data in Alpine stores for sharing
-- Use component `x-data` for isolated state
-
-**Livewire State (Hybrid):**
-- Public properties are reactive and persist across requests
-- Use computed properties for derived state
-- Don't store Eloquent Collections as public properties
-- Use `->values()->toArray()` to convert Collections for Alpine
-
-### Component Communication Patterns
-
-1. **Parent → Child:** Props/attributes
-2. **Child → Parent:** Events (`$dispatch`, `$emit`)
-3. **Sibling → Sibling:** Alpine store or browser events
-4. **Cross-Page (SPA):** Navigation persistence with `@persist`
-
 ### File Organization
+
+File organisation should be organised very well and not just have all files in a directory, for example all Services should be broken down by service and have subdirectories 
 
 - **Livewire Components:** `app/Livewire/` organized by feature
 - **Blade Views:** Mirror Livewire structure in `resources/views/livewire/`

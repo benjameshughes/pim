@@ -218,6 +218,292 @@ Query;
     }
 
     /**
+     * Get ALL Shopify taxonomy categories with pagination (ENHANCED SASSY VERSION)
+     */
+    public function getAllTaxonomyCategories(int $batchSize = 250): array
+    {
+        $allCategories = [];
+        $hasNextPage = true;
+        $cursor = null;
+        $requestCount = 0;
+        $maxRequests = 50; // Safety limit
+
+        Log::info('🚀 Starting ENHANCED taxonomy sync - fetching ALL categories with pagination');
+
+        while ($hasNextPage && $requestCount < $maxRequests) {
+            $requestCount++;
+            
+            // Build GraphQL query with cursor pagination
+            $afterClause = $cursor ? ", after: \"$cursor\"" : '';
+            
+            $graphQL = <<<Query
+query {
+  taxonomy {
+    categories(first: $batchSize$afterClause) {
+      edges {
+        cursor
+        node {
+          id
+          name
+          fullName
+          level
+          isLeaf
+          parentId
+          childrenIds
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+Query;
+
+            try {
+                Log::info("📋 Taxonomy request $requestCount" . ($cursor ? " (cursor: " . substr($cursor, 0, 20) . "...)" : " (first batch)"));
+                
+                $response = $this->shopify->GraphQL->post($graphQL);
+                
+                if (!isset($response['data']['taxonomy']['categories'])) {
+                    Log::warning('⚠️ No taxonomy data in response', ['response' => $response]);
+                    break;
+                }
+
+                $categoriesData = $response['data']['taxonomy']['categories'];
+                $edges = $categoriesData['edges'] ?? [];
+                
+                Log::info("✅ Retrieved " . count($edges) . " categories in batch $requestCount");
+                
+                // Add categories to our collection
+                foreach ($edges as $edge) {
+                    if (isset($edge['node'])) {
+                        $allCategories[] = $edge['node'];
+                    }
+                }
+
+                // Check for pagination
+                $pageInfo = $categoriesData['pageInfo'] ?? [];
+                $hasNextPage = $pageInfo['hasNextPage'] ?? false;
+                $cursor = $pageInfo['endCursor'] ?? null;
+                
+                if ($hasNextPage && !$cursor) {
+                    Log::warning('⚠️ Has next page but no cursor - stopping pagination');
+                    break;
+                }
+
+                // Add a small delay between requests to be nice to Shopify
+                usleep(250000); // 250ms delay
+                
+            } catch (Exception $e) {
+                Log::error('❌ Failed to get taxonomy batch', [
+                    'request_number' => $requestCount,
+                    'cursor' => $cursor,
+                    'error' => $e->getMessage()
+                ]);
+                
+                return [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                    'categories_fetched_before_error' => count($allCategories)
+                ];
+            }
+        }
+
+        if ($requestCount >= $maxRequests) {
+            Log::warning("⚠️ Hit maximum request limit ($maxRequests) - may not have all categories");
+        }
+
+        Log::info("🎉 ENHANCED taxonomy sync complete!", [
+            'total_categories' => count($allCategories),
+            'total_requests' => $requestCount,
+            'sample_categories' => array_slice(array_map(fn($cat) => [
+                'id' => $cat['id'],
+                'name' => $cat['name'],
+                'fullName' => $cat['fullName'],
+                'level' => $cat['level']
+            ], $allCategories), 0, 5)
+        ]);
+
+        return [
+            'success' => true,
+            'data' => [
+                'taxonomy' => [
+                    'categories' => [
+                        'edges' => array_map(fn($category) => ['node' => $category], $allCategories)
+                    ]
+                ]
+            ],
+            'total_categories' => count($allCategories),
+            'requests_made' => $requestCount
+        ];
+    }
+
+    /**
+     * Get specific taxonomy categories by their IDs (RECURSIVE CHILD FETCHER)
+     */
+    public function getTaxonomyCategoriesByIds(array $categoryIds): array
+    {
+        if (empty($categoryIds)) {
+            return ['success' => true, 'data' => ['categories' => []]];
+        }
+
+        // Build GraphQL query to fetch specific categories by ID
+        $idsString = implode('", "', $categoryIds);
+        
+        $graphQL = <<<Query
+query {
+  nodes(ids: ["$idsString"]) {
+    ... on TaxonomyCategory {
+      id
+      name
+      fullName
+      level
+      isLeaf
+      parentId
+      childrenIds
+    }
+  }
+}
+Query;
+
+        try {
+            Log::info("🎯 Fetching " . count($categoryIds) . " specific categories by ID", [
+                'sample_ids' => array_slice($categoryIds, 0, 3)
+            ]);
+            
+            $response = $this->shopify->GraphQL->post($graphQL);
+            
+            if (!isset($response['data']['nodes'])) {
+                Log::warning('⚠️ No nodes data in response', ['response' => $response]);
+                return ['success' => false, 'error' => 'No nodes in response'];
+            }
+
+            $categories = [];
+            foreach ($response['data']['nodes'] as $node) {
+                if ($node && isset($node['id'])) {
+                    $categories[] = $node;
+                }
+            }
+
+            Log::info("✅ Successfully fetched " . count($categories) . " categories by ID");
+
+            return [
+                'success' => true,
+                'data' => ['categories' => $categories],
+                'total_categories' => count($categories)
+            ];
+            
+        } catch (Exception $e) {
+            Log::error('❌ Failed to get taxonomy categories by IDs', [
+                'category_ids' => $categoryIds,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get the COMPLETE taxonomy hierarchy with ALL subcategories (ULTIMATE SASSY VERSION)
+     */
+    public function getCompleteTaxonomyHierarchy(int $batchSize = 250): array
+    {
+        Log::info('🌟 Starting ULTIMATE taxonomy sync - fetching complete hierarchy with all subcategories!');
+        
+        // Step 1: Get all top-level categories
+        $topLevelResponse = $this->getAllTaxonomyCategories($batchSize);
+        if (!$topLevelResponse['success']) {
+            return $topLevelResponse;
+        }
+
+        $allCategories = [];
+        $topLevelCategories = [];
+        
+        // Extract categories and find ones with children
+        foreach ($topLevelResponse['data']['taxonomy']['categories']['edges'] as $edge) {
+            $category = $edge['node'];
+            $allCategories[] = $category;
+            $topLevelCategories[] = $category;
+        }
+
+        Log::info("📋 Found " . count($topLevelCategories) . " top-level categories");
+
+        // Step 2: Recursively fetch all child categories
+        $childCategoriesFound = 0;
+        $requestsMade = $topLevelResponse['requests_made'] ?? 1;
+        
+        foreach ($topLevelCategories as $category) {
+            $childrenIds = $category['childrenIds'] ?? [];
+            
+            if (!empty($childrenIds)) {
+                Log::info("🔍 Fetching " . count($childrenIds) . " children for category: " . $category['name']);
+                
+                $childResponse = $this->getTaxonomyCategoriesByIds($childrenIds);
+                $requestsMade++;
+                
+                if ($childResponse['success']) {
+                    $children = $childResponse['data']['categories'] ?? [];
+                    $childCategoriesFound += count($children);
+                    
+                    foreach ($children as $child) {
+                        $allCategories[] = $child;
+                        
+                        // Recursively fetch grandchildren if they exist
+                        $grandchildrenIds = $child['childrenIds'] ?? [];
+                        if (!empty($grandchildrenIds)) {
+                            Log::info("👶 Fetching " . count($grandchildrenIds) . " grandchildren for: " . $child['name']);
+                            
+                            $grandchildResponse = $this->getTaxonomyCategoriesByIds($grandchildrenIds);
+                            $requestsMade++;
+                            
+                            if ($grandchildResponse['success']) {
+                                $grandchildren = $grandchildResponse['data']['categories'] ?? [];
+                                $childCategoriesFound += count($grandchildren);
+                                
+                                foreach ($grandchildren as $grandchild) {
+                                    $allCategories[] = $grandchild;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Log::warning("⚠️ Failed to fetch children for " . $category['name'] . ": " . $childResponse['error']);
+                }
+                
+                // Add delay between requests
+                usleep(250000); // 250ms delay
+            }
+        }
+
+        Log::info("🎊 ULTIMATE taxonomy sync complete!", [
+            'total_categories' => count($allCategories),
+            'top_level_categories' => count($topLevelCategories),
+            'child_categories_found' => $childCategoriesFound,
+            'total_requests' => $requestsMade
+        ]);
+
+        return [
+            'success' => true,
+            'data' => [
+                'taxonomy' => [
+                    'categories' => [
+                        'edges' => array_map(fn($category) => ['node' => $category], $allCategories)
+                    ]
+                ]
+            ],
+            'total_categories' => count($allCategories),
+            'top_level_categories' => count($topLevelCategories),
+            'child_categories' => $childCategoriesFound,
+            'requests_made' => $requestsMade
+        ];
+    }
+
+    /**
      * Search taxonomy categories by name using GraphQL
      */
     public function searchTaxonomyCategories(string $query): array

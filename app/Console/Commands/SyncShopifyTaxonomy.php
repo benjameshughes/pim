@@ -52,8 +52,8 @@ class SyncShopifyTaxonomy extends Command
         }
 
         try {
-            // Start with a reasonable batch size
-            $this->syncTaxonomyBatch(250);
+            // Use the ULTIMATE SASSY HIERARCHY method to get ALL categories AND subcategories!
+            $this->syncCompleteTaxonomyHierarchy(250);
 
             $totalCategories = ShopifyTaxonomyCategory::count();
             $this->info("✅ Successfully synced {$totalCategories} taxonomy categories");
@@ -77,10 +77,145 @@ class SyncShopifyTaxonomy extends Command
     }
 
     /**
-     * Sync taxonomy categories in batches
+     * Sync the COMPLETE taxonomy hierarchy with ALL subcategories (ULTIMATE VERSION)
+     */
+    private function syncCompleteTaxonomyHierarchy(int $batchSize): void
+    {
+        $this->info("🌟 Fetching COMPLETE taxonomy hierarchy with ALL subcategories...");
+
+        $response = $this->shopifyService->getCompleteTaxonomyHierarchy($batchSize);
+
+        if (! $response['success']) {
+            throw new \Exception('Failed to fetch complete taxonomy hierarchy: '.$response['error']);
+        }
+
+        $categories = $response['data']['taxonomy']['categories']['edges'] ?? [];
+        $totalCategories = count($categories);
+        $requestsMade = $response['requests_made'] ?? 1;
+        $childCategories = $response['child_categories'] ?? 0;
+        
+        $this->info("🎊 Retrieved {$totalCategories} total categories ({$childCategories} subcategories) in {$requestsMade} requests!");
+        $this->info('🔄 Processing all categories...');
+
+        $bar = $this->output->createProgressBar($totalCategories);
+        $bar->start();
+
+        DB::beginTransaction();
+
+        try {
+            $processed = 0;
+            foreach ($categories as $categoryEdge) {
+                $node = $categoryEdge['node'];
+
+                ShopifyTaxonomyCategory::updateOrCreate(
+                    ['shopify_id' => $node['id']],
+                    [
+                        'name' => $node['name'],
+                        'full_name' => $node['fullName'],
+                        'level' => $node['level'],
+                        'is_leaf' => $node['isLeaf'],
+                        'is_root' => $node['level'] === 0,
+                        'parent_id' => $node['parentId'],
+                        'children_ids' => $node['childrenIds'] ?? [],
+                        'ancestor_ids' => [], // Will be populated in second pass
+                        'attributes' => [], // Will be populated separately
+                    ]
+                );
+
+                $processed++;
+                $bar->advance();
+            }
+
+            DB::commit();
+            $bar->finish();
+            $this->newLine();
+            
+            $this->info("✨ Processed {$processed} categories successfully!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $bar->finish();
+            $this->newLine();
+            throw $e;
+        }
+
+        // Second pass: populate ancestor relationships
+        $this->populateAncestors();
+    }
+
+    /**
+     * Sync ALL taxonomy categories using enhanced pagination (SASSY VERSION)
+     */
+    private function syncAllTaxonomyCategories(int $batchSize): void
+    {
+        $this->info("🚀 Fetching ALL taxonomy categories with enhanced pagination...");
+
+        $response = $this->shopifyService->getAllTaxonomyCategories($batchSize);
+
+        if (! $response['success']) {
+            throw new \Exception('Failed to fetch taxonomy: '.$response['error']);
+        }
+
+        $categories = $response['data']['taxonomy']['categories']['edges'] ?? [];
+        $totalCategories = count($categories);
+        $requestsMade = $response['requests_made'] ?? 1;
+        
+        $this->info("💎 Retrieved {$totalCategories} categories in {$requestsMade} paginated requests!");
+        $this->info('🔄 Processing categories...');
+
+        $bar = $this->output->createProgressBar($totalCategories);
+        $bar->start();
+
+        DB::beginTransaction();
+
+        try {
+            $processed = 0;
+            foreach ($categories as $categoryEdge) {
+                $node = $categoryEdge['node'];
+
+                ShopifyTaxonomyCategory::updateOrCreate(
+                    ['shopify_id' => $node['id']],
+                    [
+                        'name' => $node['name'],
+                        'full_name' => $node['fullName'],
+                        'level' => $node['level'],
+                        'is_leaf' => $node['isLeaf'],
+                        'is_root' => $node['level'] === 0,
+                        'parent_id' => $node['parentId'],
+                        'children_ids' => $node['childrenIds'] ?? [],
+                        'ancestor_ids' => [], // Will be populated in second pass
+                        'attributes' => [], // Will be populated separately
+                    ]
+                );
+
+                $processed++;
+                $bar->advance();
+            }
+
+            DB::commit();
+            $bar->finish();
+            $this->newLine();
+            
+            $this->info("✨ Processed {$processed} categories successfully!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $bar->finish();
+            $this->newLine();
+            throw $e;
+        }
+
+        // Second pass: populate ancestor relationships
+        $this->populateAncestors();
+    }
+
+    /**
+     * Legacy sync method for backwards compatibility
      */
     private function syncTaxonomyBatch(int $batchSize): void
     {
+        $this->warn("⚠️ Using legacy sync method - consider using syncAllTaxonomyCategories instead");
+        
         $this->info("Fetching taxonomy categories (batch size: {$batchSize})...");
 
         $response = $this->shopifyService->getTaxonomyCategories($batchSize);
