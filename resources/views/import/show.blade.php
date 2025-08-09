@@ -165,9 +165,9 @@
                 }
 
                 try {
-                    this.channel = window.Echo.channel(`import-progress.${this.sessionId}`);
+                    this.channel = window.Echo.channel(`import.${this.sessionId}`);
                     
-                    this.channel.listen('ImportProgressUpdated', (data) => {
+                    this.channel.listen('ImportSessionUpdated', (data) => {
                         this.session = { ...this.session, ...data };
                         console.log('Import progress updated:', data);
                     });

@@ -288,7 +288,7 @@
                             <flux:icon name="settings" class="mx-auto h-12 w-12 text-zinc-400" />
                             <p class="mt-4 text-zinc-600 dark:text-zinc-400">No product attributes configured</p>
                             <p class="text-sm text-zinc-500">You can add attributes later or configure them in 
-                                <a href="{{ route('products.attribute-definitions') }}" class="text-indigo-600 hover:text-indigo-500">
+                                <a href="{{ route('attributes.definitions') }}" class="text-indigo-600 hover:text-indigo-500">
                                     Attribute Definitions
                                 </a>
                             </p>

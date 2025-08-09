@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Products\ProductWizard;
+use App\Livewire\Pim\Products\Management\ProductWizard;
 use App\Models\Product;
 use App\Models\User;
 use Livewire\Livewire;

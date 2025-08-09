@@ -77,16 +77,9 @@ class ImportSession extends Model
             }
         });
 
-        // Broadcast dashboard updates
+        // Broadcast when import session is created
         static::created(function ($model) {
             event(new ImportSessionCreated($model));
-        });
-
-        static::updated(function ($model) {
-            // Only broadcast if status or progress changed (avoid too many events)
-            if ($model->isDirty(['status', 'progress_percentage', 'processed_rows', 'current_operation'])) {
-                event(new ImportSessionUpdated($model));
-            }
         });
     }
 
@@ -101,16 +94,15 @@ class ImportSession extends Model
             throw new \InvalidArgumentException('Progress percentage must be between 0 and 100');
         }
 
+        // Update the model
         $this->update([
             'current_stage' => $stage,
             'current_operation' => $operation,
             'progress_percentage' => $percentage,
         ]);
 
-        // Broadcast progress update if broadcaster exists
-        if (class_exists(\App\Services\Import\ImportProgressBroadcaster::class)) {
-            app(\App\Services\Import\ImportProgressBroadcaster::class)->broadcastProgress($this);
-        }
+        // Directly broadcast the event
+        broadcast(new ImportSessionUpdated($this));
 
         return $this;
     }

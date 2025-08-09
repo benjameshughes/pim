@@ -20,13 +20,15 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use App\Services\Import\Performance\ImportPerformanceBuilder;
 
 class ProcessImportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 1800; // 30 minutes
+    public $timeout = 300; // 5 minutes - shorter timeout
     public $tries = 2;
+    public $maxExceptions = 3;
 
     private array $statistics = [
         'processed_rows' => 0,
@@ -61,8 +63,6 @@ class ProcessImportJob implements ShouldQueue
             $this->initializeActionsPipeline();
             $this->initializeProcessing();
 
-            DB::beginTransaction();
-
             $this->session->markAsStarted();
             $this->session->updateProgress(
                 stage: 'processing',
@@ -70,13 +70,11 @@ class ProcessImportJob implements ShouldQueue
                 percentage: 5
             );
 
-            // Process file in chunks
+            // Process file in chunks (each chunk has its own transaction)
             $this->processFileInChunks();
 
             // Compile final results
             $this->compileFinalResults();
-
-            DB::commit();
 
             $this->session->markAsCompleted();
             $this->session->updateProgress(
@@ -178,138 +176,48 @@ class ProcessImportJob implements ShouldQueue
     private function processFileInChunks(): void
     {
         $filePath = Storage::path($this->session->file_path);
-        $configuration = $this->session->configuration;
-        $chunkSize = $configuration['chunk_size'] ?? 50;
-
-        if ($this->session->file_type === 'csv') {
-            $this->processCsvInChunks($filePath, $chunkSize);
-        } else {
-            $this->processExcelInChunks($filePath, $chunkSize);
-        }
-    }
-
-    private function processCsvInChunks(string $filePath, int $chunkSize): void
-    {
-        $handle = fopen($filePath, 'r');
-        if (!$handle) {
-            throw new \Exception('Could not open CSV file');
-        }
-
-        // Skip header
-        $headers = fgetcsv($handle);
-        $columnMapping = $this->session->column_mapping ?? [];
-
-        $chunk = [];
-        $rowNumber = 2; // Start from row 2 (after header)
-
-        while (($row = fgetcsv($handle)) !== false) {
-            $chunk[] = [
-                'row_number' => $rowNumber,
-                'data' => $row,
-                'headers' => $headers,
-            ];
-
-            if (count($chunk) >= $chunkSize) {
-                $this->processChunk($chunk, $columnMapping);
-                $chunk = [];
-                
-                // Update progress
-                $this->updateProgress();
-            }
-
-            $rowNumber++;
-        }
-
-        // Process remaining chunk
-        if (!empty($chunk)) {
-            $this->processChunk($chunk, $columnMapping);
-        }
-
-        fclose($handle);
-    }
-
-    private function processExcelInChunks(string $filePath, int $chunkSize): void
-    {
-        $reader = IOFactory::createReader('Xlsx');
-        $reader->setReadDataOnly(true);
-        $reader->setReadEmptyCells(false);
-
-        $fileAnalysis = $this->session->file_analysis;
-        $columnMapping = $this->session->column_mapping ?? [];
-
-        // Process first worksheet with data
-        $worksheetName = null;
-        foreach ($fileAnalysis['worksheets'] ?? [] as $worksheet) {
-            if (($worksheet['total_rows'] ?? 0) > 0) {
-                $worksheetName = $worksheet['name'];
-                break;
-            }
-        }
-
-        if (!$worksheetName) {
-            throw new \Exception('No worksheets with data found');
-        }
-
-        $reader->setLoadSheetsOnly([$worksheetName]);
-        $spreadsheet = $reader->load($filePath);
-        $worksheet = $spreadsheet->getActiveSheet();
-
-        // Get headers
-        $headers = [];
-        $highestColumn = $worksheet->getHighestColumn();
-        for ($col = 'A'; $col <= $highestColumn; $col++) {
-            $cellValue = $worksheet->getCell($col . '1')->getCalculatedValue();
-            $headers[] = (string) $cellValue;
-        }
-
-        // Process in chunks
-        $chunk = [];
-        $maxRow = $worksheet->getHighestRow();
         
-        for ($rowNumber = 2; $rowNumber <= $maxRow; $rowNumber++) {
-            $rowData = [];
-            for ($colIndex = 0; $colIndex < count($headers); $colIndex++) {
-                $col = chr(ord('A') + $colIndex);
-                $cellValue = $worksheet->getCell($col . $rowNumber)->getCalculatedValue();
-                $rowData[] = (string) $cellValue;
-            }
+        Log::info('🚀 Initializing HIGH-PERFORMANCE import processing', [
+            'session_id' => $this->session->session_id,
+            'file_name' => $this->session->original_filename,
+            'file_size' => number_format($this->session->file_size / 1024, 2) . ' KB',
+            'total_rows' => $this->session->total_rows,
+        ]);
 
-            // Skip empty rows
-            if (array_filter($rowData, fn($cell) => !empty(trim($cell)))) {
-                $chunk[] = [
-                    'row_number' => $rowNumber,
-                    'data' => $rowData,
-                    'headers' => $headers,
-                ];
-            }
+        // 🔥 ULTRA PERFORMANCE BUILDER - ACTIVATED!
+        $performanceBuilder = ImportPerformanceBuilder::forSession($this->session)
+            ->maximize() // Enable ALL optimizations
+            ->withDetailedLogging();
 
-            if (count($chunk) >= $chunkSize) {
-                $this->processChunk($chunk, $columnMapping);
-                $chunk = [];
-                
-                // Update progress
-                $this->updateProgress();
-            }
+        // 🚀 Process file with MAXIMUM PERFORMANCE
+        foreach ($performanceBuilder->processFile($filePath, function($chunk) {
+            return $this->processChunk($chunk, $this->session->column_mapping ?? []);
+        }) as $result) {
+            // Each chunk result is yielded here
+            $this->updateProgress();
         }
 
-        // Process remaining chunk
-        if (!empty($chunk)) {
-            $this->processChunk($chunk, $columnMapping);
-        }
-
-        $spreadsheet->disconnectWorksheets();
-        unset($spreadsheet);
+        // 📊 Log performance statistics
+        $stats = $performanceBuilder->getPerformanceStats();
+        Log::info('🎯 HIGH-PERFORMANCE import processing completed', [
+            'session_id' => $this->session->session_id,
+            'performance_stats' => $stats,
+        ]);
     }
+
 
     private function processChunk(array $chunk, array $columnMapping): void
     {
-        foreach ($chunk as $rowInfo) {
-            try {
-                $this->processRow($rowInfo, $columnMapping);
-            } catch (\Exception $e) {
-                $this->handleRowError($rowInfo['row_number'], $e);
+        // Process each chunk in its own transaction for better performance
+        DB::transaction(function () use ($chunk, $columnMapping) {
+            foreach ($chunk as $rowInfo) {
+                try {
+                    $this->processRow($rowInfo, $columnMapping);
+                } catch (\Exception $e) {
+                    $this->handleRowError($rowInfo['row_number'], $e);
+                }
             }
-        }
+        });
     }
 
     private function processRow(array $rowInfo, array $columnMapping): void

@@ -674,6 +674,8 @@ class ProductWizard extends Component
                 'image_type' => $this->imageType,
                 'alt_text' => $product->name,
                 'sort_order' => $sortOrder++,
+                'storage_disk' => 'public',
+                'processing_status' => 'pending',
             ]);
         }
     }

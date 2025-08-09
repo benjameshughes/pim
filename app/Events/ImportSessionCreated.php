@@ -5,11 +5,11 @@ namespace App\Events;
 use App\Models\ImportSession;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ImportSessionCreated implements ShouldBroadcast
+class ImportSessionCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -23,7 +23,7 @@ class ImportSessionCreated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new Channel('dashboard-updates'),
+            new Channel('import.' . $this->session->session_id),
         ];
     }
 

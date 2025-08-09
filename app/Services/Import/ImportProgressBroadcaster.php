@@ -2,7 +2,7 @@
 
 namespace App\Services\Import;
 
-use App\Events\Import\ImportProgressUpdated;
+use App\Events\ImportSessionUpdated;
 use App\Models\ImportSession;
 use Illuminate\Support\Facades\Log;
 
@@ -11,7 +11,7 @@ class ImportProgressBroadcaster
     public function broadcastProgress(ImportSession $session): void
     {
         try {
-            event(new ImportProgressUpdated($session));
+            event(new ImportSessionUpdated($session));
             
             Log::debug('Import progress broadcasted', [
                 'session_id' => $session->session_id,

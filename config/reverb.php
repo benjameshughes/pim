@@ -35,8 +35,8 @@ return [
             'hostname' => env('REVERB_HOST'),
             'options' => [
                 // 'tls' => [
-                //     'local_cert' => env('REVERB_LOCAL_CERT', '~/.config/valet/Certificates/products.test.crt'),
-                //     'local_pk' => env('REVERB_LOCAL_PK', '~/.config/valet/Certificates/products.test.key'),
+                //     'local_cert' => env('REVERB_LOCAL_CERT', '~/.config/herd/config/valet/Certificates/products.test.crt'),
+                //     'local_pk' => env('REVERB_LOCAL_PK', '~/.config/herd/config/valet/Certificates/products.test.key'),
                 //     'verify_peer' => false,
                 //     'verify_peer_name' => false,
                 // ],

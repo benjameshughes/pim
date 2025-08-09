@@ -1,6 +1,6 @@
 <?php
 
-use App\Livewire\Products\ProductWizard;
+use App\Livewire\Pim\Products\Management\ProductWizard;
 use App\Models\Barcode;
 use App\Models\BarcodePool;
 use App\Models\Product;

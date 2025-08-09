@@ -123,7 +123,7 @@ class ImportBuilder
 
         // Dispatch analyze file job if it exists
         if (class_exists(\App\Jobs\Import\AnalyzeFileJob::class)) {
-            \App\Jobs\Import\AnalyzeFileJob::dispatch($session);
+            \App\Jobs\Import\AnalyzeFileJob::dispatch($session)->onQueue('imports');
         }
 
         return $session;
