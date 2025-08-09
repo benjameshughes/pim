@@ -31,22 +31,13 @@
                         current="{{ request()->routeIs('products.*') }}" 
                         wire:navigate
                     >
-                        Products
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="tag" 
-                        href="{{ route('products.variants.index') }}" 
-                        current="{{ request()->routeIs('products.variants.*') }}" 
-                        wire:navigate
-                    >
-                        Variants
+                        Products & Variants
                     </flux:navlist.item>
                     
                     <flux:navlist.item 
                         icon="sparkles" 
-                        href="{{ route('products.wizard') }}" 
-                        current="{{ request()->routeIs('products.wizard') }}" 
+                        href="{{ route('products.create.wizard') }}" 
+                        current="{{ request()->routeIs('products.create.wizard') }}" 
                         wire:navigate
                     >
                         Product Wizard

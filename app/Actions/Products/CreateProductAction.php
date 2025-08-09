@@ -155,7 +155,7 @@ class CreateProductAction extends BaseAction
             $product->attributes()->create([
                 'attribute_key' => $key,
                 'attribute_value' => $value,
-                'data_type' => is_numeric($value) ? 'number' : 'text',
+                'data_type' => is_numeric($value) ? 'number' : 'string',
             ]);
         }
     }

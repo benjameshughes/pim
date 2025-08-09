@@ -138,7 +138,12 @@ Route::middleware(['auth'])->group(function () {
     })->name('archive');
 
     // Clean Product Management Routes - Builder Pattern + Actions Pattern
-    Route::resource('products', \App\Http\Controllers\Products\ProductController::class);
+    Route::resource('products', \App\Http\Controllers\Products\ProductController::class, [
+        'except' => ['index']  // Use Livewire component for index instead
+    ]);
+    
+    // Unified Products & Variants Index - Clean Blade Wrapper
+    Route::view('products', 'products.index')->name('products.index');
 
     // Additional product routes
     Route::prefix('products')->name('products.')->group(function () {
@@ -148,11 +153,11 @@ Route::middleware(['auth'])->group(function () {
 
     // Legacy routes that still need manual registration
     Route::prefix('products')->name('products.')->group(function () {
-        // ProductWizard - Enhanced with Builder patterns
-        Route::get('wizard', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('wizard');
+        // Product Creation Wizard - Enhanced with Builder patterns  
+        Route::get('create/wizard', \App\Livewire\Pim\Products\Management\ProductWizard::class)->name('create.wizard');
 
         // Variants
-        Route::get('variants', VariantIndex::class)->name('variants.index');
+        // Removed separate variants index - now unified in products table
         Route::get('variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create');
         Route::get('{product}/variants/create', \App\Livewire\Products\VariantCreate::class)->name('variants.create-for-product');
 
