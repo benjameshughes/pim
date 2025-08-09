@@ -11,6 +11,7 @@ use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -36,13 +37,21 @@ class ProductWizard extends Component
 
     public array $variantMatrix = [];
 
+    // Smart dynamic selection arrays
     public array $selectedColors = [];
-
     public array $selectedSizes = [];
-
     public array $selectedWidths = [];
-
     public array $selectedDrops = [];
+
+    // Custom additions from user input
+    public array $customColors = [];
+    public array $customWidths = [];
+    public array $customDrops = [];
+
+    // Autocomplete input fields
+    public string $colorInput = '';
+    public string $widthInput = '';  
+    public string $dropInput = '';
 
     public array $attributeValues = [];
 
@@ -185,8 +194,8 @@ class ProductWizard extends Component
 
     public function updatedFormName()
     {
-        // Auto-generate slug when name changes, but only if slug is empty
-        if (empty($this->form->slug) && ! empty($this->form->name)) {
+        // Auto-generate slug when name changes for new products
+        if (! empty($this->form->name)) {
             $this->form->slug = $this->generateUniqueSlug($this->form->name);
         }
     }
@@ -212,6 +221,161 @@ class ProductWizard extends Component
     {
         $this->generateParentSku();
         $this->validateParentSkuUniqueness();
+    }
+
+    // ===============================================
+    // 🎨 SMART AUTOCOMPLETE METHODS - THE MAGIC! ✨
+    // ===============================================
+
+    /**
+     * Add a color to the selection (from autocomplete or custom input)
+     */
+    public function addColor(string $color): void
+    {
+        $color = trim($color);
+        if (empty($color) || in_array($color, $this->selectedColors)) {
+            return;
+        }
+
+        $this->selectedColors[] = $color;
+
+        // Add to custom colors if not in common list
+        if (!in_array($color, $this->commonColors) && !in_array($color, $this->customColors)) {
+            $this->customColors[] = $color;
+        }
+
+        $this->colorInput = ''; // Clear input
+        
+        // Dispatch event for Alpine to update suggestions
+        $this->dispatch('color-added');
+        
+        // Regenerate variants if auto-generation is enabled
+        if ($this->generateVariants) {
+            $this->generateVariantMatrix();
+        }
+    }
+
+    /**
+     * Remove a color from selection
+     */
+    public function removeColor(int $index): void
+    {
+        if (isset($this->selectedColors[$index])) {
+            unset($this->selectedColors[$index]);
+            $this->selectedColors = array_values($this->selectedColors); // Re-index
+
+            // Dispatch event for Alpine to update suggestions
+            $this->dispatch('color-added');
+
+            // Regenerate variants
+            if ($this->generateVariants) {
+                $this->generateVariantMatrix();
+            }
+        }
+    }
+
+    /**
+     * Add a width to the selection
+     */
+    public function addWidth(string $width): void
+    {
+        $width = trim($width);
+        if (empty($width) || in_array($width, $this->selectedWidths)) {
+            return;
+        }
+
+        // Auto-format width if it's just a number
+        if (is_numeric($width)) {
+            $width = $width . 'cm';
+        }
+
+        $this->selectedWidths[] = $width;
+
+        // Add to custom widths if not in common list
+        if (!in_array($width, $this->commonWidths) && !in_array($width, $this->customWidths)) {
+            $this->customWidths[] = $width;
+        }
+
+        $this->widthInput = ''; // Clear input
+        
+        // Dispatch event for Alpine to update suggestions
+        $this->dispatch('width-added');
+
+        // Regenerate variants
+        if ($this->generateVariants) {
+            $this->generateVariantMatrix();
+        }
+    }
+
+    /**
+     * Remove a width from selection
+     */
+    public function removeWidth(int $index): void
+    {
+        if (isset($this->selectedWidths[$index])) {
+            unset($this->selectedWidths[$index]);
+            $this->selectedWidths = array_values($this->selectedWidths); // Re-index
+
+            // Dispatch event for Alpine to update suggestions
+            $this->dispatch('width-added');
+
+            // Regenerate variants
+            if ($this->generateVariants) {
+                $this->generateVariantMatrix();
+            }
+        }
+    }
+
+    /**
+     * Add a drop/length to the selection
+     */
+    public function addDrop(string $drop): void
+    {
+        $drop = trim($drop);
+        if (empty($drop) || in_array($drop, $this->selectedDrops)) {
+            return;
+        }
+
+        // Auto-format drop if it's just a number
+        if (is_numeric($drop)) {
+            $drop = $drop . 'cm';
+        }
+
+        $this->selectedDrops[] = $drop;
+
+        // Add to custom drops if not in common list
+        if (!in_array($drop, $this->commonDrops) && !in_array($drop, $this->customDrops)) {
+            $this->customDrops[] = $drop;
+        }
+
+        $this->dropInput = ''; // Clear input
+        
+        // Dispatch event for Alpine to update suggestions
+        $this->dispatch('drop-added');
+
+        // Regenerate variants
+        if ($this->generateVariants) {
+            $this->generateVariantMatrix();
+        }
+    }
+
+    /**
+     * Remove a drop from selection
+     */
+    public function removeDrop(int $index): void
+    {
+        if (isset($this->selectedDrops[$index])) {
+            unset($this->selectedDrops[$index]);
+            $this->selectedDrops = array_values($this->selectedDrops); // Re-index
+
+            // Dispatch event for Alpine to update suggestions
+            $this->dispatch('drop-added');
+
+            // Regenerate variants
+            if ($this->generateVariants) {
+                $this->generateVariantMatrix();
+            }
+        }
     }
 
     public function nextStep()
@@ -824,6 +988,55 @@ class ProductWizard extends Component
             7 => 'Review all information and create your product with variants.',
             default => ''
         };
+    }
+
+    // ===============================================
+    // 🪄 COMPUTED PROPERTIES - LARAVEL MAGIC! ✨
+    // ===============================================
+
+    /**
+     * Get all available colors (common + custom) using Laravel Collections
+     */
+    #[Computed]
+    public function allColors()
+    {
+        return collect($this->commonColors)
+            ->merge($this->customColors)
+            ->unique()
+            ->sort()
+            ->values();
+    }
+
+    /**
+     * Get all available widths (common + custom) with smart formatting
+     */
+    #[Computed] 
+    public function allWidths()
+    {
+        return collect($this->commonWidths)
+            ->merge($this->customWidths)
+            ->unique()
+            ->sortBy(function ($width) {
+                // Sort numerically by extracting the number
+                return (int) preg_replace('/[^0-9]/', '', $width);
+            })
+            ->values();
+    }
+
+    /**
+     * Get all available drops (common + custom) with smart formatting
+     */
+    #[Computed]
+    public function allDrops()
+    {
+        return collect($this->commonDrops)
+            ->merge($this->customDrops)
+            ->unique()
+            ->sortBy(function ($drop) {
+                // Sort numerically by extracting the number
+                return (int) preg_replace('/[^0-9]/', '', $drop);
+            })
+            ->values();
     }
 
     public function render()
