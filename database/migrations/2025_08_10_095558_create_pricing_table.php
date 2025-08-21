@@ -19,7 +19,7 @@ return new class extends Migration
 
             // 🏠 CORE RELATIONSHIPS
             $table->foreignId('product_variant_id')->constrained()->onDelete('cascade');
-            $table->foreignId('sales_channel_id')->nullable()->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('sales_channel_id')->nullable();
 
             // 💰 BASE PRICING (The Foundation)
             $table->decimal('cost_price', 10, 2)->default(0)->comment('What we pay supplier');
