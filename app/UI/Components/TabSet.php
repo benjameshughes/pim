@@ -31,11 +31,11 @@ class TabSet
 
     public static function make(): self
     {
-        return new self();
+        return new self;
     }
 
     /**
-     * @param array<mixed>|Collection<mixed> $tabs
+     * @param  array<mixed>|Collection<mixed>  $tabs
      */
     public function tabs(array|Collection $tabs): static
     {
@@ -111,6 +111,7 @@ class TabSet
 
     /**
      * Get all tabs with their computed properties
+     *
      * @return Collection<int, Tab>
      */
     public function getTabs(): Collection
@@ -128,9 +129,8 @@ class TabSet
 
     /**
      * Build navigation data for the tabs
-     * @return Collection<int, array<string, mixed>>
      */
-    public function buildNavigation(?\Illuminate\Database\Eloquent\Model $model = null): Collection
+    public function buildNavigation(?\Illuminate\Database\Eloquent\Model $model = null)
     {
         $currentRoute = request()->route()?->getName() ?? '';
         $currentParameters = collect(request()->route()?->parameters() ?? []);

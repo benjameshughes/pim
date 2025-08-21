@@ -2,19 +2,17 @@
 
 namespace App\Livewire\Shopify;
 
-use App\Models\ShopifyWebhookLog;
 use App\Http\Middleware\ShopifyWebhookMiddleware;
-use App\Services\Shopify\API\ShopifyWebhookService;
+use App\Models\ShopifyWebhookLog;
+use Carbon\Carbon;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\Computed;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 
 /**
  * 🎭 LEGENDARY SHOPIFY WEBHOOK DASHBOARD 🎭
- * 
+ *
  * The most FABULOUS webhook monitoring dashboard ever created!
  * Because webhook monitoring should be as stunning as a drag performance! 💅
  */
@@ -24,12 +22,17 @@ class WebhookDashboard extends Component
     use WithPagination;
 
     public string $filterStatus = 'all';
+
     public string $filterTopic = 'all';
+
     public string $timeRange = '24h';
+
     public string $search = '';
-    
+
     public array $dashboardStats = [];
+
     public array $securityStats = [];
+
     public array $topicBreakdown = [];
 
     public function mount(): void
@@ -62,7 +65,7 @@ class WebhookDashboard extends Component
     private function calculateDashboardStats(): array
     {
         $timeRange = $this->getTimeRangeCarbon();
-        
+
         $stats = ShopifyWebhookLog::where('created_at', '>=', $timeRange)
             ->selectRaw('
                 COUNT(*) as total_webhooks,
@@ -82,7 +85,7 @@ class WebhookDashboard extends Component
             ->first();
 
         // Calculate success rate
-        $successRate = $stats->total_webhooks > 0 
+        $successRate = $stats->total_webhooks > 0
             ? round(($stats->successful_webhooks / $stats->total_webhooks) * 100, 1)
             : 0;
 
@@ -100,7 +103,7 @@ class WebhookDashboard extends Component
             'max_processing_time' => round($stats->max_processing_time ?? 0, 2),
             'hourly_distribution' => $hourlyStats,
             'health_status' => $this->calculateSystemHealth($successRate),
-            'time_range' => $this->timeRange
+            'time_range' => $this->timeRange,
         ];
     }
 
@@ -111,20 +114,20 @@ class WebhookDashboard extends Component
     {
         $hours = [];
         $now = now();
-        
+
         for ($i = 23; $i >= 0; $i--) {
             $hour = $now->copy()->subHours($i);
             $nextHour = $hour->copy()->addHour();
-            
+
             $count = ShopifyWebhookLog::whereBetween('created_at', [$hour, $nextHour])->count();
-            
+
             $hours[] = [
                 'hour' => $hour->format('H:00'),
                 'count' => $count,
-                'timestamp' => $hour->toISOString()
+                'timestamp' => $hour->toISOString(),
             ];
         }
-        
+
         return $hours;
     }
 
@@ -134,7 +137,7 @@ class WebhookDashboard extends Component
     private function calculateTopicBreakdown(): array
     {
         $timeRange = $this->getTimeRangeCarbon();
-        
+
         return ShopifyWebhookLog::where('created_at', '>=', $timeRange)
             ->selectRaw('
                 topic,
@@ -151,7 +154,7 @@ class WebhookDashboard extends Component
             ->get()
             ->map(function ($item) {
                 $successRate = $item->total > 0 ? round(($item->successful / $item->total) * 100, 1) : 0;
-                
+
                 return [
                     'topic' => $item->topic,
                     'total' => $item->total,
@@ -159,7 +162,7 @@ class WebhookDashboard extends Component
                     'failed' => $item->failed,
                     'success_rate' => $successRate,
                     'avg_processing_time' => round($item->avg_time ?? 0, 2),
-                    'status_color' => $successRate >= 95 ? 'emerald' : ($successRate >= 80 ? 'yellow' : 'red')
+                    'status_color' => $successRate >= 95 ? 'emerald' : ($successRate >= 80 ? 'yellow' : 'red'),
                 ];
             })
             ->toArray();
@@ -186,7 +189,7 @@ class WebhookDashboard extends Component
      */
     private function getTimeRangeCarbon(): Carbon
     {
-        return match($this->timeRange) {
+        return match ($this->timeRange) {
             '1h' => now()->subHour(),
             '24h' => now()->subDay(),
             '7d' => now()->subWeek(),
@@ -215,10 +218,10 @@ class WebhookDashboard extends Component
         }
 
         if ($this->search) {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->where('topic', 'like', "%{$this->search}%")
-                  ->orWhere('shopify_product_id', 'like', "%{$this->search}%")
-                  ->orWhereJsonContains('metadata->shop_domain', $this->search);
+                    ->orWhere('shopify_product_id', 'like', "%{$this->search}%")
+                    ->orWhereJsonContains('metadata->shop_domain', $this->search);
             });
         }
 
@@ -274,7 +277,7 @@ class WebhookDashboard extends Component
     {
         $cutoff = now()->subDays(30);
         $deleted = ShopifyWebhookLog::where('created_at', '<', $cutoff)->delete();
-        
+
         $this->dispatch('log-cleanup-completed', count: $deleted);
         $this->loadDashboardData();
     }
@@ -297,7 +300,7 @@ class WebhookDashboard extends Component
                 $webhook->payload,
                 $webhook->metadata ?? []
             );
-            
+
             $webhook->update(['status' => 'queued']);
             $retried++;
         }

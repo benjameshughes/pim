@@ -4,7 +4,6 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -17,41 +16,61 @@ use InvalidArgumentException;
 class UpdateProductAction extends BaseAction
 {
     /**
-     * Execute product update
-     *
-     * @param  Product  $product  Product to update
-     * @param  array  $data  Update data
-     * @return Product The updated product
-     *
-     * @throws InvalidArgumentException If validation fails
+     * Validate parameters before execution
      */
-    public function execute(...$params): Product
+    protected function validate(array $params): bool
+    {
+        if (count($params) < 1) {
+            throw new InvalidArgumentException('Product instance is required as first parameter');
+        }
+
+        if (! $params[0] instanceof Product) {
+            throw new InvalidArgumentException('First parameter must be a Product instance');
+        }
+
+        return true;
+    }
+
+    /**
+     * Perform the product update action
+     */
+    protected function performAction(...$params): array
     {
         $product = $params[0];
         $data = $params[1] ?? [];
 
-        if (! $product instanceof Product) {
-            throw new InvalidArgumentException('First parameter must be a Product instance');
-        }
-
         $this->validateUpdateData($product, $data);
 
-        return DB::transaction(function () use ($product, $data) {
-            // Handle slug update if name changed
-            if (isset($data['name']) && $data['name'] !== $product->name) {
-                if (empty($data['slug'])) {
-                    $data['slug'] = $this->generateUniqueSlug($data['name'], $product->id);
-                }
+        $updatedProduct = $this->updateProductData($product, $data);
+
+        return $this->success(
+            "Product '{$updatedProduct->name}' updated successfully",
+            [
+                'product' => $updatedProduct,
+                'updated_fields' => array_keys($data),
+            ]
+        );
+    }
+
+    /**
+     * Update product data with transaction safety
+     */
+    protected function updateProductData(Product $product, array $data): Product
+    {
+        // Handle slug update if name changed
+        if (isset($data['name']) && $data['name'] !== $product->name) {
+            if (empty($data['slug'])) {
+                $data['slug'] = $this->generateUniqueSlug($data['name'], $product->id);
             }
+        }
 
-            // Update the product
-            $product->update($data);
+        // Update the product
+        $product->update($data);
 
-            // Handle relationship updates
-            $this->handleRelationshipUpdates($product, $data);
+        // Handle relationship updates
+        $this->handleRelationshipUpdates($product, $data);
 
-            return $product->fresh();
-        });
+        return $product->fresh();
     }
 
     /**

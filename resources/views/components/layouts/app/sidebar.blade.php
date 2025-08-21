@@ -11,197 +11,99 @@
                 <x-app-logo />
             </a>
 
-            {{-- Clean FluxUI Navigation - Builder + Actions Pattern Architecture --}}
+            {{-- ✨ PHOENIX NAVIGATION - SACRED THREE ✨ --}}
             <flux:navlist variant="outline">
                 {{-- Dashboard --}}
                 <flux:navlist.item 
                     icon="squares-2x2" 
-                    href="{{ route('dashboard') }}" 
-                    current="{{ request()->routeIs('dashboard') }}" 
+                    href="{{ route('dashboard') }}"
                     wire:navigate
                 >
                     Dashboard
                 </flux:navlist.item>
 
-                {{-- Product Management Group --}}
-                <flux:navlist.group heading="Product Management" class="grid">
-                    <flux:navlist.item 
-                        icon="cube" 
-                        href="{{ route('products.index') }}" 
-                        current="{{ request()->routeIs('products.*') }}" 
-                        wire:navigate
-                    >
-                        Products & Variants
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="sparkles" 
-                        href="{{ route('products.create.wizard') }}" 
-                        current="{{ request()->routeIs('products.create.wizard') }}" 
-                        wire:navigate
-                    >
-                        Product Wizard
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 🚀 UNIFIED PRODUCTS & VARIANTS --}}
+                <flux:navlist.item 
+                    icon="cube" 
+                    href="{{ route('products.index') }}"
+                >
+                    Products & Variants
+                </flux:navlist.item>
 
-                {{-- Data Management Group --}}
-                <flux:navlist.group heading="Data Management" class="grid">
-                    <flux:navlist.item 
-                        icon="qr-code" 
-                        href="{{ route('barcodes.index') }}" 
-                        current="{{ request()->routeIs('barcodes.*') }}" 
-                        wire:navigate
-                    >
-                        Barcodes
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="currency-pound" 
-                        href="{{ route('pricing.index') }}" 
-                        current="{{ request()->routeIs('pricing.*') }}" 
-                        wire:navigate
-                    >
-                        Pricing
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="photo" 
-                        href="{{ route('images.index') }}" 
-                        current="{{ request()->routeIs('images.*') }}" 
-                        wire:navigate
-                    >
-                        Images
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 📤 IMPORT --}}
+                <flux:navlist.item 
+                    icon="arrow-up-tray" 
+                    href="{{ route('import.products') }}"
+                >
+                    Import
+                </flux:navlist.item>
 
-                {{-- Data Exchange Group --}}
-                <flux:navlist.group heading="Data Exchange" class="grid">
-                    <flux:navlist.item 
-                        icon="arrow-down-tray" 
-                        href="{{ route('import.index') }}" 
-                        current="{{ request()->routeIs('import.*') }}" 
-                        wire:navigate
-                    >
-                        Import Data
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="arrow-up-tray" 
-                        href="{{ route('export') }}" 
-                        current="{{ request()->routeIs('export*') }}" 
-                        wire:navigate
-                    >
-                        Export Data
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 🎨 DIGITAL ASSETS --}}
+                <flux:navlist.item 
+                    icon="photo" 
+                    href="{{ route('dam.index') }}"
+                >
+                    Image Library
+                </flux:navlist.item>
 
-                {{-- Marketplace Sync Group --}}
-                <flux:navlist.group heading="Marketplace Sync" class="grid">
-                    <flux:navlist.item 
-                        icon="shopping-bag" 
-                        href="{{ route('sync.shopify') }}" 
-                        current="{{ request()->routeIs('sync.shopify') }}" 
-                        wire:navigate
-                    >
-                        Shopify
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="building-storefront" 
-                        href="{{ route('sync.ebay') }}" 
-                        current="{{ request()->routeIs('sync.ebay') }}" 
-                        wire:navigate
-                    >
-                        eBay
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="globe-alt" 
-                        href="{{ route('sync.mirakl') }}" 
-                        current="{{ request()->routeIs('sync.mirakl') }}" 
-                        wire:navigate
-                    >
-                        Mirakl
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 🔢 BARCODES --}}
+                <flux:navlist.item 
+                    icon="qr-code" 
+                    href="{{ route('barcodes.index') }}"
+                >
+                    Barcodes
+                </flux:navlist.item>
 
-                {{-- Operations Group --}}
-                <flux:navlist.group heading="Operations" class="grid">
-                    <flux:navlist.item 
-                        icon="wrench-screwdriver" 
-                        href="{{ route('operations.bulk') }}" 
-                        current="{{ request()->routeIs('operations.*') }}" 
-                        wire:navigate
-                    >
-                        Bulk Operations
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="archive-box" 
-                        href="{{ route('archive') }}" 
-                        current="{{ request()->routeIs('archive') }}" 
-                        wire:navigate
-                    >
-                        Archive
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 🛍️ SHOPIFY SYNC --}}
+                <flux:navlist.item 
+                    icon="cloud-arrow-up" 
+                    href="{{ route('shopify.sync') }}" 
+                >
+                    Shopify
+                </flux:navlist.item>
 
-                {{-- Configuration Group --}}
-                <flux:navlist.group heading="Configuration" class="grid">
-                    <flux:navlist.item 
-                        icon="adjustments-horizontal" 
-                        href="{{ route('attributes.definitions') }}" 
-                        current="{{ request()->routeIs('attributes.*') }}" 
-                        wire:navigate
-                    >
-                        Attributes
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="users" 
-                        href="{{ route('admin.users.index') }}" 
-                        current="{{ request()->routeIs('admin.users.*') }}" 
-                        wire:navigate
-                    >
-                        User Management
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                {{-- 🎨 SHOPIFY COLORS --}}
+                <flux:navlist.item 
+                    icon="swatch" 
+                    href="{{ route('shopify.colors') }}" 
+                >
+                    Color Manager
+                </flux:navlist.item>
 
-                {{-- Examples Group (Development) --}}
-                @if(app()->environment('local'))
-                <flux:navlist.group heading="Examples" class="grid">
-                    <flux:navlist.item 
-                        icon="beaker" 
-                        href="{{ route('examples.toast.demo') }}" 
-                        current="{{ request()->routeIs('examples.toast.demo') }}" 
-                        wire:navigate
-                    >
-                        Toast Demo
-                    </flux:navlist.item>
-                    
-                    <flux:navlist.item 
-                        icon="adjustments-horizontal" 
-                        href="{{ route('examples.attributes.demo') }}" 
-                        current="{{ request()->routeIs('examples.attributes.demo') }}" 
-                        wire:navigate
-                    >
-                        Attributes Demo
-                    </flux:navlist.item>
-                </flux:navlist.group>
-                @endif
+                {{-- 💰 PRICING --}}
+                <flux:navlist.item 
+                    icon="currency-dollar" 
+                    href="{{ route('pricing.dashboard') }}" 
+                >
+                    Pricing
+                </flux:navlist.item>
+
+                {{-- 🚀 BULK OPERATIONS --}}
+                <flux:navlist.item 
+                    icon="bolt" 
+                    href="{{ route('bulk.operations') }}" 
+                >
+                    Bulk Operations
+                </flux:navlist.item>
+
+                {{-- 🏷️ MARKETPLACE IDENTIFIERS --}}
+                <flux:navlist.item 
+                    icon="tag" 
+                    href="{{ route('marketplace.identifiers') }}" 
+                >
+                    Marketplace Identifiers
+                </flux:navlist.item>
+
+                {{-- 🎛️ CHANNEL MAPPING --}}
+                <flux:navlist.item 
+                    icon="adjustments-horizontal" 
+                    href="{{ route('channel.mapping.dashboard') }}" 
+                >
+                    Channel Mapping
+                </flux:navlist.item>
             </flux:navlist>
 
             <flux:spacer />
-
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                {{ __('Repository') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                {{ __('Documentation') }}
-                </flux:navlist.item>
-            </flux:navlist>
 
             <!-- Desktop User Menu -->
             <flux:dropdown class="hidden lg:block" position="bottom" align="start">
@@ -299,15 +201,27 @@
             </flux:dropdown>
         </flux:header>
 
-        {{ $slot }}
+        <flux:main>
+            {{ $slot }}
+        </flux:main>
+
+        {{-- ✨ PHOENIX TOAST - CUSTOMIZABLE PERFECTION ✨ --}}
+        <flux:toast 
+            position="bottom-right" 
+            animation="glitter" 
+            theme="modern" 
+            :duration="5000" 
+            :max-toasts="3" 
+            glitter-intensity="high"
+        />
 
         @fluxScripts
         @livewireScripts
         
+        {{-- Global DAM Image Selector --}}
+        <livewire:d-a-m.image-selector />
+
         {{-- Component Scripts Stack --}}
         @stack('scripts')
-        
-        {{-- Alpine Toast Integration (ResourceManager Pattern) - Temporarily disabled for debugging --}}
-        {{-- @include('partials.alpine-toast-integration') --}}
     </body>
 </html>

@@ -5,22 +5,23 @@ namespace App\Actions\Shopify\Sync;
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
 use App\Models\ShopifyProductSync;
-use App\Services\ShopifyConnectService;
 use App\Services\Shopify\API\ShopifyDataComparatorService;
-use App\Services\ShopifyExportService;
+use App\Services\ShopifyConnectService;
+use App\Services\Shopify\Services\ShopifyExportService;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 /**
  * 🚀 SYNC PRODUCT TO SHOPIFY ACTION 🚀
- * 
+ *
  * Performs comprehensive product synchronization to Shopify like a SYNC SUPERHERO!
  * Handles creation, updates, data comparison, and error recovery with STYLE! 💅
  */
 class SyncProductToShopifyAction extends BaseAction
 {
     private ShopifyConnectService $shopifyService;
+
     private ShopifyExportService $exportService;
+
     private ShopifyDataComparatorService $comparatorService;
 
     public function __construct(
@@ -41,43 +42,43 @@ class SyncProductToShopifyAction extends BaseAction
     {
         $product = $params[0] ?? null;
         $options = $params[1] ?? [];
-        
-        if (!$product instanceof Product) {
+
+        if (! $product instanceof Product) {
             throw new \InvalidArgumentException('First parameter must be a Product instance');
         }
-        
+
         $syncMethod = $options['method'] ?? 'manual';
         $forceUpdate = $options['force'] ?? false;
-        
-        Log::info("🚀 Starting product sync to Shopify", [
+
+        Log::info('🚀 Starting product sync to Shopify', [
             'product_id' => $product->id,
             'product_name' => $product->name,
             'sync_method' => $syncMethod,
-            'force_update' => $forceUpdate
+            'force_update' => $forceUpdate,
         ]);
 
         $startTime = microtime(true);
 
         try {
             // Step 1: Check if product needs syncing (unless forced)
-            if (!$forceUpdate && !$this->needsSync($product)) {
+            if (! $forceUpdate && ! $this->needsSync($product)) {
                 $duration = round((microtime(true) - $startTime) * 1000, 2);
-                Log::info("⏭️ Sync skipped - product already up to date", [
+                Log::info('⏭️ Sync skipped - product already up to date', [
                     'product_id' => $product->id,
-                    'duration_ms' => $duration
+                    'duration_ms' => $duration,
                 ]);
 
-                return $this->success("Product is already synchronized", [
+                return $this->success('Product is already synchronized', [
                     'action' => 'skipped',
                     'reason' => 'already_synced',
-                    'duration_ms' => $duration
+                    'duration_ms' => $duration,
                 ]);
             }
 
             // Step 2: Determine sync strategy
             $existingSync = ShopifyProductSync::getMainSyncRecord($product->id);
-            $isNewProduct = !$existingSync || !$existingSync->shopify_product_id;
-            
+            $isNewProduct = ! $existingSync || ! $existingSync->shopify_product_id;
+
             // Step 3: Perform the sync
             if ($isNewProduct) {
                 $result = $this->performInitialSync($product, $syncMethod);
@@ -86,44 +87,44 @@ class SyncProductToShopifyAction extends BaseAction
             }
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             // Step 4: Update sync record with comprehensive data
             $this->updateSyncRecord($product, $result, $syncMethod, $duration);
 
-            Log::info("✅ Product sync completed successfully", [
+            Log::info('✅ Product sync completed successfully', [
                 'product_id' => $product->id,
                 'sync_type' => $isNewProduct ? 'create' : 'update',
                 'duration_ms' => $duration,
-                'shopify_id' => $result['shopify_product_id'] ?? null
+                'shopify_id' => $result['shopify_product_id'] ?? null,
             ]);
 
-            return $this->success("Product synchronized successfully", [
+            return $this->success('Product synchronized successfully', [
                 'action' => $isNewProduct ? 'created' : 'updated',
                 'shopify_product_id' => $result['shopify_product_id'] ?? null,
                 'shopify_url' => $result['shopify_url'] ?? null,
                 'variants_synced' => $result['variants_synced'] ?? 0,
                 'duration_ms' => $duration,
-                'sync_details' => $result
+                'sync_details' => $result,
             ]);
 
         } catch (\Exception $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             // Record the failure
             $this->recordSyncFailure($product, $e, $syncMethod, $duration);
 
-            Log::error("❌ Product sync failed", [
+            Log::error('❌ Product sync failed', [
                 'product_id' => $product->id,
                 'duration_ms' => $duration,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->failure("Product sync failed: " . $e->getMessage(), [
+            return $this->failure('Product sync failed: '.$e->getMessage(), [
                 'error_type' => get_class($e),
                 'error_details' => $e->getMessage(),
                 'duration_ms' => $duration,
-                'recovery_suggestions' => $this->getRecoverySuggestions($e)
+                'recovery_suggestions' => $this->getRecoverySuggestions($e),
             ]);
         }
     }
@@ -133,21 +134,21 @@ class SyncProductToShopifyAction extends BaseAction
      */
     private function performInitialSync(Product $product, string $syncMethod): array
     {
-        Log::info("📦 Creating new product in Shopify", [
+        Log::info('📦 Creating new product in Shopify', [
             'product_id' => $product->id,
-            'product_name' => $product->name
+            'product_name' => $product->name,
         ]);
 
         // Use existing export service for initial creation
         $exportResult = $this->exportService->exportProductsToShopify([$product]);
-        
-        if (!$exportResult['success'] || empty($exportResult['results'])) {
-            throw new \Exception("Failed to create product in Shopify: " . ($exportResult['message'] ?? 'Unknown error'));
+
+        if (! $exportResult['success'] || empty($exportResult['results'])) {
+            throw new \Exception('Failed to create product in Shopify: '.($exportResult['message'] ?? 'Unknown error'));
         }
 
         $productResult = $exportResult['results'][0] ?? null;
-        if (!$productResult || !$productResult['success']) {
-            throw new \Exception("Product creation failed: " . ($productResult['error'] ?? 'Unknown error'));
+        if (! $productResult || ! $productResult['success']) {
+            throw new \Exception('Product creation failed: '.($productResult['error'] ?? 'Unknown error'));
         }
 
         return [
@@ -155,7 +156,7 @@ class SyncProductToShopifyAction extends BaseAction
             'shopify_product_id' => $productResult['shopify_product_id'],
             'shopify_url' => $this->buildShopifyUrl($productResult['shopify_product_id']),
             'variants_synced' => count($productResult['variants'] ?? []),
-            'export_result' => $productResult
+            'export_result' => $productResult,
         ];
     }
 
@@ -164,29 +165,29 @@ class SyncProductToShopifyAction extends BaseAction
      */
     private function performUpdateSync(Product $product, ShopifyProductSync $existingSync, string $syncMethod): array
     {
-        Log::info("🔄 Updating existing product in Shopify", [
+        Log::info('🔄 Updating existing product in Shopify', [
             'product_id' => $product->id,
-            'shopify_product_id' => $existingSync->shopify_product_id
+            'shopify_product_id' => $existingSync->shopify_product_id,
         ]);
 
         // Get current Shopify data for comparison
         $shopifyId = $this->extractNumericId($existingSync->shopify_product_id);
         $currentData = $this->shopifyService->getProduct($shopifyId);
-        
-        if (!$currentData['success']) {
-            throw new \Exception("Failed to fetch current Shopify data: " . $currentData['error']);
+
+        if (! $currentData['success']) {
+            throw new \Exception('Failed to fetch current Shopify data: '.$currentData['error']);
         }
 
         // Perform data comparison to see what needs updating
         $comparison = $this->comparatorService->compareProductData($product, $currentData['data']);
-        
-        if (!$comparison['needs_sync']) {
+
+        if (! $comparison['needs_sync']) {
             return [
                 'action' => 'no_changes',
                 'shopify_product_id' => $existingSync->shopify_product_id,
                 'shopify_url' => $existingSync->getShopifyAdminUrl(),
                 'variants_synced' => $existingSync->variants_synced ?? 0,
-                'comparison' => $comparison
+                'comparison' => $comparison,
             ];
         }
 
@@ -199,7 +200,7 @@ class SyncProductToShopifyAction extends BaseAction
             'shopify_url' => $existingSync->getShopifyAdminUrl(),
             'variants_synced' => $updateResult['variants_synced'] ?? 0,
             'changes_made' => $updateResult['changes'] ?? [],
-            'comparison' => $comparison
+            'comparison' => $comparison,
         ];
     }
 
@@ -213,25 +214,25 @@ class SyncProductToShopifyAction extends BaseAction
 
         // For now, use the export service for updates (future enhancement: targeted GraphQL updates)
         $exportResult = $this->exportService->exportProductsToShopify([$product]);
-        
-        if (!$exportResult['success'] || empty($exportResult['results'])) {
-            throw new \Exception("Failed to update product in Shopify: " . ($exportResult['message'] ?? 'Unknown error'));
+
+        if (! $exportResult['success'] || empty($exportResult['results'])) {
+            throw new \Exception('Failed to update product in Shopify: '.($exportResult['message'] ?? 'Unknown error'));
         }
 
         $productResult = $exportResult['results'][0] ?? null;
-        if (!$productResult || !$productResult['success']) {
-            throw new \Exception("Product update failed: " . ($productResult['error'] ?? 'Unknown error'));
+        if (! $productResult || ! $productResult['success']) {
+            throw new \Exception('Product update failed: '.($productResult['error'] ?? 'Unknown error'));
         }
 
         // Track what was changed based on comparison
-        if (!empty($comparison['differences'])) {
+        if (! empty($comparison['differences'])) {
             $changes = array_keys($comparison['differences']);
         }
 
         return [
             'changes' => $changes,
             'variants_synced' => count($productResult['variants'] ?? []),
-            'update_result' => $productResult
+            'update_result' => $productResult,
         ];
     }
 
@@ -241,8 +242,8 @@ class SyncProductToShopifyAction extends BaseAction
     private function needsSync(Product $product): bool
     {
         $sync = ShopifyProductSync::getMainSyncRecord($product->id);
-        
-        if (!$sync || !$sync->shopify_product_id) {
+
+        if (! $sync || ! $sync->shopify_product_id) {
             return true; // Never synced
         }
 
@@ -255,14 +256,14 @@ class SyncProductToShopifyAction extends BaseAction
         $hasVariantChanges = $product->variants()
             ->where('updated_at', '>', $sync->last_synced_at)
             ->exists();
-        
+
         if ($hasVariantChanges) {
             return true;
         }
 
         // Check pricing changes
         $hasPricingChanges = $product->variants()
-            ->whereHas('pricing', function($query) use ($sync) {
+            ->whereHas('pricing', function ($query) use ($sync) {
                 $query->where('updated_at', '>', $sync->last_synced_at);
             })
             ->exists();
@@ -277,7 +278,7 @@ class SyncProductToShopifyAction extends BaseAction
     {
         // Find the primary color for the sync record (legacy compatibility)
         $primaryColor = $product->variants->first()?->color ?? 'default';
-        
+
         ShopifyProductSync::updateComprehensiveSync(
             $product->id,
             $primaryColor,
@@ -289,7 +290,7 @@ class SyncProductToShopifyAction extends BaseAction
                 'variants_synced' => $result['variants_synced'] ?? 0,
                 'duration' => (int) $duration,
                 'health_score' => 100, // Successful sync gets perfect health
-                'drift_score' => 0.0   // Fresh sync has no drift
+                'drift_score' => 0.0,   // Fresh sync has no drift
             ]
         );
     }
@@ -301,7 +302,7 @@ class SyncProductToShopifyAction extends BaseAction
     {
         $primaryColor = $product->variants->first()?->color ?? 'default';
         $existingSync = ShopifyProductSync::getMainSyncRecord($product->id);
-        
+
         ShopifyProductSync::updateComprehensiveSync(
             $product->id,
             $primaryColor,
@@ -316,8 +317,8 @@ class SyncProductToShopifyAction extends BaseAction
                     'type' => get_class($e),
                     'message' => $e->getMessage(),
                     'code' => $e->getCode(),
-                    'failed_at' => now()->toISOString()
-                ]
+                    'failed_at' => now()->toISOString(),
+                ],
             ]
         );
     }
@@ -359,7 +360,7 @@ class SyncProductToShopifyAction extends BaseAction
     {
         $numericId = $this->extractNumericId($shopifyProductId);
         $storeUrl = config('services.shopify.store_url');
-        
+
         return $numericId ? "https://{$storeUrl}/admin/products/{$numericId}" : null;
     }
 
@@ -371,11 +372,11 @@ class SyncProductToShopifyAction extends BaseAction
         if (preg_match('/\/Product\/(\d+)$/', $gid, $matches)) {
             return (int) $matches[1];
         }
-        
+
         if (is_numeric($gid)) {
             return (int) $gid;
         }
-        
+
         return null;
     }
 
@@ -389,12 +390,12 @@ class SyncProductToShopifyAction extends BaseAction
             'total_requested' => count($productIds),
             'successful_syncs' => 0,
             'failed_syncs' => 0,
-            'skipped_syncs' => 0
+            'skipped_syncs' => 0,
         ];
 
         foreach ($productIds as $productId) {
             $product = Product::find($productId);
-            if (!$product) {
+            if (! $product) {
                 continue;
             }
 
@@ -402,7 +403,7 @@ class SyncProductToShopifyAction extends BaseAction
             $results[] = [
                 'product_id' => $productId,
                 'product_name' => $product->name,
-                'result' => $result
+                'result' => $result,
             ];
 
             // Update summary
@@ -420,7 +421,7 @@ class SyncProductToShopifyAction extends BaseAction
         return [
             'summary' => $summary,
             'results' => $results,
-            'synced_at' => now()->toISOString()
+            'last_synced_at' => now()->toISOString(),
         ];
     }
 }

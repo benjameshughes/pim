@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Facades\Sync;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Livewire\Attributes\Layout;
@@ -186,22 +187,35 @@ class Dashboard extends Component
 
     private function getChannelSyncStatus(): string
     {
-        $readyProducts = $this->getReadyForExport();
-        $totalProducts = ProductVariant::count();
+        // 🎨 Using our beautiful unified sync system!
+        $health = Sync::status()->health();
 
-        if ($totalProducts === 0) {
+        // Calculate overall sync health across all channels
+        $totalItems = $health['total_items'] ?? 0;
+
+        if ($totalItems === 0) {
             return 'synced';
         }
 
-        $percentage = ($readyProducts / $totalProducts) * 100;
+        $syncedPercentage = ($health['synced'] ?? 0) / $totalItems * 100;
+        $failedPercentage = ($health['failed'] ?? 0) / $totalItems * 100;
 
-        if ($percentage >= 95) {
+        // If too many failures, mark as failed
+        if ($failedPercentage > 10) {
+            return 'failed';
+        }
+
+        // If most items are synced, mark as synced
+        if ($syncedPercentage >= 90) {
             return 'synced';
         }
-        if ($percentage >= 80) {
+
+        // If reasonable sync rate, mark as partial
+        if ($syncedPercentage >= 60) {
             return 'partial';
         }
 
+        // Otherwise, still pending sync
         return 'pending';
     }
 
@@ -230,12 +244,40 @@ class Dashboard extends Component
     // PIM Workflow Methods
     private function getRecentImports(): array
     {
-        // Mock recent import data - could be enhanced with actual import tracking
-        return [
-            ['name' => 'Electronics Catalog', 'status' => 'completed', 'items' => 145, 'time' => '2 hours ago'],
-            ['name' => 'Fashion Collection', 'status' => 'processing', 'items' => 89, 'time' => '1 day ago'],
-            ['name' => 'Home & Garden', 'status' => 'completed', 'items' => 234, 'time' => '3 days ago'],
-        ];
+        // 🎨 Using our beautiful unified sync system for recent activity!
+        $recentLogs = Sync::log()
+            ->lastHours(72) // Last 3 days
+            ->pushes()
+            ->take(10)
+            ->get();
+
+        if ($recentLogs->isEmpty()) {
+            // Fallback to mock data if no sync logs yet
+            return [
+                ['name' => 'Shopify Products', 'status' => 'pending', 'items' => 0, 'time' => 'No recent activity'],
+                ['name' => 'eBay Listings', 'status' => 'pending', 'items' => 0, 'time' => 'No recent activity'],
+            ];
+        }
+
+        return $recentLogs->groupBy('sync_account.channel')->map(function ($logs, $channel) {
+            $latest = $logs->first();
+            $totalItems = $logs->where('action', 'push')->count();
+            $successes = $logs->where('success', true)->count();
+
+            $status = match (true) {
+                $successes === $totalItems => 'completed',
+                $successes > 0 => 'partial',
+                $logs->where('success', false)->count() > 0 => 'failed',
+                default => 'processing'
+            };
+
+            return [
+                'name' => ucfirst($channel).' Sync',
+                'status' => $status,
+                'items' => $totalItems,
+                'time' => $latest->created_at->diffForHumans(),
+            ];
+        })->values()->take(3)->toArray();
     }
 
     private function getDataQualityAlerts(): array
@@ -272,11 +314,60 @@ class Dashboard extends Component
 
     private function getWorkflowBottlenecks(): array
     {
-        return [
-            ['stage' => 'Image Processing', 'count' => 23, 'avg_time' => '2.3 hours'],
-            ['stage' => 'Price Validation', 'count' => 12, 'avg_time' => '45 minutes'],
-            ['stage' => 'Barcode Assignment', 'count' => 8, 'avg_time' => '15 minutes'],
-        ];
+        // 🎨 Using our unified sync system to identify real bottlenecks!
+        $performance = Sync::log()->performance();
+
+        $bottlenecks = [];
+
+        // Check for slow sync operations
+        if (($performance['avg_duration'] ?? 0) > 10000) { // > 10 seconds
+            $slowSyncs = Sync::log()->slow()->count();
+            $bottlenecks[] = [
+                'stage' => 'Sync Performance',
+                'count' => $slowSyncs,
+                'avg_time' => round(($performance['avg_duration'] ?? 0) / 1000, 1).'s',
+            ];
+        }
+
+        // Check for failed syncs
+        $failedSyncs = Sync::log()->failures()->today()->count();
+        if ($failedSyncs > 0) {
+            $bottlenecks[] = [
+                'stage' => 'Sync Failures',
+                'count' => $failedSyncs,
+                'avg_time' => 'Manual review needed',
+            ];
+        }
+
+        // Check for pending items
+        $pendingSyncs = Sync::status()->pending()->count();
+        if ($pendingSyncs > 10) {
+            $bottlenecks[] = [
+                'stage' => 'Sync Queue',
+                'count' => $pendingSyncs,
+                'avg_time' => 'Queued for sync',
+            ];
+        }
+
+        // Fallback to data quality bottlenecks if no sync issues
+        if (empty($bottlenecks)) {
+            $missingBarcodes = $this->getMissingBarcodes();
+            $pricingGaps = $this->getPricingGaps();
+
+            if ($missingBarcodes > 0) {
+                $bottlenecks[] = ['stage' => 'Barcode Assignment', 'count' => $missingBarcodes, 'avg_time' => '2 minutes'];
+            }
+
+            if ($pricingGaps > 0) {
+                $bottlenecks[] = ['stage' => 'Price Validation', 'count' => $pricingGaps, 'avg_time' => '5 minutes'];
+            }
+
+            if (empty($bottlenecks)) {
+                $bottlenecks[] = ['stage' => 'All Systems', 'count' => 0, 'avg_time' => 'Optimal'];
+            }
+        }
+
+        return array_slice($bottlenecks, 0, 3);
     }
 
     // PIM Chart Data Methods

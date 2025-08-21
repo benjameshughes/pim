@@ -7,10 +7,8 @@ use App\Exceptions\DuplicateSkuException;
 use App\Models\BarcodePool;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Support\Toast;
-use App\Traits\HasLoadingStates;
-use App\Traits\PerformanceMonitoring;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Validate;
@@ -27,7 +25,7 @@ use Livewire\WithFileUploads;
 #[Title('Create Product Variant')]
 class VariantCreate extends Component
 {
-    use HasLoadingStates, PerformanceMonitoring, WithFileUploads;
+    use WithFileUploads;
 
     /**
      * Parent product (passed via route parameter)
@@ -35,9 +33,13 @@ class VariantCreate extends Component
     public ?Product $product = null;
 
     /**
+     * Variant being edited (null for create mode)
+     */
+    public ?ProductVariant $variant = null;
+
+    /**
      * Variant SKU
      */
-    #[Validate('required|string|max:100|unique:product_variants,sku')]
     public string $sku = '';
 
     /**
@@ -169,23 +171,42 @@ class VariantCreate extends Component
     /**
      * Component mount
      */
-    public function mount(?Product $product = null): void
+    public function mount(?Product $product = null, ?ProductVariant $variant = null): void
     {
-        $this->startTimer('component_mount');
-
         $this->product = $product;
+        $this->variant = $variant;
 
         if ($product) {
-            $this->startTimer('sku_generation');
             $this->generateSkuFromProduct();
-            $this->endTimer('sku_generation');
         }
 
-        $this->startTimer('barcode_stats_load');
         $this->loadBarcodeStats();
-        $this->endTimer('barcode_stats_load');
+    }
 
-        $this->endTimer('component_mount');
+    /**
+     * Get dynamic validation rules that handle both create and edit modes
+     */
+    protected function rules()
+    {
+        return [
+            'sku' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('product_variants', 'sku')->ignore($this->variant?->id),
+            ],
+            'status' => 'required|in:draft,active,inactive,archived',
+            'stockLevel' => 'required|integer|min:0',
+            'color' => 'nullable|string|max:50',
+            'width' => 'nullable|string|max:20',
+            'drop' => 'nullable|string|max:20',
+            'retailPrice' => 'nullable|numeric|min:0',
+            'costPrice' => 'nullable|numeric|min:0',
+            'package.length' => 'nullable|numeric|min:0',
+            'package.width' => 'nullable|numeric|min:0',
+            'package.height' => 'nullable|numeric|min:0',
+            'package.weight' => 'nullable|numeric|min:0',
+        ];
     }
 
     /**
@@ -273,16 +294,13 @@ class VariantCreate extends Component
         $this->processingStep = 'Validating form data...';
         $this->processingProgress = 10;
 
-        // Enhanced loading states
-        $this->setLoading('validation', true, 'Validating form data...');
+        // Enhanced loading states - simplified
 
         try {
             $this->validate();
-            $this->clearLoading('validation');
 
             $this->processingStep = 'Building variant configuration...';
             $this->processingProgress = 25;
-            $this->setLoading('building', true, 'Building variant configuration...');
 
             // Create variant using the enhanced VariantBuilder pattern
             $builder = ProductVariant::buildFor($this->product)
@@ -318,13 +336,10 @@ class VariantCreate extends Component
                 );
             }
 
-            $this->clearLoading('building');
-
             // Handle barcode assignment
             if ($this->barcode['assign']) {
                 $this->processingStep = 'Assigning barcode...';
                 $this->processingProgress = 60;
-                $this->setLoading('barcode', true, 'Assigning barcode from pool...');
 
                 if (! empty($this->barcode['custom'])) {
                     // Use custom barcode
@@ -333,21 +348,16 @@ class VariantCreate extends Component
                     // Auto-assign from pool
                     $builder->assignFromPool($this->barcode['type']);
                 }
-
-                $this->clearLoading('barcode');
             }
 
             $this->processingStep = 'Creating variant in database...';
             $this->processingProgress = 80;
-            $this->setLoading('database', true, 'Saving to database...');
 
             // Execute the builder to create the variant! ✨
             $variant = $builder->execute();
 
-            $this->clearLoading('database');
-            $this->processingStep = 'Finalizing...';
-            $this->processingProgress = 95;
-            $this->setLoading('finalizing', true, 'Finalizing variant creation...');
+            $this->processingStep = 'Success!';
+            $this->processingProgress = 100;
 
             // Dispatch success event
             $this->dispatch('variant-created', [
@@ -356,26 +366,11 @@ class VariantCreate extends Component
                 'productName' => $this->product->name,
             ]);
 
-            $this->clearLoading('finalizing');
-            $this->processingStep = 'Success!';
-            $this->processingProgress = 100;
-
-            // Success toast notification
-            Toast::success(
-                'Variant Created!',
-                "Variant '{$variant->sku}' created successfully using Builder pattern!"
-            )
-                ->actionUrl('View Variant', route('products.variants.view', $variant))
-                ->send($this);
-
-            // Clear all loading states
-            $this->clearAllLoading();
-
-            // Small delay to show completion
-            sleep(0.5);
+            // Success notification
+            $this->dispatch('success', "Variant '{$variant->sku}' created successfully!");
 
             // Redirect to variant view
-            $this->redirect(route('products.variants.view', $variant), navigate: true);
+            $this->redirect(route('variants.show', $variant), navigate: true);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             $this->resetProcessing();
@@ -383,16 +378,8 @@ class VariantCreate extends Component
         } catch (BarcodePoolExhaustedException $e) {
             $this->resetProcessing();
 
-            // Enhanced toast notification for barcode pool exhaustion
-            Toast::error(
-                'Barcodes Exhausted',
-                $e->getUserMessage()
-            )
-                ->withSuggestions($e->getSuggestedActions())
-                ->actionUrl('Import Barcodes', '/barcodes/pool/import')
-                ->retry()
-                ->persistent()
-                ->send($this);
+            // Enhanced notification for barcode pool exhaustion
+            $this->dispatch('error', 'Barcodes Exhausted: '.$e->getUserMessage());
 
             // Keep original dispatch for any JavaScript listeners
             $this->dispatch('barcode-pool-exhausted', [
@@ -404,15 +391,8 @@ class VariantCreate extends Component
         } catch (DuplicateSkuException $e) {
             $this->resetProcessing();
 
-            // Enhanced toast notification for duplicate SKU
-            Toast::error(
-                'Duplicate SKU',
-                $e->getUserMessage()
-            )
-                ->withSuggestions($e->getSuggestedSkus())
-                ->withData(['suggestedField' => 'sku'])
-                ->duration(8000) // Longer duration for suggestions
-                ->send($this);
+            // Enhanced notification for duplicate SKU
+            $this->dispatch('error', 'Duplicate SKU: '.$e->getUserMessage());
 
             // Add validation error to the sku field
             $this->addError('sku', $e->getUserMessage());
@@ -427,15 +407,8 @@ class VariantCreate extends Component
         } catch (\Exception $e) {
             $this->resetProcessing();
 
-            // Generic error with retry option
-            Toast::error(
-                'Variant Creation Failed',
-                'An unexpected error occurred: '.$e->getMessage()
-            )
-                ->retry()
-                ->actionUrl('Get Help', '/help')
-                ->duration(10000)
-                ->send($this);
+            // Generic error
+            $this->dispatch('error', 'Variant Creation Failed: '.$e->getMessage());
 
             $this->dispatch('variant-create-failed', error: $e->getMessage());
         }
@@ -480,7 +453,6 @@ class VariantCreate extends Component
         $this->processing = false;
         $this->processingStep = '';
         $this->processingProgress = 0;
-        $this->clearAllLoading();
     }
 
     /**

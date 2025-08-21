@@ -2,32 +2,24 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
-    public function run(): void
+    public function run()
     {
-        // User::factory(10)->create();
 
-        // Don't overwrite existing users - just ensure we have at least one
-        if (User::count() === 0) {
-            User::factory()->create([
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
-        }
+        UserFactory::new()->create([
+            'name' => 'Big Daddy',
+            'email' => 'ben@app.com',
+            'password' => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
 
-        // Seed the new marketplace and attribute structures
         $this->call([
-            MarketplaceSeeder::class,
-            WindowShadeAttributeSeeder::class,
-            CoreAttributeSeeder::class,
+            //
         ]);
     }
 }

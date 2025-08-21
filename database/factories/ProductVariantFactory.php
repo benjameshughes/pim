@@ -3,31 +3,46 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductVariant>
- */
 class ProductVariantFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = ProductVariant::class;
+
     public function definition(): array
     {
         return [
             'product_id' => Product::factory(),
-            'sku' => strtoupper($this->faker->bothify('SKU-####-???')),
-            'color' => $this->faker->colorName(),
-            'size' => $this->faker->randomElement(['XS', 'S', 'M', 'L', 'XL', 'XXL']),
+            'title' => $this->faker->words(2, true),
+            'sku' => $this->faker->unique()->numerify('VAR-###'),
+            'color' => $this->faker->randomElement(['Red', 'Blue', 'Green', 'Black', 'White']),
+            'width' => $this->faker->numberBetween(50, 200),
+            'drop' => $this->faker->numberBetween(100, 300),
+            'price' => $this->faker->randomFloat(2, 10, 100),
             'stock_level' => $this->faker->numberBetween(0, 100),
-            'package_length' => $this->faker->randomFloat(2, 10, 100),
-            'package_width' => $this->faker->randomFloat(2, 10, 100),
-            'package_height' => $this->faker->randomFloat(2, 5, 50),
-            'package_weight' => $this->faker->randomFloat(2, 0.1, 10),
-            'status' => $this->faker->randomElement(['active', 'inactive', 'out_of_stock']),
+            'status' => $this->faker->randomElement(['active', 'inactive']),
         ];
+    }
+
+    public function active(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'active',
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'inactive',
+        ]);
+    }
+
+    public function forProduct(Product $product): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'product_id' => $product->id,
+        ]);
     }
 }

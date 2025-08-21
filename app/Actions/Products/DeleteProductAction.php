@@ -4,7 +4,6 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
@@ -17,37 +16,56 @@ use InvalidArgumentException;
 class DeleteProductAction extends BaseAction
 {
     /**
-     * Execute product deletion
-     *
-     * @param  Product  $product  Product to delete
-     * @param  bool  $forceDelete  Whether to force delete (bypass soft delete if implemented)
-     * @return bool Success status
-     *
-     * @throws InvalidArgumentException If product is invalid
+     * Validate parameters before execution
      */
-    public function execute(...$params): bool
+    protected function validate(array $params): bool
+    {
+        if (count($params) < 1) {
+            throw new InvalidArgumentException('Product instance is required as first parameter');
+        }
+
+        if (! $params[0] instanceof Product) {
+            throw new InvalidArgumentException('First parameter must be a Product instance');
+        }
+
+        return true;
+    }
+
+    /**
+     * Perform the product deletion action
+     */
+    protected function performAction(...$params): array
     {
         $product = $params[0];
         $forceDelete = $params[1] ?? false;
 
-        if (! $product instanceof Product) {
-            throw new InvalidArgumentException('First parameter must be a Product instance');
+        // Handle pre-deletion cleanup
+        $this->handlePreDeletion($product);
+
+        // Delete related data first to maintain referential integrity
+        $this->deleteRelatedData($product);
+
+        // Delete the product itself
+        $success = $forceDelete ? $product->forceDelete() : $product->delete();
+
+        if ($success) {
+            return $this->success(
+                'Product deleted successfully',
+                [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'force_delete' => $forceDelete,
+                ]
+            );
+        } else {
+            return $this->failure(
+                'Failed to delete product',
+                [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                ]
+            );
         }
-
-        return DB::transaction(function () use ($product, $forceDelete) {
-            // Handle pre-deletion cleanup
-            $this->handlePreDeletion($product);
-
-            // Delete related data first to maintain referential integrity
-            $this->deleteRelatedData($product);
-
-            // Delete the product itself
-            if ($forceDelete) {
-                return $product->forceDelete();
-            } else {
-                return $product->delete();
-            }
-        });
     }
 
     /**

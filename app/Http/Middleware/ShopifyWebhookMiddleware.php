@@ -5,13 +5,13 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * 🎭 LEGENDARY SHOPIFY WEBHOOK MIDDLEWARE 🎭
- * 
+ *
  * Protects webhook endpoints with MAXIMUM SASS and security!
  * Because security should be tighter than my stage costume! 💅
  */
@@ -24,83 +24,89 @@ class ShopifyWebhookMiddleware
     {
         $startTime = microtime(true);
         $requestId = uniqid('webhook_middleware_', true);
-        
-        Log::info("🛡️ LEGENDARY webhook middleware engaged!", [
+
+        Log::info('🛡️ LEGENDARY webhook middleware engaged!', [
             'request_id' => $requestId,
             'ip' => $request->ip(),
             'user_agent' => $request->header('User-Agent'),
             'topic' => $request->header('X-Shopify-Topic'),
-            'shop_domain' => $request->header('X-Shopify-Shop-Domain')
+            'shop_domain' => $request->header('X-Shopify-Shop-Domain'),
         ]);
 
         // 🚨 Security Check 1: Validate request method
-        if (!$request->isMethod('POST')) {
-            Log::warning("🚨 Invalid request method - webhooks must be POST!", [
+        if (! $request->isMethod('POST')) {
+            Log::warning('🚨 Invalid request method - webhooks must be POST!', [
                 'method' => $request->method(),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
+
             return response('Method Not Allowed', 405);
         }
 
         // 🚨 Security Check 2: Validate required Shopify headers
-        if (!$this->hasRequiredShopifyHeaders($request)) {
-            Log::warning("🚨 Missing required Shopify headers - suspicious request!", [
+        if (! $this->hasRequiredShopifyHeaders($request)) {
+            Log::warning('🚨 Missing required Shopify headers - suspicious request!', [
                 'ip' => $request->ip(),
-                'headers' => $request->headers->all()
+                'headers' => $request->headers->all(),
             ]);
+
             return response('Bad Request', 400);
         }
 
         // 🚨 Security Check 3: Rate limiting by IP
-        if (!$this->passesRateLimit($request)) {
+        if (! $this->passesRateLimit($request)) {
             Log::warning("🚨 Rate limit exceeded - someone's being TOO enthusiastic!", [
                 'ip' => $request->ip(),
-                'topic' => $request->header('X-Shopify-Topic')
+                'topic' => $request->header('X-Shopify-Topic'),
             ]);
+
             return response('Too Many Requests', 429);
         }
 
         // 🚨 Security Check 4: Content-Type validation
-        if (!$this->hasValidContentType($request)) {
-            Log::warning("🚨 Invalid content type - expecting JSON!", [
+        if (! $this->hasValidContentType($request)) {
+            Log::warning('🚨 Invalid content type - expecting JSON!', [
                 'content_type' => $request->header('Content-Type'),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
+
             return response('Unsupported Media Type', 415);
         }
 
         // 🚨 Security Check 5: Payload size validation
-        if (!$this->hasValidPayloadSize($request)) {
+        if (! $this->hasValidPayloadSize($request)) {
             Log::warning("🚨 Payload too large - that's suspicious!", [
                 'content_length' => $request->header('Content-Length'),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
+
             return response('Payload Too Large', 413);
         }
 
         // 🚨 Security Check 6: User-Agent validation
-        if (!$this->hasValidUserAgent($request)) {
-            Log::warning("🚨 Invalid User-Agent - not from Shopify!", [
+        if (! $this->hasValidUserAgent($request)) {
+            Log::warning('🚨 Invalid User-Agent - not from Shopify!', [
                 'user_agent' => $request->header('User-Agent'),
-                'ip' => $request->ip()
+                'ip' => $request->ip(),
             ]);
+
             return response('Forbidden', 403);
         }
 
         // 📊 Log successful middleware passage
         $middlewareTime = round((microtime(true) - $startTime) * 1000, 2);
-        
-        Log::info("✨ LEGENDARY webhook middleware passed all checks!", [
+
+        Log::info('✨ LEGENDARY webhook middleware passed all checks!', [
             'request_id' => $requestId,
             'middleware_time_ms' => $middlewareTime,
             'topic' => $request->header('X-Shopify-Topic'),
-            'shop_domain' => $request->header('X-Shopify-Shop-Domain')
+            'shop_domain' => $request->header('X-Shopify-Shop-Domain'),
         ]);
 
         // Add middleware metadata to request
         $request->merge([
             '_webhook_middleware_time' => $middlewareTime,
-            '_webhook_request_id' => $requestId
+            '_webhook_request_id' => $requestId,
         ]);
 
         return $next($request);
@@ -114,12 +120,13 @@ class ShopifyWebhookMiddleware
         $requiredHeaders = [
             'X-Shopify-Topic',
             'X-Shopify-Hmac-Sha256',
-            'X-Shopify-Shop-Domain'
+            'X-Shopify-Shop-Domain',
         ];
 
         foreach ($requiredHeaders as $header) {
-            if (!$request->header($header)) {
+            if (! $request->header($header)) {
                 Log::debug("Missing required header: {$header}");
+
                 return false;
             }
         }
@@ -134,16 +141,16 @@ class ShopifyWebhookMiddleware
     {
         $ip = $request->ip();
         $shopDomain = $request->header('X-Shopify-Shop-Domain', 'unknown');
-        
+
         // Rate limit by IP: 100 requests per minute
         $ipKey = "webhook_rate_limit_ip:{$ip}";
-        if (!RateLimiter::attempt($ipKey, 100, function() {}, 60)) {
+        if (! RateLimiter::attempt($ipKey, 100, function () {}, 60)) {
             return false;
         }
 
         // Rate limit by shop domain: 200 requests per minute
         $shopKey = "webhook_rate_limit_shop:{$shopDomain}";
-        if (!RateLimiter::attempt($shopKey, 200, function() {}, 60)) {
+        if (! RateLimiter::attempt($shopKey, 200, function () {}, 60)) {
             return false;
         }
 
@@ -156,8 +163,8 @@ class ShopifyWebhookMiddleware
     private function hasValidContentType(Request $request): bool
     {
         $contentType = $request->header('Content-Type', '');
-        
-        return str_contains($contentType, 'application/json') || 
+
+        return str_contains($contentType, 'application/json') ||
                str_contains($contentType, 'application/x-www-form-urlencoded');
     }
 
@@ -178,7 +185,7 @@ class ShopifyWebhookMiddleware
     private function hasValidUserAgent(Request $request): bool
     {
         $userAgent = $request->header('User-Agent', '');
-        
+
         // Shopify typically uses User-Agent like: "Shopify/1.0 (https://shopify.com)"
         return str_contains(strtolower($userAgent), 'shopify') ||
                str_contains(strtolower($userAgent), 'webhook');
@@ -195,13 +202,13 @@ class ShopifyWebhookMiddleware
             'user_agent' => $request->header('User-Agent'),
             'all_headers' => $request->headers->all(),
             'content_length' => $request->header('Content-Length'),
-            'request_time' => now()->toISOString()
+            'request_time' => now()->toISOString(),
         ];
 
-        Log::warning("🚨 SUSPICIOUS webhook activity detected!", $suspiciousData);
+        Log::warning('🚨 SUSPICIOUS webhook activity detected!', $suspiciousData);
 
         // Store in cache for monitoring dashboard
-        $cacheKey = "suspicious_webhook_activity:" . now()->format('Y-m-d-H');
+        $cacheKey = 'suspicious_webhook_activity:'.now()->format('Y-m-d-H');
         $existing = Cache::get($cacheKey, []);
         $existing[] = $suspiciousData;
         Cache::put($cacheKey, $existing, now()->addHours(24));
@@ -218,20 +225,20 @@ class ShopifyWebhookMiddleware
         // Get hourly stats for the last 24 hours
         for ($i = 0; $i < 24; $i++) {
             $hour = $now->copy()->subHours($i);
-            $cacheKey = "suspicious_webhook_activity:" . $hour->format('Y-m-d-H');
+            $cacheKey = 'suspicious_webhook_activity:'.$hour->format('Y-m-d-H');
             $hourlyActivity = Cache::get($cacheKey, []);
-            
+
             $stats[$hour->format('H:00')] = [
                 'suspicious_requests' => count($hourlyActivity),
                 'unique_ips' => count(array_unique(array_column($hourlyActivity, 'ip'))),
-                'reasons' => array_count_values(array_column($hourlyActivity, 'reason'))
+                'reasons' => array_count_values(array_column($hourlyActivity, 'reason')),
             ];
         }
 
         return [
             'hourly_stats' => $stats,
             'rate_limit_stats' => $this->getRateLimitStats(),
-            'generated_at' => now()->toISOString()
+            'generated_at' => now()->toISOString(),
         ];
     }
 
@@ -244,7 +251,7 @@ class ShopifyWebhookMiddleware
         return [
             'ip_limits_active' => RateLimiter::remaining('webhook_rate_limit_ip:*'),
             'shop_limits_active' => RateLimiter::remaining('webhook_rate_limit_shop:*'),
-            'note' => 'Rate limiting stats require custom implementation based on your cache driver'
+            'note' => 'Rate limiting stats require custom implementation based on your cache driver',
         ];
     }
 }

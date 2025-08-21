@@ -65,7 +65,7 @@ class Tab implements Htmlable
     }
 
     /**
-     * @param array<string, mixed>|Collection<string, mixed> $parameters
+     * @param  array<string, mixed>|Collection<string, mixed>  $parameters
      */
     public function route(string $route, array|Collection $parameters = []): static
     {
@@ -85,6 +85,13 @@ class Tab implements Htmlable
     public function badge(string|int|Closure|null $badge, ?string $color = null): static
     {
         $this->badge = $badge;
+        $this->badgeColor = $color;
+
+        return $this;
+    }
+
+    public function badgeColor(?string $color): static
+    {
         $this->badgeColor = $color;
 
         return $this;

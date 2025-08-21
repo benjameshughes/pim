@@ -1,3 +1,5 @@
-<x-layouts.app.sidebar>
-    <livewire:pim.products.management.product-index />
-</x-layouts.app.sidebar>
+<x-layouts.app>
+    <x-slot:title>Products & Variants</x-slot:title>
+    
+    <livewire:products.product-index />
+</x-layouts.app>

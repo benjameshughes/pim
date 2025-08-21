@@ -2,100 +2,119 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Milon\Barcode\DNS1D;
-use Milon\Barcode\DNS2D;
 
 class Barcode extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'product_variant_id',
         'barcode',
-        'barcode_type',
-        'is_primary',
+        'type',
+        'status',
     ];
 
     protected $casts = [
-        'is_primary' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    public const BARCODE_TYPES = [
-        'EAN13' => 'EAN-13',
-        'EAN8' => 'EAN-8',
-        'UPC' => 'UPC-A',
-        'CODE128' => 'Code 128',
-        'CODE39' => 'Code 39',
-        'CODABAR' => 'Codabar',
-        'QRCODE' => 'QR Code',
-    ];
-
+    /**
+     * 📦 VARIANT RELATIONSHIP
+     *
+     * Each barcode belongs to a specific variant
+     */
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
     }
 
     /**
-     * Generate barcode image as HTML
+     * 🏠 PRODUCT ACCESSOR (through variant)
+     *
+     * Get the product this barcode belongs to via its variant
      */
-    public function generateBarcodeHtml($width = 2, $height = 30): string
+    public function getProductAttribute()
     {
-        if ($this->barcode_type === 'QRCODE') {
-            return (new DNS2D)->getBarcodeHTML($this->barcode, 'QRCODE', $width, $height);
-        }
-
-        return (new DNS1D)->getBarcodeHTML($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
+        return $this->productVariant?->product;
     }
 
     /**
-     * Generate barcode image as PNG
+     * ✅ IS ACTIVE
+     *
+     * Check if barcode is active
      */
-    public function generateBarcodePNG($width = 2, $height = 30): string
+    public function isActive()
     {
-        if ($this->barcode_type === 'QRCODE') {
-            return (new DNS2D)->getBarcodePNG($this->barcode, 'QRCODE', $width, $height);
-        }
-
-        return (new DNS1D)->getBarcodePNG($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
+        return $this->status === 'active';
     }
 
     /**
-     * Generate barcode image as SVG
+     * 🔍 SCOPE: Active barcodes only
      */
-    public function generateBarcodeSVG($width = 2, $height = 30): string
+    public function scopeActive($query)
     {
-        if ($this->barcode_type === 'QRCODE') {
-            return (new DNS2D)->getBarcodeSVG($this->barcode, 'QRCODE', $width, $height);
-        }
-
-        return (new DNS1D)->getBarcodeSVG($this->barcode, $this->barcode_type ?? 'CODE128', $width, $height);
+        return $query->where('status', 'active');
     }
 
     /**
-     * Get the barcode type label
+     * 🔍 SCOPE: By type
      */
-    public function getBarcodeTypeLabel(): string
+    public function scopeByType($query, $type)
     {
-        return self::BARCODE_TYPES[$this->barcode_type] ?? $this->barcode_type;
+        return $query->where('type', $type);
     }
 
     /**
-     * Generate a random barcode for testing
+     * 🔍 SCOPE: Caecus barcodes
      */
-    public static function generateRandomBarcode(string $type = 'CODE128'): string
+    public function scopeCaecus($query)
     {
-        switch ($type) {
-            case 'EAN13':
-                return str_pad(mt_rand(100000000000, 999999999999), 13, '0', STR_PAD_LEFT);
-            case 'EAN8':
-                return str_pad(mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
-            case 'UPC':
-                return str_pad(mt_rand(100000000000, 999999999999), 12, '0', STR_PAD_LEFT);
-            case 'CODE128':
-            case 'CODE39':
-            case 'CODABAR':
-            default:
-                return strtoupper(substr(md5(uniqid()), 0, 12));
+        return $query->where('type', 'caecus');
+    }
+
+    /**
+     * 🔍 SCOPE: System barcodes
+     */
+    public function scopeSystem($query)
+    {
+        return $query->where('type', 'system');
+    }
+
+    /**
+     * 🎯 FIND BY BARCODE
+     *
+     * Find a barcode by its number and type
+     */
+    public static function findByBarcode(string $barcode, ?string $type = null)
+    {
+        $query = static::where('barcode', $barcode);
+
+        if ($type) {
+            $query->where('type', $type);
         }
+
+        return $query->first();
+    }
+
+    /**
+     * 📱 FORMATTED BARCODE
+     *
+     * Display barcode with type label
+     */
+    public function getFormattedBarcodeAttribute()
+    {
+        $typeLabel = match ($this->type) {
+            'caecus' => 'Caecus',
+            'system' => 'System',
+            'ean13' => 'EAN13',
+            'upc' => 'UPC',
+            default => ucfirst($this->type)
+        };
+
+        return "{$typeLabel}: {$this->barcode}";
     }
 }

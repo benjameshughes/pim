@@ -2,326 +2,315 @@
 
 namespace App\Models;
 
+use App\Traits\HasAttributesTrait;
+use App\Traits\InheritsAttributesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-class ProductVariant extends Model implements HasMedia
+class ProductVariant extends Model
 {
-    use HasFactory, InteractsWithMedia;
+    use HasFactory, HasAttributesTrait, InheritsAttributesTrait;
 
     protected $fillable = [
         'product_id',
         'sku',
-        'status',
+        'external_sku',
+        'title',
+        'color',
+        'width',
+        'drop',
+        'max_drop',
+        'price',
         'stock_level',
-        'images',
-        'package_length',
-        'package_width',
-        'package_height',
-        'package_weight',
+        'status',
+        'parcel_length',
+        'parcel_width',
+        'parcel_depth',
+        'parcel_weight',
     ];
 
     protected $casts = [
-        'images' => 'array',
-        'package_length' => 'decimal:2',
-        'package_width' => 'decimal:2',
-        'package_height' => 'decimal:2',
-        'package_weight' => 'decimal:3',
+        'width' => 'integer',
+        'drop' => 'integer',
+        'max_drop' => 'integer',
+        'price' => 'float',
+        'stock_level' => 'integer',
+        'parcel_length' => 'decimal:2',
+        'parcel_width' => 'decimal:2',
+        'parcel_depth' => 'decimal:2',
+        'parcel_weight' => 'decimal:3',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
+    /**
+     * 🏠 PRODUCT RELATIONSHIP
+     *
+     * Each variant belongs to a product family
+     */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /**
+     * 🖼️ IMAGES - Polymorphic relationship to Image model
+     *
+     * Each variant can have specific images stored in R2
+     */
+    public function images(): MorphMany
+    {
+        return $this->morphMany(Image::class, 'imageable')->ordered();
+    }
+
+    /**
+     * ⭐ PRIMARY IMAGE - Get the primary image for this variant
+     */
+    public function primaryImage(): ?Image
+    {
+        return $this->images()->primary()->first();
+    }
+
+    /**
+     * 🔢 BARCODES
+     *
+     * Each variant can have multiple barcodes (Caecus + System)
+     */
     public function barcodes(): HasMany
     {
         return $this->hasMany(Barcode::class);
     }
 
+    /**
+     * 🛍️ SHOPIFY SYNC STATUS
+     *
+     * Track sync status for this specific variant
+     */
+    public function shopifySyncStatus(): HasMany
+    {
+        return $this->hasMany(ShopifySyncStatus::class);
+    }
+
+    /**
+     * 💰 PRICING - Multi-channel pricing support
+     */
     public function pricing(): HasMany
     {
         return $this->hasMany(Pricing::class);
     }
 
-    public function images(): HasMany
+    /**
+     * 🔗 MARKETPLACE LINKS
+     *
+     * Polymorphic relationship to marketplace links for this variant
+     */
+    public function marketplaceLinks(): MorphMany
     {
-        return $this->hasMany(ProductImage::class, 'variant_id');
+        return $this->morphMany(MarketplaceLink::class, 'linkable');
     }
 
+    /**
+     * 🔗 VARIANT-LEVEL MARKETPLACE LINKS
+     *
+     * Only the variant-level marketplace links
+     */
+    public function variantMarketplaceLinks(): MorphMany
+    {
+        return $this->marketplaceLinks()->where('link_level', 'variant');
+    }
+
+    /**
+     * 💎 ACTIVE PRICING - Only active pricing records
+     */
+    public function activePricing(): HasMany
+    {
+        return $this->pricing()->active();
+    }
+
+    /**
+     * 🏷️ ATTRIBUTES
+     *
+     * Flexible attribute system for variant metadata with inheritance
+     */
     public function attributes(): HasMany
     {
         return $this->hasMany(VariantAttribute::class, 'variant_id');
     }
 
-    public function marketplaceVariants(): HasMany
-    {
-        return $this->hasMany(MarketplaceVariant::class, 'variant_id');
-    }
-
-    public function marketplaceBarcodes(): HasMany
-    {
-        return $this->hasMany(MarketplaceBarcode::class, 'variant_id');
-    }
-
-    public function variantImages(): HasMany
-    {
-        return $this->hasMany(ProductImage::class, 'variant_id')->whereNull('product_id');
-    }
-
-    public function primaryBarcode()
-    {
-        return $this->barcodes()->where('is_primary', true)->first();
-    }
-
-    public function mainImage()
-    {
-        return $this->variantImages()->where('image_type', 'main')->first();
-    }
-
-    public function swatchImage()
-    {
-        return $this->variantImages()->where('image_type', 'swatch')->first();
-    }
-
-    public function getMarketplaceData(string $marketplaceCode): ?MarketplaceVariant
-    {
-        return $this->marketplaceVariants()
-            ->whereHas('marketplace', function ($query) use ($marketplaceCode) {
-                $query->where('code', $marketplaceCode);
-            })
-            ->first();
-    }
-
     /**
-     * Register media conversions for automatic image processing
-     */
-    public function registerMediaConversions(?Media $media = null): void
-    {
-        $this->addMediaConversion('thumb')
-            ->width(150)
-            ->height(150)
-            ->sharpen(10)
-            ->nonQueued(); // Generate immediately
-
-        $this->addMediaConversion('medium')
-            ->width(400)
-            ->height(400)
-            ->optimize()
-            ->nonQueued();
-
-        $this->addMediaConversion('large')
-            ->width(800)
-            ->height(800)
-            ->optimize()
-            ->queued(); // Generate in background
-
-        $this->addMediaConversion('webp')
-            ->format('webp')
-            ->width(600)
-            ->height(600)
-            ->optimize()
-            ->queued();
-    }
-
-    /**
-     * Register media collections
-     */
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('images')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
-    }
-
-    /**
-     * Accessor methods for core attributes stored in the attribute system
-     * These provide seamless access to attributes as if they were direct properties
-     */
-    public function getColorAttribute(): ?string
-    {
-        $attribute = $this->attributes()->byKey('color')->first();
-
-        return $attribute ? $attribute->attribute_value : null;
-    }
-
-    public function getWidthAttribute(): ?string
-    {
-        $attribute = $this->attributes()->byKey('width')->first();
-
-        return $attribute ? $attribute->attribute_value : null;
-    }
-
-    public function getDropAttribute(): ?string
-    {
-        $attribute = $this->attributes()->byKey('drop')->first();
-
-        return $attribute ? $attribute->attribute_value : null;
-    }
-
-    /**
-     * Helper method to get any variant attribute value by key
-     */
-    public function getVariantAttributeValue(string $key): mixed
-    {
-        $attribute = $this->attributes()->byKey($key)->first();
-
-        return $attribute ? $attribute->typed_value : null;
-    }
-
-    /**
-     * Helper method to set any variant attribute value
-     */
-    public function setVariantAttributeValue(string $key, $value, string $dataType = 'text', ?string $category = null): void
-    {
-        \App\Models\VariantAttribute::setValue($this->id, $key, $value, $dataType, $category);
-
-        // Clear the relationship cache so fresh data is loaded
-        unset($this->relations['attributes']);
-    }
-
-    /**
-     * Get formatted display string for dimensions
-     */
-    public function getDimensionsAttribute(): ?string
-    {
-        $width = $this->width;
-        $drop = $this->drop;
-
-        if ($width && $drop) {
-            return "{$width} × {$drop}";
-        } elseif ($width) {
-            return "{$width} wide";
-        } elseif ($drop) {
-            return "{$drop} drop";
-        }
-
-        return null;
-    }
-
-    /**
-     * Backward compatibility - get size as formatted dimensions
-     * This allows existing views using $variant->size to work
-     */
-    public function getSizeAttribute(): ?string
-    {
-        return $this->getDimensionsAttribute();
-    }
-
-    /**
-     * Get the first variant image URL for display
-     */
-    public function getImageUrlAttribute(): ?string
-    {
-        if ($this->images && count($this->images) > 0) {
-            return asset('storage/'.$this->images[0]);
-        }
-
-        // Try variant images relationship
-        if ($this->variantImages->isNotEmpty()) {
-            $mainImage = $this->variantImages->where('image_type', 'main')->first();
-            if ($mainImage) {
-                return \Storage::url($mainImage->image_path);
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Get the retail price from the first pricing record
-     */
-    public function getRetailPriceAttribute(): ?float
-    {
-        return $this->pricing->first()?->retail_price;
-    }
-
-    /**
-     * Model event listeners for archiving
-     */
-    protected static function booted(): void
-    {
-        static::deleting(function (ProductVariant $variant) {
-            // Only archive if deletion_reason is set on the model
-            // This allows for programmatic deletion with archiving
-            if (isset($variant->deletion_reason)) {
-                \App\Models\DeletedProductVariant::createFromVariant(
-                    $variant,
-                    $variant->deletion_reason,
-                    $variant->deletion_notes ?? null
-                );
-            }
-
-            // Free up any assigned barcodes for reuse
-            \App\Models\BarcodePool::where('assigned_to_variant_id', $variant->id)
-                ->update([
-                    'status' => 'available',
-                    'assigned_to_variant_id' => null,
-                    'assigned_at' => null,
-                ]);
-        });
-    }
-
-    /**
-     * Create a new variant builder instance
-     */
-    public static function build(): \App\Builders\Variants\VariantBuilder
-    {
-        return \App\Builders\Variants\VariantBuilder::create();
-    }
-
-    /**
-     * Create variant builder for specific product
-     */
-    public static function buildFor(Product $product): \App\Builders\Variants\VariantBuilder
-    {
-        return \App\Builders\Variants\VariantBuilder::for($product);
-    }
-
-    /**
-     * Get variant builder for editing this variant
-     */
-    public function edit(): \App\Builders\Variants\VariantBuilder
-    {
-        $builder = \App\Builders\Variants\VariantBuilder::create();
-
-        // Pre-populate with current variant data
-        $builder->productId($this->product_id)
-            ->sku($this->sku)
-            ->status($this->status ?? 'active')
-            ->stockLevel($this->stock_level ?? 0);
-
-        // Add dimensions if available
-        if ($this->package_length) {
-            $builder->dimensions(
-                $this->package_length,
-                $this->package_width,
-                $this->package_height,
-                $this->package_weight
-            );
-        }
-
-        // Add current attributes
-        $attributes = [];
-        foreach ($this->attributes as $attribute) {
-            $attributes[$attribute->attribute_key] = $attribute->attribute_value;
-        }
-        if (! empty($attributes)) {
-            $builder->attributes($attributes);
-        }
-
-        return $builder;
-    }
-
-    /**
-     * Query scope for active variants
+     * ✅ VALID ATTRIBUTES
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Only attributes that pass validation
+     */
+    public function validAttributes(): HasMany
+    {
+        return $this->attributes()->valid();
+    }
+
+    /**
+     * 🧬 INHERITED ATTRIBUTES
+     *
+     * Attributes inherited from parent product
+     */
+    public function inheritedAttributes(): HasMany
+    {
+        return $this->attributes()->inherited();
+    }
+
+    /**
+     * 🎯 OVERRIDE ATTRIBUTES
+     *
+     * Attributes that override inherited values
+     */
+    public function overrideAttributes(): HasMany
+    {
+        return $this->attributes()->overrides();
+    }
+
+    /**
+     * 🎯 GET SMART ATTRIBUTE VALUE WITH INHERITANCE
+     *
+     * Get attribute value with smart inheritance fallback (use explicit method to avoid conflicts)
+     */
+    public function getSmartAttributeValue(string $key)
+    {
+        // First check direct model fields
+        if (array_key_exists($key, $this->getAttributes())) {
+            return $this->getAttributeValue($key);
+        }
+
+        // Try to get from variant attributes system
+        $variantAttribute = $this->attributes()->forAttribute($key)->first();
+        if ($variantAttribute) {
+            return $variantAttribute->getTypedValue();
+        }
+
+        // Fallback to product attribute if inheritable
+        if ($this->product) {
+            $attributeDefinition = AttributeDefinition::findByKey($key);
+            if ($attributeDefinition && $attributeDefinition->supportsInheritance()) {
+                $productAttribute = $this->product->attributes()->forAttribute($key)->first();
+                if ($productAttribute) {
+                    return $productAttribute->getTypedValue();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 🎯 SET ATTRIBUTE VALUE
+     *
+     * Set an attribute value in the flexible attributes system
+     */
+    public function setAttributeValue(string $key, $value, array $options = []): ?VariantAttribute
+    {
+        try {
+            return VariantAttribute::createOrUpdate($this, $key, $value, $options);
+        } catch (\InvalidArgumentException $e) {
+            // Attribute definition doesn't exist, ignore silently or log
+            return null;
+        }
+    }
+
+    /**
+     * 🎯 GET SMART BRAND VALUE WITH INHERITANCE
+     *
+     * Get brand with inheritance fallback from parent product
+     */
+    public function getSmartBrandValue()
+    {
+        // First check if variant has explicit brand override
+        $variantBrand = $this->attributes()->forAttribute('brand')->first();
+        if ($variantBrand && !$variantBrand->is_inherited) {
+            return $variantBrand->getTypedValue();
+        }
+
+        // Fallback to product brand (either direct field or attributes)
+        return $this->product?->brand;
+    }
+
+
+    /**
+     * 🎨 BARCODE RELATIONSHIP
+     *
+     * Get the primary barcode relationship for this variant (caecus type)
+     */
+    public function barcode()
+    {
+        return $this->hasOne(Barcode::class)->where('type', 'caecus');
+    }
+
+    /**
+     * 🎨 GET BARCODE VALUE
+     *
+     * Get the actual barcode value for this variant
+     */
+    public function getBarcodeValue()
+    {
+        return $this->barcodes()->where('type', 'caecus')->first();
+    }
+
+    /**
+     * 📦 DISPLAY TITLE
+     *
+     * Generate a beautiful display title
+     */
+    public function getDisplayTitleAttribute()
+    {
+        return "{$this->product->name} {$this->color} {$this->width}cm";
+    }
+
+    /**
+     * 💰 FORMATTED PRICE
+     *
+     * Get price with currency symbol
+     */
+    public function getFormattedPriceAttribute()
+    {
+        return '£'.number_format($this->price, 2);
+    }
+
+    /**
+     * 📏 DIMENSIONS STRING
+     *
+     * Get width x drop display string
+     */
+    public function getDimensionsAttribute()
+    {
+        if ($this->drop) {
+            return "{$this->width}cm x {$this->drop}cm";
+        }
+
+        return "{$this->width}cm (up to {$this->max_drop}cm drop)";
+    }
+
+    /**
+     * ✅ IS ACTIVE
+     *
+     * Check if variant is active
+     */
+    public function isActive()
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * 📦 IN STOCK
+     *
+     * Check if variant is in stock
+     */
+    public function inStock()
+    {
+        return $this->stock_level > 0;
+    }
+
+    /**
+     * 🔍 SCOPE: Active variants only
      */
     public function scopeActive($query)
     {
@@ -329,48 +318,36 @@ class ProductVariant extends Model implements HasMedia
     }
 
     /**
-     * Query scope with common relationships
+     * 🔍 SCOPE: In stock variants
+     */
+    public function scopeInStock($query)
+    {
+        return $query->where('stock_level', '>', 0);
+    }
+
+    /**
+     * 🔍 SCOPE: By color
+     */
+    public function scopeByColor($query, $color)
+    {
+        return $query->where('color', $color);
+    }
+
+    /**
+     * 🔍 SCOPE: By width
+     */
+    public function scopeByWidth($query, $width)
+    {
+        return $query->where('width', $width);
+    }
+
+    /**
+     * 🏗️ BUILDER PATTERN FACTORY
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Create a new VariantBuilder for fluent variant creation
      */
-    public function scopeWithCommon($query)
+    public static function buildFor(Product $product): \App\Builders\VariantBuilder
     {
-        return $query->with([
-            'product:id,name,parent_sku',
-            'barcodes:id,product_variant_id,barcode,is_primary',
-            'pricing:id,product_variant_id,retail_price,marketplace',
-            'attributes:id,variant_id,attribute_key,attribute_value',
-        ]);
-    }
-
-    /**
-     * Check if variant has primary barcode
-     */
-    public function hasPrimaryBarcode(): bool
-    {
-        return $this->barcodes()->where('is_primary', true)->exists();
-    }
-
-    /**
-     * Check if variant has pricing
-     */
-    public function hasPricing(): bool
-    {
-        return $this->pricing()->exists();
-    }
-
-    /**
-     * Get display name with product name and attributes
-     */
-    public function getDisplayNameAttribute(): string
-    {
-        $parts = array_filter([
-            $this->product->name ?? 'Product',
-            $this->color,
-            $this->dimensions ?? $this->size,
-        ]);
-
-        return implode(' - ', $parts);
+        return new \App\Builders\VariantBuilder($product);
     }
 }

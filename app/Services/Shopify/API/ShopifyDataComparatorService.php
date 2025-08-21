@@ -4,16 +4,15 @@ namespace App\Services\Shopify\API;
 
 use App\Models\Product;
 use App\Models\ProductVariant;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
  * 🕵️ SHOPIFY DATA COMPARATOR SERVICE 🕵️
- * 
+ *
  * Detects data drift between our app and Shopify like a FORENSIC DETECTIVE!
  * Compares every detail and spots even the tiniest discrepancies.
- * 
+ *
  * *adjusts detective hat with sass* 💅
  */
 class ShopifyDataComparatorService
@@ -30,53 +29,53 @@ class ShopifyDataComparatorService
 
         // Compare basic product information
         $basicDifferences = $this->compareBasicProductInfo($product, $shopifyData);
-        if (!empty($basicDifferences)) {
+        if (! empty($basicDifferences)) {
             $differences['basic_info'] = $basicDifferences;
             $driftScore += count($basicDifferences);
         }
 
         // Compare pricing information
         $pricingDifferences = $this->comparePricing($product, $shopifyData);
-        if (!empty($pricingDifferences)) {
+        if (! empty($pricingDifferences)) {
             $differences['pricing'] = $pricingDifferences;
             $driftScore += count($pricingDifferences) * 2; // Pricing is more important
         }
 
         // Compare variant information
         $variantDifferences = $this->compareVariants($product, $shopifyData);
-        if (!empty($variantDifferences)) {
+        if (! empty($variantDifferences)) {
             $differences['variants'] = $variantDifferences;
             $driftScore += count($variantDifferences);
         }
 
         // Compare inventory levels
         $inventoryDifferences = $this->compareInventory($product, $shopifyData);
-        if (!empty($inventoryDifferences)) {
+        if (! empty($inventoryDifferences)) {
             $differences['inventory'] = $inventoryDifferences;
             $driftScore += count($inventoryDifferences);
         }
 
         // Compare status and availability
         $statusDifferences = $this->compareStatus($product, $shopifyData);
-        if (!empty($statusDifferences)) {
+        if (! empty($statusDifferences)) {
             $differences['status'] = $statusDifferences;
             $driftScore += count($statusDifferences);
         }
 
         // Compare images (if applicable)
         $imageDifferences = $this->compareImages($product, $shopifyData);
-        if (!empty($imageDifferences)) {
+        if (! empty($imageDifferences)) {
             $differences['images'] = $imageDifferences;
             $driftScore += count($imageDifferences) * 0.5; // Images are less critical
         }
 
         return [
-            'needs_sync' => !empty($differences),
+            'needs_sync' => ! empty($differences),
             'drift_score' => $driftScore,
             'drift_severity' => $this->calculateDriftSeverity($driftScore),
             'differences' => $differences,
             'comparison_timestamp' => now()->toISOString(),
-            'recommendation' => $this->generateSyncRecommendation($driftScore, $differences)
+            'recommendation' => $this->generateSyncRecommendation($driftScore, $differences),
         ];
     }
 
@@ -85,26 +84,26 @@ class ShopifyDataComparatorService
      */
     public function bulkCompareProducts(Collection $products, array $shopifyDataCollection): array
     {
-        Log::info("📊 Bulk comparing " . $products->count() . " products for data drift");
+        Log::info('📊 Bulk comparing '.$products->count().' products for data drift');
 
         $results = [];
         $summary = [
             'total_compared' => 0,
             'products_with_drift' => 0,
             'total_drift_score' => 0,
-            'high_priority_drifts' => 0
+            'high_priority_drifts' => 0,
         ];
 
         foreach ($products as $product) {
             $shopifyData = $this->findShopifyDataForProduct($product, $shopifyDataCollection);
-            
+
             if ($shopifyData) {
                 $comparison = $this->compareProductData($product, $shopifyData);
-                
+
                 $results[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
-                    'comparison' => $comparison
+                    'comparison' => $comparison,
                 ];
 
                 // Update summary
@@ -119,14 +118,14 @@ class ShopifyDataComparatorService
             }
         }
 
-        $summary['average_drift_score'] = $summary['total_compared'] > 0 
+        $summary['average_drift_score'] = $summary['total_compared'] > 0
             ? round($summary['total_drift_score'] / $summary['total_compared'], 2)
             : 0;
 
         return [
             'summary' => $summary,
             'products' => $results,
-            'drift_alerts' => $this->generateDriftAlerts($results)
+            'drift_alerts' => $this->generateDriftAlerts($results),
         ];
     }
 
@@ -136,19 +135,19 @@ class ShopifyDataComparatorService
     public function generateDriftReport(Product $product, array $shopifyData): array
     {
         $comparison = $this->compareProductData($product, $shopifyData);
-        
+
         return [
             'product_info' => [
                 'id' => $product->id,
                 'name' => $product->name,
                 'sku' => $product->variants->first()?->sku,
-                'shopify_id' => $this->extractShopifyProductId($shopifyData)
+                'shopify_id' => $this->extractShopifyProductId($shopifyData),
             ],
             'comparison_details' => $comparison,
             'sync_priority' => $this->calculateSyncPriority($comparison),
             'recommended_actions' => $this->getRecommendedActions($comparison),
             'risk_assessment' => $this->assessSyncRisk($comparison),
-            'time_sensitivity' => $this->calculateTimeSensitivity($comparison)
+            'time_sensitivity' => $this->calculateTimeSensitivity($comparison),
         ];
     }
 
@@ -165,7 +164,7 @@ class ShopifyDataComparatorService
             $differences['title'] = [
                 'local' => $localTitle,
                 'shopify' => $shopifyTitle,
-                'severity' => 'medium'
+                'severity' => 'medium',
             ];
         }
 
@@ -176,17 +175,17 @@ class ShopifyDataComparatorService
             $differences['description'] = [
                 'local' => $localDescription,
                 'shopify' => $shopifyDescription,
-                'severity' => 'low'
+                'severity' => 'low',
             ];
         }
 
         // Compare vendor/brand
         $shopifyVendor = $shopifyData['vendor'] ?? '';
-        if (!empty($shopifyVendor) && $shopifyVendor !== 'BLINDS_OUTLET') {
+        if (! empty($shopifyVendor) && $shopifyVendor !== 'BLINDS_OUTLET') {
             $differences['vendor'] = [
                 'local' => 'BLINDS_OUTLET',
                 'shopify' => $shopifyVendor,
-                'severity' => 'low'
+                'severity' => 'low',
             ];
         }
 
@@ -200,10 +199,10 @@ class ShopifyDataComparatorService
 
         foreach ($product->variants as $localVariant) {
             $matchingShopifyVariant = $this->findMatchingShopifyVariant($localVariant, $shopifyVariants);
-            
+
             if ($matchingShopifyVariant) {
                 $priceDiff = $this->compareVariantPricing($localVariant, $matchingShopifyVariant);
-                if (!empty($priceDiff)) {
+                if (! empty($priceDiff)) {
                     $differences[$localVariant->sku] = $priceDiff;
                 }
             }
@@ -216,8 +215,8 @@ class ShopifyDataComparatorService
     {
         $differences = [];
         $localPricing = $localVariant->pricing()->first();
-        
-        if (!$localPricing) {
+
+        if (! $localPricing) {
             return [];
         }
 
@@ -229,7 +228,7 @@ class ShopifyDataComparatorService
                 'local' => $localPrice,
                 'shopify' => $shopifyPrice,
                 'difference' => round($localPrice - $shopifyPrice, 2),
-                'severity' => 'high'
+                'severity' => 'high',
             ];
         }
 
@@ -240,7 +239,7 @@ class ShopifyDataComparatorService
             $differences['compare_at_price'] = [
                 'local' => null,
                 'shopify' => $shopifyComparePrice,
-                'severity' => 'low'
+                'severity' => 'low',
             ];
         }
 
@@ -255,28 +254,28 @@ class ShopifyDataComparatorService
         // Compare variant counts
         $localCount = $product->variants->count();
         $shopifyCount = count($shopifyVariants);
-        
+
         if ($localCount !== $shopifyCount) {
             $differences['variant_count'] = [
                 'local' => $localCount,
                 'shopify' => $shopifyCount,
-                'severity' => 'high'
+                'severity' => 'high',
             ];
         }
 
         // Compare individual variants
         foreach ($product->variants as $localVariant) {
             $matchingShopifyVariant = $this->findMatchingShopifyVariant($localVariant, $shopifyVariants);
-            
-            if (!$matchingShopifyVariant) {
+
+            if (! $matchingShopifyVariant) {
                 $differences['missing_variants'][] = [
                     'sku' => $localVariant->sku,
                     'local_id' => $localVariant->id,
-                    'severity' => 'high'
+                    'severity' => 'high',
                 ];
             } else {
                 $variantDiff = $this->compareVariantDetails($localVariant, $matchingShopifyVariant);
-                if (!empty($variantDiff)) {
+                if (! empty($variantDiff)) {
                     $differences['variant_details'][$localVariant->sku] = $variantDiff;
                 }
             }
@@ -294,19 +293,19 @@ class ShopifyDataComparatorService
             $differences['sku'] = [
                 'local' => $localVariant->sku,
                 'shopify' => $shopifyVariant['sku'] ?? '',
-                'severity' => 'high'
+                'severity' => 'high',
             ];
         }
 
         // Compare barcode
         $localBarcode = $localVariant->barcodes()->where('is_primary', true)->first()?->barcode;
         $shopifyBarcode = $shopifyVariant['barcode'] ?? '';
-        
+
         if ($localBarcode && $localBarcode !== $shopifyBarcode) {
             $differences['barcode'] = [
                 'local' => $localBarcode,
                 'shopify' => $shopifyBarcode,
-                'severity' => 'medium'
+                'severity' => 'medium',
             ];
         }
 
@@ -316,7 +315,7 @@ class ShopifyDataComparatorService
             $differences['weight'] = [
                 'local' => null,
                 'shopify' => $shopifyVariant['weight'],
-                'severity' => 'low'
+                'severity' => 'low',
             ];
         }
 
@@ -330,17 +329,17 @@ class ShopifyDataComparatorService
 
         foreach ($product->variants as $localVariant) {
             $matchingShopifyVariant = $this->findMatchingShopifyVariant($localVariant, $shopifyVariants);
-            
+
             if ($matchingShopifyVariant) {
                 $localStock = $localVariant->stock_level ?? 0;
                 $shopifyStock = $matchingShopifyVariant['inventoryQuantity'] ?? 0;
-                
+
                 if ($localStock !== $shopifyStock) {
                     $differences[$localVariant->sku] = [
                         'local' => $localStock,
                         'shopify' => $shopifyStock,
                         'difference' => $localStock - $shopifyStock,
-                        'severity' => abs($localStock - $shopifyStock) > 10 ? 'high' : 'medium'
+                        'severity' => abs($localStock - $shopifyStock) > 10 ? 'high' : 'medium',
                     ];
                 }
             }
@@ -360,7 +359,7 @@ class ShopifyDataComparatorService
         $statusMapping = [
             'active' => 'active',
             'inactive' => 'draft',
-            'discontinued' => 'archived'
+            'discontinued' => 'archived',
         ];
 
         $expectedShopifyStatus = $statusMapping[$localStatus] ?? 'draft';
@@ -370,7 +369,7 @@ class ShopifyDataComparatorService
                 'local' => $localStatus,
                 'shopify' => $shopifyStatus,
                 'expected_shopify' => $expectedShopifyStatus,
-                'severity' => 'medium'
+                'severity' => 'medium',
             ];
         }
 
@@ -388,7 +387,7 @@ class ShopifyDataComparatorService
             $differences['image_count'] = [
                 'local' => $localImageCount,
                 'shopify' => $shopifyImageCount,
-                'severity' => 'low'
+                'severity' => 'low',
             ];
         }
 
@@ -404,7 +403,7 @@ class ShopifyDataComparatorService
                 return $shopifyVariant;
             }
         }
-        
+
         return null;
     }
 
@@ -426,7 +425,7 @@ class ShopifyDataComparatorService
         } elseif ($driftScore > 0) {
             return 'low';
         }
-        
+
         return 'none';
     }
 
@@ -435,7 +434,7 @@ class ShopifyDataComparatorService
         if ($driftScore === 0) {
             return 'No sync required - data is perfectly aligned';
         }
-        
+
         if ($driftScore >= 8) {
             return 'Urgent sync required - critical data differences detected';
         } elseif ($driftScore >= 5) {
@@ -443,34 +442,34 @@ class ShopifyDataComparatorService
         } elseif ($driftScore >= 2) {
             return 'Sync recommended - moderate differences detected';
         }
-        
+
         return 'Low priority sync - minor differences detected';
     }
 
     private function generateDriftAlerts(array $results): array
     {
         $alerts = [];
-        
+
         foreach ($results as $result) {
             $comparison = $result['comparison'];
-            
+
             if ($comparison['drift_severity'] === 'critical') {
                 $alerts[] = [
                     'type' => 'critical',
                     'product_name' => $result['product_name'],
                     'message' => 'Critical data drift detected - immediate sync required',
-                    'drift_score' => $comparison['drift_score']
+                    'drift_score' => $comparison['drift_score'],
                 ];
             } elseif ($comparison['drift_severity'] === 'high') {
                 $alerts[] = [
                     'type' => 'warning',
                     'product_name' => $result['product_name'],
                     'message' => 'Significant data drift detected',
-                    'drift_score' => $comparison['drift_score']
+                    'drift_score' => $comparison['drift_score'],
                 ];
             }
         }
-        
+
         return $alerts;
     }
 
@@ -481,7 +480,7 @@ class ShopifyDataComparatorService
 
     private function calculateSyncPriority(array $comparison): string
     {
-        return match($comparison['drift_severity']) {
+        return match ($comparison['drift_severity']) {
             'critical' => 'urgent',
             'high' => 'high',
             'medium' => 'normal',
@@ -493,30 +492,30 @@ class ShopifyDataComparatorService
     private function getRecommendedActions(array $comparison): array
     {
         $actions = [];
-        
-        if (!empty($comparison['differences']['pricing'])) {
+
+        if (! empty($comparison['differences']['pricing'])) {
             $actions[] = 'Update pricing information in Shopify';
         }
-        
-        if (!empty($comparison['differences']['inventory'])) {
+
+        if (! empty($comparison['differences']['inventory'])) {
             $actions[] = 'Sync inventory levels';
         }
-        
-        if (!empty($comparison['differences']['variants'])) {
+
+        if (! empty($comparison['differences']['variants'])) {
             $actions[] = 'Review and sync variant information';
         }
-        
-        if (!empty($comparison['differences']['basic_info'])) {
+
+        if (! empty($comparison['differences']['basic_info'])) {
             $actions[] = 'Update product details (title, description)';
         }
-        
+
         return $actions;
     }
 
     private function assessSyncRisk(array $comparison): string
     {
         $driftScore = $comparison['drift_score'];
-        
+
         if ($driftScore >= 8) {
             return 'high'; // Risk of customer confusion, lost sales
         } elseif ($driftScore >= 5) {
@@ -524,27 +523,27 @@ class ShopifyDataComparatorService
         } elseif ($driftScore >= 2) {
             return 'low'; // Minor inconsistencies
         }
-        
+
         return 'minimal';
     }
 
     private function calculateTimeSensitivity(array $comparison): string
     {
         // Check for pricing differences (time-sensitive)
-        if (!empty($comparison['differences']['pricing'])) {
+        if (! empty($comparison['differences']['pricing'])) {
             return 'immediate';
         }
-        
+
         // Check for inventory differences (time-sensitive)
-        if (!empty($comparison['differences']['inventory'])) {
+        if (! empty($comparison['differences']['inventory'])) {
             return 'within_hours';
         }
-        
+
         // Other differences can wait
-        if (!empty($comparison['differences'])) {
+        if (! empty($comparison['differences'])) {
             return 'within_days';
         }
-        
+
         return 'no_urgency';
     }
 }

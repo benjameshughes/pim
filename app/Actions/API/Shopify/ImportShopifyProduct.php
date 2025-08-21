@@ -113,8 +113,10 @@ class ImportShopifyProduct
      */
     private function shouldSkipProduct(array $shopifyProduct, array $productInfo): bool
     {
-        // Skip if we already imported this Shopify product
-        $existingProduct = Product::whereJsonContains('metadata->shopify_id', $shopifyProduct['id'])->first();
+        // Skip if we already imported this Shopify product by checking parent_sku pattern
+        // We'll use a prefix + shopify_id pattern for parent_sku
+        $shopifyParentSku = 'SH'.$shopifyProduct['id'];
+        $existingProduct = Product::where('parent_sku', $shopifyParentSku)->first();
         if ($existingProduct) {
             return true;
         }

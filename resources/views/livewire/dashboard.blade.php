@@ -1,414 +1,322 @@
-<div wire:poll.{{ $refreshInterval }}ms="refreshData">
-    {{-- Breadcrumb Navigation --}}
-    <x-breadcrumb :items="[
-        ['name' => 'Dashboard']
-    ]" />
-
-    {{-- Page Header --}}
-    <div class="flex items-center justify-between mb-6">
+<div class="space-y-6">
+    {{-- Clean Header Section --}}
+    <div class="flex items-center justify-between">
         <div>
-            <flux:heading size="xl">PIM Dashboard</flux:heading>
-            <flux:subheading>Monitor your product information management performance and data quality</flux:subheading>
+            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Dashboard</h1>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Welcome back, {{ auth()->user()->name }} • {{ now()->format('D, M j, Y') }}
+            </p>
         </div>
         
         <div class="flex items-center space-x-3">
-            <flux:button variant="ghost" icon="arrow-path" wire:click="refreshData" wire:loading.attr="disabled">
-                <span wire:loading.remove>Refresh</span>
-                <span wire:loading>Refreshing...</span>
+            <flux:button href="{{ route('products.create') }}" variant="primary" icon="plus">
+                New Product
             </flux:button>
-            
-            <flux:dropdown>
-                <flux:button variant="primary" icon="funnel">
-                    Time Range
-                </flux:button>
-                
-                <flux:menu>
-                    <flux:menu.item>Last 7 days</flux:menu.item>
-                    <flux:menu.item>Last 30 days</flux:menu.item>
-                    <flux:menu.item>Last 3 months</flux:menu.item>
-                    <flux:menu.separator />
-                    <flux:menu.item>Custom range</flux:menu.item>
-                </flux:menu>
-            </flux:dropdown>
+            <flux:button wire:click="refreshData" variant="ghost" icon="arrow-path">
+                Refresh
+            </flux:button>
         </div>
     </div>
 
-    {{-- Success Message (if any) --}}
-    @if (session()->has('message'))
-        <div class="mb-6 rounded-lg bg-green-100 px-6 py-4 text-green-700 dark:bg-green-900 dark:text-green-300">
-            {{ session('message') }}
+    {{-- Stats Cards --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {{-- Catalog Health --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <flux:icon name="chart-bar" class="w-8 h-8 text-green-500" />
+                <div class="ml-4">
+                    <div class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $this->pimMetrics['catalog_health']['completeness_score'] }}%</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Catalog Health</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Content Efficiency --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <flux:icon name="bolt" class="w-8 h-8 text-blue-500" />
+                <div class="ml-4">
+                    <div class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $this->pimMetrics['content_efficiency']['automation_rate'] }}%</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Automation Rate</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Missing Barcodes --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <flux:icon name="exclamation-triangle" class="w-8 h-8 text-yellow-500" />
+                <div class="ml-4">
+                    <div class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $this->pimMetrics['operational_kpis']['missing_barcodes'] }}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Missing Barcodes</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Export Ready --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center">
+                <flux:icon name="cloud-arrow-up" class="w-8 h-8 text-purple-500" />
+                <div class="ml-4">
+                    <div class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $this->pimMetrics['channel_readiness']['ready_for_export'] }}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">Export Ready</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Data Quality Alerts --}}
+    @if(!empty($this->pimWorkflow['data_quality_alerts']))
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Data Quality Alerts</h3>
+                <flux:badge color="yellow" size="sm">{{ count($this->pimWorkflow['data_quality_alerts']) }} items</flux:badge>
+            </div>
+            
+            <div class="space-y-3">
+                @foreach($this->pimWorkflow['data_quality_alerts'] as $alert)
+                    <div class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center">
+                            @if($alert['type'] === 'error')
+                                <flux:icon name="x-circle" class="w-5 h-5 text-red-500 mr-3" />
+                            @elseif($alert['type'] === 'warning')  
+                                <flux:icon name="exclamation-triangle" class="w-5 h-5 text-yellow-500 mr-3" />
+                            @else
+                                <flux:icon name="information-circle" class="w-5 h-5 text-blue-500 mr-3" />
+                            @endif
+                            <div>
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $alert['message'] }}</p>
+                            </div>
+                        </div>
+                        <flux:button variant="outline" size="sm">
+                            Fix Now
+                        </flux:button>
+                    </div>
+                @endforeach
+            </div>
         </div>
     @endif
 
-    {{-- PIM Key Metrics Cards --}}
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {{-- Catalog Completeness --}}
-        <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
-                            <flux:icon name="chart-bar" class="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                    </div>
-                    <div class="ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                Catalog Completeness
-                            </dt>
-                            <dd class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                                {{ $this->pimMetrics['catalog_health']['completeness_score'] }}%
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center text-sm">
-                    @if($this->pimMetrics['catalog_health']['data_quality_trend'] === 'improving')
-                        <span class="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-400">
-                            <flux:icon name="chevron-right" class="h-3 w-3 mr-1 rotate-[-45deg]" />
-                            Improving
-                        </span>
-                    @elseif($this->pimMetrics['catalog_health']['data_quality_trend'] === 'declining')
-                        <span class="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/50 px-3 py-1 text-xs font-medium text-red-800 dark:text-red-400">
-                            <flux:icon name="chevron-down" class="h-3 w-3 mr-1" />
-                            Declining
-                        </span>
-                    @else
-                        <span class="inline-flex items-center rounded-full bg-zinc-100 dark:bg-zinc-700 px-3 py-1 text-xs font-medium text-zinc-800 dark:text-zinc-300">
-                            <flux:icon name="chevrons-up-down" class="h-3 w-3 mr-1" />
-                            Stable
-                        </span>
-                    @endif
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- Recent Activity --}}
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Recent Activity</h3>
+                    <flux:button variant="ghost" size="sm">View All</flux:button>
                 </div>
             </div>
+
+            @if($this->pimWorkflow['recent_imports'])
+                <div class="overflow-x-auto">
+                    <table class="w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-900/50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Activity
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Items
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Time
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            @foreach($this->pimWorkflow['recent_imports'] as $import)
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $import['name'] }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <flux:badge 
+                                            :color="match($import['status']) {
+                                                'completed' => 'green',
+                                                'partial' => 'yellow', 
+                                                'failed' => 'red',
+                                                'processing' => 'blue',
+                                                default => 'gray'
+                                            }"
+                                            size="sm"
+                                        >
+                                            {{ ucfirst($import['status']) }}
+                                        </flux:badge>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ $import['items'] }}</div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ $import['time'] }}</div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="px-6 py-12 text-center">
+                    <flux:icon name="inbox" class="mx-auto h-8 w-8 text-gray-400" />
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No recent activity</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Your recent operations will appear here</p>
+                </div>
+            @endif
         </div>
 
-        {{-- Time to Market --}}
-        <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                            <flux:icon name="activity" class="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <div class="ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                Avg Time to Market
-                            </dt>
-                            <dd class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                                {{ $this->pimMetrics['content_efficiency']['time_to_market'] }}d
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center text-sm">
-                    <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/50 px-3 py-1 text-xs font-medium text-blue-800 dark:text-blue-400">
-                        {{ $this->pimMetrics['content_efficiency']['weekly_throughput'] }} items this week
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Data Quality Issues --}}
-        <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-                            <flux:icon name="triangle-alert" class="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                        </div>
-                    </div>
-                    <div class="ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                Data Quality Issues
-                            </dt>
-                            <dd class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                                {{ $this->pimMetrics['operational_kpis']['missing_barcodes'] + $this->pimMetrics['operational_kpis']['pricing_gaps'] }}
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center text-sm">
-                    <span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/50 px-3 py-1 text-xs font-medium text-amber-800 dark:text-amber-400">
-                        {{ $this->pimMetrics['operational_kpis']['products_pending_approval'] }} pending approval
-                    </span>
-                </div>
-            </div>
-        </div>
-
-        {{-- Channel Readiness --}}
-        <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-            <div class="p-6">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/50">
-                            <flux:icon name="globe" class="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                        </div>
-                    </div>
-                    <div class="ml-4 w-0 flex-1">
-                        <dl>
-                            <dt class="text-sm font-medium text-zinc-500 dark:text-zinc-400 truncate">
-                                Channel Ready
-                            </dt>
-                            <dd class="text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-                                {{ $this->pimMetrics['channel_readiness']['ready_for_export'] }}
-                            </dd>
-                        </dl>
-                    </div>
-                </div>
-                <div class="mt-4 flex items-center text-sm">
-                    @php
-                        $syncStatus = $this->pimMetrics['channel_readiness']['channel_sync_status'];
-                        $statusClasses = [
-                            'synced' => 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-400',
-                            'partial' => 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-400',
-                            'pending' => 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-400'
-                        ];
-                    @endphp
-                    <span class="inline-flex items-center rounded-full {{ $statusClasses[$syncStatus] }} px-3 py-1 text-xs font-medium">
-                        {{ ucfirst($syncStatus) }} sync
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Main PIM Content Grid --}}
-    <div class="grid gap-8 lg:grid-cols-12">
-        {{-- PIM Analytics Section --}}
-        <div class="lg:col-span-8 space-y-8">
-            {{-- Catalog Completeness Trend --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                            Catalog Completeness Trend
-                        </h3>
-                        <flux:button variant="ghost" size="sm" icon="chart-bar">
-                            View Details
-                        </flux:button>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        @foreach($this->pimCharts['catalog_completeness_trend'] as $date => $score)
-                        <div class="flex items-center">
-                            <div class="w-20 text-sm text-zinc-600 dark:text-zinc-400">{{ \Carbon\Carbon::parse($date)->format('M d') }}</div>
-                            <div class="flex-1 mx-4">
-                                <div class="bg-zinc-200 dark:bg-zinc-700 rounded-full h-2">
-                                    <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-2 rounded-full transition-all duration-500" 
-                                         style="width: {{ $score }}%"></div>
-                                </div>
-                            </div>
-                            <div class="w-16 text-sm font-medium text-zinc-900 dark:text-zinc-100 text-right">{{ $score }}%</div>
-                        </div>
-                        @endforeach
-                    </div>
+        {{-- Quick Actions & Insights --}}
+        <div class="space-y-6">
+            {{-- Quick Actions --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Quick Actions</h3>
+                
+                <div class="space-y-3">
+                    <flux:button href="{{ route('products.create') }}" variant="outline" size="sm" icon="plus" class="w-full justify-start">
+                        Create Product
+                    </flux:button>
+                    <flux:button href="{{ route('barcodes.index') }}" variant="outline" size="sm" icon="qr-code" class="w-full justify-start">
+                        Manage Barcodes
+                    </flux:button>
+                    <flux:button href="{{ route('shopify.sync') }}" variant="outline" size="sm" icon="cloud-arrow-up" class="w-full justify-start">
+                        Sync Shopify
+                    </flux:button>
+                    <flux:button href="{{ route('import.products') }}" variant="outline" size="sm" icon="arrow-up-tray" class="w-full justify-start">
+                        Import Products
+                    </flux:button>
                 </div>
             </div>
 
-            {{-- Data Quality Score Breakdown --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
-                        Data Quality Metrics
-                    </h3>
-                    
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                        @foreach($this->pimCharts['data_quality_score'] as $metric => $score)
-                        <div class="text-center">
-                            <div class="relative w-16 h-16 mx-auto mb-2">
-                                <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-                                    <circle cx="18" cy="18" r="16" fill="none" class="stroke-zinc-200 dark:stroke-zinc-700" stroke-width="2"></circle>
-                                    <circle cx="18" cy="18" r="16" fill="none" class="stroke-emerald-500" stroke-width="2" 
-                                            stroke-dasharray="{{ $score }}, 100" stroke-linecap="round"></circle>
-                                </svg>
-                                <div class="absolute inset-0 flex items-center justify-center">
-                                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ $score }}%</span>
-                                </div>
-                            </div>
-                            <div class="text-sm font-medium text-zinc-900 dark:text-zinc-100 capitalize">{{ str_replace('_', ' ', $metric) }}</div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-
-            {{-- Content Velocity Chart --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
-                        Content Velocity (Last 7 Days)
-                    </h3>
-                    
-                    <div class="flex items-end space-x-2 h-32">
-                        @php $maxCount = max($this->pimCharts['content_velocity']) ?: 1; @endphp
-                        @foreach($this->pimCharts['content_velocity'] as $date => $count)
-                        <div class="flex flex-col items-center flex-1">
-                            <div class="w-full bg-zinc-200 dark:bg-zinc-700 rounded-t" style="height: {{ ($count / $maxCount) * 100 }}%">
-                                <div class="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all duration-500" 
-                                     style="height: 100%"></div>
-                            </div>
-                            <div class="mt-2 text-xs text-zinc-600 dark:text-zinc-400">{{ \Carbon\Carbon::parse($date)->format('M j') }}</div>
-                            <div class="text-xs font-medium text-zinc-900 dark:text-zinc-100">{{ $count }}</div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- PIM Workflow Sidebar --}}
-        <div class="lg:col-span-4 space-y-6">
-            {{-- Data Quality Alerts --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                            Quality Alerts
-                        </h3>
-                        <flux:button variant="ghost" size="sm" href="/products/variants" wire:navigate>
-                            View All
-                        </flux:button>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        @forelse($this->pimWorkflow['data_quality_alerts'] as $alert)
-                        <div class="p-3 rounded-lg border {{ $alert['type'] === 'error' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : ($alert['type'] === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800') }}">
-                            <div class="flex items-start">
-                                @if($alert['type'] === 'error')
-                                    <flux:icon name="circle-x" class="h-5 w-5 text-red-500 dark:text-red-400 mt-0.5 mr-3" />
-                                @elseif($alert['type'] === 'warning')
-                                    <flux:icon name="triangle-alert" class="h-5 w-5 text-amber-500 dark:text-amber-400 mt-0.5 mr-3" />
+            {{-- Performance Bottlenecks --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Performance</h3>
+                
+                <div class="space-y-4">
+                    @foreach($this->pimWorkflow['workflow_bottlenecks'] as $bottleneck)
+                        <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{ $bottleneck['stage'] }}</h4>
+                                @if($bottleneck['count'] > 0)
+                                    <span class="w-2 h-2 bg-red-500 rounded-full"></span>
                                 @else
-                                    <flux:icon name="circle-alert" class="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5 mr-3" />
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                                 @endif
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ $alert['message'] }}</p>
-                                    <flux:button variant="ghost" size="sm" class="mt-2">
-                                        Fix Now
-                                    </flux:button>
-                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                <span>{{ $bottleneck['count'] }} items</span>
+                                <span>•</span>
+                                <span>{{ $bottleneck['avg_time'] }}</span>
                             </div>
                         </div>
-                        @empty
-                        <div class="text-center py-6 text-zinc-500 dark:text-zinc-400">
-                            <flux:icon name="circle-check" class="mx-auto h-8 w-8 mb-2 text-emerald-500" />
-                            <p class="text-sm">All quality checks passed!</p>
-                        </div>
-                        @endforelse
-                    </div>
-                </div>
-            </div>
-
-            {{-- Recent Import Activity --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                            Recent Imports
-                        </h3>
-                        <flux:button variant="ghost" size="sm" href="/products/import" wire:navigate>
-                            Import Data
-                        </flux:button>
-                    </div>
-                    
-                    <div class="space-y-3">
-                        @foreach($this->pimWorkflow['recent_imports'] as $import)
-                        <div class="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-700/50">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                                    {{ $import['name'] }}
-                                </p>
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ $import['items'] }} items • {{ $import['time'] }}
-                                </p>
-                            </div>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                {{ $import['status'] === 'completed' ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-400' }}">
-                                {{ ucfirst($import['status']) }}
-                            </span>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-
-            {{-- Workflow Bottlenecks --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                        Workflow Bottlenecks
-                    </h3>
-                    
-                    <div class="space-y-3">
-                        @foreach($this->pimWorkflow['workflow_bottlenecks'] as $bottleneck)
-                        <div class="flex items-center justify-between p-3 rounded-lg bg-zinc-50 dark:bg-zinc-700/50">
-                            <div>
-                                <p class="text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ $bottleneck['stage'] }}</p>
-                                <p class="text-xs text-zinc-500 dark:text-zinc-400">Avg: {{ $bottleneck['avg_time'] }}</p>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-lg font-bold text-zinc-900 dark:text-zinc-100">{{ $bottleneck['count'] }}</div>
-                                <div class="text-xs text-zinc-500 dark:text-zinc-400">pending</div>
-                            </div>
-                        </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-
-            {{-- PIM Quick Actions --}}
-            <div class="overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-zinc-800">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-                        Quick Actions
-                    </h3>
-                    
-                    <div class="space-y-3">
-                        <flux:button variant="primary" class="w-full justify-start" icon="plus" href="/products/create" wire:navigate>
-                            Add Product
-                        </flux:button>
-                        
-                        <flux:button variant="outline" class="w-full justify-start" icon="document-arrow-up" href="/products/import" wire:navigate>
-                            Bulk Import
-                        </flux:button>
-                        
-                        <flux:button variant="outline" class="w-full justify-start" icon="qr-code" href="/products/barcodes" wire:navigate>
-                            Assign Barcodes
-                        </flux:button>
-                        
-                        <flux:button variant="outline" class="w-full justify-start" icon="photo" href="/products/images" wire:navigate>
-                            Enrich Images
-                        </flux:button>
-                        
-                        <flux:button variant="outline" class="w-full justify-start" icon="currency-pound" href="/products/pricing" wire:navigate>
-                            Update Pricing
-                        </flux:button>
-                    </div>
+                    @endforeach
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Auto-refresh indicator (styled like success message) --}}
-    <div wire:loading.delay class="fixed bottom-4 right-4 z-50">
-        <div class="rounded-lg bg-blue-100 px-6 py-4 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shadow-lg">
-            <div class="flex items-center space-x-2">
-                <flux:icon name="refresh-ccw" class="h-4 w-4 animate-spin" />
-                <span class="text-sm font-medium">Refreshing PIM data...</span>
+    {{-- App-Specific Widgets --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {{-- Color Management --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <flux:icon name="swatch" class="w-6 h-6 text-pink-500 mr-3" />
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Color Management</h3>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                @php
+                    $uniqueColors = \App\Models\ProductVariant::distinct('color')->count('color');
+                    $recentColorChanges = \App\Models\ProductVariant::where('updated_at', '>=', now()->subWeek())->count();
+                @endphp
+                
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Unique Colors</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $uniqueColors }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Recent Updates</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $recentColorChanges }}</span>
+                </div>
+                
+                <flux:button href="{{ route('shopify.colors') }}" variant="outline" size="sm" class="w-full mt-3">
+                    Manage Colors
+                </flux:button>
+            </div>
+        </div>
+
+        {{-- Barcode Pool Status --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <flux:icon name="qr-code" class="w-6 h-6 text-green-500 mr-3" />
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Barcode Pool</h3>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                @php
+                    $totalBarcodes = \App\Models\Barcode::count();
+                    $assignedBarcodes = \App\Models\Barcode::whereNotNull('variant_id')->count();
+                    $availableRate = $totalBarcodes > 0 ? round((($totalBarcodes - $assignedBarcodes) / $totalBarcodes) * 100, 1) : 0;
+                @endphp
+                
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Available</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $availableRate }}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Total Pool</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $totalBarcodes }}</span>
+                </div>
+                
+                <flux:button href="{{ route('barcodes.index') }}" variant="outline" size="sm" class="w-full mt-3">
+                    Manage Pool
+                </flux:button>
+            </div>
+        </div>
+
+        {{-- Sync Health --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center">
+                    <flux:icon name="cloud-arrow-up" class="w-6 h-6 text-blue-500 mr-3" />
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Sync Health</h3>
+                </div>
+            </div>
+            
+            <div class="space-y-3">
+                @php
+                    $syncStatus = $this->pimMetrics['channel_readiness']['channel_sync_status'];
+                    $readyProducts = $this->pimMetrics['channel_readiness']['ready_for_export'];
+                @endphp
+                
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Status</span>
+                    <flux:badge 
+                        :color="match($syncStatus) {
+                            'synced' => 'green',
+                            'partial' => 'yellow',
+                            'failed' => 'red',
+                            'pending' => 'blue',
+                            default => 'gray'
+                        }"
+                        size="sm"
+                    >
+                        {{ ucfirst($syncStatus) }}
+                    </flux:badge>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Ready Products</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $readyProducts }}</span>
+                </div>
+                
+                <flux:button href="{{ route('shopify.sync') }}" variant="outline" size="sm" class="w-full mt-3">
+                    View Sync
+                </flux:button>
             </div>
         </div>
     </div>
-
-    @script
-    <script>
-        $wire.on('data-refreshed', () => {
-            // Optional: Show success notification
-            console.log('PIM dashboard data refreshed successfully');
-        });
-    </script>
-    @endscript
 </div>

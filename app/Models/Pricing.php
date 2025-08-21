@@ -2,219 +2,313 @@
 
 namespace App\Models;
 
+use App\Support\Collections\PricingCollection;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Number;
 
+/**
+ * 💰🎭 PRICING MODEL - THE FINANCIAL DIVA OF OUR SYSTEM! 🎭💰
+ *
+ * Honey, this model is SERVING major financial energy!
+ * Multi-channel pricing, discounts, profitability - we do it ALL with SASS! ✨
+ */
 class Pricing extends Model
 {
+    use HasFactory;
+
     protected $table = 'pricing';
 
     protected $fillable = [
         'product_variant_id',
-        'marketplace',
-        'currency',
-        'retail_price',
+        'sales_channel_id',
         'cost_price',
-        'vat_percentage',
-        'vat_amount',
-        'vat_inclusive',
+        'base_price',
+        'currency',
+        'channel_price',
+        'markup_percentage',
+        'sale_price',
+        'discount_percentage',
+        'discount_amount',
+        'sale_starts_at',
+        'sale_ends_at',
         'shipping_cost',
-        'channel_fee_percentage',
-        'channel_fee_amount',
+        'platform_fee_percentage',
+        'payment_fee_percentage',
+        'vat_rate',
+        'vat_inclusive',
         'profit_amount',
-        'profit_margin_percentage',
-        'total_cost',
-        'final_price',
+        'profit_margin',
+        'roi_percentage',
+        'is_active',
+        'status',
+        'metadata',
+        'notes',
     ];
 
     protected $casts = [
-        'retail_price' => 'decimal:2',
         'cost_price' => 'decimal:2',
-        'vat_percentage' => 'decimal:2',
-        'vat_amount' => 'decimal:2',
-        'vat_inclusive' => 'boolean',
+        'base_price' => 'decimal:2',
+        'channel_price' => 'decimal:2',
+        'markup_percentage' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'discount_percentage' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
-        'channel_fee_percentage' => 'decimal:2',
-        'channel_fee_amount' => 'decimal:2',
+        'platform_fee_percentage' => 'decimal:2',
+        'payment_fee_percentage' => 'decimal:2',
+        'vat_rate' => 'decimal:2',
+        'vat_inclusive' => 'boolean',
         'profit_amount' => 'decimal:2',
-        'profit_margin_percentage' => 'decimal:2',
-        'total_cost' => 'decimal:2',
-        'final_price' => 'decimal:2',
+        'profit_margin' => 'decimal:2',
+        'roi_percentage' => 'decimal:2',
+        'is_active' => 'boolean',
+        'sale_starts_at' => 'datetime',
+        'sale_ends_at' => 'datetime',
+        'metadata' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
+    /**
+     * 💅✨ CUSTOM PRICING COLLECTION - BECAUSE WE'RE EXTRA LIKE THAT! ✨💅
+     */
+    public function newCollection(array $models = []): Collection
+    {
+        return new PricingCollection($models);
+    }
+
+    /**
+     * 🏠 PRODUCT VARIANT RELATIONSHIP
+     */
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
     }
 
+    /**
+     * 🛍️ SALES CHANNEL RELATIONSHIP
+     */
     public function salesChannel(): BelongsTo
     {
-        return $this->belongsTo(SalesChannel::class, 'marketplace', 'slug');
+        return $this->belongsTo(SalesChannel::class);
     }
 
     /**
-     * Calculate all pricing fields automatically
+     * 💎 GET CURRENT SELLING PRICE - The final price customers see
      */
-    public function calculatePricing(): self
+    public function getCurrentPriceAttribute(): float
     {
-        // Start with retail price
-        $retailPrice = (float) $this->retail_price;
-        $costPrice = (float) ($this->cost_price ?? 0);
-
-        if ($retailPrice <= 0) {
-            return $this;
+        // If we're in a sale period, return sale price
+        if ($this->isOnSale()) {
+            return $this->sale_price ?? $this->calculateSalePrice();
         }
 
-        // Calculate VAT
-        $this->calculateVAT();
+        // Return channel-specific price or base price
+        return $this->channel_price ?? $this->base_price;
+    }
 
-        // Calculate channel fees
-        $this->calculateChannelFees();
+    /**
+     * 🎯 IS ON SALE - Check if currently in sale period
+     */
+    public function isOnSale(): bool
+    {
+        $now = now();
 
-        // Calculate total costs and profit
-        $this->calculateProfitAndCosts();
+        if (! $this->sale_starts_at && ! $this->sale_ends_at) {
+            return false;
+        }
+
+        $startsAt = $this->sale_starts_at ?: $now->copy()->subDay();
+        $endsAt = $this->sale_ends_at ?: $now->copy()->addYear();
+
+        return $now->between($startsAt, $endsAt);
+    }
+
+    /**
+     * 💸 CALCULATE SALE PRICE - Apply discounts dynamically
+     */
+    public function calculateSalePrice(): float
+    {
+        $basePrice = $this->channel_price ?? $this->base_price;
+
+        if ($this->discount_percentage) {
+            return $basePrice * (1 - ($this->discount_percentage / 100));
+        }
+
+        if ($this->discount_amount) {
+            return max(0, $basePrice - $this->discount_amount);
+        }
+
+        return $basePrice;
+    }
+
+    /**
+     * 📊 CALCULATE PROFIT - The money that makes us RICH!
+     */
+    public function calculateProfit(): array
+    {
+        $sellingPrice = $this->current_price;
+        $totalCosts = $this->calculateTotalCosts();
+
+        $profitAmount = $sellingPrice - $totalCosts['total'];
+        $profitMargin = $sellingPrice > 0 ? ($profitAmount / $sellingPrice) * 100 : 0;
+        $roi = $totalCosts['total'] > 0 ? ($profitAmount / $totalCosts['total']) * 100 : 0;
+
+        return [
+            'selling_price' => $sellingPrice,
+            'total_costs' => $totalCosts['total'],
+            'profit_amount' => $profitAmount,
+            'profit_margin' => $profitMargin,
+            'roi' => $roi,
+            'cost_breakdown' => $totalCosts['breakdown'],
+        ];
+    }
+
+    /**
+     * 💰 CALCULATE TOTAL COSTS - All the expenses
+     */
+    public function calculateTotalCosts(): array
+    {
+        $sellingPrice = $this->current_price;
+
+        // Base cost
+        $costPrice = $this->cost_price;
+
+        // Shipping cost
+        $shippingCost = $this->shipping_cost;
+
+        // Platform fees (% of selling price)
+        $platformFee = $sellingPrice * ($this->platform_fee_percentage / 100);
+
+        // Payment processing fees (% of selling price)
+        $paymentFee = $sellingPrice * ($this->payment_fee_percentage / 100);
+
+        // VAT calculation
+        $vatAmount = 0;
+        if (! $this->vat_inclusive && $this->vat_rate > 0) {
+            $vatAmount = $sellingPrice * ($this->vat_rate / 100);
+        }
+
+        $totalCosts = $costPrice + $shippingCost + $platformFee + $paymentFee + $vatAmount;
+
+        return [
+            'total' => $totalCosts,
+            'breakdown' => [
+                'cost_price' => $costPrice,
+                'shipping_cost' => $shippingCost,
+                'platform_fee' => $platformFee,
+                'payment_fee' => $paymentFee,
+                'vat_amount' => $vatAmount,
+            ],
+        ];
+    }
+
+    /**
+     * 🎨 FORMATTED PRICE - Beautiful currency display
+     */
+    public function getFormattedPriceAttribute(): string
+    {
+        return Number::currency($this->current_price, in: $this->currency);
+    }
+
+    /**
+     * 🎨 FORMATTED COST PRICE - What we pay
+     */
+    public function getFormattedCostPriceAttribute(): string
+    {
+        return Number::currency($this->cost_price, in: $this->currency);
+    }
+
+    /**
+     * 🎨 FORMATTED PROFIT - The beautiful profit display
+     */
+    public function getFormattedProfitAttribute(): string
+    {
+        $profit = $this->calculateProfit();
+
+        return Number::currency($profit['profit_amount'], in: $this->currency);
+    }
+
+    /**
+     * 🔄 UPDATE CALCULATED FIELDS - Refresh the calculated values
+     */
+    public function updateCalculatedFields(): self
+    {
+        $profit = $this->calculateProfit();
+
+        $this->update([
+            'profit_amount' => $profit['profit_amount'],
+            'profit_margin' => $profit['profit_margin'],
+            'roi_percentage' => $profit['roi'],
+        ]);
 
         return $this;
     }
 
     /**
-     * Calculate VAT amount based on percentage and inclusive/exclusive setting
+     * 🎯 SCOPE: Active pricing only
      */
-    protected function calculateVAT(): void
+    public function scopeActive($query)
     {
-        $retailPrice = (float) $this->retail_price;
-        $vatPercentage = (float) $this->vat_percentage;
-
-        if ($vatPercentage > 0) {
-            if ($this->vat_inclusive) {
-                // VAT is included in retail price
-                $this->vat_amount = $retailPrice - ($retailPrice / (1 + ($vatPercentage / 100)));
-            } else {
-                // VAT is additional to retail price
-                $this->vat_amount = $retailPrice * ($vatPercentage / 100);
-            }
-        } else {
-            $this->vat_amount = 0;
-        }
+        return $query->where('is_active', true);
     }
 
     /**
-     * Calculate channel fees
+     * 🎯 SCOPE: For specific channel
      */
-    protected function calculateChannelFees(): void
+    public function scopeForChannel($query, $channelId)
     {
-        $retailPrice = (float) $this->retail_price;
-        $feePercentage = (float) $this->channel_fee_percentage;
-
-        if ($feePercentage > 0) {
-            $this->channel_fee_amount = $retailPrice * ($feePercentage / 100);
-        } else {
-            // Try to get fee from sales channel
-            $channel = $this->salesChannel;
-            if ($channel) {
-                $this->channel_fee_percentage = $channel->default_fee_percentage;
-                $this->channel_fee_amount = $channel->calculateFee($retailPrice);
-            } else {
-                $this->channel_fee_amount = 0;
-            }
-        }
+        return $query->where('sales_channel_id', $channelId);
     }
 
     /**
-     * Calculate profit and total costs
+     * 🎯 SCOPE: Currently on sale
      */
-    protected function calculateProfitAndCosts(): void
+    public function scopeOnSale($query)
     {
-        $retailPrice = (float) $this->retail_price;
-        $costPrice = (float) ($this->cost_price ?? 0);
-        $vatAmount = (float) ($this->vat_amount ?? 0);
-        $shippingCost = (float) ($this->shipping_cost ?? 0);
-        $channelFeeAmount = (float) ($this->channel_fee_amount ?? 0);
+        $now = now();
 
-        // Total cost (all expenses)
-        $this->total_cost = $costPrice + $shippingCost + $channelFeeAmount;
-
-        // Final price (what we actually receive)
-        if ($this->vat_inclusive) {
-            $this->final_price = $retailPrice - $channelFeeAmount;
-        } else {
-            $this->final_price = ($retailPrice + $vatAmount) - $channelFeeAmount;
-        }
-
-        // Profit calculation
-        $this->profit_amount = $this->final_price - $this->total_cost;
-
-        // Profit margin percentage
-        if ($this->final_price > 0) {
-            $this->profit_margin_percentage = ($this->profit_amount / $this->final_price) * 100;
-        } else {
-            $this->profit_margin_percentage = 0;
-        }
+        return $query->where(function ($q) use ($now) {
+            $q->where('sale_starts_at', '<=', $now)
+                ->where('sale_ends_at', '>=', $now);
+        })->orWhere(function ($q) {
+            $q->whereNotNull('discount_percentage')
+                ->orWhereNotNull('discount_amount');
+        });
     }
 
     /**
-     * Get net price (price without VAT)
+     * 🎯 SCOPE: Profitable items
      */
-    public function getNetPriceAttribute(): float
+    public function scopeProfitable($query, $minimumMargin = 0)
     {
-        if ($this->vat_inclusive) {
-            return $this->retail_price - ($this->vat_amount ?? 0);
-        }
-
-        return $this->retail_price;
+        return $query->where('profit_margin', '>', $minimumMargin);
     }
 
     /**
-     * Get gross price (price including VAT)
+     * 🎯 SCOPE: By currency
      */
-    public function getGrossPriceAttribute(): float
+    public function scopeByCurrency($query, $currency)
     {
-        if ($this->vat_inclusive) {
-            return $this->retail_price;
-        }
-
-        return $this->retail_price + ($this->vat_amount ?? 0);
+        return $query->where('currency', $currency);
     }
 
     /**
-     * Check if this pricing is profitable
+     * 🔥 MODEL EVENTS - Auto-calculate on save
      */
-    public function isProfitable(): bool
+    protected static function boot()
     {
-        return ($this->profit_amount ?? 0) > 0;
-    }
+        parent::boot();
 
-    /**
-     * Get profit margin as formatted percentage
-     */
-    public function getFormattedProfitMargin(): string
-    {
-        return number_format($this->profit_margin_percentage ?? 0, 1).'%';
-    }
-
-    /**
-     * Auto-calculate and save pricing
-     */
-    public function recalculateAndSave(): bool
-    {
-        $this->calculatePricing();
-
-        return $this->save();
-    }
-
-    /**
-     * Scope for specific marketplace
-     */
-    public function scopeForMarketplace($query, string $marketplace)
-    {
-        return $query->where('marketplace', $marketplace);
-    }
-
-    /**
-     * Scope for profitable items only
-     */
-    public function scopeProfitable($query)
-    {
-        return $query->where('profit_amount', '>', 0);
+        // Auto-calculate profit fields when saving
+        static::saving(function (Pricing $pricing) {
+            $profit = $pricing->calculateProfit();
+            $pricing->profit_amount = $profit['profit_amount'];
+            $pricing->profit_margin = $profit['profit_margin'];
+            $pricing->roi_percentage = $profit['roi'];
+        });
     }
 }

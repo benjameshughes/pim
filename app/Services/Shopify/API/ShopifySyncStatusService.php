@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 💅 SHOPIFY SYNC STATUS SERVICE 💅
- * 
+ *
  * Monitors sync status between our app and Shopify like they're SOULMATES!
  * Provides real-time sync monitoring, health tracking, and status reporting.
- * 
+ *
  * Part of the organized Shopify API services architecture 🎭
  */
 class ShopifySyncStatusService
@@ -34,15 +34,15 @@ class ShopifySyncStatusService
         Log::info("🔍 Getting sync status for product: {$product->name}");
 
         $syncRecord = $this->getSyncRecord($product);
-        
-        if (!$syncRecord || !$syncRecord->shopify_product_id) {
+
+        if (! $syncRecord || ! $syncRecord->shopify_product_id) {
             return $this->buildNotSyncedStatus($product);
         }
 
         // Get current Shopify data for comparison
         $shopifyData = $this->fetchShopifyProductData($syncRecord->shopify_product_id);
-        
-        if (!$shopifyData['success']) {
+
+        if (! $shopifyData['success']) {
             return $this->buildErrorStatus($product, $syncRecord, $shopifyData['error']);
         }
 
@@ -55,7 +55,7 @@ class ShopifySyncStatusService
      */
     public function getBulkSyncStatus(Collection $products): array
     {
-        Log::info("📊 Getting bulk sync status for " . $products->count() . " products");
+        Log::info('📊 Getting bulk sync status for '.$products->count().' products');
 
         $results = [];
         $summary = $this->initializeSummary($products->count());
@@ -65,7 +65,7 @@ class ShopifySyncStatusService
             $results[] = [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
-                'status' => $status
+                'status' => $status,
             ];
 
             $this->updateSummary($summary, $status['status']);
@@ -74,7 +74,7 @@ class ShopifySyncStatusService
         return [
             'summary' => $summary,
             'products' => $results,
-            'health_percentage' => $this->calculateHealthPercentage($summary)
+            'health_percentage' => $this->calculateHealthPercentage($summary),
         ];
     }
 
@@ -84,8 +84,8 @@ class ShopifySyncStatusService
     public function needsSync(Product $product): bool
     {
         $syncRecord = $this->getSyncRecord($product);
-        
-        if (!$syncRecord || !$syncRecord->shopify_product_id) {
+
+        if (! $syncRecord || ! $syncRecord->shopify_product_id) {
             return true; // Never synced
         }
 
@@ -102,13 +102,13 @@ class ShopifySyncStatusService
     {
         $syncRecords = ShopifyProductSync::with('product')->get();
         $totalProducts = Product::count();
-        
+
         return [
             'overview' => $this->buildOverview($syncRecords, $totalProducts),
             'recent_activity' => $this->getRecentSyncActivity(),
             'health_score' => $this->calculateOverallHealthScore($syncRecords, $totalProducts),
             'sync_recommendations' => $this->getSyncRecommendations($syncRecords, $totalProducts),
-            'status_breakdown' => $this->getStatusBreakdown($syncRecords)
+            'status_breakdown' => $this->getStatusBreakdown($syncRecords),
         ];
     }
 
@@ -118,13 +118,13 @@ class ShopifySyncStatusService
     public function getSyncTabData(Product $product): array
     {
         $status = $this->getProductSyncStatus($product);
-        
+
         return [
             'sync_status' => $status,
             'sync_actions' => $this->getAvailableSyncActions($status),
             'sync_history' => $this->getSyncHistory($product),
             'shopify_link' => $status['shopify_url'] ?? null,
-            'last_sync_details' => $this->getLastSyncDetails($product)
+            'last_sync_details' => $this->getLastSyncDetails($product),
         ];
     }
 
@@ -138,8 +138,8 @@ class ShopifySyncStatusService
     private function fetchShopifyProductData(string $shopifyProductId): array
     {
         $numericId = $this->extractNumericId($shopifyProductId);
-        
-        if (!$numericId) {
+
+        if (! $numericId) {
             return ['success' => false, 'error' => 'Invalid Shopify product ID format'];
         }
 
@@ -152,12 +152,12 @@ class ShopifySyncStatusService
         if (preg_match('/\/Product\/(\d+)$/', $gid, $matches)) {
             return (int) $matches[1];
         }
-        
+
         // If it's already numeric
         if (is_numeric($gid)) {
             return (int) $gid;
         }
-        
+
         return null;
     }
 
@@ -173,8 +173,8 @@ class ShopifySyncStatusService
             'sync_summary' => 'Product has never been synced to Shopify',
             'recommendations' => [
                 'Push this product to Shopify to enable sync tracking',
-                'Ensure product has all required data (name, pricing, variants)'
-            ]
+                'Ensure product has all required data (name, pricing, variants)',
+            ],
         ];
     }
 
@@ -188,12 +188,12 @@ class ShopifySyncStatusService
             'sync_health' => 'critical',
             'error' => $error,
             'needs_sync' => true,
-            'sync_summary' => 'Unable to fetch current Shopify data: ' . $error,
+            'sync_summary' => 'Unable to fetch current Shopify data: '.$error,
             'recommendations' => [
                 'Check if product still exists in Shopify',
                 'Verify Shopify API credentials and permissions',
-                'Consider re-syncing the product'
-            ]
+                'Consider re-syncing the product',
+            ],
         ];
     }
 
@@ -202,10 +202,10 @@ class ShopifySyncStatusService
         $localUpdated = Carbon::parse($product->updated_at);
         $shopifyUpdated = Carbon::parse($shopifyData['updatedAt']);
         $lastSynced = Carbon::parse($syncRecord->last_synced_at);
-        
+
         $needsSync = $this->needsSync($product);
         $syncHealth = $this->determineSyncHealth($localUpdated, $shopifyUpdated, $lastSynced, $needsSync);
-        
+
         return [
             'status' => $needsSync ? 'out_of_sync' : 'synced',
             'shopify_product_id' => $syncRecord->shopify_product_id,
@@ -218,7 +218,7 @@ class ShopifySyncStatusService
             'local_updated_at' => $product->updated_at,
             'variants_status' => $this->compareVariantCounts($product, $shopifyData),
             'data_freshness' => $this->calculateDataFreshness($lastSynced),
-            'recommendations' => $this->generateRecommendations($needsSync, $syncHealth)
+            'recommendations' => $this->generateRecommendations($needsSync, $syncHealth),
         ];
     }
 
@@ -226,7 +226,7 @@ class ShopifySyncStatusService
     {
         $numericId = $this->extractNumericId($shopifyProductId);
         $storeUrl = config('services.shopify.store_url');
-        
+
         return "https://{$storeUrl}/admin/products/{$numericId}";
     }
 
@@ -234,7 +234,7 @@ class ShopifySyncStatusService
     {
         if ($needsSync) {
             $hoursSinceLastSync = $lastSynced->diffInHours(now());
-            
+
             if ($hoursSinceLastSync > 24) {
                 return 'poor';
             } elseif ($hoursSinceLastSync > 6) {
@@ -243,22 +243,22 @@ class ShopifySyncStatusService
                 return 'good';
             }
         }
-        
+
         return 'excellent';
     }
 
     private function generateSyncSummary(bool $needsSync, Carbon $localUpdated, Carbon $shopifyUpdated): string
     {
-        if (!$needsSync) {
+        if (! $needsSync) {
             return 'Product is perfectly synchronized with Shopify';
         }
-        
+
         if ($localUpdated->gt($shopifyUpdated)) {
             return 'Local changes need to be pushed to Shopify';
         } elseif ($shopifyUpdated->gt($localUpdated)) {
             return 'Shopify has newer data - consider pulling updates';
         }
-        
+
         return 'Sync status needs verification';
     }
 
@@ -266,19 +266,19 @@ class ShopifySyncStatusService
     {
         $localCount = $product->variants->count();
         $shopifyCount = count($shopifyData['variants'] ?? []);
-        
+
         return [
             'local_count' => $localCount,
             'shopify_count' => $shopifyCount,
             'count_match' => $localCount === $shopifyCount,
-            'status' => $localCount === $shopifyCount ? 'synced' : 'mismatch'
+            'status' => $localCount === $shopifyCount ? 'synced' : 'mismatch',
         ];
     }
 
     private function calculateDataFreshness(Carbon $lastSynced): string
     {
         $hoursAgo = $lastSynced->diffInHours(now());
-        
+
         if ($hoursAgo < 1) {
             return 'very_fresh';
         } elseif ($hoursAgo < 6) {
@@ -293,19 +293,19 @@ class ShopifySyncStatusService
     private function generateRecommendations(bool $needsSync, string $syncHealth): array
     {
         $recommendations = [];
-        
+
         if ($needsSync) {
             $recommendations[] = 'Sync this product to update Shopify with latest changes';
         }
-        
+
         if ($syncHealth === 'poor') {
             $recommendations[] = 'Consider setting up automatic syncing for this product';
         }
-        
+
         if (empty($recommendations)) {
             $recommendations[] = 'Product sync is healthy - no action required';
         }
-        
+
         return $recommendations;
     }
 
@@ -318,14 +318,14 @@ class ShopifySyncStatusService
             'out_of_sync' => 0,
             'not_synced' => 0,
             'errors' => 0,
-            'needs_attention' => 0
+            'needs_attention' => 0,
         ];
     }
 
     private function updateSummary(array &$summary, string $status): void
     {
         $summary[$status] = ($summary[$status] ?? 0) + 1;
-        
+
         if (in_array($status, ['out_of_sync', 'not_synced', 'error'])) {
             $summary['needs_attention']++;
         }
@@ -333,7 +333,7 @@ class ShopifySyncStatusService
 
     private function calculateHealthPercentage(array $summary): float
     {
-        return $summary['total'] > 0 
+        return $summary['total'] > 0
             ? round(($summary['synced'] / $summary['total']) * 100, 1)
             : 0;
     }
@@ -353,7 +353,7 @@ class ShopifySyncStatusService
     private function checkPricingChanges(Product $product, ShopifyProductSync $syncRecord): bool
     {
         return $product->variants()
-            ->whereHas('pricing', function($query) use ($syncRecord) {
+            ->whereHas('pricing', function ($query) use ($syncRecord) {
                 $query->where('updated_at', '>', $syncRecord->last_synced_at);
             })
             ->exists();
@@ -378,11 +378,11 @@ class ShopifySyncStatusService
             ->orderBy('last_synced_at', 'desc')
             ->limit(10)
             ->get()
-            ->map(fn($sync) => [
+            ->map(fn ($sync) => [
                 'product_name' => $sync->product?->name,
                 'action' => 'synced',
                 'timestamp' => $sync->last_synced_at,
-                'status' => $sync->sync_status
+                'status' => $sync->sync_status,
             ])
             ->toArray();
     }
@@ -392,35 +392,36 @@ class ShopifySyncStatusService
         if ($totalProducts === 0) {
             return 100;
         }
-        
+
         $syncedCount = $syncRecords->where('sync_status', 'synced')->count();
+
         return round(($syncedCount / $totalProducts) * 100);
     }
 
     private function getSyncRecommendations(Collection $syncRecords, int $totalProducts): array
     {
         $recommendations = [];
-        
+
         $failedCount = $syncRecords->where('sync_status', 'failed')->count();
         if ($failedCount > 0) {
             $recommendations[] = [
                 'type' => 'error',
                 'title' => 'Fix Failed Syncs',
                 'description' => "{$failedCount} products have failed sync attempts",
-                'action' => 'review_errors'
+                'action' => 'review_errors',
             ];
         }
-        
+
         $neverSynced = $totalProducts - $syncRecords->count();
         if ($neverSynced > 0) {
             $recommendations[] = [
-                'type' => 'warning', 
+                'type' => 'warning',
                 'title' => 'Sync New Products',
                 'description' => "{$neverSynced} products never synced to Shopify",
-                'action' => 'bulk_sync'
+                'action' => 'bulk_sync',
             ];
         }
-        
+
         return $recommendations;
     }
 
@@ -437,29 +438,29 @@ class ShopifySyncStatusService
     private function getAvailableSyncActions(array $status): array
     {
         $actions = [];
-        
+
         if ($status['needs_sync']) {
             $actions[] = [
                 'action' => 'sync_now',
                 'label' => 'Sync to Shopify',
-                'type' => 'primary'
+                'type' => 'primary',
             ];
         }
-        
+
         if ($status['status'] === 'error') {
             $actions[] = [
                 'action' => 'retry_sync',
                 'label' => 'Retry Sync',
-                'type' => 'warning'
+                'type' => 'warning',
             ];
         }
-        
+
         $actions[] = [
             'action' => 'view_in_shopify',
             'label' => 'View in Shopify',
-            'type' => 'secondary'
+            'type' => 'secondary',
         ];
-        
+
         return $actions;
     }
 
@@ -472,16 +473,16 @@ class ShopifySyncStatusService
     private function getLastSyncDetails(Product $product): ?array
     {
         $syncRecord = $this->getSyncRecord($product);
-        
-        if (!$syncRecord) {
+
+        if (! $syncRecord) {
             return null;
         }
-        
+
         return [
-            'synced_at' => $syncRecord->last_synced_at,
+            'last_synced_at' => $syncRecord->last_synced_at,
             'sync_method' => $syncRecord->sync_method ?? 'manual',
             'variants_synced' => $syncRecord->variants_synced ?? 0,
-            'sync_duration' => $syncRecord->sync_duration ?? null
+            'sync_duration' => $syncRecord->sync_duration ?? null,
         ];
     }
 }

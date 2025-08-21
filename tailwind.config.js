@@ -9,34 +9,6 @@ export default {
     "./app/Toasts/**/*.php",
     "./config/toasts.php",
   ],
-
-  safelist: [
-    // Toast positioning classes
-    'fixed', 'top-4', 'right-4', 'left-4', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'z-50', 'max-w-sm',
-    'flex-col', 'flex-col-reverse', 'items-start', 'items-end', 'items-center',
-    
-    // Toast type styling classes using custom status colors
-    'bg-status-success-50', 'dark:bg-status-success-700', 'dark:bg-opacity-30', 'border-status-success-100', 'dark:border-status-success-600',
-    'text-status-success-700', 'dark:text-status-success-100', 'text-status-success-500',
-    'hover:bg-status-success-100', 'dark:hover:bg-status-success-600',
-    
-    'bg-status-error-50', 'dark:bg-status-error-700', 'border-status-error-100', 'dark:border-status-error-600',
-    'text-status-error-700', 'dark:text-status-error-100', 'text-status-error-500',
-    'hover:bg-status-error-100', 'dark:hover:bg-status-error-600',
-    
-    'bg-status-warning-50', 'dark:bg-status-warning-700', 'border-status-warning-100', 'dark:border-status-warning-600',
-    'text-status-warning-700', 'dark:text-status-warning-100', 'text-status-warning-500',
-    'hover:bg-status-warning-100', 'dark:hover:bg-status-warning-600',
-    
-    'bg-status-info-50', 'dark:bg-status-info-700', 'border-status-info-100', 'dark:border-status-info-600',
-    'text-status-info-700', 'dark:text-status-info-100', 'text-status-info-500',
-    'hover:bg-status-info-100', 'dark:hover:bg-status-info-600',
-    
-    // Animation classes
-    'opacity-0', 'opacity-100', 'transform', 'translate-x-full', 'translate-x-0',
-    'scale-95', 'scale-100', 'transition-all', 'duration-300', 'duration-200',
-    'ease-in-out', 'ease-out',
-  ],
   
   darkMode: 'class', // Enable class-based dark mode
   

@@ -70,4 +70,46 @@ return [
         'location_key' => env('EBAY_LOCATION_KEY', 'default_location'),
     ],
 
+    // Mirakl Operator Configurations
+    'mirakl_operators' => [
+        'freemans' => [
+            'base_url' => env('MIRAKL_FREEMANS_BASE_URL', 'https://freemansuk-prod.mirakl.net/'),
+            'api_key' => env('MIRAKL_FREEMANS_API_KEY'),
+            'store_id' => env('MIRAKL_FREEMANS_STORE_ID', '2023'),
+            'timeout' => 30,
+            'currency' => 'GBP',
+            'logistic_class' => 'DL', // Default: Evri shipping
+            'leadtime_to_ship' => 2,
+            'default_state' => '11', // Active product state
+            'category_code' => 'H02', // Curtains & Blinds
+        ],
+        'bq' => [
+            'base_url' => env('MIRAKL_BQ_BASE_URL', 'https://marketplace.kingfisher.com/'),
+            'api_key' => env('MIRAKL_BQ_API_KEY'),
+            'store_id' => env('MIRAKL_BQ_STORE_ID', '4274'),
+            'timeout' => 30,
+            'currency' => 'GBP',
+            'logistic_class' => 'STD', // Standard shipping for B&Q
+            'leadtime_to_ship' => 5, // 5 days for B&Q (DIY/Trade suppliers)
+            'default_state' => '11', // Active product state
+            'category_code' => 'GARDEN01', // Garden & Outdoor category for blinds
+            'required_performance_score' => 98, // High standards for B&Q
+            'min_reviews' => 50,
+            'marketplace_type' => 'diy_home_improvement',
+        ],
+        'debenhams' => [
+            'base_url' => env('MIRAKL_DEBENHAMS_BASE_URL', 'https://debenhamsuk-prod.mirakl.net/'),
+            'api_key' => env('MIRAKL_DEBENHAMS_API_KEY'),
+            'store_id' => env('MIRAKL_DEBENHAMS_STORE_ID', '3433'),
+            'timeout' => 30,
+            'currency' => 'GBP',
+            'logistic_class' => 'STD', // Standard shipping for Debenhams
+            'leadtime_to_ship' => 3, // 3 days for Debenhams
+            'default_state' => '11', // Active product state
+            'category_code' => 'HOME02', // Home & Garden category for blinds
+            'required_performance_score' => 95,
+            'min_reviews' => 100,
+        ],
+    ],
+
 ];

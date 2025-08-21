@@ -9,7 +9,6 @@ use App\Models\Pricing;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\VariantAttribute;
-use App\Traits\PerformanceMonitoring;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -25,70 +24,58 @@ use Illuminate\Support\Facades\Storage;
  */
 class CreateVariantWithBarcodeAction extends BaseAction
 {
-    use PerformanceMonitoring;
-
     /**
-     * Execute variant creation with all integrations
+     * Perform variant creation with all integrations
      *
      * @param  mixed  ...$params  Variant data from VariantBuilder
-     * @return ProductVariant Created variant with all relationships
+     * @return array Action result with created variant
      */
-    public function execute(...$params): ProductVariant
+    protected function performAction(...$params): array
     {
         $data = $params[0] ?? [];
 
-        $this->startTimer('variant_creation_total');
-
-        return DB::transaction(function () use ($data) {
+        $variant = DB::transaction(function () use ($data) {
             // Create the base variant
-            $this->startTimer('variant_creation');
             $variantData = $this->extractVariantData($data);
             $variant = ProductVariant::create($variantData);
-            $this->endTimer('variant_creation');
 
             // Handle barcode assignment if provided
             if (! empty($data['barcodes']) || ! empty($data['barcode_pool_id'])) {
-                $this->startTimer('barcode_assignment');
                 $this->handleBarcodeAssignment($variant, $data);
-                $this->endTimer('barcode_assignment');
             }
 
             // Handle pricing if provided
             if (! empty($data['pricing']) || ! empty($data['marketplace_pricing'])) {
-                $this->startTimer('pricing_creation');
                 $this->handlePricing($variant, $data);
                 $this->handleMarketplacePricing($variant, $data);
-                $this->endTimer('pricing_creation');
             }
 
             // Handle variant images if provided
             if (! empty($data['variant_images'])) {
-                $this->startTimer('image_processing');
                 $this->handleVariantImages($variant, $data);
-                $this->endTimer('image_processing');
             }
 
             // Handle attributes if provided
             if (! empty($data['attributes'])) {
-                $this->startTimer('attribute_processing');
                 $this->handleAttributes($variant, $data);
-                $this->endTimer('attribute_processing');
             }
 
             // Optimized eager loading - load all relationships in one query
-            $this->startTimer('relationship_loading');
             $result = $variant->fresh([
                 'barcodes',
                 'pricing',
-                'attributes',
-                'images',
-                'product:id,name,sku',  // Only load needed product fields
+                'product:id,name,parent_sku',  // Only load needed product fields
             ]);
-            $this->endTimer('relationship_loading');
-            $this->endTimer('variant_creation_total');
 
             return $result;
         });
+
+        // Return standardized array format for BaseAction compatibility
+        return $this->success("Variant '{$variant->sku}' created successfully", [
+            'variant' => $variant,
+            'product' => $variant, // For backward compatibility with builder expectations
+            'variant_id' => $variant->id,
+        ]);
     }
 
     /**
@@ -102,6 +89,11 @@ class CreateVariantWithBarcodeAction extends BaseAction
         return array_intersect_key($data, array_flip([
             'product_id',
             'sku',
+            'title',
+            'color',
+            'width',
+            'drop',
+            'price',
             'status',
             'stock_level',
             'images', // Legacy images field

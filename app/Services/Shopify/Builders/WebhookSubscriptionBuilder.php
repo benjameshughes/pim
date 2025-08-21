@@ -7,16 +7,20 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🔔 WEBHOOK SUBSCRIPTION BUILDER 🔔
- * 
+ *
  * Fluent API for building and managing Shopify webhook subscriptions like a NOTIFICATION ARCHITECT!
  * Uses the fabulous Builder Pattern for elegant webhook configuration! 💅
  */
 class WebhookSubscriptionBuilder
 {
     private ShopifyWebhookService $webhookService;
+
     private array $topics = [];
+
     private ?string $callbackUrl = null;
+
     private array $options = [];
+
     private bool $includeAllSyncTopics = false;
 
     public function __construct(ShopifyWebhookService $webhookService)
@@ -29,13 +33,13 @@ class WebhookSubscriptionBuilder
      */
     public function topic(string $topic): static
     {
-        if (!in_array($topic, $this->topics)) {
+        if (! in_array($topic, $this->topics)) {
             $this->topics[] = $topic;
         }
 
-        Log::debug("📋 Added webhook topic", [
+        Log::debug('📋 Added webhook topic', [
             'topic' => $topic,
-            'total_topics' => count($this->topics)
+            'total_topics' => count($this->topics),
         ]);
 
         return $this;
@@ -60,10 +64,10 @@ class WebhookSubscriptionBuilder
     {
         $this->includeAllSyncTopics = true;
         $syncTopics = ShopifyWebhookService::getSyncWebhookTopics();
-        
-        Log::info("🚀 Including all sync-related topics", [
+
+        Log::info('🚀 Including all sync-related topics', [
             'sync_topics' => $syncTopics,
-            'count' => count($syncTopics)
+            'count' => count($syncTopics),
         ]);
 
         return $this->topics($syncTopics);
@@ -76,8 +80,8 @@ class WebhookSubscriptionBuilder
     {
         return $this->topics([
             'products/create',
-            'products/update', 
-            'products/delete'
+            'products/update',
+            'products/delete',
         ]);
     }
 
@@ -89,7 +93,7 @@ class WebhookSubscriptionBuilder
         return $this->topics([
             'inventory_levels/update',
             'inventory_levels/connect',
-            'inventory_levels/disconnect'
+            'inventory_levels/disconnect',
         ]);
     }
 
@@ -100,8 +104,8 @@ class WebhookSubscriptionBuilder
     {
         $this->callbackUrl = $url;
 
-        Log::debug("📞 Set webhook callback URL", [
-            'callback_url' => $url
+        Log::debug('📞 Set webhook callback URL', [
+            'callback_url' => $url,
         ]);
 
         return $this;
@@ -121,6 +125,7 @@ class WebhookSubscriptionBuilder
     public function options(array $options): static
     {
         $this->options = array_merge($this->options, $options);
+
         return $this;
     }
 
@@ -130,6 +135,7 @@ class WebhookSubscriptionBuilder
     public function withSignatureVerification(): static
     {
         $this->options['verify_signature'] = true;
+
         return $this;
     }
 
@@ -139,6 +145,7 @@ class WebhookSubscriptionBuilder
     public function timeout(int $seconds): static
     {
         $this->options['timeout'] = $seconds;
+
         return $this;
     }
 
@@ -147,10 +154,10 @@ class WebhookSubscriptionBuilder
      */
     public function execute(): array
     {
-        Log::info("🔔 Executing webhook subscription builder", [
+        Log::info('🔔 Executing webhook subscription builder', [
             'topics_count' => count($this->topics),
             'callback_url' => $this->callbackUrl,
-            'options' => $this->options
+            'options' => $this->options,
         ]);
 
         // Validate configuration
@@ -159,31 +166,31 @@ class WebhookSubscriptionBuilder
         try {
             // Subscribe to all configured topics
             $results = $this->webhookService->subscribeToSyncWebhooks($this->callbackUrl);
-            
-            Log::info("✅ Webhook subscriptions completed", [
+
+            Log::info('✅ Webhook subscriptions completed', [
                 'success' => $results['success'],
                 'successful_subscriptions' => $results['summary']['successful_subscriptions'] ?? 0,
-                'failed_subscriptions' => $results['summary']['failed_subscriptions'] ?? 0
+                'failed_subscriptions' => $results['summary']['failed_subscriptions'] ?? 0,
             ]);
 
             return $this->buildResponse($results);
 
         } catch (\Exception $e) {
-            Log::error("❌ Webhook subscription failed", [
+            Log::error('❌ Webhook subscription failed', [
                 'error' => $e->getMessage(),
                 'topics' => $this->topics,
-                'callback_url' => $this->callbackUrl
+                'callback_url' => $this->callbackUrl,
             ]);
 
             return [
                 'success' => false,
-                'message' => 'Webhook subscription failed: ' . $e->getMessage(),
+                'message' => 'Webhook subscription failed: '.$e->getMessage(),
                 'error' => $e->getMessage(),
                 'configuration' => [
                     'topics' => $this->topics,
                     'callback_url' => $this->callbackUrl,
-                    'options' => $this->options
-                ]
+                    'options' => $this->options,
+                ],
             ];
         }
     }
@@ -198,7 +205,7 @@ class WebhookSubscriptionBuilder
             'callback_url' => $this->callbackUrl,
             'options' => $this->options,
             'sync_coverage' => $this->calculateSyncCoverage(),
-            'setup_instructions' => $this->getSetupInstructions()
+            'setup_instructions' => $this->getSetupInstructions(),
         ];
     }
 
@@ -215,11 +222,12 @@ class WebhookSubscriptionBuilder
      */
     public function refresh(): array
     {
-        if (!$this->callbackUrl) {
+        if (! $this->callbackUrl) {
             $this->defaultCallback();
         }
 
-        Log::info("🔄 Refreshing webhook subscriptions");
+        Log::info('🔄 Refreshing webhook subscriptions');
+
         return $this->webhookService->refreshWebhookSubscriptions($this->callbackUrl);
     }
 
@@ -234,12 +242,12 @@ class WebhookSubscriptionBuilder
             throw new \InvalidArgumentException('No webhook topics configured. Use ->topic() or ->allSyncTopics()');
         }
 
-        if (!$this->callbackUrl) {
+        if (! $this->callbackUrl) {
             throw new \InvalidArgumentException('No callback URL configured. Use ->callbackUrl() or ->defaultCallback()');
         }
 
-        if (!filter_var($this->callbackUrl, FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException('Invalid callback URL format: ' . $this->callbackUrl);
+        if (! filter_var($this->callbackUrl, FILTER_VALIDATE_URL)) {
+            throw new \InvalidArgumentException('Invalid callback URL format: '.$this->callbackUrl);
         }
     }
 
@@ -256,10 +264,10 @@ class WebhookSubscriptionBuilder
             'configuration' => [
                 'topics' => $this->topics,
                 'callback_url' => $this->callbackUrl,
-                'options' => $this->options
+                'options' => $this->options,
             ],
             'sync_coverage' => $this->calculateSyncCoverage(),
-            'recommendations' => $this->generateRecommendations($results)
+            'recommendations' => $this->generateRecommendations($results),
         ];
     }
 
@@ -270,7 +278,7 @@ class WebhookSubscriptionBuilder
     {
         $allSyncTopics = ShopifyWebhookService::getSyncWebhookTopics();
         $coveredTopics = array_intersect($this->topics, $allSyncTopics);
-        $coveragePercentage = count($allSyncTopics) > 0 
+        $coveragePercentage = count($allSyncTopics) > 0
             ? round((count($coveredTopics) / count($allSyncTopics)) * 100, 1)
             : 0;
 
@@ -279,7 +287,7 @@ class WebhookSubscriptionBuilder
             'total_sync_topics' => count($allSyncTopics),
             'coverage_percentage' => $coveragePercentage,
             'missing_topics' => array_diff($allSyncTopics, $coveredTopics),
-            'status' => $coveragePercentage >= 100 ? 'complete' : 'partial'
+            'status' => $coveragePercentage >= 100 ? 'complete' : 'partial',
         ];
     }
 
@@ -294,17 +302,17 @@ class WebhookSubscriptionBuilder
                 '2. Implement webhook signature verification for security',
                 '3. Test webhook delivery with a sample event',
                 '4. Monitor webhook health regularly',
-                '5. Handle webhook failures gracefully'
+                '5. Handle webhook failures gracefully',
             ],
             'security_checklist' => [
                 'Verify webhook signatures',
                 'Use HTTPS for callback URLs',
                 'Implement proper error handling',
                 'Log webhook events for debugging',
-                'Rate limit webhook processing'
+                'Rate limit webhook processing',
             ],
             'callback_url' => $this->callbackUrl,
-            'topics_configured' => $this->topics
+            'topics_configured' => $this->topics,
         ];
     }
 
@@ -322,8 +330,8 @@ class WebhookSubscriptionBuilder
             $recommendations[] = [
                 'type' => 'warning',
                 'title' => 'Some webhook subscriptions failed',
-                'description' => "Review failed subscriptions and retry setup",
-                'action' => 'Check error details and fix configuration issues'
+                'description' => 'Review failed subscriptions and retry setup',
+                'action' => 'Check error details and fix configuration issues',
             ];
         }
 
@@ -332,8 +340,8 @@ class WebhookSubscriptionBuilder
             $recommendations[] = [
                 'type' => 'info',
                 'title' => 'Incomplete sync coverage',
-                'description' => "Missing webhook subscriptions for complete sync monitoring",
-                'action' => 'Use ->allSyncTopics() for full coverage'
+                'description' => 'Missing webhook subscriptions for complete sync monitoring',
+                'action' => 'Use ->allSyncTopics() for full coverage',
             ];
         }
 
@@ -341,8 +349,8 @@ class WebhookSubscriptionBuilder
             $recommendations[] = [
                 'type' => 'security',
                 'title' => 'Enable signature verification',
-                'description' => "Webhook signature verification is not enabled",
-                'action' => 'Use ->withSignatureVerification() for security'
+                'description' => 'Webhook signature verification is not enabled',
+                'action' => 'Use ->withSignatureVerification() for security',
             ];
         }
 

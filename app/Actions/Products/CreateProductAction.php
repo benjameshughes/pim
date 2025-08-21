@@ -4,7 +4,6 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -46,13 +45,13 @@ class CreateProductAction extends BaseAction
 
         $product = $product->fresh();
 
-        // Return standardized array format while maintaining access to the product
-        return [
-            'success' => true,
-            'product' => $product,
-            'message' => "Product '{$product->name}' created successfully",
-            'product_id' => $product->id,
-        ];
+        return $this->success(
+            "Product '{$product->name}' created successfully",
+            [
+                'product' => $product,
+                'product_id' => $product->id,
+            ]
+        );
     }
 
     /**

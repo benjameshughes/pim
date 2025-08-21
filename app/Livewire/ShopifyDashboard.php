@@ -2,17 +2,16 @@
 
 namespace App\Livewire;
 
-use App\Models\Product;
 use App\Models\ShopifyProductSync;
 use App\Models\ShopifyWebhookLog;
-use App\Services\Shopify\API\ShopifySyncStatusService;
-use Livewire\Component;
+use App\Services\Marketplace\Facades\Sync;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 /**
  * 🏪 LEGENDARY SHOPIFY DASHBOARD 🏪
- * 
+ *
  * The most FABULOUS sync monitoring dashboard ever created!
  * Shows comprehensive sync intelligence with SASS and STYLE! 💅
  */
@@ -21,8 +20,11 @@ use Livewire\Attributes\Title;
 class ShopifyDashboard extends Component
 {
     public array $dashboardData = [];
+
     public array $recentActivity = [];
+
     public array $healthSummary = [];
+
     public array $webhookHealth = [];
 
     public function mount()
@@ -36,15 +38,28 @@ class ShopifyDashboard extends Component
     }
 
     /**
-     * 📊 Load all dashboard data with MAXIMUM FABULOUSNESS
+     * 📊 Load all dashboard data (ULTRA-SIMPLE!)
      */
     public function loadDashboardData()
     {
-        $syncService = app(ShopifySyncStatusService::class);
-        
-        // Get comprehensive dashboard data
-        $this->dashboardData = $syncService->getSyncHealthDashboard();
-        
+        // ULTRA-SIMPLE: Just get basic stats and connection info
+        try {
+            $connectionTest = Sync::shopify()->testConnection();
+
+            $this->dashboardData = [
+                'connection_status' => $connectionTest['success'] ? 'Connected' : 'Failed',
+                'shop_name' => $connectionTest['shop_name'] ?? 'Unknown',
+                'shop_domain' => $connectionTest['domain'] ?? 'Unknown',
+                'last_checked' => now()->toDateTimeString(),
+            ];
+        } catch (\Exception $e) {
+            $this->dashboardData = [
+                'connection_status' => 'Error',
+                'error' => $e->getMessage(),
+                'last_checked' => now()->toDateTimeString(),
+            ];
+        }
+
         // Load additional UI-specific data
         $this->loadHealthSummary();
         $this->loadRecentActivity();
@@ -57,26 +72,26 @@ class ShopifyDashboard extends Component
     private function loadHealthSummary()
     {
         $syncRecords = ShopifyProductSync::with('product')->get();
-        
+
         $healthScores = [];
         $gradeDistribution = ['A+' => 0, 'A' => 0, 'A-' => 0, 'B+' => 0, 'B' => 0, 'B-' => 0, 'C+' => 0, 'C' => 0, 'C-' => 0, 'D' => 0, 'F' => 0];
-        
+
         foreach ($syncRecords as $sync) {
             $health = $sync->calculateSyncHealth();
             $healthScores[] = $health;
-            
+
             $grade = $this->getHealthGrade($health);
             $gradeDistribution[$grade]++;
         }
 
         $averageHealth = count($healthScores) > 0 ? round(array_sum($healthScores) / count($healthScores)) : 0;
-        
+
         $this->healthSummary = [
             'average_health' => $averageHealth,
             'total_products' => $syncRecords->count(),
-            'healthy_products' => count(array_filter($healthScores, fn($score) => $score >= 80)),
-            'needs_attention' => count(array_filter($healthScores, fn($score) => $score < 80)),
-            'grade_distribution' => array_filter($gradeDistribution, fn($count) => $count > 0),
+            'healthy_products' => count(array_filter($healthScores, fn ($score) => $score >= 80)),
+            'needs_attention' => count(array_filter($healthScores, fn ($score) => $score < 80)),
+            'grade_distribution' => array_filter($gradeDistribution, fn ($count) => $count > 0),
             'health_trend' => $this->calculateHealthTrend(),
         ];
     }
@@ -102,7 +117,7 @@ class ShopifyDashboard extends Component
             ->get();
 
         $this->recentActivity = [
-            'syncs' => $recentSyncs->map(function($sync) {
+            'syncs' => $recentSyncs->map(function ($sync) {
                 return [
                     'type' => 'sync',
                     'product_name' => $sync->product?->name ?? 'Unknown Product',
@@ -113,7 +128,7 @@ class ShopifyDashboard extends Component
                     'drift_score' => $sync->data_drift_score ?? 0,
                 ];
             }),
-            'webhooks' => $recentWebhooks->map(function($webhook) {
+            'webhooks' => $recentWebhooks->map(function ($webhook) {
                 return [
                     'type' => 'webhook',
                     'topic' => $webhook->topic,
@@ -155,36 +170,50 @@ class ShopifyDashboard extends Component
     }
 
     /**
-     * 🚀 Trigger bulk sync for products needing attention
+     * 🚀 Trigger bulk sync for products needing attention (ULTRA-SIMPLE!)
      */
     public function syncProductsNeedingAttention()
     {
-        $productsNeedingSync = ShopifyProductSync::needsAttention()
-            ->with('product')
-            ->limit(10) // Reasonable batch size
-            ->get();
+        try {
+            $products = \App\Models\Product::with('variants')
+                ->where('status', 'active')
+                ->limit(10)
+                ->get();
 
-        foreach ($productsNeedingSync as $sync) {
-            if ($sync->product) {
-                // Trigger sync job here (implement based on your job queue setup)
-                // SyncProductToShopify::dispatch($sync->product);
+            if ($products->isEmpty()) {
+                $this->dispatch('bulk-sync-triggered', [
+                    'message' => 'No active products found to sync',
+                    'count' => 0,
+                ]);
+
+                return;
             }
+
+            // ULTRA-SIMPLE: Use the beautiful API with color splitting!
+            $results = Sync::shopify()->pushWithColors($products->toArray());
+            $successCount = collect($results)->where('success', true)->count();
+
+            $this->dispatch('bulk-sync-triggered', [
+                'message' => "Bulk sync completed: {$successCount} products synced successfully",
+                'count' => $successCount,
+            ]);
+
+            // Refresh after triggering sync
+            $this->refresh();
+
+        } catch (\Exception $e) {
+            $this->dispatch('bulk-sync-triggered', [
+                'message' => 'Bulk sync failed: '.$e->getMessage(),
+                'count' => 0,
+            ]);
         }
-
-        $this->dispatch('bulk-sync-triggered', [
-            'message' => 'Bulk sync initiated for ' . $productsNeedingSync->count() . ' products',
-            'count' => $productsNeedingSync->count()
-        ]);
-
-        // Refresh after triggering sync
-        $this->refresh();
     }
 
     // ===== HELPER METHODS ===== //
 
     private function getHealthGrade(int $health): string
     {
-        return match(true) {
+        return match (true) {
             $health >= 95 => 'A+',
             $health >= 90 => 'A',
             $health >= 85 => 'A-',
@@ -205,19 +234,19 @@ class ShopifyDashboard extends Component
         // Simple trend calculation - could be enhanced with historical data
         $recentHealth = ShopifyProductSync::where('last_synced_at', '>=', now()->subDays(7))
             ->get()
-            ->avg(fn($sync) => $sync->calculateSyncHealth());
+            ->avg(fn ($sync) => $sync->calculateSyncHealth());
 
         $olderHealth = ShopifyProductSync::where('last_synced_at', '<', now()->subDays(7))
             ->where('last_synced_at', '>=', now()->subDays(14))
             ->get()
-            ->avg(fn($sync) => $sync->calculateSyncHealth());
+            ->avg(fn ($sync) => $sync->calculateSyncHealth());
 
-        if (!$recentHealth || !$olderHealth) {
+        if (! $recentHealth || ! $olderHealth) {
             return 'stable';
         }
 
         $difference = $recentHealth - $olderHealth;
-        
+
         if ($difference > 5) {
             return 'improving';
         } elseif ($difference < -5) {

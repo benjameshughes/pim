@@ -2,26 +2,34 @@
 
 namespace Database\Factories;
 
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
- */
 class ProductFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Product::class;
+
     public function definition(): array
     {
         return [
             'name' => $this->faker->words(3, true),
-            'slug' => $this->faker->slug(),
-            'description' => $this->faker->sentence(),
-            'status' => $this->faker->randomElement(['active', 'inactive', 'discontinued']),
-            'images' => [],
+            'parent_sku' => $this->faker->unique()->numerify('SKU-###'),
+            'status' => $this->faker->randomElement(['active', 'inactive']),
+            'description' => $this->faker->paragraph(),
         ];
+    }
+
+    public function active(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'active',
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'inactive',
+        ]);
     }
 }

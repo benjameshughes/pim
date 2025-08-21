@@ -21,7 +21,7 @@ abstract class DuskTestCase extends BaseTestCase
         if (! static::runningInSail()) {
             static::startChromeDriver(['--port=9515']);
         }
-        
+
         // Register custom browser macro for checking console errors
         Browser::macro('assertNoConsoleErrors', function () {
             $logs = $this->driver->manage()->getLog('browser');
@@ -29,28 +29,28 @@ abstract class DuskTestCase extends BaseTestCase
                 if ($log['level'] !== 'SEVERE') {
                     return false;
                 }
-                
+
                 // Ignore non-critical errors
                 $ignoredPatterns = [
                     '/favicon\.ico.*Failed to load resource/',  // Missing favicon
                     '/net::ERR_FAILED.*favicon\.ico/',         // Favicon network errors
                 ];
-                
+
                 foreach ($ignoredPatterns as $pattern) {
                     if (preg_match($pattern, $log['message'])) {
                         return false;
                     }
                 }
-                
+
                 return true;
             });
-            
+
             if ($errors->isNotEmpty()) {
                 throw new \PHPUnit\Framework\AssertionFailedError(
-                    'Console errors found: ' . $errors->pluck('message')->implode(', ')
+                    'Console errors found: '.$errors->pluck('message')->implode(', ')
                 );
             }
-            
+
             return $this;
         });
     }
@@ -76,10 +76,10 @@ abstract class DuskTestCase extends BaseTestCase
         $capabilities = DesiredCapabilities::chrome()->setCapability(
             ChromeOptions::CAPABILITY, $options
         );
-        
+
         // Enable browser logging
         $capabilities->setCapability('goog:loggingPrefs', [
-            'browser' => 'ALL'
+            'browser' => 'ALL',
         ]);
 
         return RemoteWebDriver::create(

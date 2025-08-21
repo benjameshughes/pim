@@ -2,472 +2,345 @@
 
 namespace App\Models;
 
-use App\Builders\Products\ProductBuilder;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\Collections\ShopifyProductCollection;
+use App\Traits\HasAttributesTrait;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-/**
- * Product Model
- *
- * Enhanced for Builder Pattern compatibility with additional scopes and methods.
- * Supports fluent API for creation and updates.
- */
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, HasAttributesTrait;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<string>
-     */
     protected $fillable = [
         'name',
-        'slug',
         'parent_sku',
         'description',
         'status',
-        'auto_generated',
-        'images',
-        // Note: Removed old numbered feature columns - now using ProductFeature relationship
+        'image_url',
+        'category_id',
+        'brand',
+        'meta_description',
+        // Import fields (linnworks_sku removed by migration)
+        'barcode',
+        'length',
+        'width',
+        'depth',
+        'weight',
+        'retail_price',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
-        'images' => 'array',
-        'auto_generated' => 'boolean',
+        'status' => \App\Enums\ProductStatus::class,
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
-     * Status constants for better type safety
+     * 💎 VARIANTS - The heart of the business
+     *
+     * Each product has many variants (color + width combinations)
      */
-    const STATUS_DRAFT = 'draft';
-
-    const STATUS_ACTIVE = 'active';
-
-    const STATUS_INACTIVE = 'inactive';
-
-    const STATUS_ARCHIVED = 'archived';
-
-    /**
-     * Get all available status options
-     */
-    public static function getStatusOptions(): array
-    {
-        return [
-            self::STATUS_DRAFT => 'Draft',
-            self::STATUS_ACTIVE => 'Active',
-            self::STATUS_INACTIVE => 'Inactive',
-            self::STATUS_ARCHIVED => 'Archived',
-        ];
-    }
-
-    /**
-     * Create a new ProductBuilder instance for this model
-     */
-    public static function build(): ProductBuilder
-    {
-        return ProductBuilder::create();
-    }
-
-    /**
-     * Create a ProductBuilder instance for updating this product
-     */
-    public function edit(): ProductBuilder
-    {
-        return ProductBuilder::update($this);
-    }
-
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class);
     }
 
-    public function metadata(): HasMany
+    /**
+     * 🖼️ IMAGES - Polymorphic relationship to Image model
+     *
+     * Each product can have multiple images stored in R2
+     */
+    public function images(): MorphMany
     {
-        return $this->hasMany(ProductMetadata::class);
+        return $this->morphMany(Image::class, 'imageable')->ordered();
     }
 
+    /**
+     * ⭐ PRIMARY IMAGE - Get the primary image for this product
+     */
+    public function primaryImage(): ?Image
+    {
+        return $this->images()->primary()->first();
+    }
+
+    /**
+     * 🛍️ SHOPIFY SYNC STATUS (Legacy)
+     *
+     * @deprecated Use syncStatuses() instead. Maintained for backward compatibility.
+     */
+    public function shopifySyncStatus(): HasMany
+    {
+        return $this->hasMany(ShopifySyncStatus::class);
+    }
+
+    /**
+     * 📊 SYNC STATUSES
+     *
+     * Unified sync statuses across all marketplaces
+     */
+    public function syncStatuses(): HasMany
+    {
+        return $this->hasMany(SyncStatus::class);
+    }
+
+    /**
+     * 📝 SYNC LOGS
+     *
+     * Comprehensive audit trail for all sync operations
+     */
+    public function syncLogs(): HasMany
+    {
+        return $this->hasMany(SyncLog::class);
+    }
+
+    /**
+     * 🏷️ TAGS
+     *
+     * The tags that belong to the product.
+     */
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class);
+    }
+
+    /**
+     * ✅ ACTIVE VARIANTS
+     *
+     * Only get active variants
+     */
+    public function activeVariants(): HasMany
+    {
+        return $this->variants()->where('status', 'active');
+    }
+
+    /**
+     * 🔗 SKU LINKS (Legacy)
+     *
+     * @deprecated Use marketplaceLinks() instead. Maintained for backward compatibility.
+     */
+    public function skuLinks(): HasMany
+    {
+        return $this->hasMany(SkuLink::class);
+    }
+
+    /**
+     * 🔗 MARKETPLACE LINKS
+     *
+     * Polymorphic relationship to marketplace links for this product
+     */
+    public function marketplaceLinks(): MorphMany
+    {
+        return $this->morphMany(MarketplaceLink::class, 'linkable');
+    }
+
+    /**
+     * 🔗 PRODUCT-LEVEL MARKETPLACE LINKS
+     *
+     * Only the product-level marketplace links (excludes variant links)
+     */
+    public function productMarketplaceLinks(): MorphMany
+    {
+        return $this->marketplaceLinks()->where('link_level', 'product');
+    }
+
+    /**
+     * 🏷️ ATTRIBUTES
+     *
+     * Flexible attribute system for product metadata
+     */
     public function attributes(): HasMany
     {
         return $this->hasMany(ProductAttribute::class);
     }
 
-    public function productImages(): HasMany
+    /**
+     * ✅ VALID ATTRIBUTES
+     *
+     * Only attributes that pass validation
+     */
+    public function validAttributes(): HasMany
     {
-        return $this->hasMany(ProductImage::class)->whereNull('variant_id');
-    }
-
-    public function allImages(): HasMany
-    {
-        return $this->hasMany(ProductImage::class);
-    }
-
-    public function features(): HasMany
-    {
-        return $this->hasMany(ProductFeature::class)->ordered();
-    }
-
-    public function productFeatures(): HasMany
-    {
-        return $this->features()->features();
-    }
-
-    public function productDetails(): HasMany
-    {
-        return $this->features()->details();
-    }
-
-    public function categories(): BelongsToMany
-    {
-        return $this->belongsToMany(Category::class, 'product_categories')
-            ->withPivot('is_primary')
-            ->withTimestamps();
-    }
-
-    public function primaryCategory()
-    {
-        return $this->categories()->wherePivot('is_primary', true)->first();
-    }
-
-    public function mainImage()
-    {
-        return $this->productImages()->where('image_type', 'main')->first();
-    }
-
-    public function swatchImage()
-    {
-        return $this->productImages()->where('image_type', 'swatch')->first();
-    }
-
-    public function getMetaAttribute()
-    {
-        return new ProductMetaAccessor($this);
+        return $this->attributes()->valid();
     }
 
     /**
-     * Get Shopify sync status for this product
+     * 🧬 INHERITABLE ATTRIBUTES
+     *
+     * Attributes that can be inherited by variants
      */
-    public function getShopifySyncStatus(): array
+    public function inheritableAttributes(): HasMany
     {
-        // ✨ ENHANCED with our LEGENDARY sync status system! ✨
-        $syncRecords = ShopifyProductSync::where('product_id', $this->id)->get();
-
-        if ($syncRecords->isEmpty()) {
-            return [
-                'status' => 'not_synced',
-                'colors_synced' => 0,
-                'total_colors' => $this->variants->pluck('color')->filter()->unique()->count(),
-                'last_synced_at' => null,
-                'has_failures' => false,
-                'health_score' => 0,
-                'health_grade' => 'N/A',
-                'needs_attention' => true,
-                'sync_summary' => 'Product has never been synced to Shopify',
-            ];
-        }
-
-        $successfulSyncs = $syncRecords->where('sync_status', 'synced');
-        $failedSyncs = $syncRecords->where('sync_status', 'failed');
-        $pendingSyncs = $syncRecords->where('sync_status', 'pending');
-
-        // Determine overall status
-        if ($pendingSyncs->isNotEmpty()) {
-            $status = 'pending';
-        } elseif ($failedSyncs->isNotEmpty()) {
-            $status = 'failed';
-        } elseif ($successfulSyncs->isNotEmpty()) {
-            $status = 'synced';
-        } else {
-            $status = 'not_synced';
-        }
-
-        // ✨ Calculate comprehensive health metrics using our LEGENDARY system! ✨
-        $mainSync = ShopifyProductSync::getMainSyncRecord($this->id);
-        $healthScore = $mainSync ? $mainSync->calculateSyncHealth() : 0;
-        $healthGrade = $this->getHealthGrade($healthScore);
-        $syncSummary = $this->generateSyncSummary($status, $successfulSyncs, $failedSyncs);
-        $needsAttention = $status !== 'synced' || $healthScore < 80;
-        
-        // Get shopify URLs for admin links
-        $shopifyUrls = $successfulSyncs->map(fn($sync) => $sync->getShopifyAdminUrl())->filter()->unique();
-
-        return [
-            'status' => $status,
-            'colors_synced' => $successfulSyncs->count(),
-            'total_colors' => $this->variants->pluck('color')->filter()->unique()->count(),
-            'last_synced_at' => $successfulSyncs->max('last_synced_at'),
-            'has_failures' => $failedSyncs->isNotEmpty(),
-            'sync_records' => $syncRecords,
-            // 💎 NEW LEGENDARY FEATURES 💎
-            'health_score' => $healthScore,
-            'health_grade' => $healthGrade,
-            'needs_attention' => $needsAttention,
-            'sync_summary' => $syncSummary,
-            'shopify_urls' => $shopifyUrls->values()->toArray(),
-            'drift_score' => $mainSync?->data_drift_score ?? 0,
-            'variants_synced' => $mainSync?->variants_synced ?? 0,
-            'sync_method' => $mainSync?->sync_method ?? 'unknown',
-        ];
-    }
-
-    /**
-     * 💅 SASSILLA'S HELPER METHODS FOR LEGENDARY SYNC STATUS 💅
-     */
-    
-    /**
-     * Convert health score to letter grade (because we're CLASSY!)
-     */
-    private function getHealthGrade(int $health): string
-    {
-        return match(true) {
-            $health >= 95 => 'A+',
-            $health >= 90 => 'A',
-            $health >= 85 => 'A-',
-            $health >= 80 => 'B+',
-            $health >= 75 => 'B',
-            $health >= 70 => 'B-',
-            $health >= 65 => 'C+',
-            $health >= 60 => 'C',
-            $health >= 55 => 'C-',
-            $health >= 50 => 'D',
-            $health > 0 => 'F',
-            default => 'N/A'
-        };
-    }
-    
-    /**
-     * Generate user-friendly sync summary message
-     */
-    private function generateSyncSummary(string $status, $successfulSyncs, $failedSyncs): string
-    {
-        return match($status) {
-            'not_synced' => 'Product has never been synced to Shopify',
-            'pending' => 'Sync operation in progress',
-            'failed' => 'Sync failed - ' . $failedSyncs->count() . ' color variant(s) need attention',
-            'synced' => $successfulSyncs->count() . ' color variant(s) successfully synced to Shopify',
-            default => 'Unknown sync status'
-        };
-    }
-
-    /**
-     * Relation to Shopify sync records
-     */
-    public function shopifySyncs(): HasMany
-    {
-        return $this->hasMany(ShopifyProductSync::class);
-    }
-
-    // =====================================
-    // Builder Pattern Helper Methods
-    // =====================================
-
-    /**
-     * Get product features as array (updated to use new normalized structure)
-     */
-    public function getFeaturesArray(): array
-    {
-        return $this->productFeatures->pluck('content')->toArray();
-    }
-
-    /**
-     * Get product details as array (updated to use new normalized structure)
-     */
-    public function getDetailsArray(): array
-    {
-        return $this->productDetails->pluck('content')->toArray();
-    }
-
-    /**
-     * Check if product has any features (updated to use new normalized structure)
-     */
-    public function hasFeatures(): bool
-    {
-        return $this->productFeatures()->exists();
-    }
-
-    /**
-     * Check if product has any details (updated to use new normalized structure)
-     */
-    public function hasDetails(): bool
-    {
-        return $this->productDetails()->exists();
-    }
-
-    /**
-     * Add a new feature to the product
-     */
-    public function addFeature(string $content, ?string $title = null, int $sortOrder = 0): ProductFeature
-    {
-        return $this->features()->create([
-            'type' => 'feature',
-            'content' => $content,
-            'title' => $title,
-            'sort_order' => $sortOrder ?: $this->productFeatures()->max('sort_order') + 1,
-        ]);
-    }
-
-    /**
-     * Add a new detail to the product
-     */
-    public function addDetail(string $content, ?string $title = null, int $sortOrder = 0): ProductFeature
-    {
-        return $this->features()->create([
-            'type' => 'detail',
-            'content' => $content,
-            'title' => $title,
-            'sort_order' => $sortOrder ?: $this->productDetails()->max('sort_order') + 1,
-        ]);
-    }
-
-    /**
-     * Get display status with proper formatting
-     */
-    public function getFormattedStatus(): string
-    {
-        return ucfirst($this->status);
-    }
-
-    /**
-     * Check if product is active
-     */
-    public function isActive(): bool
-    {
-        return $this->status === self::STATUS_ACTIVE;
-    }
-
-    /**
-     * Check if product is draft
-     */
-    public function isDraft(): bool
-    {
-        return $this->status === self::STATUS_DRAFT;
-    }
-
-    /**
-     * Check if product is inactive
-     */
-    public function isInactive(): bool
-    {
-        return $this->status === self::STATUS_INACTIVE;
-    }
-
-    /**
-     * Check if product is archived
-     */
-    public function isArchived(): bool
-    {
-        return $this->status === self::STATUS_ARCHIVED;
-    }
-
-    // =====================================
-    // Query Scopes
-    // =====================================
-
-    /**
-     * Scope a query to only include active products
-     */
-    public function scopeActive(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_ACTIVE);
-    }
-
-    /**
-     * Scope a query to only include draft products
-     */
-    public function scopeDraft(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_DRAFT);
-    }
-
-    /**
-     * Scope a query to only include inactive products
-     */
-    public function scopeInactive(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_INACTIVE);
-    }
-
-    /**
-     * Scope a query to only include archived products
-     */
-    public function scopeArchived(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_ARCHIVED);
-    }
-
-    /**
-     * Scope a query to filter by status
-     */
-    public function scopeWithStatus(Builder $query, string $status): Builder
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope a query to search by name, SKU, or description
-     */
-    public function scopeSearch(Builder $query, string $search): Builder
-    {
-        return $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-                ->orWhere('parent_sku', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+        return $this->attributes()->whereHas('attributeDefinition', function ($query) {
+            $query->where('is_inheritable', true);
         });
     }
 
     /**
-     * Scope a query to only include products with variants
+     * 🎯 GET SMART ATTRIBUTE VALUE
+     *
+     * Get a specific attribute value from flexible system (use explicit method to avoid conflicts)
      */
-    public function scopeWithVariants(Builder $query): Builder
+    public function getSmartAttributeValue(string $key)
     {
-        return $query->has('variants');
+        // First check direct model fields
+        if (array_key_exists($key, $this->getAttributes())) {
+            return $this->getAttributeValue($key);
+        }
+
+        // Try to get from attributes system
+        $attribute = $this->attributes()->forAttribute($key)->first();
+        return $attribute?->getTypedValue();
     }
 
     /**
-     * Scope a query to only include products without variants
+     * 🎯 SET ATTRIBUTE VALUE
+     *
+     * Set an attribute value in the flexible attributes system
      */
-    public function scopeWithoutVariants(Builder $query): Builder
+    public function setAttributeValue(string $key, $value, array $options = []): ?ProductAttribute
     {
-        return $query->doesntHave('variants');
+        try {
+            return ProductAttribute::createOrUpdate($this, $key, $value, $options);
+        } catch (\InvalidArgumentException $e) {
+            // Attribute definition doesn't exist, ignore silently or log
+            return null;
+        }
     }
 
     /**
-     * Scope a query to only include auto-generated products
+     * 🎯 GET SMART BRAND VALUE
+     *
+     * Get brand with fallback from direct field to attributes system
      */
-    public function scopeAutoGenerated(Builder $query): Builder
+    public function getSmartBrandValue()
     {
-        return $query->where('auto_generated', true);
+        // First check direct brand field
+        if (!empty($this->getOriginal('brand'))) {
+            return $this->getOriginal('brand');
+        }
+
+        // Fallback to attributes system
+        $brandAttribute = $this->attributes()->forAttribute('brand')->first();
+        return $brandAttribute?->getTypedValue();
     }
 
     /**
-     * Scope a query to only include manually created products
+     * 🎨 UNIQUE COLORS
+     *
+     * Get all unique colors for this product
      */
-    public function scopeManuallyCreated(Builder $query): Builder
+    public function getColorsAttribute()
     {
-        return $query->where('auto_generated', false);
+        return $this->variants->pluck('color')->unique()->values();
     }
 
     /**
-     * Scope a query to include published products (active or inactive)
+     * 📏 AVAILABLE WIDTHS
+     *
+     * Get all available widths for this product
      */
-    public function scopePublished(Builder $query): Builder
+    public function getWidthsAttribute()
     {
-        return $query->whereIn('status', [self::STATUS_ACTIVE, self::STATUS_INACTIVE]);
+        return $this->variants->pluck('width')->unique()->sort()->values();
     }
 
     /**
-     * Scope a query to load common relationships
+     * 🔍 SCOPE: Active products only
      */
-    public function scopeWithCommonRelations(Builder $query): Builder
+    public function scopeActive($query)
     {
-        return $query->with(['variants', 'productImages', 'categories']);
+        return $query->where('status', 'active');
+    }
+
+    /**
+     * 💅✨ CUSTOM SHOPIFY COLLECTION - BECAUSE WE'RE EXTRA LIKE THAT! ✨💅
+     *
+     * Return our fabulous ShopifyProductCollection instead of boring default Collection
+     */
+    public function newCollection(array $models = []): Collection
+    {
+        return new ShopifyProductCollection($models);
+    }
+
+    /**
+     * 🛍️ SHOPIFY SCOPE - Get products with Shopify superpowers!
+     * Usage: Product::shopify()->syncable()->exportToShopify()
+     */
+    public function scopeShopify($query)
+    {
+        return $query->with(['variants.barcodes', 'variants.pricing', 'shopifySyncStatus']);
+    }
+
+    /**
+     * 🔥✨ COLLECTION-BASED DTO INTEGRATION ✨🔥
+     */
+
+    /**
+     * 🚀 Create product from Collection-powered ProductDTO
+     */
+    public static function createFromDTO(\App\DTOs\Products\ProductDTO $dto): self
+    {
+        $modelData = $dto->toModelData();
+
+        return static::create($modelData->toArray());
+    }
+
+    /**
+     * ✏️ Update product from Collection-powered ProductDTO
+     */
+    public function updateFromDTO(\App\DTOs\Products\ProductDTO $dto): bool
+    {
+        $modelData = $dto->toModelData();
+
+        // Only update fields that are actually different for efficiency
+        $currentDto = \App\DTOs\Products\ProductDTO::fromModel($this);
+        $changedFields = $dto->getChangedFields($currentDto);
+
+        if ($changedFields->isEmpty()) {
+            return true; // No changes needed
+        }
+
+        // Update only changed fields using Collection operations
+        $updateData = $modelData->only($changedFields->toArray());
+
+        return $this->update($updateData->toArray());
+    }
+
+    /**
+     * 🎯 Convert model to Collection-powered ProductDTO
+     */
+    public function toProductDTO(): \App\DTOs\Products\ProductDTO
+    {
+        return \App\DTOs\Products\ProductDTO::fromModel($this);
+    }
+
+    /**
+     * 📊 Get Collection-based statistics for products
+     */
+    public static function getCollectionStatistics(): \Illuminate\Support\Collection
+    {
+        $products = static::all();
+
+        return collect([
+            'total_products' => $products->count(),
+            'active_products' => $products->where('status', 'active')->count(),
+            'inactive_products' => $products->where('status', 'inactive')->count(),
+            'status_distribution' => \App\Enums\ProductStatus::getStatistics($products),
+            'completion_stats' => $products->map(fn ($product) => $product->toProductDTO()->getStatistics()->get('completeness_percentage')
+            )->pipe(fn ($percentages) => [
+                'average_completion' => $percentages->average(),
+                'min_completion' => $percentages->min(),
+                'max_completion' => $percentages->max(),
+                'fully_complete' => $percentages->filter(fn ($p) => $p >= 100)->count(),
+            ]),
+            'field_usage' => collect([
+                'with_description' => $products->whereNotNull('description')->count(),
+                'with_image' => $products->whereNotNull('image_url')->count(),
+                'with_variants' => $products->has('variants')->count(),
+            ]),
+        ]);
     }
 }
