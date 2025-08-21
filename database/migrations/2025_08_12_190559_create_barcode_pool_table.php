@@ -57,11 +57,11 @@ return new class extends Migration
             $table->timestamps();
 
             // Performance indexes for large dataset operations
-            $table->index(['status', 'barcode_type']); // Primary assignment queries
-            $table->index(['is_legacy', 'row_number']); // Legacy data queries
-            $table->index(['assigned_to_variant_id', 'assigned_at']); // Assignment history
-            $table->index(['import_batch_id', 'created_at']); // Batch processing
-            $table->index(['barcode_type', 'quality_score', 'status']); // Smart assignment queries
+            $table->index(['status', 'barcode_type'], 'bp_status_type_idx'); // Primary assignment queries
+            $table->index(['is_legacy', 'row_number'], 'bp_legacy_row_idx'); // Legacy data queries
+            $table->index(['assigned_to_variant_id', 'assigned_at'], 'bp_assignment_hist_idx'); // Assignment history
+            $table->index(['import_batch_id', 'created_at'], 'bp_batch_created_idx'); // Batch processing
+            $table->index(['barcode_type', 'quality_score', 'status'], 'bp_smart_assign_idx'); // Smart assignment queries
 
             // Compound index for the most common assignment query
             $table->index(['status', 'barcode_type', 'is_legacy', 'row_number'], 'idx_assignment_priority');

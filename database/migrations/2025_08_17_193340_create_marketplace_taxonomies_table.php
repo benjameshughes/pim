@@ -61,11 +61,11 @@ return new class extends Migration
             $table->timestamps();
 
             // Performance indexes
-            $table->index(['sync_account_id', 'taxonomy_type']);
-            $table->index(['sync_account_id', 'taxonomy_type', 'is_active']);
-            $table->index(['taxonomy_type', 'external_id']);
-            $table->index(['sync_account_id', 'external_parent_id']);
-            $table->index(['level', 'is_leaf']);
+            $table->index(['sync_account_id', 'taxonomy_type'], 'mt_account_type_idx');
+            $table->index(['sync_account_id', 'taxonomy_type', 'is_active'], 'mt_account_type_active_idx');
+            $table->index(['taxonomy_type', 'external_id'], 'mt_type_external_idx');
+            $table->index(['sync_account_id', 'external_parent_id'], 'mt_account_parent_idx');
+            $table->index(['level', 'is_leaf'], 'mt_level_leaf_idx');
             $table->index('last_synced_at');
 
             // Unique constraint per marketplace

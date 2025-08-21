@@ -38,9 +38,9 @@ return new class extends Migration
             $table->timestamps();
 
             // Indexes for performance
-            $table->index(['channel_type', 'channel_subtype', 'category']);
-            $table->index(['field_code', 'channel_type']);
-            $table->index(['is_required', 'is_active']);
+            $table->index(['channel_type', 'channel_subtype', 'category'], 'cfd_channel_category_idx');
+            $table->index(['field_code', 'channel_type'], 'cfd_field_channel_idx');
+            $table->index(['is_required', 'is_active'], 'cfd_required_active_idx');
 
             // Unique constraint
             $table->unique(['channel_type', 'channel_subtype', 'category', 'field_code'], 'channel_field_unique');
