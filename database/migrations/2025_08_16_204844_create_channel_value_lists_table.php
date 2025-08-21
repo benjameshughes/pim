@@ -12,11 +12,11 @@ return new class extends Migration
             $table->id();
 
             // Channel identification
-            $table->string('channel_type'); // 'mirakl', 'shopify', 'ebay', 'amazon'
-            $table->string('channel_subtype')->nullable(); // 'freemans', 'debenhams' for Mirakl
+            $table->string('channel_type', 50); // 'mirakl', 'shopify', 'ebay', 'amazon'
+            $table->string('channel_subtype', 100)->nullable(); // 'freemans', 'debenhams' for Mirakl
 
             // Value list identification
-            $table->string('list_code'); // The value list identifier
+            $table->string('list_code', 100); // The value list identifier
             $table->string('list_name')->nullable(); // Human-readable name
             $table->text('list_description')->nullable();
 

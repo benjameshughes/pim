@@ -29,7 +29,7 @@ return new class extends Migration
             $table->foreignId('marketplace_taxonomy_id')->constrained()->onDelete('cascade');
 
             // Attribute identification
-            $table->string('attribute_key');              // e.g., 'material', 'color', 'size'
+            $table->string('attribute_key', 100);              // e.g., 'material', 'color', 'size'
             $table->string('attribute_name');            // e.g., 'Material', 'Color', 'Size'
 
             // Value storage (flexible for different data types)

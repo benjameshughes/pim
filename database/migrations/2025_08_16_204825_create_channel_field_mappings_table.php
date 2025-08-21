@@ -15,8 +15,8 @@ return new class extends Migration
             $table->foreignId('sync_account_id')->constrained()->onDelete('cascade');
 
             // Target field identification
-            $table->string('channel_field_code'); // The marketplace field
-            $table->string('category')->nullable(); // Category context if applicable
+            $table->string('channel_field_code', 100); // The marketplace field
+            $table->string('category', 100)->nullable(); // Category context if applicable
 
             // Source mapping (what PIM data to use)
             $table->string('mapping_type'); // 'pim_field', 'static_value', 'expression', 'custom'
@@ -31,9 +31,9 @@ return new class extends Migration
             $table->text('notes')->nullable(); // User notes
 
             // Override levels
-            $table->string('mapping_level')->default('global'); // 'global', 'product', 'variant'
+            $table->string('mapping_level', 50)->default('global'); // 'global', 'product', 'variant'
             $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade'); // Product-specific override
-            $table->string('variant_scope')->nullable(); // 'all', 'color:Red', 'size:Large', etc.
+            $table->string('variant_scope', 100)->nullable(); // 'all', 'color:Red', 'size:Large', etc.
 
             // Validation and testing
             $table->json('validation_status')->nullable(); // Last validation result
@@ -42,14 +42,15 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Indexes
-            $table->index(['sync_account_id', 'channel_field_code']);
-            $table->index(['mapping_type', 'source_field']);
-            $table->index(['mapping_level', 'product_id']);
-            $table->index(['is_active', 'priority']);
+            // Indexes with proper names
+            $table->index(['sync_account_id', 'channel_field_code'], 'cfm_account_field_idx');
+            $table->index(['mapping_type', 'source_field'], 'cfm_type_source_idx');
+            $table->index(['mapping_level', 'product_id'], 'cfm_level_product_idx');
+            $table->index(['is_active', 'priority'], 'cfm_active_priority_idx');
 
-            // Unique constraint for global mappings
-            $table->unique(['sync_account_id', 'channel_field_code', 'category', 'mapping_level', 'product_id', 'variant_scope'], 'channel_mapping_unique');
+            // Simpler unique constraints to avoid MySQL key length issues
+            $table->unique(['sync_account_id', 'channel_field_code', 'mapping_level'], 'cfm_basic_unique');
+            $table->index(['category', 'product_id', 'variant_scope'], 'cfm_scope_idx'); // Index for additional uniqueness checking
         });
     }
 
