@@ -59,10 +59,10 @@ return new class extends Migration
             $table->timestamps();
             
             // Indexes for performance
-            $table->index(['is_active', 'sort_order']);
-            $table->index(['group', 'sort_order']);
-            $table->index(['data_type']);
-            $table->index(['is_inheritable']);
+            $table->index(['is_active', 'sort_order'], 'ad_active_sort_idx');
+            $table->index(['group', 'sort_order'], 'ad_group_sort_idx');
+            $table->index(['data_type'], 'ad_data_type_idx');
+            $table->index(['is_inheritable'], 'ad_inheritable_idx');
         });
     }
 

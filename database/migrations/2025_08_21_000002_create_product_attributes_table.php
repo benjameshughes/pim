@@ -50,8 +50,8 @@ return new class extends Migration
             $table->unique(['product_id', 'attribute_definition_id']); // One value per attribute per product
             $table->index(['product_id', 'is_valid']); // For getting valid attributes
             $table->index(['attribute_definition_id', 'value']); // For searching by attribute value
-            $table->index(['source']); // For filtering by source
-            $table->index(['last_synced_at']); // For sync operations
+            $table->index(['source'], 'pa_source_idx'); // For filtering by source
+            $table->index(['last_synced_at'], 'pa_synced_at_idx'); // For sync operations
             $table->index(['is_valid', 'last_validated_at']); // For validation operations
         });
     }

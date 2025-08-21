@@ -53,12 +53,12 @@ return new class extends Migration
             $table->timestamps();
 
             // Performance indexes
-            $table->index(['product_id', 'sync_account_id']);
-            $table->index(['sync_account_id', 'attribute_key']);
-            $table->index(['marketplace_taxonomy_id']);
-            $table->index(['product_id', 'attribute_key']);
-            $table->index(['is_valid', 'is_required']);
-            $table->index('assigned_at');
+            $table->index(['product_id', 'sync_account_id'], 'mpa_product_account_idx');
+            $table->index(['sync_account_id', 'attribute_key'], 'mpa_account_attr_idx');
+            $table->index(['marketplace_taxonomy_id'], 'mpa_taxonomy_idx');
+            $table->index(['product_id', 'attribute_key'], 'mpa_product_attr_idx');
+            $table->index(['is_valid', 'is_required'], 'mpa_valid_required_idx');
+            $table->index('assigned_at', 'mpa_assigned_at_idx');
 
             // Unique constraint - one attribute per product per marketplace
             $table->unique(['product_id', 'sync_account_id', 'attribute_key'], 'unique_product_marketplace_attribute');

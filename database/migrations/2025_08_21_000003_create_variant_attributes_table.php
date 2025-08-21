@@ -56,10 +56,10 @@ return new class extends Migration
             $table->unique(['variant_id', 'attribute_definition_id']); // One value per attribute per variant
             $table->index(['variant_id', 'is_valid']); // For getting valid attributes
             $table->index(['attribute_definition_id', 'value']); // For searching by attribute value
-            $table->index(['source']); // For filtering by source
-            $table->index(['is_inherited', 'inherited_at']); // For inheritance operations
-            $table->index(['is_override']); // For finding overrides
-            $table->index(['last_synced_at']); // For sync operations
+            $table->index(['source'], 'va_source_idx'); // For filtering by source
+            $table->index(['is_inherited', 'inherited_at'], 'va_inherited_idx'); // For inheritance operations
+            $table->index(['is_override'], 'va_override_idx'); // For finding overrides
+            $table->index(['last_synced_at'], 'va_synced_at_idx'); // For sync operations
             $table->index(['is_valid', 'last_validated_at']); // For validation operations
         });
     }
