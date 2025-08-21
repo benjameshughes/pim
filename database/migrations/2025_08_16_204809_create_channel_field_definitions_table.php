@@ -12,12 +12,12 @@ return new class extends Migration
             $table->id();
 
             // Channel identification
-            $table->string('channel_type'); // 'mirakl', 'shopify', 'ebay', 'amazon'
-            $table->string('channel_subtype')->nullable(); // 'freemans', 'debenhams' for Mirakl
-            $table->string('category')->nullable(); // Category-specific fields
+            $table->string('channel_type', 50); // 'mirakl', 'shopify', 'ebay', 'amazon'
+            $table->string('channel_subtype', 100)->nullable(); // 'freemans', 'debenhams' for Mirakl
+            $table->string('category', 100)->nullable(); // Category-specific fields
 
             // Field definition
-            $table->string('field_code'); // API field name
+            $table->string('field_code', 100); // API field name
             $table->string('field_label'); // Human-readable label
             $table->string('field_type'); // TEXT, LIST, MEDIA, MEASUREMENT, etc.
             $table->boolean('is_required')->default(false);
