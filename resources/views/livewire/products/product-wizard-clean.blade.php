@@ -80,19 +80,34 @@
 
     {{-- Current Step Component --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        @livewire($this->currentStepComponent, [
-            'stepData' => $wizardData[$currentStep === 1 ? 'product_info' : ($currentStep === 2 ? 'variants' : ($currentStep === 3 ? 'images' : 'pricing'))],
-            'allStepData' => [
-                1 => $wizardData['product_info'] ?? [],
-                2 => $wizardData['variants'] ?? [],
-                3 => $wizardData['images'] ?? [],
-                4 => $wizardData['pricing'] ?? [],
-            ],
-            'isActive' => true,
-            'currentStep' => $currentStep,
-            'isEditMode' => $this->isEditMode,
-            'product' => $this->product,
-        ], key("step-{$currentStep}"))
+        @if($this->product)
+            @livewire($this->currentStepComponent, [
+                'stepData' => $wizardData[$this->getStepNavigator()->getStepKey($currentStep)] ?? [],
+                'allStepData' => [
+                    1 => $wizardData['product_info'] ?? [],
+                    2 => $wizardData['variants'] ?? [],
+                    3 => $wizardData['images'] ?? [],
+                    4 => $wizardData['pricing'] ?? [],
+                ],
+                'isActive' => true,
+                'currentStep' => $currentStep,
+                'isEditMode' => $this->isEditMode,
+                'product' => $this->product,
+            ], key("step-{$currentStep}"))
+        @else
+            @livewire($this->currentStepComponent, [
+                'stepData' => $wizardData[$this->getStepNavigator()->getStepKey($currentStep)] ?? [],
+                'allStepData' => [
+                    1 => $wizardData['product_info'] ?? [],
+                    2 => $wizardData['variants'] ?? [],
+                    3 => $wizardData['images'] ?? [],
+                    4 => $wizardData['pricing'] ?? [],
+                ],
+                'isActive' => true,
+                'currentStep' => $currentStep,
+                'isEditMode' => $this->isEditMode,
+            ], key("step-{$currentStep}"))
+        @endif
     </div>
 
     {{-- Compact Navigation --}}
@@ -139,4 +154,49 @@
             </flux:button>
         @endif
     </div>
+
+    {{-- Auto-save Script (Livewire Best Practice) --}}
+    @if($autoSaveEnabled && auth()->check())
+    <script>
+        document.addEventListener('livewire:navigated', () => {
+            // Auto-save interval (configurable)
+            const autoSaveInterval = @js($autoSaveInterval * 1000); // Convert to milliseconds
+            
+            setInterval(() => {
+                @this.autoSave();
+            }, autoSaveInterval);
+        });
+
+        // Listen for draft conflict events
+        document.addEventListener('livewire:initialized', () => {
+            @this.on('draft-conflict-detected', (event) => {
+                const data = event[0];
+                showDraftConflictModal(data);
+            });
+        });
+
+        function showDraftConflictModal(data) {
+            if (confirm(`You have unsaved changes for "${data.productName}". Would you like to restore them?`)) {
+                @this.call('restoreDraft');
+            } else {
+                @this.call('ignoreDraft');
+            }
+        }
+    </script>
+    @endif
+
+    {{-- Draft Status Indicator --}}
+    @if($hasUnsavedChanges && auth()->check())
+    <div class="fixed bottom-4 right-4 z-50">
+        <div class="bg-amber-100 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 shadow-lg">
+            <div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+                <flux:icon name="exclamation-circle" class="w-4 h-4" />
+                <span>Unsaved changes</span>
+                @if($isSaving)
+                    <flux:icon name="loader" class="w-3 h-3 animate-spin" />
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
 </div>

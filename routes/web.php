@@ -74,7 +74,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('products.show.history');
 
     Route::get('products/{product}/edit', function (App\Models\Product $product) {
-        return view('products.wizard-clean', compact('product'));
+        return view('products.create', compact('product'));
     })->name('products.edit');
 
     // 📤 IMPORT

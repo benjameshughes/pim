@@ -25,23 +25,25 @@ class SyncStatus extends Model
 
     protected $fillable = [
         'product_id',
-        'product_variant_id',
         'sync_account_id',
-        'external_product_id',
-        'external_variant_id',
-        'external_handle',
-        'sync_status',
+        'channel',
+        'status',
+        'external_id',
         'last_synced_at',
-        'error_message',
-        'metadata',
-        'color',
-        'sync_type',
+        'last_attempted_at',
+        'last_error',
+        'error_count',
+        'product_checksum',
+        'pricing_checksum',
+        'inventory_checksum',
+        'sync_metadata',
     ];
 
     protected $casts = [
         'last_synced_at' => 'datetime',
-        'metadata' => 'array',
-        'created_at' => 'datetime',
+        'last_attempted_at' => 'datetime', 
+        'sync_metadata' => 'array',
+        'error_count' => 'integer',
         'updated_at' => 'datetime',
     ];
 

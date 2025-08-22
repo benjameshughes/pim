@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Products\Wizard;
 
-use App\Actions\Products\Wizard\ValidateProductWizardStepAction;
+use App\Http\Requests\ProductInfoStepRequest;
 use App\Models\Product;
-use Livewire\Attributes\Validate;
+use App\Services\SkuGeneratorService;
 use Livewire\Component;
 
 /**
@@ -15,21 +15,16 @@ use Livewire\Component;
  */
 class ProductInfoStep extends Component
 {
-    // Form fields with validation
-    #[Validate('required|min:3')]
+    // Form fields
     public string $name = '';
-
-    #[Validate('nullable|string|min:2')]
     public string $parent_sku = '';
-
-    #[Validate('nullable|string')]
     public string $description = '';
-
-    #[Validate('required|in:draft,active,inactive,archived')]
     public string $status = 'active';
-
-    #[Validate('nullable|url')]
     public string $image_url = '';
+    
+    // Real-time validation state
+    public array $skuSuggestions = [];
+    public bool $isValidatingSku = false;
 
     // Component state
     public array $stepData = [];
@@ -80,12 +75,20 @@ class ProductInfoStep extends Component
      */
     public function completeStep(): void
     {
-        // Validate using our action
-        $validateAction = new ValidateProductWizardStepAction;
-        $result = $validateAction->execute(1, $this->getFormData());
-
-        if (! $result['data']['valid']) {
-            $this->errors = $result['data']['errors'];
+        // Prepare data for validation
+        $data = $this->getFormData();
+        if ($this->product) {
+            $data['product_id'] = $this->product->id;
+        }
+        
+        // Use Laravel Form Request validation
+        $validator = validator($data, (new ProductInfoStepRequest())->rules());
+        
+        if ($validator->fails()) {
+            foreach ($validator->errors()->messages() as $field => $messages) {
+                $this->addError($field, $messages[0]);
+            }
+            
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'Please fix the validation errors below.',
@@ -95,7 +98,7 @@ class ProductInfoStep extends Component
         }
 
         // Clear errors and emit step completed event
-        $this->errors = [];
+        $this->resetErrorBag();
         $this->dispatch('step-completed', 1, $this->getFormData());
     }
 
@@ -110,12 +113,54 @@ class ProductInfoStep extends Component
 
     public function updatedParentSku(): void
     {
-        $this->validateField('parent_sku');
+        $this->validateParentSkuRealtime();
         $this->emitDataUpdate();
+    }
+    
+    /**
+     * Real-time SKU validation with suggestions
+     */
+    public function validateParentSkuRealtime(): void
+    {
+        $this->isValidatingSku = true;
+        $this->skuSuggestions = [];
+        
+        if (empty($this->parent_sku)) {
+            $this->isValidatingSku = false;
+            return;
+        }
+        
+        // Use Laravel validation
+        $validator = validator(['parent_sku' => $this->parent_sku], [
+            'parent_sku' => ['required', new \App\Rules\ParentSkuRule($this->product?->id)]
+        ]);
+        
+        if ($validator->fails()) {
+            $this->addError('parent_sku', $validator->errors()->first('parent_sku'));
+            
+            // Generate suggestions if SKU is taken
+            $skuService = app(SkuGeneratorService::class);
+            $this->skuSuggestions = $skuService->suggestAlternativeParentSkus($this->parent_sku);
+        } else {
+            $this->resetErrorBag('parent_sku');
+        }
+        
+        $this->isValidatingSku = false;
     }
 
     public function updatedDescription(): void
     {
+        $this->emitDataUpdate();
+    }
+    
+    /**
+     * Use a suggested SKU
+     */
+    public function useSuggestedSku(string $sku): void
+    {
+        $this->parent_sku = $sku;
+        $this->skuSuggestions = [];
+        $this->resetErrorBag('parent_sku');
         $this->emitDataUpdate();
     }
 
@@ -136,13 +181,24 @@ class ProductInfoStep extends Component
      */
     protected function validateField(string $field): void
     {
-        try {
-            $this->validateOnly($field);
-            // Clear field error if validation passes
-            unset($this->errors[$field]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Set field error from Livewire validation
-            $this->errors[$field] = $e->validator->errors()->first($field);
+        // Use our Form Request rules for validation
+        $data = $this->getFormData();
+        if ($this->product) {
+            $data['product_id'] = $this->product->id;
+        }
+        
+        $rules = (new ProductInfoStepRequest())->rules();
+        
+        if (!isset($rules[$field])) {
+            return;
+        }
+        
+        $validator = validator([$field => $data[$field]], [$field => $rules[$field]]);
+        
+        if ($validator->fails()) {
+            $this->addError($field, $validator->errors()->first($field));
+        } else {
+            $this->resetErrorBag($field);
         }
     }
 

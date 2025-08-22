@@ -20,16 +20,17 @@ class SyncStatusFactory extends Factory
         return [
             'sync_account_id' => SyncAccount::factory(),
             'product_id' => Product::factory(),
-            'product_variant_id' => null,
-            'color' => fake()->optional()->colorName(),
-            'sync_status' => fake()->randomElement(['pending', 'synced', 'failed', 'out_of_sync']),
-            'external_product_id' => fake()->optional()->uuid(),
-            'external_variant_id' => fake()->optional()->uuid(),
-            'external_handle' => fake()->optional()->slug(),
+            'channel' => fake()->randomElement(['shopify', 'ebay', 'amazon']),
+            'status' => fake()->randomElement(['never_synced', 'synced', 'needs_update', 'sync_failed']),
+            'external_id' => fake()->optional()->uuid(),
             'last_synced_at' => fake()->optional()->dateTimeBetween('-30 days', 'now'),
-            'sync_type' => fake()->randomElement(['standard', 'color_separated']),
-            'error_message' => fake()->optional()->sentence(),
-            'metadata' => [
+            'last_attempted_at' => fake()->optional()->dateTimeBetween('-1 day', 'now'),
+            'last_error' => fake()->optional()->sentence(),
+            'error_count' => fake()->numberBetween(0, 3),
+            'product_checksum' => fake()->optional()->md5(),
+            'pricing_checksum' => fake()->optional()->md5(),
+            'inventory_checksum' => fake()->optional()->md5(),
+            'sync_metadata' => [
                 'attempts' => fake()->numberBetween(1, 3),
                 'external_url' => fake()->optional()->url(),
             ],
@@ -42,9 +43,10 @@ class SyncStatusFactory extends Factory
     public function synced(): static
     {
         return $this->state([
-            'sync_status' => 'synced',
+            'status' => 'synced',
             'last_synced_at' => fake()->dateTimeBetween('-7 days', 'now'),
-            'error_message' => null,
+            'last_error' => null,
+            'error_count' => 0,
         ]);
     }
 
@@ -54,8 +56,9 @@ class SyncStatusFactory extends Factory
     public function failed(): static
     {
         return $this->state([
-            'sync_status' => 'failed',
-            'error_message' => fake()->sentence(),
+            'status' => 'sync_failed',
+            'last_error' => fake()->sentence(),
+            'error_count' => fake()->numberBetween(1, 5),
         ]);
     }
 
@@ -65,19 +68,10 @@ class SyncStatusFactory extends Factory
     public function pending(): static
     {
         return $this->state([
-            'sync_status' => 'pending',
+            'status' => 'never_synced',
             'last_synced_at' => null,
-            'error_message' => null,
-        ]);
-    }
-
-    /**
-     * With variant
-     */
-    public function withVariant(): static
-    {
-        return $this->state([
-            'product_variant_id' => ProductVariant::factory(),
+            'last_error' => null,
+            'error_count' => 0,
         ]);
     }
 

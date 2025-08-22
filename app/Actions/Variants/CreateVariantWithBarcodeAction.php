@@ -2,6 +2,7 @@
 
 namespace App\Actions\Variants;
 
+use App\Actions\Barcodes\AssignBarcodeToVariantAction;
 use App\Actions\Base\BaseAction;
 use App\Models\Barcode;
 use App\Models\BarcodePool;
@@ -39,8 +40,8 @@ class CreateVariantWithBarcodeAction extends BaseAction
             $variantData = $this->extractVariantData($data);
             $variant = ProductVariant::create($variantData);
 
-            // Handle barcode assignment if provided
-            if (! empty($data['barcodes']) || ! empty($data['barcode_pool_id'])) {
+            // Handle barcode assignment if provided or auto-assign
+            if (! empty($data['barcodes']) || ! empty($data['barcode_pool_id']) || $data['auto_assign_barcode'] ?? true) {
                 $this->handleBarcodeAssignment($variant, $data);
             }
 
@@ -109,26 +110,49 @@ class CreateVariantWithBarcodeAction extends BaseAction
      */
     protected function handleBarcodeAssignment(ProductVariant $variant, array $data): void
     {
+        // Handle manual barcode data (legacy support)
         $barcodes = $data['barcodes'] ?? [];
+        if (!empty($barcodes)) {
+            foreach ($barcodes as $barcodeData) {
+                // Create barcode record directly (manual assignment)
+                Barcode::create([
+                    'product_variant_id' => $variant->id,
+                    'barcode' => $barcodeData['barcode'],
+                    'type' => $barcodeData['type'] ?? 'EAN13',
+                    'status' => 'active',
+                ]);
+            }
+            return;
+        }
 
-        foreach ($barcodes as $barcodeData) {
-            // Create barcode record
-            Barcode::create([
-                'product_variant_id' => $variant->id,
-                'barcode' => $barcodeData['barcode'],
-                'barcode_type' => $barcodeData['type'] ?? 'EAN13',
-                'is_primary' => $barcodeData['is_primary'] ?? false,
-            ]);
+        // Handle pool-based assignment (new system)
+        if (!empty($data['barcode_pool_id'])) {
+            $barcodePool = BarcodePool::find($data['barcode_pool_id']);
+            if ($barcodePool && $barcodePool->isAvailable()) {
+                $barcodePool->assignTo($variant);
+            }
+            return;
+        }
 
-            // Update barcode pool if this came from pool assignment
-            if (isset($data['barcode_pool_id'])) {
-                BarcodePool::where('id', $data['barcode_pool_id'])
-                    ->update([
-                        'status' => 'assigned',
-                        'assigned_to_variant_id' => $variant->id,
-                        'assigned_at' => now(),
-                        'date_first_used' => now(),
+        // Auto-assign from pool (default behavior)
+        if ($data['auto_assign_barcode'] ?? true) {
+            try {
+                $assignAction = new AssignBarcodeToVariantAction();
+                $result = $assignAction->execute($variant, $data['barcode_type'] ?? 'EAN13');
+                
+                // Log successful assignment
+                if ($result['assigned']) {
+                    \Log::info("Auto-assigned barcode to variant", [
+                        'variant_id' => $variant->id,
+                        'barcode' => $result['barcode_pool']->barcode ?? 'unknown',
                     ]);
+                }
+            } catch (\Exception $e) {
+                // Log but don't fail variant creation
+                \Log::warning("Failed to auto-assign barcode to variant", [
+                    'variant_id' => $variant->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
     }

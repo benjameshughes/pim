@@ -8,10 +8,18 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                        ✨ Create New Product
+                        @if(isset($product))
+                            ✏️ Edit Product: {{ $product->name }}
+                        @else
+                            ✨ Create New Product
+                        @endif
                     </h1>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
-                        Use our magical product wizard to create amazing products
+                        @if(isset($product))
+                            Update your product using our magical wizard
+                        @else
+                            Use our magical product wizard to create amazing products
+                        @endif
                     </p>
                 </div>
                 
@@ -41,7 +49,13 @@
                                 <svg class="w-3 h-3 text-gray-400 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
                                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
                                 </svg>
-                                <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">Create</span>
+                                <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">
+                                    @if(isset($product))
+                                        Edit
+                                    @else
+                                        Create
+                                    @endif
+                                </span>
                             </div>
                         </li>
                     </ol>
@@ -50,7 +64,11 @@
         </div>
 
         {{-- Product Wizard Component --}}
-        <livewire:products.product-wizard-clean />
+        @if(isset($product))
+            <livewire:products.product-wizard-clean :product="$product" />
+        @else
+            <livewire:products.product-wizard-clean />
+        @endif
 
         
     </div>

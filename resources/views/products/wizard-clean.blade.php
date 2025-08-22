@@ -3,7 +3,11 @@
     
     <div class="container max-w-7xl mx-auto px-4 py-8">
         <div class="max-w-7xl mx-auto">
-            <livewire:products.product-wizard-clean :product="$product ?? null" />
+            @if(isset($product))
+                <livewire:products.product-wizard-clean :product="$product" />
+            @else
+                <livewire:products.product-wizard-clean />
+            @endif
         </div>
     </div>
 </x-layouts.app>

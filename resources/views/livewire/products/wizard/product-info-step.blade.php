@@ -33,20 +33,47 @@
             </flux:field>
         </div>
 
-        {{-- Parent SKU --}}
+        {{-- Parent SKU with Real-time Validation --}}
         <div>
             <flux:field>
-                <flux:label>Parent SKU</flux:label>
-                <flux:input
-                    wire:model.live.debounce.300ms="parent_sku"
-                placeholder="e.g. BLIND-001"
-                invalid="{{ !empty($errors['parent_sku']) }}"
-            />
-            @if(!empty($errors['parent_sku']))
-                <flux:error>{{ $errors['parent_sku'] }}</flux:error>
-            @endif
-            <flux:description>Optional: Used to group related products</flux:description>
-        </flux:field>
+                <flux:label>Parent SKU *</flux:label>
+                <div class="relative">
+                    <flux:input
+                        wire:model.live.debounce.500ms="parent_sku"
+                        placeholder="e.g. 001, 123, 999"
+                        invalid="{{ !empty($errors['parent_sku']) }}"
+                    />
+                    @if($isValidatingSku)
+                        <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <flux:icon name="loader" class="w-4 h-4 animate-spin text-blue-500" />
+                        </div>
+                    @endif
+                </div>
+                
+                @if(!empty($errors['parent_sku']))
+                    <flux:error>{{ $errors['parent_sku'] }}</flux:error>
+                    
+                    {{-- SKU Suggestions --}}
+                    @if(!empty($skuSuggestions))
+                        <div class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p class="text-sm text-blue-700 dark:text-blue-300 mb-2">Try these available SKUs:</p>
+                            <div class="flex gap-2 flex-wrap">
+                                @foreach($skuSuggestions as $suggestion)
+                                    <button
+                                        type="button"
+                                        wire:click="useSuggestedSku('{{ $suggestion }}')"
+                                        class="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-300 rounded transition-colors"
+                                    >
+                                        {{ $suggestion }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endif
+                
+                <flux:description>Format: 3 digits (001-999). Variants will be auto-generated as 001-001, 001-002, etc.</flux:description>
+            </flux:field>
         </div>
 
         {{-- Status --}}

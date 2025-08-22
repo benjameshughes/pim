@@ -14,7 +14,7 @@
             <flux:button href="{{ route('variants.create') }}" icon="plus" variant="outline">
                 New Variant
             </flux:button>
-            <flux:button href="{{ route('products.create') }}" icon="plus" variant="primary">
+            <flux:button href="{{ route('products.wizard-clean') }}" icon="plus" variant="primary">
                 New Product
             </flux:button>
         </div>
@@ -248,7 +248,7 @@
                                             Clear Search
                                         </flux:button>
                                     @endif
-                                    <flux:button href="{{ route('products.wizard') }}" variant="primary" size="sm">
+                                    <flux:button href="{{ route('products.wizard-clean') }}" variant="primary" size="sm">
                                         Create First Product
                                     </flux:button>
                                 </div>

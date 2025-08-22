@@ -101,13 +101,13 @@ class Pricing extends Model
      */
     public function getCurrentPriceAttribute(): float
     {
-        // If we're in a sale period, return sale price
-        if ($this->isOnSale()) {
-            return $this->sale_price ?? $this->calculateSalePrice();
+        // If we have a discount price, return that
+        if ($this->discount_price) {
+            return (float) $this->discount_price;
         }
 
-        // Return channel-specific price or base price
-        return $this->channel_price ?? $this->base_price;
+        // Otherwise return the regular price
+        return (float) $this->price;
     }
 
     /**
@@ -115,16 +115,7 @@ class Pricing extends Model
      */
     public function isOnSale(): bool
     {
-        $now = now();
-
-        if (! $this->sale_starts_at && ! $this->sale_ends_at) {
-            return false;
-        }
-
-        $startsAt = $this->sale_starts_at ?: $now->copy()->subDay();
-        $endsAt = $this->sale_ends_at ?: $now->copy()->addYear();
-
-        return $now->between($startsAt, $endsAt);
+        return $this->discount_price !== null;
     }
 
     /**
