@@ -66,15 +66,6 @@ class Product extends Model
         return $this->images()->primary()->first();
     }
 
-    /**
-     * 🛍️ SHOPIFY SYNC STATUS (Legacy)
-     *
-     * @deprecated Use syncStatuses() instead. Maintained for backward compatibility.
-     */
-    public function shopifySyncStatus(): HasMany
-    {
-        return $this->hasMany(ShopifySyncStatus::class);
-    }
 
     /**
      * 📊 SYNC STATUSES
@@ -271,7 +262,7 @@ class Product extends Model
      */
     public function scopeShopify($query)
     {
-        return $query->with(['variants.barcodes', 'variants.pricing', 'shopifySyncStatus']);
+        return $query->with(['variants.barcodes', 'variants.pricing']);
     }
 
     /**

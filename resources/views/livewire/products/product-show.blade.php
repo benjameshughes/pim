@@ -68,6 +68,9 @@
             @case('products.show.attributes')
                 <livewire:components.attributes-card :model="$product" />
                 @break
+            @case('products.show.images')
+                <livewire:products.product-images :product="$product" />
+                @break
             @case('products.show.history')
                 <livewire:products.product-history :product="$product" />
                 @break

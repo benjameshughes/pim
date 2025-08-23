@@ -25,49 +25,17 @@ class Pricing extends Model
         'product_variant_id',
         'sales_channel_id',
         'cost_price',
-        'base_price',
+        'price',
+        'discount_price',
+        'margin_percentage',
         'currency',
-        'channel_price',
-        'markup_percentage',
-        'sale_price',
-        'discount_percentage',
-        'discount_amount',
-        'sale_starts_at',
-        'sale_ends_at',
-        'shipping_cost',
-        'platform_fee_percentage',
-        'payment_fee_percentage',
-        'vat_rate',
-        'vat_inclusive',
-        'profit_amount',
-        'profit_margin',
-        'roi_percentage',
-        'is_active',
-        'status',
-        'metadata',
-        'notes',
     ];
 
     protected $casts = [
         'cost_price' => 'decimal:2',
-        'base_price' => 'decimal:2',
-        'channel_price' => 'decimal:2',
-        'markup_percentage' => 'decimal:2',
-        'sale_price' => 'decimal:2',
-        'discount_percentage' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'shipping_cost' => 'decimal:2',
-        'platform_fee_percentage' => 'decimal:2',
-        'payment_fee_percentage' => 'decimal:2',
-        'vat_rate' => 'decimal:2',
-        'vat_inclusive' => 'boolean',
-        'profit_amount' => 'decimal:2',
-        'profit_margin' => 'decimal:2',
-        'roi_percentage' => 'decimal:2',
-        'is_active' => 'boolean',
-        'sale_starts_at' => 'datetime',
-        'sale_ends_at' => 'datetime',
-        'metadata' => 'array',
+        'price' => 'decimal:2',
+        'discount_price' => 'decimal:2',
+        'margin_percentage' => 'decimal:2',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -287,19 +255,4 @@ class Pricing extends Model
         return $query->where('currency', $currency);
     }
 
-    /**
-     * 🔥 MODEL EVENTS - Auto-calculate on save
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        // Auto-calculate profit fields when saving
-        static::saving(function (Pricing $pricing) {
-            $profit = $pricing->calculateProfit();
-            $pricing->profit_amount = $profit['profit_amount'];
-            $pricing->profit_margin = $profit['profit_margin'];
-            $pricing->roi_percentage = $profit['roi'];
-        });
-    }
 }

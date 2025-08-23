@@ -34,8 +34,9 @@ Route::middleware(['auth'])->group(function () {
 
     // 📦 PRODUCTS
     Route::view('products', 'products.index')->name('products.index');
-    Route::view('products/wizard-clean', 'products.wizard-clean')->name('products.wizard-clean');
-    Route::view('products/create', 'products.create')->name('products.create');
+    Route::get('products/create', function () {
+        return view('products.create');
+    })->name('products.create');
 
     // 🏗️ BUILDER PATTERN WIZARD
     Route::view('products/builder', 'products.builder')->name('products.builder');

@@ -46,7 +46,7 @@ class ProductIndex extends Component
                 ->orWhereHas('variants', fn ($vq) => $vq->where('sku', 'like', "%{$this->search}%")
                     ->orWhere('color', 'like', "%{$this->search}%")))
             ->when($this->status !== 'all', fn ($q) => $q->where('status', $this->status))
-            ->with(['shopifySyncStatus'])
+            ->with(['syncStatuses.syncAccount'])
             ->withCount('variants')
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);

@@ -18,19 +18,31 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->foreignId('attribute_definition_id')->constrained()->onDelete('cascade');
             
-            // Attribute value (stored as text, typed in application)
+            // Value storage and display
             $table->text('value')->nullable();
-            $table->string('value_type')->default('string'); // "string", "number", "boolean", "array"
+            $table->text('display_value')->nullable();
+            $table->json('value_metadata')->nullable();
             
-            // Data quality
-            $table->string('source')->default('manual'); // "manual", "import", "api"
-            $table->decimal('confidence_score', 3, 2)->default(1.00); // 0.00-1.00
-            $table->json('validation_errors')->nullable(); // Track validation issues
+            // Validation status
+            $table->boolean('is_valid')->default(true);
+            $table->json('validation_errors')->nullable();
+            $table->timestamp('last_validated_at')->nullable();
             
-            // Metadata
-            $table->json('metadata')->nullable(); // Additional context
-            $table->timestamp('verified_at')->nullable(); // When was this verified
-            $table->foreignId('verified_by_user_id')->nullable()->constrained('users')->onDelete('set null');
+            // Assignment tracking
+            $table->string('source')->default('manual');
+            $table->timestamp('assigned_at')->nullable();
+            $table->string('assigned_by')->nullable();
+            $table->json('assignment_metadata')->nullable();
+            
+            // Marketplace sync status
+            $table->json('sync_status')->nullable();
+            $table->timestamp('last_synced_at')->nullable();
+            $table->json('sync_metadata')->nullable();
+            
+            // Change tracking
+            $table->text('previous_value')->nullable();
+            $table->timestamp('value_changed_at')->nullable();
+            $table->integer('version')->default(1);
             
             $table->timestamps();
             
@@ -39,8 +51,9 @@ return new class extends Migration
             
             // Indexes
             $table->index('source');
-            $table->index('confidence_score');
-            $table->index('verified_at');
+            $table->index('is_valid');
+            $table->index('last_validated_at');
+            $table->index('value_changed_at');
         });
     }
 

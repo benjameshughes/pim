@@ -18,6 +18,7 @@ class SalesChannel extends Model
 
     protected $fillable = [
         'name',
+        'code',
         'display_name',
         'slug',
         'icon',
@@ -30,6 +31,7 @@ class SalesChannel extends Model
         'base_shipping_cost',
         'free_shipping_available',
         'free_shipping_threshold',
+        'status',
         'is_active',
         'auto_sync',
         'priority',

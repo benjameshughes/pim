@@ -33,6 +33,9 @@ class Image extends Model
         'folder',
         'tags',
         'created_by_user_id',
+        // Polymorphic relationship fields
+        'imageable_type',
+        'imageable_id',
     ];
 
     protected $casts = [

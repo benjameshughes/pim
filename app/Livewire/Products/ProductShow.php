@@ -15,7 +15,6 @@ class ProductShow extends Component
     {
         $this->product = $product->load([
             'variants.barcodes',
-            'shopifySyncStatus', // Keep for backward compatibility
             'syncStatuses.syncAccount',
             'syncLogs' => function ($query) {
                 $query->with('syncAccount')->latest()->limit(10);

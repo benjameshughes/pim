@@ -24,7 +24,7 @@ test('product create route loads the wizard component', function () {
     $response = $this->actingAs($user)->get('/products/create');
     
     $response->assertStatus(200);
-    $response->assertSeeLivewire('products.product-wizard-clean');
+    $response->assertSeeLivewire('product-wizard');
 });
 
 test('product create route uses correct view', function () {

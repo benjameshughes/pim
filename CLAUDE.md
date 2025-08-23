@@ -66,6 +66,39 @@ Actions encapsulate single-responsibility business logic with transaction safety
 - Uses lucide dev for icons
 - Icons should be in the flux tag as a directive
 
+## Keyboard Navigation
+
+The ProductWizard includes intelligent keyboard shortcuts that work even when form elements are focused:
+
+### Global Shortcuts (work while typing):
+- `⌘/Ctrl + →` - Next Step
+- `⌘/Ctrl + ←` - Previous Step  
+- `⌘/Ctrl + S` - Save Product
+- `Esc` - Clear Draft (respects inline editing context)
+
+### Quick Navigation (only when not typing):
+- `1-4` - Jump to specific step
+
+### Tab Order Hierarchy:
+1. **📝 Inputs** - Data entry fields (tabindex 1-5)
+2. **🔘 Action Buttons** - Add/Upload buttons (tabindex 4-6)  
+3. **⬅️➡️ Navigation** - Previous/Next buttons (tabindex 7-8)
+4. **💾 Save** - Final save button (tabindex 9)
+5. **✂️ CRUD Operations** - Edit/delete badges (tabindex 20+)
+
+### Auto-Focus Behavior:
+- **Step 1**: Auto-focus Product Name input
+- **Step 2**: Auto-focus "Add color" input
+- **Step 3**: Auto-focus file upload input
+- **Step 4**: Auto-focus first variant's retail price
+
+### Implementation Details:
+- Uses `event.preventDefault()` and `event.stopPropagation()` for modifier key combinations
+- Allows normal form interaction while preserving global shortcuts
+- Smart Escape handling that doesn't interfere with inline editing
+- Visual hints show automatically and indicate "Works while typing!"
+- Dynamic tabindex for CRUD operations to maintain logical flow
+
 ## Replies
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
 

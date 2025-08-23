@@ -9,7 +9,7 @@
         </div>
         
         <div class="flex items-center space-x-3">
-            <flux:button href="{{ route('products.create') }}" variant="primary" icon="plus">
+            <flux:button href="{{ route('products.create') }}" variant="primary" icon="plus" wire:navigate>
                 New Product
             </flux:button>
             <flux:button wire:click="refreshData" variant="ghost" icon="arrow-path">
