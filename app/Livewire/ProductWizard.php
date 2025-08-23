@@ -11,6 +11,10 @@ use App\Models\Product;
 use App\Rules\ParentSkuRule;
 use App\Services\ImageUploadService;
 use App\Services\WizardDraftService;
+use App\Actions\Products\SaveProductAction;
+use App\Actions\Products\CreateVariantsAction;
+use App\Actions\Products\SavePricingAction;
+use App\Actions\Products\AttachImagesAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -149,14 +153,16 @@ class ProductWizard extends Component
      */
     public function mount(?Product $product = null): void
     {
+        $routeName = request()->route()?->getName() ?? 'unknown';
+        
         \Log::info('🚀 ProductWizard mount() called', [
             'product_passed' => $product ? $product->id : 'null',
-            'route' => request()->route()?->getName() ?? 'unknown'
+            'route' => $routeName,
+            'product_exists' => $product && $product->exists
         ]);
         
         // 🎯 ROUTE-BASED MODE DETECTION - Clean & Explicit
-        $routeName = request()->route()->getName();
-        $this->isEditMode = $routeName === 'products.edit';
+        $this->isEditMode = $routeName === 'products.edit' && $product && $product->exists;
         
         if ($this->isEditMode) {
             // Edit mode: Use provided product + load any draft changes
@@ -661,199 +667,153 @@ class ProductWizard extends Component
     }
 
     /**
-     * 💾 SAVE PRODUCT - Clean Database Integration
+     * 🚀 SAVE PRODUCT - REFACTORED WITH BUILDER PATTERN
+     * 
+     * Clean separation: Livewire handles UI state, Actions handle business logic
+     * Follows ProductWizard.md architecture specification
      */
     public function saveProduct(): void
     {
         $this->isSaving = true;
 
         try {
-            // Clear any previous errors
+            // Clear any previous errors and validate
             $this->resetErrorBag();
-            
-            // Final validation
-            \Log::info('ProductWizard validation - Product ID: ' . ($this->product?->id ?? 'null') . ', Edit Mode: ' . ($this->isEditMode ? 'true' : 'false'));
-            
-            $this->validate([
-                'name' => 'required|min:3|max:255',
-                'parent_sku' => [
-                    'required', 
-                    'regex:/^[0-9]{3}$/',
-                    Rule::unique('products', 'parent_sku')->ignore($this->isEditMode && $this->product ? $this->product : null)
-                ],
-                'status' => 'required|in:draft,active,inactive,archived',
-                'brand' => 'nullable|string|max:100',
-            ]);
+            $this->validateWizardData();
 
             if (empty($this->generated_variants)) {
                 throw new NoVariantsException();
             }
 
             DB::transaction(function () {
-                try {
-                // 1. Save/Update Product
-                if ($this->isEditMode) {
-                    $this->product->update([
-                        'name' => $this->name,
-                        'parent_sku' => $this->parent_sku,
-                        'description' => $this->description,
-                        'status' => $this->status,
-                    ]);
-                } else {
-                    $this->product = Product::create([
-                        'name' => $this->name,
-                        'parent_sku' => $this->parent_sku,
-                        'description' => $this->description,
-                        'status' => $this->status,
-                    ]);
+                // Step 1: Save/Update Parent Product (ProductWizard.md Step 1)
+                $productResult = (new SaveProductAction())->execute([
+                    'name' => $this->name,
+                    'parent_sku' => $this->parent_sku, 
+                    'description' => $this->description,
+                    'status' => $this->status,
+                    'brand' => $this->brand,
+                ], $this->isEditMode ? $this->product : null);
+                
+                $this->product = $productResult['product'];
+
+                // Step 2: Create Variants (ProductWizard.md Step 2) - only for new products
+                if (!$this->isEditMode) {
+                    (new CreateVariantsAction())->execute($this->product, $this->generated_variants);
                 }
 
-                // 2. Handle Brand Attribute (for both product and variants)
-                if (! empty($this->brand)) {
-                    try {
-                        // Ensure brand attribute definition exists
-                        $brandDef = \App\Models\AttributeDefinition::findByKey('brand');
-                        if (! $brandDef) {
-                            $brandDef = \App\Models\AttributeDefinition::create([
-                                'key' => 'brand',
-                                'name' => 'Brand',
-                                'description' => 'Product brand name',
-                                'data_type' => 'string',
-                                'is_inheritable' => true,
-                                'inheritance_strategy' => 'always',
-                                'is_required_for_products' => false,
-                                'is_required_for_variants' => false,
-                                'is_system_attribute' => true,
-                                'group' => 'basic',
-                                'sort_order' => 10,
-                                'is_active' => true,
-                            ]);
-                        }
-
-                        // Set brand attribute on product
-                        \App\Models\ProductAttribute::createOrUpdate(
-                            $this->product,
-                            'brand',
-                            $this->brand,
-                            ['source' => 'wizard']
-                        );
-                    } catch (\Throwable $e) {
-                        throw ProductSaveException::attributeCreationFailed('brand', $e);
-                    }
+                // Step 3: Attach Images (ProductWizard.md Step 3)  
+                if (!empty($this->uploaded_images)) {
+                    (new AttachImagesAction())->execute($this->product, $this->uploaded_images);
                 }
 
-                // 3. Save Variants (only for new products or if variants changed)
-                if (! $this->isEditMode) {
-                    foreach ($this->generated_variants as $index => $variantData) {
-                        try {
-                            $variant = $this->product->variants()->create([
-                                'sku' => $variantData['sku'],
-                                'title' => $this->generateVariantTitle($variantData),
-                                'color' => $variantData['color'] ?: 'Standard',
-                                'width' => $variantData['width'] ?: 0,
-                                'drop' => $variantData['drop'],
-                                'price' => 0.00, // Default price - will be set in pricing step
-                                'status' => 'active',
-                            ]);
-
-                            // Inherit brand attribute to variant (if brand is inheritable)
-                            if (! empty($this->brand) && $brandDef && $brandDef->is_inheritable) {
-                                \App\Models\VariantAttribute::createOrUpdate(
-                                    $variant,
-                                    'brand',
-                                    $this->brand,
-                                    ['source' => 'wizard_inherited']
-                                );
-                            }
-                        } catch (\Throwable $e) {
-                            throw ProductSaveException::variantCreationFailed($variantData, $e);
-                        }
-
-                        // 4. Skip pricing for now - requires sales channels setup
-                        // TODO: Add pricing after sales channels are configured
-                    }
-
-                    // 4. Assign Barcodes (dispatch job)  
-                    $variantIds = $this->product->variants()->pluck('id')->toArray();
-                    if (!empty($variantIds)) {
-                        AssignBarcodesJob::dispatch('product_variants', $variantIds);
-                    }
+                // Step 4: Save Pricing & Stock (ProductWizard.md Step 4)
+                if (!empty($this->variant_pricing)) {
+                    (new SavePricingAction())->execute($this->variant_pricing);
                 }
 
-                // 5. Attach uploaded images to product
-                if (! empty($this->uploaded_images)) {
-                    $this->attachImagesToProduct();
-                }
-
-                // 6. Delete draft on successful save
-                if (auth()->check()) {
-                    try {
-                        $draftDeleted = $this->getDraftService()->delete(
-                            (string) auth()->id(),
-                            $this->product->id
-                        );
-                        \Log::info('ProductWizard: Draft deletion attempted', [
-                            'user_id' => auth()->id(),
-                            'product_id' => $this->product->id,
-                            'result' => $draftDeleted ? 'success' : 'no_draft_found'
-                        ]);
-                    } catch (\Exception $e) {
-                        \Log::error('ProductWizard: Draft deletion failed', [
-                            'user_id' => auth()->id(),
-                            'product_id' => $this->product->id,
-                            'error' => $e->getMessage()
-                        ]);
-                        // Don't fail the save for draft deletion errors
-                    }
-                }
-                } catch (\Throwable $e) {
-                    throw ProductSaveException::transactionFailed($e, [
-                        'name' => $this->name,
-                        'parent_sku' => $this->parent_sku,
-                        'variants_count' => count($this->generated_variants),
-                    ]);
-                }
+                // Clean up: Delete draft on successful save
+                $this->deleteDraftAfterSave();
             });
 
-            session()->flash('success',
-                'Product '.($this->isEditMode ? 'updated' : 'created').' successfully!'
-            );
-
-            // Don't redirect in tests - just mark success
-            if (!app()->runningInConsole()) {
-                $this->redirect(route('products.show', ['product' => $this->product->id]));
-            }
+            // Success feedback and redirect
+            $this->handleSuccessfulSave();
 
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Re-throw validation exceptions so they display properly
-            throw $e;
-        } catch (NoVariantsException $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => $e->getUserMessage(),
-            ]);
-            throw $e;
-        } catch (WizardValidationException $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => $e->getUserMessage(),
-            ]);
-            throw $e;
-        } catch (ProductSaveException $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => $e->getUserMessage(),
-            ]);
-            throw $e;
+            throw $e; // Re-throw validation exceptions
+        } catch (NoVariantsException | WizardValidationException | ProductSaveException $e) {
+            $this->handleKnownException($e);
         } catch (\Exception $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'An unexpected error occurred: ' . $e->getMessage(),
-            ]);
-            throw $e;
+            $this->handleUnexpectedException($e);
         } finally {
             $this->isSaving = false;
         }
+    }
+
+    /**
+     * Validate all wizard data
+     */
+    protected function validateWizardData(): void
+    {
+        \Log::info('ProductWizard validation', [
+            'product_id' => $this->product?->id ?? 'null',
+            'edit_mode' => $this->isEditMode
+        ]);
+        
+        $this->validate([
+            'name' => 'required|min:3|max:255',
+            'parent_sku' => [
+                'required', 
+                'regex:/^[0-9]{3}$/',
+                Rule::unique('products', 'parent_sku')->ignore($this->isEditMode && $this->product ? $this->product : null)
+            ],
+            'status' => 'required|in:draft,active,inactive,archived',
+            'brand' => 'nullable|string|max:100',
+        ]);
+    }
+
+    /**
+     * Handle successful save
+     */
+    protected function handleSuccessfulSave(): void
+    {
+        session()->flash('success',
+            'Product '.($this->isEditMode ? 'updated' : 'created').' successfully!'
+        );
+
+        // Don't redirect in tests - just mark success
+        if (!app()->runningInConsole()) {
+            $this->redirect(route('products.show', ['product' => $this->product->id]));
+        }
+    }
+
+    /**
+     * Delete draft after successful save
+     */
+    protected function deleteDraftAfterSave(): void
+    {
+        if (auth()->check()) {
+            try {
+                $draftDeleted = $this->getDraftService()->delete(
+                    (string) auth()->id(),
+                    $this->product?->id
+                );
+                \Log::info('ProductWizard: Draft deletion', [
+                    'user_id' => auth()->id(),
+                    'product_id' => $this->product?->id,
+                    'result' => $draftDeleted ? 'success' : 'no_draft_found'
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('ProductWizard: Draft deletion failed', [
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the save for draft deletion errors
+            }
+        }
+    }
+
+    /**
+     * Handle known exceptions with user-friendly messages
+     */
+    protected function handleKnownException($e): void
+    {
+        $this->dispatch('notify', [
+            'type' => 'error',
+            'message' => $e->getUserMessage(),
+        ]);
+        throw $e;
+    }
+
+    /**
+     * Handle unexpected exceptions
+     */
+    protected function handleUnexpectedException(\Exception $e): void
+    {
+        $this->dispatch('notify', [
+            'type' => 'error',
+            'message' => 'An unexpected error occurred: ' . $e->getMessage(),
+        ]);
+        throw $e;
     }
 
     /**

@@ -1,12 +1,9 @@
 <x-layouts.app>
-    <x-slot:title>Create Product</x-slot:title>
+    <x-slot:title>{{ isset($product) ? 'Edit Product' : 'Create Product' }}</x-slot:title>
     
-    <div class="p-4">
-        <h1>About to load ProductWizard...</h1>
-        <p>This line shows before the component</p>
-        
+    @if(isset($product))
+        <livewire:product-wizard :product="$product" />
+    @else
         <livewire:product-wizard />
-        
-        <p>This line shows after the component (if it loads)</p>
-    </div>
+    @endif
 </x-layouts.app>

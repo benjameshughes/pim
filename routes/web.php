@@ -35,7 +35,7 @@ Route::middleware(['auth'])->group(function () {
     // 📦 PRODUCTS
     Route::view('products', 'products.index')->name('products.index');
     Route::get('products/create', function () {
-        return view('products.create');
+        return view('products.create', ['product' => null]);
     })->name('products.create');
 
     // 🏗️ BUILDER PATTERN WIZARD
