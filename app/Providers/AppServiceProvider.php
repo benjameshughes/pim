@@ -20,15 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Register StackedListBuilder in container
-        $this->app->bind('stacked-list', function () {
-            return new \App\StackedList\StackedListBuilder;
-        });
-
-        // Register current Livewire component for easy access in StackedList classes
-        $this->app->bind('stacked-list.component', function () {
-            return app('livewire')->current();
-        });
+        //
     }
 
     /**
