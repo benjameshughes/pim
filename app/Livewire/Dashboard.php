@@ -82,9 +82,7 @@ class Dashboard extends Component
 
     private function getProductsWithImages(): int
     {
-        return Product::whereNotNull('images')
-            ->where('images', '!=', '[]')
-            ->count();
+        return Product::whereHas('images')->count();
     }
 
     private function getVariantsWithCompleteData(): int
