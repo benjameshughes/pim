@@ -13,7 +13,7 @@ use Livewire\WithPagination;
 
 /**
  * 🎨✨ IMAGE LIBRARY - DIGITAL ASSET MANAGEMENT SYSTEM ✨🎨
- * 
+ *
  * Complete DAM interface for managing standalone and linked images
  * Features: upload, search, tag, organize, and link images to products
  */
@@ -24,38 +24,49 @@ class ImageLibrary extends Component
     // Upload functionality
     /** @var \Illuminate\Http\UploadedFile[] */
     public $newImages = [];
+
     public bool $isUploading = false;
+
     public int $uploadProgress = 0;
-    
+
     // Upload progress tracking
     public int $uploadingCount = 0;
+
     public int $uploadedCount = 0;
+
     public int $totalToUpload = 0;
+
     /** @var array<string, string> */
     public array $uploadingFiles = []; // filename => status
+
     /** @var array<string, string> */
     public array $uploadResults = []; // filename => result message
 
     // Search and filtering
     public string $search = '';
+
     public string $selectedFolder = '';
+
     /** @var string[] */
     public array $selectedTags = [];
+
     public string $filterBy = 'all'; // all, attached, unattached, mine
+
     public string $sortBy = 'created_at';
+
     public string $sortDirection = 'desc';
 
-    // Bulk operations  
+    // Bulk operations
     /** @var int[] */
     public array $selectedImages = [];
+
     public bool $selectAll = false;
 
     // Modals and UI state
     public bool $showUploadModal = false;
-    public bool $showEditModal = false;
+
     public bool $showDeleteConfirmModal = false;
-    public ?Image $editingImage = null;
-    
+
     // Delete confirmation state
     /** @var array<string, mixed> */
     public array $pendingDeleteAction = [];
@@ -69,10 +80,6 @@ class ImageLibrary extends Component
         'folder' => 'uncategorized',
         'tags' => [],
     ];
-
-    // Edit metadata
-    /** @var array<string, mixed> */
-    public array $editMetadata = [];
 
     // Bulk operations
     /** @var array<string, mixed> */
@@ -97,9 +104,10 @@ class ImageLibrary extends Component
      */
     protected function getImageUploadService(): ImageUploadService
     {
-        if (!$this->imageUploadService) {
+        if (! $this->imageUploadService) {
             $this->imageUploadService = new ImageUploadService;
         }
+
         return $this->imageUploadService;
     }
 
@@ -125,7 +133,7 @@ class ImageLibrary extends Component
         }
 
         // Apply tag filters
-        if (!empty($this->selectedTags)) {
+        if (! empty($this->selectedTags)) {
             $query->withAnyTag($this->selectedTags);
         }
 
@@ -145,6 +153,7 @@ class ImageLibrary extends Component
 
     /**
      * 📁 GET AVAILABLE FOLDERS
+     *
      * @return string[]
      */
     #[Computed]
@@ -160,6 +169,7 @@ class ImageLibrary extends Component
 
     /**
      * 🏷️ GET AVAILABLE TAGS
+     *
      * @return string[]
      */
     #[Computed]
@@ -241,33 +251,33 @@ class ImageLibrary extends Component
             // Process each file individually for progress tracking
             foreach ($this->newImages as $index => $file) {
                 $filename = $file->getClientOriginalName();
-                
+
                 // Mark as currently uploading
                 $this->uploadingFiles[$filename] = 'uploading';
                 $this->uploadingCount++;
-                
+
                 try {
                     // Upload single file
                     $this->getImageUploadService()->uploadStandalone(
                         [$file],
                         $this->uploadMetadata
                     );
-                    
+
                     // Mark as completed
                     $this->uploadResults[$filename] = 'success';
                     $successCount++;
-                    
+
                 } catch (\Exception $e) {
                     // Mark as failed
-                    $this->uploadResults[$filename] = 'error: ' . $e->getMessage();
+                    $this->uploadResults[$filename] = 'error: '.$e->getMessage();
                     $errorCount++;
                 }
-                
+
                 // Update progress
                 unset($this->uploadingFiles[$filename]);
                 $this->uploadingCount--;
                 $this->uploadedCount++;
-                
+
                 // Brief pause for UI updates (optional)
                 usleep(100000); // 0.1 second
             }
@@ -276,7 +286,7 @@ class ImageLibrary extends Component
             if ($errorCount === 0) {
                 $this->dispatch('notify', [
                     'type' => 'success',
-                    'message' => "Successfully uploaded {$successCount} image" . ($successCount === 1 ? '' : 's') . '!',
+                    'message' => "Successfully uploaded {$successCount} image".($successCount === 1 ? '' : 's').'!',
                 ]);
             } elseif ($successCount === 0) {
                 $this->dispatch('notify', [
@@ -286,7 +296,7 @@ class ImageLibrary extends Component
             } else {
                 $this->dispatch('notify', [
                     'type' => 'warning',
-                    'message' => "Uploaded {$successCount} image" . ($successCount === 1 ? '' : 's') . " but {$errorCount} failed.",
+                    'message' => "Uploaded {$successCount} image".($successCount === 1 ? '' : 's')." but {$errorCount} failed.",
                 ]);
             }
 
@@ -299,7 +309,7 @@ class ImageLibrary extends Component
         } catch (\Exception $e) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Upload failed: ' . $e->getMessage(),
+                'message' => 'Upload failed: '.$e->getMessage(),
             ]);
         } finally {
             $this->isUploading = false;
@@ -308,61 +318,18 @@ class ImageLibrary extends Component
     }
 
     /**
-     * ✏️ START EDITING IMAGE
-     */
-    public function editImage(int $imageId): void
-    {
-        $this->editingImage = Image::findOrFail($imageId);
-        $this->editMetadata = [
-            'title' => $this->editingImage->title,
-            'alt_text' => $this->editingImage->alt_text,
-            'description' => $this->editingImage->description,
-            'folder' => $this->editingImage->folder,
-            'tags' => $this->editingImage->tags ?? [],
-        ];
-        $this->showEditModal = true;
-    }
-
-    /**
-     * 💾 SAVE IMAGE CHANGES
-     */
-    public function saveImageChanges(): void
-    {
-        $this->validate([
-            'editMetadata.title' => 'nullable|string|max:255',
-            'editMetadata.alt_text' => 'nullable|string|max:255',
-            'editMetadata.description' => 'nullable|string|max:1000',
-            'editMetadata.folder' => 'required|string|max:255',
-        ]);
-
-        // Convert tags string to array if needed
-        if (isset($this->editMetadata['tags']) && is_string($this->editMetadata['tags'])) {
-            $this->editMetadata['tags'] = array_filter(
-                array_map('trim', explode(',', $this->editMetadata['tags']))
-            );
-        }
-
-        $this->editingImage->update($this->editMetadata);
-
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => 'Image updated successfully!',
-        ]);
-
-        $this->reset(['editingImage', 'editMetadata', 'showEditModal']);
-    }
-
-    /**
      * 🗑️ DELETE IMAGE
      */
-    public function deleteImage(int $imageId): void
+    public function deleteImage(int $imageId, \App\Actions\Images\DeleteImageAction $deleteImageAction): void
     {
         $image = Image::findOrFail($imageId);
-        $this->getImageUploadService()->deleteImage($image);
+        $imageName = $image->display_title;
+        
+        $deleteImageAction->execute($image);
 
         $this->dispatch('notify', [
             'type' => 'success',
-            'message' => 'Image deleted successfully!',
+            'message' => "Image '{$imageName}' deleted successfully!",
         ]);
 
         $this->resetPage();
@@ -374,18 +341,19 @@ class ImageLibrary extends Component
     public function allSelected(): bool
     {
         $totalImages = $this->images->count();
+
         return $totalImages > 0 && count($this->selectedImages) === $totalImages;
     }
 
     /**
-     * 📊 CHECK IF SOME IMAGES ARE SELECTED  
+     * 📊 CHECK IF SOME IMAGES ARE SELECTED
      */
     public function someSelected(): bool
     {
         $selectedCount = count($this->selectedImages);
+
         return $selectedCount > 0 && $selectedCount < $this->images->count();
     }
-
 
     /**
      * ✅ HANDLE SELECT ALL CHANGES
@@ -491,14 +459,16 @@ class ImageLibrary extends Component
         $successCount = 0;
         $errorCount = 0;
         $errors = [];
+        
+        $deleteImageAction = app(\App\Actions\Images\DeleteImageAction::class);
 
         foreach ($images as $image) {
             try {
-                $this->getImageUploadService()->deleteImage($image);
+                $deleteImageAction->execute($image);
                 $successCount++;
             } catch (\Exception $e) {
                 $errorCount++;
-                $errors[] = "Failed to delete {$image->display_title}: " . $e->getMessage();
+                $errors[] = "Failed to delete {$image->display_title}: ".$e->getMessage();
             }
         }
 
@@ -506,17 +476,17 @@ class ImageLibrary extends Component
         if ($errorCount === 0) {
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => "Successfully deleted {$successCount} image" . ($successCount === 1 ? '' : 's') . '!',
+                'message' => "Successfully deleted {$successCount} image".($successCount === 1 ? '' : 's').'!',
             ]);
         } elseif ($successCount === 0) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => "Failed to delete all images. Please try again.",
+                'message' => 'Failed to delete all images. Please try again.',
             ]);
         } else {
             $this->dispatch('notify', [
                 'type' => 'warning',
-                'message' => "Deleted {$successCount} image" . ($successCount === 1 ? '' : 's') . " but {$errorCount} failed.",
+                'message' => "Deleted {$successCount} image".($successCount === 1 ? '' : 's')." but {$errorCount} failed.",
             ]);
         }
     }
@@ -536,6 +506,7 @@ class ImageLibrary extends Component
                 'items' => $items,
             ];
             $this->showDeleteConfirmModal = true;
+
             return;
         }
 
@@ -608,6 +579,6 @@ class ImageLibrary extends Component
      */
     public function render(): View
     {
-        return view('livewire.d-a-m.image-library');
+        return view('livewire.dam.image-library');
     }
 }
