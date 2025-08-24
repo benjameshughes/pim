@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -23,6 +24,9 @@ class Image extends Model
         'path',
         'url',
         'size',
+        'file_size',
+        'width',
+        'height',
         'mime_type',
         'is_primary',
         'sort_order',
@@ -33,7 +37,7 @@ class Image extends Model
         'folder',
         'tags',
         'created_by_user_id',
-        // Polymorphic relationship fields
+        // Polymorphic relationship fields - UNUSED but kept for migrations
         'imageable_type',
         'imageable_id',
     ];
@@ -46,13 +50,14 @@ class Image extends Model
         'created_by_user_id' => 'integer',
     ];
 
-    /**
-     * 🔗 Polymorphic relationship to any model
-     */
-    public function imageable(): MorphTo
-    {
-        return $this->morphTo();
-    }
+    // REMOVED: Polymorphic relationship - using pivot tables instead
+    // /**
+    //  * 🔗 Polymorphic relationship to any model
+    //  */
+    // public function imageable(): MorphTo
+    // {
+    //     return $this->morphTo();
+    // }
 
     /**
      * 🔍 Scope for primary images
@@ -81,6 +86,26 @@ class Image extends Model
     }
 
     /**
+     * 📦 PRODUCTS RELATIONSHIP
+     * 
+     * Many-to-many relationship with products
+     */
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Product::class, 'image_product');
+    }
+
+    /**
+     * 💎 VARIANTS RELATIONSHIP
+     * 
+     * Many-to-many relationship with product variants
+     */
+    public function variants(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\ProductVariant::class, 'image_variant');
+    }
+
+    /**
      * 🎯 DAM SCOPES
      */
     
@@ -89,7 +114,7 @@ class Image extends Model
      */
     public function scopeUnattached(Builder $query): Builder
     {
-        return $query->whereNull('imageable_type')->whereNull('imageable_id');
+        return $query->whereDoesntHave('products')->whereDoesntHave('variants');
     }
 
     /**
@@ -97,7 +122,9 @@ class Image extends Model
      */
     public function scopeAttached(Builder $query): Builder
     {
-        return $query->whereNotNull('imageable_type')->whereNotNull('imageable_id');
+        return $query->where(function ($q) {
+            $q->whereHas('products')->orWhereHas('variants');
+        });
     }
 
     /**
@@ -227,7 +254,7 @@ class Image extends Model
      */
     public function isAttached(): bool
     {
-        return $this->imageable_type !== null && $this->imageable_id !== null;
+        return $this->products()->exists() || $this->variants()->exists();
     }
 
     /**
@@ -236,6 +263,20 @@ class Image extends Model
     public function getDisplayTitleAttribute(): string
     {
         return $this->title ?: pathinfo($this->filename, PATHINFO_FILENAME);
+    }
+
+    /**
+     * 📊 Get original filename (with extension)
+     */
+    public function getOriginalFilenameAttribute(): string
+    {
+        // If title contains an extension, use it as original filename
+        if ($this->title && str_contains($this->title, '.')) {
+            return $this->title;
+        }
+        
+        // Otherwise use the stored filename
+        return $this->filename;
     }
 
     /**
@@ -250,5 +291,26 @@ class Image extends Model
             return round($bytes / 1024, 2) . ' KB';
         }
         return $bytes . ' bytes';
+    }
+
+    /**
+     * 📊 Get human readable file size (alias)
+     */
+    public function getFileSizeHumanAttribute(): string
+    {
+        return $this->getFormattedSizeAttribute();
+    }
+
+    /**
+     * 📊 Get width and height attributes for tests
+     */
+    public function getWidthAttribute(): ?int
+    {
+        return $this->attributes['width'] ?? null;
+    }
+
+    public function getHeightAttribute(): ?int
+    {
+        return $this->attributes['height'] ?? null;
     }
 }

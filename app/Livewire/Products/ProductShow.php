@@ -48,9 +48,10 @@ class ProductShow extends Component
     {
         // Get Shopify sync account
         $syncAccount = \App\Models\SyncAccount::find($syncAccountId);
-        
-        if (!$syncAccount || $syncAccount->channel !== 'shopify') {
+
+        if (! $syncAccount || $syncAccount->channel !== 'shopify') {
             $this->dispatch('error', 'Invalid Shopify account selected');
+
             return;
         }
 
@@ -63,6 +64,7 @@ class ProductShow extends Component
 
         if ($linkedColorsCount === 0) {
             $this->dispatch('error', 'No color links found for this Shopify account. Link colors first.');
+
             return;
         }
 

@@ -2,14 +2,13 @@
 
 namespace App\Livewire\Components;
 
-use App\Models\Image;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
  * 🎯✨ FLOATING ACTION BAR - LARAVEL CLOUD STYLE ✨🎯
- * 
+ *
  * Sleek bottom sliding action bar for bulk operations
  * Inspired by modern UI patterns like Laravel Cloud
  */
@@ -18,11 +17,12 @@ class FloatingActionBar extends Component
     // Selection state (passed from parent)
     /** @var int[] */
     public array $selectedItems = [];
-    
+
     // UI state
     public bool $expanded = false;
+
     public bool $visible = false;
-    
+
     // Action configuration
     /** @var array<string, mixed> */
     public array $bulkAction = [
@@ -62,7 +62,7 @@ class FloatingActionBar extends Component
     {
         $this->selectedItems = $items;
         $this->updateVisibility();
-        
+
         // Reset action when selection changes
         if (empty($items)) {
             $this->resetAction();
@@ -74,10 +74,10 @@ class FloatingActionBar extends Component
      */
     protected function updateVisibility(): void
     {
-        $this->visible = !empty($this->selectedItems);
-        
+        $this->visible = ! empty($this->selectedItems);
+
         // Auto-collapse when nothing selected
-        if (!$this->visible) {
+        if (! $this->visible) {
             $this->expanded = false;
         }
     }
@@ -87,7 +87,7 @@ class FloatingActionBar extends Component
      */
     public function toggleExpanded(): void
     {
-        $this->expanded = !$this->expanded;
+        $this->expanded = ! $this->expanded;
     }
 
     /**
@@ -96,13 +96,14 @@ class FloatingActionBar extends Component
     public function setQuickAction(string $action): void
     {
         $this->bulkAction['type'] = $action;
-        
+
         // Instant actions execute immediately
         if (in_array($action, ['delete'])) {
             $this->executeAction();
+
             return;
         }
-        
+
         // Auto-expand for actions that need more input
         if (in_array($action, ['move_folder', 'add_tags', 'remove_tags'])) {
             $this->expanded = true;
@@ -171,10 +172,10 @@ class FloatingActionBar extends Component
     public function actionLabel(): string
     {
         $type = $this->bulkAction['type'];
-        
-        return match($type) {
+
+        return match ($type) {
             'move_folder' => 'Move to Folder',
-            'add_tags' => 'Add Tags', 
+            'add_tags' => 'Add Tags',
             'remove_tags' => 'Remove Tags',
             'delete' => 'Delete Images',
             default => 'More Options'
@@ -187,7 +188,7 @@ class FloatingActionBar extends Component
     #[Computed]
     public function hasMenuActions(): bool
     {
-        return !empty($this->menuActions);
+        return ! empty($this->menuActions);
     }
 
     /**

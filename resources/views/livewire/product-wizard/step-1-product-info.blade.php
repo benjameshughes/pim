@@ -18,7 +18,7 @@
                 <flux:field>
                     <flux:label>Product Name *</flux:label>
                     <flux:input 
-                        wire:model.blur="name" 
+                        wire:model.live="name" 
                         tabindex="1"
                         x-init="$nextTick(() => $el.focus())"
                     />

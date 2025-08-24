@@ -32,20 +32,27 @@ class MarketplaceSyncCards extends Component
     }
 
     public $showLinkingModal = false;
+
     public $showShopifyColorModal = false;
+
     public $showEditLinksModal = false;
 
     public $linkingAccountId = null;
+
     public $externalProductId = '';
-    
+
     // Edit Links Modal
     public $editingAccountId = null;
+
     public $existingLinks = [];
+
     public $newExternalId = '';
-    
+
     // Shopify Color Linking
     public $shopifyProducts = [];
+
     public $colorMappings = [];
+
     public $discoveryLoading = false;
 
     public function syncToMarketplace(int $syncAccountId)
@@ -165,7 +172,8 @@ class MarketplaceSyncCards extends Component
                 'error' => $e->getMessage(),
             ]);
 
-            $this->dispatch('error', 'Failed to link product: ' . $e->getMessage());
+            $this->dispatch('error', 'Failed to link product: '.$e->getMessage());
+
             return;
         }
 
@@ -190,7 +198,7 @@ class MarketplaceSyncCards extends Component
             if ($link->external_product_id) {
                 $externalIds[] = $link->external_product_id;
             }
-            
+
             // Unlink the MarketplaceLink
             $link->unlink();
             $unlinkedCount++;
@@ -203,7 +211,7 @@ class MarketplaceSyncCards extends Component
 
         if ($syncStatus && $syncStatus->external_product_id) {
             $externalId = $syncStatus->external_product_id;
-            if (!in_array($externalId, $externalIds)) {
+            if (! in_array($externalId, $externalIds)) {
                 $externalIds[] = $externalId;
             }
 
@@ -225,8 +233,8 @@ class MarketplaceSyncCards extends Component
 
         // Log the unlinking action if we found anything to unlink
         if ($unlinkedCount > 0) {
-            $externalIdList = !empty($externalIds) ? implode(', ', $externalIds) : 'Unknown';
-            
+            $externalIdList = ! empty($externalIds) ? implode(', ', $externalIds) : 'Unknown';
+
             // Log using SyncStatus if available, otherwise create a basic log
             if ($syncStatus) {
                 \App\Models\SyncLog::createEntry($syncAccount, 'unlink', $this->product, $syncStatus)
@@ -236,10 +244,10 @@ class MarketplaceSyncCards extends Component
                     ->markAsSuccessful("MarketplaceLinks unlinked from external IDs: {$externalIdList}");
             }
 
-            $message = $unlinkedCount === 1 
+            $message = $unlinkedCount === 1
                 ? "Product unlinked from {$syncAccount->channel} listing! 🔓"
                 : "Product unlinked from {$unlinkedCount} {$syncAccount->channel} links! 🔓";
-                
+
             $this->dispatch('success', $message);
 
             // Refresh the product data
@@ -255,9 +263,10 @@ class MarketplaceSyncCards extends Component
     public function showShopifyColorLinking(int $syncAccountId)
     {
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
-        
+
         if ($syncAccount->channel !== 'shopify') {
             $this->dispatch('error', 'Color linking is only available for Shopify accounts.');
+
             return;
         }
 
@@ -281,35 +290,35 @@ class MarketplaceSyncCards extends Component
     public function discoverShopifyProducts()
     {
         $this->discoveryLoading = true;
-        
+
         try {
             $syncAccount = SyncAccount::findOrFail($this->linkingAccountId);
             $discoveryService = new ShopifyProductDiscoveryService($syncAccount);
-            
+
             $suggestions = $discoveryService->getColorLinkingSuggestions($this->product);
             $this->shopifyProducts = $discoveryService->discoverProducts(100)->toArray();
 
             // Auto-populate suggestions if found
             foreach ($suggestions as $suggestion) {
                 $color = $suggestion['color'];
-                if (isset($this->colorMappings[$color]) && !empty($suggestion['suggested_products'])) {
+                if (isset($this->colorMappings[$color]) && ! empty($suggestion['suggested_products'])) {
                     $bestMatch = $suggestion['suggested_products'][0];
                     $this->colorMappings[$color] = $bestMatch['id'];
                 }
             }
 
             $this->dispatch('success', 'Shopify products discovered! Smart suggestions applied.');
-            
+
         } catch (\Exception $e) {
             \Log::error('Failed to discover Shopify products', [
                 'error' => $e->getMessage(),
                 'product_id' => $this->product->id,
                 'sync_account_id' => $this->linkingAccountId,
             ]);
-            
-            $this->dispatch('error', 'Failed to discover Shopify products: ' . $e->getMessage());
+
+            $this->dispatch('error', 'Failed to discover Shopify products: '.$e->getMessage());
         }
-        
+
         $this->discoveryLoading = false;
     }
 
@@ -329,19 +338,20 @@ class MarketplaceSyncCards extends Component
             if ($value === 'custom') {
                 $customProperty = "colorMappings.{$color}_custom";
                 $customValue = data_get($this, $customProperty);
-                if (!empty($customValue)) {
+                if (! empty($customValue)) {
                     $hasValidSelection = true;
                     $validationRules["colorMappings.{$color}_custom"] = 'required|string|min:1';
                 }
-            } elseif (!empty($value)) {
+            } elseif (! empty($value)) {
                 $hasValidSelection = true;
                 // Don't add validation rule - we'll check this in the logic below
             }
         }
 
         // If no colors selected, show a general error
-        if (!$hasValidSelection) {
+        if (! $hasValidSelection) {
             $this->addError('colorMappings', 'Please select at least one color to link.');
+
             return;
         }
 
@@ -362,16 +372,18 @@ class MarketplaceSyncCards extends Component
                 if ($shopifyProductId === 'custom') {
                     $customProperty = "colorMappings.{$color}_custom";
                     $actualProductId = data_get($this, $customProperty);
-                    
+
                     if (empty($actualProductId)) {
                         \Log::info("⏭️ Skipping color '{$color}' - custom input empty");
+
                         continue;
                     }
-                    
+
                     $shopifyProductId = $actualProductId;
                     \Log::info("🔧 Using custom product ID for '{$color}': {$shopifyProductId}");
                 } elseif (empty($shopifyProductId)) {
                     \Log::info("⏭️ Skipping color '{$color}' - dropdown empty");
+
                     continue;
                 } else {
                     \Log::info("📋 Using dropdown selection for '{$color}': {$shopifyProductId}");
@@ -388,6 +400,7 @@ class MarketplaceSyncCards extends Component
                     \Log::info("⏭️ Skipping color '{$color}' - link already exists", [
                         'existing_link_id' => $existingLink->id,
                     ]);
+
                     continue;
                 }
 
@@ -439,9 +452,9 @@ class MarketplaceSyncCards extends Component
             } else {
                 $this->dispatch('info', 'No new color links were created. All selected colors may already be linked.');
             }
-            
+
             $this->closeShopifyColorModal();
-            
+
             // Refresh the product data
             $this->mount($this->product->fresh());
 
@@ -451,8 +464,8 @@ class MarketplaceSyncCards extends Component
                 'product_id' => $this->product->id,
                 'color_mappings' => $this->colorMappings,
             ]);
-            
-            $this->dispatch('error', 'Failed to link colors: ' . $e->getMessage());
+
+            $this->dispatch('error', 'Failed to link colors: '.$e->getMessage());
         }
     }
 
@@ -550,8 +563,9 @@ class MarketplaceSyncCards extends Component
      */
     public function updateLinkExternalId(int $index)
     {
-        if (!isset($this->existingLinks[$index])) {
+        if (! isset($this->existingLinks[$index])) {
             $this->dispatch('error', 'Link not found');
+
             return;
         }
 
@@ -560,9 +574,10 @@ class MarketplaceSyncCards extends Component
 
         if (empty($newExternalId)) {
             $this->dispatch('error', 'External ID cannot be empty');
+
             return;
         }
-        
+
         try {
             if ($link['type'] === 'marketplace_link') {
                 $marketplaceLink = MarketplaceLink::findOrFail($link['id']);
@@ -592,7 +607,7 @@ class MarketplaceSyncCards extends Component
                 'error' => $e->getMessage(),
             ]);
 
-            $this->dispatch('error', 'Failed to update external ID: ' . $e->getMessage());
+            $this->dispatch('error', 'Failed to update external ID: '.$e->getMessage());
         }
     }
 
@@ -601,8 +616,9 @@ class MarketplaceSyncCards extends Component
      */
     public function removeLinkById(int $index)
     {
-        if (!isset($this->existingLinks[$index])) {
+        if (! isset($this->existingLinks[$index])) {
             $this->dispatch('error', 'Link not found');
+
             return;
         }
 
@@ -638,7 +654,7 @@ class MarketplaceSyncCards extends Component
                 'error' => $e->getMessage(),
             ]);
 
-            $this->dispatch('error', 'Failed to remove link: ' . $e->getMessage());
+            $this->dispatch('error', 'Failed to remove link: '.$e->getMessage());
         }
     }
 
@@ -697,7 +713,7 @@ class MarketplaceSyncCards extends Component
                 'error' => $e->getMessage(),
             ]);
 
-            $this->dispatch('error', 'Failed to add link: ' . $e->getMessage());
+            $this->dispatch('error', 'Failed to add link: '.$e->getMessage());
         }
     }
 
@@ -707,7 +723,7 @@ class MarketplaceSyncCards extends Component
     public function unlinkShopifyColor(int $syncAccountId, string $color)
     {
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
-        
+
         $link = $this->product->marketplaceLinks()
             ->where('sync_account_id', $syncAccountId)
             ->whereJsonContains('marketplace_data->color_filter', $color)
@@ -718,7 +734,7 @@ class MarketplaceSyncCards extends Component
             $link->delete();
 
             $this->dispatch('success', "Unlinked {$color} from Shopify product {$externalProductId}! 🔓");
-            
+
             // Refresh the product data
             $this->mount($this->product->fresh());
         } else {
@@ -732,7 +748,7 @@ class MarketplaceSyncCards extends Component
     public function updateShopifyColorLink(int $syncAccountId, string $color, string $newExternalProductId)
     {
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
-        
+
         $link = $this->product->marketplaceLinks()
             ->where('sync_account_id', $syncAccountId)
             ->whereJsonContains('marketplace_data->color_filter', $color)
@@ -740,7 +756,7 @@ class MarketplaceSyncCards extends Component
 
         if ($link) {
             $oldProductId = $link->external_product_id;
-            
+
             $link->update([
                 'external_product_id' => $newExternalProductId,
                 'link_status' => 'linked',
@@ -753,7 +769,7 @@ class MarketplaceSyncCards extends Component
             ]);
 
             $this->dispatch('success', "Updated {$color} link from product {$oldProductId} to {$newExternalProductId}! ✏️");
-            
+
             // Refresh the product data
             $this->mount($this->product->fresh());
         } else {
@@ -793,9 +809,10 @@ class MarketplaceSyncCards extends Component
     {
         try {
             $syncAccount = SyncAccount::findOrFail($syncAccountId);
-            
+
             if ($syncAccount->channel !== 'shopify') {
                 $this->dispatch('error', 'Color link refresh is only available for Shopify accounts.');
+
                 return;
             }
 
@@ -808,7 +825,7 @@ class MarketplaceSyncCards extends Component
                 ->markAsSuccessful("Refreshed {$linkCount} color links");
 
             $this->dispatch('success', "Refreshed {$linkCount} Shopify color links! 🔄");
-            
+
             // Refresh the product data
             $this->mount($this->product->fresh());
 
@@ -818,8 +835,8 @@ class MarketplaceSyncCards extends Component
                 'product_id' => $this->product->id,
                 'sync_account_id' => $syncAccountId,
             ]);
-            
-            $this->dispatch('error', 'Failed to refresh color links: ' . $e->getMessage());
+
+            $this->dispatch('error', 'Failed to refresh color links: '.$e->getMessage());
         }
     }
 
@@ -849,9 +866,10 @@ class MarketplaceSyncCards extends Component
     {
         // Get Shopify sync account
         $syncAccount = SyncAccount::find($syncAccountId);
-        
-        if (!$syncAccount || $syncAccount->channel !== 'shopify') {
+
+        if (! $syncAccount || $syncAccount->channel !== 'shopify') {
             $this->dispatch('error', 'Invalid Shopify account selected');
+
             return;
         }
 
@@ -864,6 +882,7 @@ class MarketplaceSyncCards extends Component
 
         if ($linkedColorsCount === 0) {
             $this->dispatch('error', 'No color links found for this Shopify account. Link colors first.');
+
             return;
         }
 
@@ -895,14 +914,14 @@ class MarketplaceSyncCards extends Component
                     ->get();
 
                 // Get Shopify color links if it's a Shopify account
-                $colorLinks = ($account->channel === 'shopify') 
-                    ? $this->getShopifyColorLinks($account->id) 
+                $colorLinks = ($account->channel === 'shopify')
+                    ? $this->getShopifyColorLinks($account->id)
                     : collect();
 
                 // Determine consolidated linking status
                 $hasMarketplaceLinks = $marketplaceLinks->isNotEmpty();
                 $hasSyncStatusLink = $syncStatus && $syncStatus->external_product_id;
-                
+
                 // Priority: MarketplaceLinks > SyncStatus > Color Links (for Shopify)
                 $isLinked = $hasMarketplaceLinks || $hasSyncStatusLink || ($account->channel === 'shopify' && $colorLinks->isNotEmpty());
 
@@ -910,7 +929,7 @@ class MarketplaceSyncCards extends Component
                 $consolidatedStatus = 'not_synced';
                 if ($hasMarketplaceLinks) {
                     $latestLink = $marketplaceLinks->sortByDesc('linked_at')->first();
-                    $consolidatedStatus = match($latestLink->link_status) {
+                    $consolidatedStatus = match ($latestLink->link_status) {
                         'linked' => 'synced',
                         'pending' => 'pending',
                         'failed' => 'failed',
@@ -932,8 +951,8 @@ class MarketplaceSyncCards extends Component
                     }
                 });
 
-                $lastSync = $lastSyncTimes->isNotEmpty() 
-                    ? $lastSyncTimes->max()->diffForHumans() 
+                $lastSync = $lastSyncTimes->isNotEmpty()
+                    ? $lastSyncTimes->max()->diffForHumans()
                     : 'Never';
 
                 // Check if manually linked
@@ -987,10 +1006,10 @@ class MarketplaceSyncCards extends Component
             if ($marketplaceLinks->isNotEmpty()) {
                 // Update SyncStatus based on MarketplaceLinks
                 $latestLink = $marketplaceLinks->sortByDesc('linked_at')->first();
-                
-                $syncStatusValue = match($latestLink->link_status) {
+
+                $syncStatusValue = match ($latestLink->link_status) {
                     'linked' => 'synced',
-                    'pending' => 'pending', 
+                    'pending' => 'pending',
                     'failed' => 'failed',
                     'unlinked' => 'pending',
                     default => 'pending'
@@ -1019,7 +1038,7 @@ class MarketplaceSyncCards extends Component
                     'external_sku' => $this->product->parent_sku,
                     'external_product_id' => $syncStatus->external_product_id,
                     'external_variant_id' => $syncStatus->external_variant_id,
-                    'link_status' => match($syncStatus->sync_status) {
+                    'link_status' => match ($syncStatus->sync_status) {
                         'synced' => 'linked',
                         'pending' => 'pending',
                         'failed' => 'failed',
@@ -1047,10 +1066,10 @@ class MarketplaceSyncCards extends Component
 
             if ($updated > 0) {
                 $this->dispatch('success', "System status synchronized! 🔄 Updated {$updated} records.");
-                
+
                 // Log the synchronization
                 \App\Models\SyncLog::createEntry($syncAccount, 'sync_systems', $this->product, $syncStatus)
-                    ->markAsSuccessful("Synchronized MarketplaceLink and SyncStatus systems");
+                    ->markAsSuccessful('Synchronized MarketplaceLink and SyncStatus systems');
             } else {
                 $this->dispatch('info', 'No synchronization needed - systems are already consistent.');
             }
@@ -1064,8 +1083,8 @@ class MarketplaceSyncCards extends Component
                 'product_id' => $this->product->id,
                 'sync_account_id' => $syncAccountId,
             ]);
-            
-            $this->dispatch('error', 'Failed to synchronize systems: ' . $e->getMessage());
+
+            $this->dispatch('error', 'Failed to synchronize systems: '.$e->getMessage());
         }
     }
 

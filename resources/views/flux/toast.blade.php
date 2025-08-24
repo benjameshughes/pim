@@ -238,13 +238,7 @@ $glitterConfig = match ($glitterIntensity) {
              this.toasts = this.toasts.filter(t => t.id !== id);
          }
      }"
-     x-on:toast.window="addToast($event.detail.message, $event.detail.type, $event.detail.duration)"
-     x-on:success.window="addToast($event.detail.message || $event.detail, 'success')"
-     x-on:error.window="addToast($event.detail.message || $event.detail, 'error')"
-     x-on:notify.window="addToast($event.detail.message, $event.detail.type, $event.detail.duration)"
-     x-on:livewire--navigating.window="isNavigating = true; persistToasts()"
-     x-on:livewire--navigated.window="isNavigating = false; $nextTick(() => loadPersistedToasts())"
-     x-on:beforeunload.window="isNavigating = true; persistToasts()">
+>
 
     <!-- Toast stack container -->
     <div class="flex flex-col gap-3 pointer-events-none"

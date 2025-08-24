@@ -101,6 +101,14 @@
                 >
                     Channel Mapping
                 </flux:navlist.item>
+
+                {{-- 📊 LOG DASHBOARD --}}
+                <flux:navlist.item 
+                    icon="chart-bar" 
+                    href="{{ route('logs.dashboard') }}" 
+                >
+                    Log Dashboard
+                </flux:navlist.item>
             </flux:navlist>
 
             <flux:spacer />
@@ -213,15 +221,31 @@
             :duration="5000" 
             :max-toasts="3" 
             glitter-intensity="high"
+            x-on:notify.window="$flux.toast({ type: $event.detail.type, text: $event.detail.message, options: { persist: $event.detail.persist || false } })"
         />
 
         @fluxScripts
         @livewireScripts
         
         {{-- Global DAM Image Selector --}}
-        <livewire:d-a-m.image-selector />
+        <livewire:dam.image-selector />
+
+        {{-- Beautiful Confirmation Modal --}}
+        <x-confirmation-modal />
 
         {{-- Component Scripts Stack --}}
         @stack('scripts')
+
+        {{-- Global Confirm Modal Helper --}}
+        <script>
+            // Simple global function to show confirmation modal
+            window.confirmAction = function(options) {
+                const modal = document.querySelector('#confirmation-dialog')
+                if (modal && modal._x_dataStack) {
+                    const modalData = modal._x_dataStack[0]
+                    modalData.open(options)
+                }
+            }
+        </script>
     </body>
 </html>

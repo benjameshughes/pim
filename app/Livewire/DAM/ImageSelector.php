@@ -14,7 +14,7 @@ use Livewire\WithPagination;
 
 /**
  * 🔗✨ IMAGE SELECTOR - LINK DAM IMAGES TO PRODUCTS ✨🔗
- * 
+ *
  * Modal component for selecting and linking existing DAM images to products/variants
  * Features: search, filter, multi-select, and instant linking
  */
@@ -24,24 +24,35 @@ class ImageSelector extends Component
 
     // Modal state
     public bool $show = false;
+
     public ?Model $targetModel = null;
+
     public string $targetType = ''; // 'product' or 'variant'
+
     public int $targetId = 0;
 
     // Selection state
     /** @var int[] */
     public array $selectedImageIds = [];
+
     public int $maxSelection = 10;
+
     public bool $allowMultiple = true;
+
     public bool $setPrimaryOnSingle = true;
 
     // Search and filtering
     public string $search = '';
+
     public string $selectedFolder = '';
+
     /** @var string[] */
     public array $selectedTags = [];
+
     public string $filterBy = 'unattached'; // Focus on unlinked images by default
+
     public string $sortBy = 'created_at';
+
     public string $sortDirection = 'desc';
 
     // Results
@@ -55,15 +66,15 @@ class ImageSelector extends Component
      * 🎯 OPEN SELECTOR
      */
     /**
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      */
     public function openSelector(string $targetType, int $targetId, array $options = []): void
     {
         $this->targetType = $targetType;
         $this->targetId = $targetId;
-        
+
         // Load target model
-        $this->targetModel = match($targetType) {
+        $this->targetModel = match ($targetType) {
             'product' => Product::findOrFail($targetId),
             'variant' => ProductVariant::findOrFail($targetId),
             default => throw new \InvalidArgumentException("Invalid target type: {$targetType}"),
@@ -95,6 +106,7 @@ class ImageSelector extends Component
 
     /**
      * 📊 GET AVAILABLE IMAGES
+     *
      * @return LengthAwarePaginator<Image>
      */
     #[Computed]
@@ -113,7 +125,7 @@ class ImageSelector extends Component
         }
 
         // Apply tag filters
-        if (!empty($this->selectedTags)) {
+        if (! empty($this->selectedTags)) {
             $query->withAnyTag($this->selectedTags);
         }
 
@@ -129,9 +141,9 @@ class ImageSelector extends Component
         if ($this->targetModel) {
             $query->where(function ($q) {
                 $q->where('imageable_type', '!=', get_class($this->targetModel))
-                  ->orWhere('imageable_id', '!=', $this->targetModel->id)
-                  ->orWhereNull('imageable_type')
-                  ->orWhereNull('imageable_id');
+                    ->orWhere('imageable_id', '!=', $this->targetModel->id)
+                    ->orWhereNull('imageable_type')
+                    ->orWhereNull('imageable_id');
             });
         }
 
@@ -143,6 +155,7 @@ class ImageSelector extends Component
 
     /**
      * 📁 GET AVAILABLE FOLDERS
+     *
      * @return string[]
      */
     #[Computed]
@@ -158,6 +171,7 @@ class ImageSelector extends Component
 
     /**
      * 🏷️ GET AVAILABLE TAGS
+     *
      * @return string[]
      */
     #[Computed]
@@ -183,11 +197,11 @@ class ImageSelector extends Component
         if (in_array($imageId, $this->selectedImageIds)) {
             // Remove from selection
             $this->selectedImageIds = array_values(
-                array_filter($this->selectedImageIds, fn($id) => $id !== $imageId)
+                array_filter($this->selectedImageIds, fn ($id) => $id !== $imageId)
             );
         } else {
             // Add to selection (check limits)
-            if (!$this->allowMultiple) {
+            if (! $this->allowMultiple) {
                 $this->selectedImageIds = [$imageId];
             } elseif (count($this->selectedImageIds) < $this->maxSelection) {
                 $this->selectedImageIds[] = $imageId;
@@ -200,7 +214,7 @@ class ImageSelector extends Component
      */
     public function confirmSelection(): void
     {
-        if (empty($this->selectedImageIds) || !$this->targetModel) {
+        if (empty($this->selectedImageIds) || ! $this->targetModel) {
             return;
         }
 
@@ -214,7 +228,7 @@ class ImageSelector extends Component
             // Set first image as primary if requested and no primary exists
             if ($this->setPrimaryOnSingle && $index === 0 && method_exists($this->targetModel, 'images')) {
                 $existingPrimary = $this->targetModel->images()->primary()->first();
-                if (!$existingPrimary) {
+                if (! $existingPrimary) {
                     $image->update(['is_primary' => true]);
                 }
             }
@@ -268,7 +282,7 @@ class ImageSelector extends Component
             'count' => count($this->selectedImageIds),
             'max' => $this->maxSelection,
             'canSelectMore' => count($this->selectedImageIds) < $this->maxSelection,
-            'hasSelection' => !empty($this->selectedImageIds),
+            'hasSelection' => ! empty($this->selectedImageIds),
         ];
     }
 
@@ -277,6 +291,6 @@ class ImageSelector extends Component
      */
     public function render(): View
     {
-        return view('livewire.d-a-m.image-selector');
+        return view('livewire.dam.image-selector');
     }
 }

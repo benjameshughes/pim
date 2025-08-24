@@ -57,13 +57,13 @@ class SimpleProductImport extends Component
         try {
             // Read first few rows to get headers and sample data
             $path = $this->file->getRealPath();
-            
-            if (!file_exists($path) || !is_readable($path)) {
+
+            if (! file_exists($path) || ! is_readable($path)) {
                 throw new \Exception("File not accessible: {$path}");
             }
-            
-            $csv = array_map(function($line) { 
-                return str_getcsv($line, ',', '"', '\\'); 
+
+            $csv = array_map(function ($line) {
+                return str_getcsv($line, ',', '"', '\\');
             }, file($path));
 
             $this->headers = array_shift($csv); // First row is headers
@@ -85,7 +85,7 @@ class SimpleProductImport extends Component
                 'error' => $e->getMessage(),
                 'file_path' => $this->file ? $this->file->getRealPath() : 'no file',
             ]);
-            
+
             $this->addError('file', 'Failed to read file: '.$e->getMessage());
             $this->reset(['step', 'headers', 'sampleData']);
         }
@@ -122,7 +122,7 @@ class SimpleProductImport extends Component
     public function executeImport()
     {
         \Log::info('🔥 EXECUTE IMPORT CALLED - METHOD ENTRY');
-        
+
         // Skip standard Livewire validation as file may be in temp storage
         // $this->validate();
 
@@ -138,15 +138,17 @@ class SimpleProductImport extends Component
                 'title_mapped' => ($this->mappings['title'] !== ''),
             ]);
             $this->addError('mappings', 'SKU and Title columns are required');
+
             return;
         }
 
         \Log::info('📄 CHECKING FILE', ['file_exists' => ($this->file ? 'YES' : 'NO')]);
 
         // Validate file exists
-        if (!$this->file) {
+        if (! $this->file) {
             \Log::error('❌ FILE VALIDATION FAILED');
             $this->addError('file', 'No file uploaded');
+
             return;
         }
 
@@ -165,9 +167,9 @@ class SimpleProductImport extends Component
         try {
             // Get the correct file path for Livewire uploaded files
             $filePath = $this->file->getRealPath();
-            
+
             // Verify file exists and is readable
-            if (!file_exists($filePath) || !is_readable($filePath)) {
+            if (! file_exists($filePath) || ! is_readable($filePath)) {
                 throw new \Exception("Uploaded file not found or not readable: {$filePath}");
             }
 
@@ -185,7 +187,7 @@ class SimpleProductImport extends Component
             ]);
 
             \Log::info('✅ Import completed successfully', $this->results);
-            
+
             $this->step = 'complete';
             $this->importing = false;
 

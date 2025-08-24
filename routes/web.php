@@ -81,8 +81,31 @@ Route::middleware(['auth'])->group(function () {
     // 📤 IMPORT
     Route::view('import/products', 'import.products')->name('import.products');
 
-    // 🎨 DIGITAL ASSET MANAGEMENT (DAM)
+    // 🎨 DIGITAL ASSET MANAGEMENT (DAM) - CONSISTENT MODEL BINDING
     Route::view('dam', 'dam.index')->name('dam.index');
+    
+    // Main image view (like products show)
+    Route::get('dam/{image}', function (App\Models\Image $image) {
+        return view('dam.show', compact('image'));
+    })->name('dam.images.show');
+    
+    // Image tabs - consistent with products pattern
+    Route::get('dam/{image}/overview', function (App\Models\Image $image) {
+        return view('dam.show', compact('image'));
+    })->name('dam.images.show.overview');
+    
+    Route::get('dam/{image}/edit', function (App\Models\Image $image) {
+        return view('dam.show', compact('image'));
+    })->name('dam.images.show.edit');
+    
+    Route::get('dam/{image}/attachments', function (App\Models\Image $image) {
+        return view('dam.show', compact('image'));
+    })->name('dam.images.show.attachments');
+    
+    Route::get('dam/{image}/history', function (App\Models\Image $image) {
+        return view('dam.show', compact('image'));
+    })->name('dam.images.show.history');
+    
 
     // 💎 VARIANTS - UNIFIED WITH PRODUCTS
     Route::redirect('variants', 'products')->name('variants.index');
@@ -140,6 +163,9 @@ Route::middleware(['auth'])->group(function () {
 
     // 🎛️ CHANNEL MAPPING SYSTEM
     Route::get('channel-mapping', \App\Livewire\ChannelMapping\ChannelMapperDashboard::class)->name('channel.mapping.dashboard');
+
+    // 📊 LOG DASHBOARD
+    Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');
 
 });
 

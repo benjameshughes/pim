@@ -2,19 +2,18 @@
 
 namespace App\Livewire;
 
+use App\Actions\Products\AttachImagesAction;
+use App\Actions\Products\CreateVariantsAction;
+use App\Actions\Products\SavePricingAction;
+use App\Actions\Products\SaveProductAction;
 use App\Exceptions\ProductWizard\NoVariantsException;
 use App\Exceptions\ProductWizard\ProductSaveException;
 use App\Exceptions\ProductWizard\WizardValidationException;
-use App\Jobs\AssignBarcodesJob;
 use App\Models\Pricing;
 use App\Models\Product;
 use App\Rules\ParentSkuRule;
 use App\Services\ImageUploadService;
 use App\Services\WizardDraftService;
-use App\Actions\Products\SaveProductAction;
-use App\Actions\Products\CreateVariantsAction;
-use App\Actions\Products\SavePricingAction;
-use App\Actions\Products\AttachImagesAction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -88,12 +87,13 @@ class ProductWizard extends Component
 
     // Services (not serialized)
     protected ?WizardDraftService $draftService = null;
+
     protected ?ImageUploadService $imageService = null;
 
     // Livewire event listeners
     protected $listeners = [
         'wizard-next-step' => 'nextStep',
-        'wizard-previous-step' => 'previousStep', 
+        'wizard-previous-step' => 'previousStep',
         'wizard-save-product' => 'saveProduct',
         'wizard-clear-draft' => 'clearDraft',
     ];
@@ -107,16 +107,16 @@ class ProductWizard extends Component
         \Log::info('ProductWizard rules()', [
             'edit_mode' => $this->isEditMode,
             'product_id' => $this->product?->id ?? 'null',
-            'ignoring_product' => $ignoreProduct?->id ?? 'null'
+            'ignoring_product' => $ignoreProduct?->id ?? 'null',
         ]);
-        
+
         return [
             // Step 1
             'name' => 'required|min:3|max:255',
             'parent_sku' => [
-                'required', 
+                'required',
                 'regex:/^[0-9]{3}$/',
-                Rule::unique('products', 'parent_sku')->ignore($ignoreProduct)
+                Rule::unique('products', 'parent_sku')->ignore($ignoreProduct),
             ],
             'status' => 'required|in:draft,active,inactive,archived',
             'description' => 'nullable|max:1000',
@@ -134,17 +134,19 @@ class ProductWizard extends Component
      */
     protected function getDraftService(): WizardDraftService
     {
-        if (!$this->draftService) {
+        if (! $this->draftService) {
             $this->draftService = app(WizardDraftService::class);
         }
+
         return $this->draftService;
     }
 
     protected function getImageService(): ImageUploadService
     {
-        if (!$this->imageService) {
+        if (! $this->imageService) {
             $this->imageService = app(ImageUploadService::class);
         }
+
         return $this->imageService;
     }
 
@@ -154,16 +156,16 @@ class ProductWizard extends Component
     public function mount(?Product $product = null): void
     {
         $routeName = request()->route()?->getName() ?? 'unknown';
-        
+
         \Log::info('🚀 ProductWizard mount() called', [
             'product_passed' => $product ? $product->id : 'null',
             'route' => $routeName,
-            'product_exists' => $product && $product->exists
+            'product_exists' => $product && $product->exists,
         ]);
-        
+
         // 🎯 ROUTE-BASED MODE DETECTION - Clean & Explicit
         $this->isEditMode = $routeName === 'products.edit' && $product && $product->exists;
-        
+
         if ($this->isEditMode) {
             // Edit mode: Use provided product + load any draft changes
             $this->product = $product;
@@ -171,14 +173,14 @@ class ProductWizard extends Component
             $this->loadDraft(); // Load draft changes on top of product data
         } else {
             // Create mode: Start completely blank - no draft loading yet
-            $this->product = new Product();
+            $this->product = new Product;
             // User starts fresh - draft only gets created when they type
         }
 
         \Log::info('ProductWizard mount', [
             'route' => $routeName,
             'edit_mode' => $this->isEditMode,
-            'product_id' => $this->product?->id ?? 'null'
+            'product_id' => $this->product?->id ?? 'null',
         ]);
     }
 
@@ -188,9 +190,10 @@ class ProductWizard extends Component
     protected function loadDraft(): void
     {
         \Log::info('ProductWizard: loadDraft() called');
-        
+
         if (! auth()->check()) {
             \Log::info('ProductWizard: No auth user, skipping draft load');
+
             return;
         }
 
@@ -199,9 +202,10 @@ class ProductWizard extends Component
                 (string) auth()->id(),
                 $this->product?->id
             );
-            \Log::info('ProductWizard: Draft service call successful', ['draft_exists' => !empty($draft)]);
+            \Log::info('ProductWizard: Draft service call successful', ['draft_exists' => ! empty($draft)]);
         } catch (\Exception $e) {
             \Log::error('ProductWizard: Draft service failed', ['error' => $e->getMessage()]);
+
             return;
         }
 
@@ -292,9 +296,9 @@ class ProductWizard extends Component
         // Move to next step
         if ($this->currentStep < 4) {
             $this->currentStep++;
-            
+
             // Toast feedback for navigation
-            $this->dispatch('notify', 
+            $this->dispatch('notify',
                 message: 'Next step',
                 type: 'info'
             );
@@ -308,9 +312,9 @@ class ProductWizard extends Component
     {
         if ($this->currentStep > 1) {
             $this->currentStep--;
-            
+
             // Toast feedback for navigation
-            $this->dispatch('notify', 
+            $this->dispatch('notify',
                 message: 'Previous step',
                 type: 'info'
             );
@@ -339,6 +343,7 @@ class ProductWizard extends Component
                 if (empty($this->colors) && empty($this->widths) && empty($this->drops)) {
                     $exception = WizardValidationException::missingVariantAttributes();
                     $this->addError('variants', $exception->getUserMessage());
+
                     return;
                 }
                 break;
@@ -352,6 +357,7 @@ class ProductWizard extends Component
                 if (empty($this->generated_variants)) {
                     $exception = WizardValidationException::missingVariantsForPricing();
                     $this->addError('pricing', $exception->getUserMessage());
+
                     return;
                 }
                 break;
@@ -531,22 +537,22 @@ class ProductWizard extends Component
     private function generateVariantTitle(array $variantData): string
     {
         $title = $this->name;
-        
+
         $parts = [];
-        if (!empty($variantData['color'])) {
+        if (! empty($variantData['color'])) {
             $parts[] = $variantData['color'];
         }
-        if (!empty($variantData['width']) && $variantData['width'] > 0) {
-            $parts[] = $variantData['width'] . 'cm';
+        if (! empty($variantData['width']) && $variantData['width'] > 0) {
+            $parts[] = $variantData['width'].'cm';
         }
-        if (!empty($variantData['drop']) && $variantData['drop'] > 0) {
-            $parts[] = 'Drop ' . $variantData['drop'] . 'cm';
+        if (! empty($variantData['drop']) && $variantData['drop'] > 0) {
+            $parts[] = 'Drop '.$variantData['drop'].'cm';
         }
-        
-        if (!empty($parts)) {
-            $title .= ' - ' . implode(' ', $parts);
+
+        if (! empty($parts)) {
+            $title .= ' - '.implode(' ', $parts);
         }
-        
+
         return $title;
     }
 
@@ -597,14 +603,15 @@ class ProductWizard extends Component
     public function uploadImages(): void
     {
         \Log::info('ProductWizard: uploadImages() method called');
-        
+
         if (empty($this->image_files)) {
             \Log::info('ProductWizard: No image files to upload');
             $this->dispatch('notify', message: 'No files selected', type: 'error');
+
             return;
         }
 
-        \Log::info('ProductWizard: Uploading ' . count($this->image_files) . ' files');
+        \Log::info('ProductWizard: Uploading '.count($this->image_files).' files');
         $this->dispatch('notify', message: 'Starting upload...', type: 'info');
 
         try {
@@ -613,7 +620,7 @@ class ProductWizard extends Component
                 ['folder' => 'wizard_uploads']
             );
 
-            \Log::info('ProductWizard: Successfully uploaded ' . $uploadedImages->count() . ' images');
+            \Log::info('ProductWizard: Successfully uploaded '.$uploadedImages->count().' images');
 
             foreach ($uploadedImages as $image) {
                 $this->uploaded_images[] = [
@@ -632,11 +639,11 @@ class ProductWizard extends Component
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('ProductWizard upload error: ' . $e->getMessage(), [
+            \Log::error('ProductWizard upload error: '.$e->getMessage(), [
                 'exception' => $e,
-                'files_count' => count($this->image_files)
+                'files_count' => count($this->image_files),
             ]);
-            
+
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'Failed to upload images: '.$e->getMessage(),
@@ -646,17 +653,17 @@ class ProductWizard extends Component
 
     /**
      * 🔗 ATTACH STANDALONE IMAGES TO PRODUCT
-     * 
+     *
      * Links unattached images from the image library to this product
      */
     private function attachImagesToProduct(): void
     {
-        if (empty($this->uploaded_images) || !$this->product) {
+        if (empty($this->uploaded_images) || ! $this->product) {
             return;
         }
 
         $imageIds = collect($this->uploaded_images)->pluck('id');
-        
+
         \App\Models\Image::whereIn('id', $imageIds)
             ->whereNull('imageable_type') // Only attach unattached images
             ->update([
@@ -668,7 +675,7 @@ class ProductWizard extends Component
 
     /**
      * 🚀 SAVE PRODUCT - REFACTORED WITH BUILDER PATTERN
-     * 
+     *
      * Clean separation: Livewire handles UI state, Actions handle business logic
      * Follows ProductWizard.md architecture specification
      */
@@ -682,34 +689,34 @@ class ProductWizard extends Component
             $this->validateWizardData();
 
             if (empty($this->generated_variants)) {
-                throw new NoVariantsException();
+                throw new NoVariantsException;
             }
 
             DB::transaction(function () {
                 // Step 1: Save/Update Parent Product (ProductWizard.md Step 1)
-                $productResult = (new SaveProductAction())->execute([
+                $productResult = (new SaveProductAction)->execute([
                     'name' => $this->name,
-                    'parent_sku' => $this->parent_sku, 
+                    'parent_sku' => $this->parent_sku,
                     'description' => $this->description,
                     'status' => $this->status,
                     'brand' => $this->brand,
                 ], $this->isEditMode ? $this->product : null);
-                
+
                 $this->product = $productResult['product'];
 
                 // Step 2: Create Variants (ProductWizard.md Step 2) - only for new products
-                if (!$this->isEditMode) {
-                    (new CreateVariantsAction())->execute($this->product, $this->generated_variants);
+                if (! $this->isEditMode) {
+                    (new CreateVariantsAction)->execute($this->product, $this->generated_variants);
                 }
 
-                // Step 3: Attach Images (ProductWizard.md Step 3)  
-                if (!empty($this->uploaded_images)) {
-                    (new AttachImagesAction())->execute($this->product, $this->uploaded_images);
+                // Step 3: Attach Images (ProductWizard.md Step 3)
+                if (! empty($this->uploaded_images)) {
+                    (new AttachImagesAction)->execute($this->product, $this->uploaded_images);
                 }
 
                 // Step 4: Save Pricing & Stock (ProductWizard.md Step 4)
-                if (!empty($this->variant_pricing)) {
-                    (new SavePricingAction())->execute($this->variant_pricing);
+                if (! empty($this->variant_pricing)) {
+                    (new SavePricingAction)->execute($this->variant_pricing);
                 }
 
                 // Clean up: Delete draft on successful save
@@ -721,7 +728,7 @@ class ProductWizard extends Component
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             throw $e; // Re-throw validation exceptions
-        } catch (NoVariantsException | WizardValidationException | ProductSaveException $e) {
+        } catch (NoVariantsException|WizardValidationException|ProductSaveException $e) {
             $this->handleKnownException($e);
         } catch (\Exception $e) {
             $this->handleUnexpectedException($e);
@@ -737,15 +744,15 @@ class ProductWizard extends Component
     {
         \Log::info('ProductWizard validation', [
             'product_id' => $this->product?->id ?? 'null',
-            'edit_mode' => $this->isEditMode
+            'edit_mode' => $this->isEditMode,
         ]);
-        
+
         $this->validate([
             'name' => 'required|min:3|max:255',
             'parent_sku' => [
-                'required', 
+                'required',
                 'regex:/^[0-9]{3}$/',
-                Rule::unique('products', 'parent_sku')->ignore($this->isEditMode && $this->product ? $this->product : null)
+                Rule::unique('products', 'parent_sku')->ignore($this->isEditMode && $this->product ? $this->product : null),
             ],
             'status' => 'required|in:draft,active,inactive,archived',
             'brand' => 'nullable|string|max:100',
@@ -762,7 +769,7 @@ class ProductWizard extends Component
         );
 
         // Don't redirect in tests - just mark success
-        if (!app()->runningInConsole()) {
+        if (! app()->runningInConsole()) {
             $this->redirect(route('products.show', ['product' => $this->product->id]));
         }
     }
@@ -781,11 +788,11 @@ class ProductWizard extends Component
                 \Log::info('ProductWizard: Draft deletion', [
                     'user_id' => auth()->id(),
                     'product_id' => $this->product?->id,
-                    'result' => $draftDeleted ? 'success' : 'no_draft_found'
+                    'result' => $draftDeleted ? 'success' : 'no_draft_found',
                 ]);
             } catch (\Exception $e) {
                 \Log::error('ProductWizard: Draft deletion failed', [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
                 // Don't fail the save for draft deletion errors
             }
@@ -811,7 +818,7 @@ class ProductWizard extends Component
     {
         $this->dispatch('notify', [
             'type' => 'error',
-            'message' => 'An unexpected error occurred: ' . $e->getMessage(),
+            'message' => 'An unexpected error occurred: '.$e->getMessage(),
         ]);
         throw $e;
     }

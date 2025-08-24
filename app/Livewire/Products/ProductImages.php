@@ -7,7 +7,7 @@ use Livewire\Component;
 
 /**
  * 🖼️ PRODUCT IMAGES TAB
- * 
+ *
  * Display and manage images for a specific product
  */
 class ProductImages extends Component

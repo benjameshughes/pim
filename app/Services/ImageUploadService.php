@@ -231,8 +231,10 @@ class ImageUploadService
      */
     public function deleteImage(Image $image): bool
     {
-        // Delete file from R2
-        Storage::disk($this->disk)->delete($image->path);
+        // Delete file from R2 only if path exists
+        if ($image->path) {
+            Storage::disk($this->disk)->delete($image->path);
+        }
 
         // Delete database record
         $image->delete();
