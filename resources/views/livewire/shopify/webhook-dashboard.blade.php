@@ -77,20 +77,20 @@
             <!-- Status Filter -->
             <div>
                 <flux:select wire:model.live="filterStatus" class="w-full">
-                    <flux:option value="all">All Statuses</flux:option>
-                    <flux:option value="completed">✅ Completed</flux:option>
-                    <flux:option value="failed">❌ Failed</flux:option>
-                    <flux:option value="processing">⚡ Processing</flux:option>
-                    <flux:option value="queued">📋 Queued</flux:option>
+                    <flux:select.option value="all">All Statuses</flux:select.option>
+                    <flux:select.option value="completed">✅ Completed</flux:select.option>
+                    <flux:select.option value="failed">❌ Failed</flux:select.option>
+                    <flux:select.option value="processing">⚡ Processing</flux:select.option>
+                    <flux:select.option value="queued">📋 Queued</flux:select.option>
                 </flux:select>
             </div>
 
             <!-- Topic Filter -->
             <div>
                 <flux:select wire:model.live="filterTopic" class="w-full">
-                    <flux:option value="all">All Topics</flux:option>
+                    <flux:select.option value="all">All Topics</flux:select.option>
                     @foreach($this->availableTopics as $topic)
-                        <flux:option value="{{ $topic }}">{{ str_replace('/', ' → ', $topic) }}</flux:option>
+                        <flux:select.option value="{{ $topic }}">{{ str_replace('/', ' → ', $topic) }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
@@ -98,10 +98,10 @@
             <!-- Time Range -->
             <div>
                 <flux:select wire:model.live="timeRange" class="w-full">
-                    <flux:option value="1h">Last Hour</flux:option>
-                    <flux:option value="24h">Last 24 Hours</flux:option>
-                    <flux:option value="7d">Last 7 Days</flux:option>
-                    <flux:option value="30d">Last 30 Days</flux:option>
+                    <flux:select.option value="1h">Last Hour</flux:select.option>
+                    <flux:select.option value="24h">Last 24 Hours</flux:select.option>
+                    <flux:select.option value="7d">Last 7 Days</flux:select.option>
+                    <flux:select.option value="30d">Last 30 Days</flux:select.option>
                 </flux:select>
             </div>
 

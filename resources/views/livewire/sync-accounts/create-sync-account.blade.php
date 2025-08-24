@@ -13,7 +13,7 @@
                     <flux:label>Integration Type</flux:label>
                     <flux:select wire:model.live="channel" placeholder="Choose an integration...">
                         @foreach($this->getChannelOptions() as $value => $label)
-                            <flux:option value="{{ $value }}">{{ $label }}</flux:option>
+                            <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
                         @endforeach
                     </flux:select>
                     <flux:error name="channel" />
@@ -105,8 +105,8 @@
                             <flux:field>
                                 <flux:label>Environment</flux:label>
                                 <flux:select wire:model="environment">
-                                    <flux:option value="SANDBOX">Sandbox (Testing)</flux:option>
-                                    <flux:option value="PRODUCTION">Production (Live)</flux:option>
+                                    <flux:select.option value="SANDBOX">Sandbox (Testing)</flux:select.option>
+                                    <flux:select.option value="PRODUCTION">Production (Live)</flux:select.option>
                                 </flux:select>
                                 <flux:error name="environment" />
                             </flux:field>

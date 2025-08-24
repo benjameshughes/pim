@@ -30,7 +30,7 @@
                 <flux:label>Channel</flux:label>
                 <flux:select wire:model.live="channelFilter" placeholder="All channels">
                     @foreach($channels as $channel)
-                        <flux:option value="{{ $channel }}">{{ ucfirst($channel) }}</flux:option>
+                        <flux:select.option value="{{ $channel }}">{{ ucfirst($channel) }}</flux:select.option>
                     @endforeach
                 </flux:select>
             </flux:field>
