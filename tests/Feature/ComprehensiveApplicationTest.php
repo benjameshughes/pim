@@ -69,6 +69,25 @@ describe('🔍 Comprehensive Application Health Check', function () {
         
         test('authenticated user can access dashboard', function () {
             $response = $this->get('/dashboard');
+            
+            if ($response->status() >= 400) {
+                // Get the actual error content
+                $content = $response->getContent();
+                if (strpos($content, 'SQLSTATE') !== false) {
+                    // Extract SQL error
+                    preg_match('/SQLSTATE\[.*?\]: (.*?) \(/', $content, $matches);
+                    if (isset($matches[1])) {
+                        dump('SQL Error found:', $matches[1]);
+                    } else {
+                        dump('SQLSTATE error in response but could not parse');
+                    }
+                } else {
+                    dump('Non-SQL error, status:', $response->status());
+                    // Show first 500 chars of error
+                    dump(substr(strip_tags($content), 0, 500));
+                }
+            }
+            
             expect($response->status())->toBeLessThan(400);
         });
         
