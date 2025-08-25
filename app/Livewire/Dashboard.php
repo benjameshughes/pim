@@ -259,13 +259,13 @@ class Dashboard extends Component
 
         return $recentLogs->groupBy('sync_account.channel')->map(function ($logs, $channel) {
             $latest = $logs->first();
-            $totalItems = $logs->where('action', 'push')->count();
-            $successes = $logs->where('success', true)->count();
+            $totalItems = $logs->count();
+            $successes = $logs->where('status', 'completed')->count();
 
             $status = match (true) {
                 $successes === $totalItems => 'completed',
                 $successes > 0 => 'partial',
-                $logs->where('success', false)->count() > 0 => 'failed',
+                $logs->where('status', 'failed')->count() > 0 => 'failed',
                 default => 'processing'
             };
 
