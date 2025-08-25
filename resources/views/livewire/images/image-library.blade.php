@@ -30,7 +30,6 @@
                     <flux:select.option value="all">All images</flux:select.option>
                     <flux:select.option value="unattached">Unlinked</flux:select.option>
                     <flux:select.option value="attached">Linked to products</flux:select.option>
-                    <flux:select.option value="mine">My uploads</flux:select.option>
                 </flux:select>
             </div>
 

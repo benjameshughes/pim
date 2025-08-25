@@ -26,6 +26,9 @@ class ImageLibrary extends Component
     public string $search = '';
     public string $selectedFolder = '';
     public string $selectedTag = '';
+    public string $filterBy = 'all'; // all, attached, unattached
+    public string $sortBy = 'created_at';
+    public string $sortDirection = 'desc';
 
     // New image metadata
     public string $newImageFolder = '';
@@ -43,6 +46,7 @@ class ImageLibrary extends Component
         'search' => ['except' => ''],
         'selectedFolder' => ['except' => ''],
         'selectedTag' => ['except' => ''],
+        'filterBy' => ['except' => 'all'],
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
     ];
@@ -141,7 +145,7 @@ class ImageLibrary extends Component
      */
     public function clearFilters()
     {
-        $this->reset(['search', 'selectedFolder', 'selectedTag']);
+        $this->reset(['search', 'selectedFolder', 'selectedTag', 'filterBy']);
         $this->resetPage();
     }
 
@@ -150,7 +154,7 @@ class ImageLibrary extends Component
      */
     public function getImagesProperty()
     {
-        $query = Image::query()->ordered();
+        $query = Image::query();
 
         // Search
         if ($this->search) {
@@ -166,6 +170,16 @@ class ImageLibrary extends Component
         if ($this->selectedTag) {
             $query->withTag($this->selectedTag);
         }
+
+        // Filter by attachment status
+        match ($this->filterBy) {
+            'attached' => $query->attached(),
+            'unattached' => $query->unattached(),
+            default => null, // Show all
+        };
+
+        // Apply sorting
+        $query->orderBy($this->sortBy, $this->sortDirection);
 
         return $query->paginate($this->perPage);
     }
@@ -209,6 +223,29 @@ class ImageLibrary extends Component
             'unattached' => Image::unattached()->count(),
             'folders' => Image::select('folder')->whereNotNull('folder')->distinct()->count(),
         ];
+    }
+
+    /**
+     * 🔍 UPDATE FILTERS - Reset pagination when filters change
+     */
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedFolder(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSelectedTag(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterBy(): void
+    {
+        $this->resetPage();
     }
 
     /**
