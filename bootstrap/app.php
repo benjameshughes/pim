@@ -13,13 +13,10 @@ use Illuminate\Foundation\Configuration\Middleware;
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // 🎭 LEGENDARY webhook middleware registration
-        $middleware->alias([
-            'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
-        ]);
-        
-        // Add request logging for debugging - TEMPORARILY DISABLED FOR TESTING
-        // $middleware->web(\App\Http\Middleware\LogRequests::class);
+        // TEMPORARILY DISABLED ALL MIDDLEWARE FOR PRODUCTION DEBUGGING
+        // $middleware->alias([
+        //     'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

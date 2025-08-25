@@ -11,15 +11,14 @@ class MarketplaceServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Register the marketplace APIs
-        $this->app->singleton(ShopifyAPI::class, function ($app) {
-            return new ShopifyAPI;
-        });
+        // TEMPORARILY DISABLED FOR PRODUCTION DEBUGGING
+        // $this->app->singleton(ShopifyAPI::class, function ($app) {
+        //     return new ShopifyAPI;
+        // });
 
-        // Register the sync facade binding
-        $this->app->singleton('marketplace.sync', function ($app) {
-            return new MarketplaceSync($app->make(ShopifyAPI::class));
-        });
+        // $this->app->singleton('marketplace.sync', function ($app) {
+        //     return new MarketplaceSync($app->make(ShopifyAPI::class));
+        // });
     }
 
     public function boot(): void
