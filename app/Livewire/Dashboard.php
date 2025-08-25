@@ -82,7 +82,7 @@ class Dashboard extends Component
 
     private function getProductsWithImages(): int
     {
-        return Product::whereHas('images')->count();
+        return Product::whereNotNull('image_url')->count();
     }
 
     private function getVariantsWithCompleteData(): int
@@ -178,7 +178,7 @@ class Dashboard extends Component
             ->whereHas('barcodes')
             ->whereHas('pricing')
             ->whereHas('product', function ($query) {
-                $query->whereNotNull('images')->where('images', '!=', '[]');
+                $query->whereNotNull('image_url');
             })
             ->count();
     }
@@ -402,7 +402,7 @@ class Dashboard extends Component
             'pending_images' => ProductVariant::whereHas('barcodes')
                 ->whereHas('pricing')
                 ->whereDoesntHave('product', function ($query) {
-                    $query->whereNotNull('images')->where('images', '!=', '[]');
+                    $query->whereNotNull('image_url');
                 })->count(),
             'pending_data' => $this->getPendingEnrichment(),
             'draft' => Product::where('status', 'draft')->count(),
