@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * 📊 ENHANCED REQUEST LOGGING MIDDLEWARE
- * 
+ *
  * Comprehensive request/response logging with metrics, performance tracking,
  * and smart filtering for production-ready observability
  */
@@ -66,7 +66,7 @@ class LogRequests
     protected function shouldSkipLogging(Request $request): bool
     {
         $path = $request->path();
-        
+
         foreach ($this->skipRoutes as $skipRoute) {
             if (str_starts_with($path, $skipRoute)) {
                 return true;
@@ -101,14 +101,14 @@ class LogRequests
 
         // Add filtered headers (excluding sensitive ones)
         $context['headers'] = $this->filterSensitiveData(
-            $request->headers->all(), 
+            $request->headers->all(),
             $this->sensitiveHeaders
         );
 
         // Add request data (excluding sensitive fields)
         if ($request->isMethod('POST') || $request->isMethod('PUT') || $request->isMethod('PATCH')) {
             $context['data'] = $this->filterSensitiveData(
-                $request->all(), 
+                $request->all(),
                 $this->sensitiveFields
             );
         }
@@ -175,7 +175,7 @@ class LogRequests
     {
         return match (true) {
             $durationMs < 100 => 'excellent',
-            $durationMs < 300 => 'good', 
+            $durationMs < 300 => 'good',
             $durationMs < 1000 => 'acceptable',
             $durationMs < 3000 => 'slow',
             default => 'very_slow'
@@ -184,17 +184,18 @@ class LogRequests
 
     /**
      * Filter out sensitive data from arrays
-     * @param array<string, mixed> $data
-     * @param string[] $sensitiveKeys
+     *
+     * @param  array<string, mixed>  $data
+     * @param  string[]  $sensitiveKeys
      * @return array<string, mixed>
      */
     protected function filterSensitiveData(array $data, array $sensitiveKeys): array
     {
         $filtered = [];
-        
+
         foreach ($data as $key => $value) {
             $lowerKey = strtolower($key);
-            
+
             // Check if key is sensitive
             $isSensitive = false;
             foreach ($sensitiveKeys as $sensitiveKey) {
@@ -203,7 +204,7 @@ class LogRequests
                     break;
                 }
             }
-            
+
             if ($isSensitive) {
                 $filtered[$key] = '[REDACTED]';
             } elseif (is_array($value)) {
@@ -212,7 +213,7 @@ class LogRequests
                 $filtered[$key] = $value;
             }
         }
-        
+
         return $filtered;
     }
 }

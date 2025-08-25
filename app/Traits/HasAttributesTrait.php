@@ -2,13 +2,11 @@
 
 namespace App\Traits;
 
-use App\Models\AttributeDefinition;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 /**
  * 🏷️ HAS ATTRIBUTES TRAIT
- * 
+ *
  * Provides common attribute functionality for both Product and ProductVariant models.
  * Handles getting/setting attributes, validation, and basic attribute operations.
  */
@@ -22,6 +20,7 @@ trait HasAttributesTrait
     public function getTypedAttributeValue(string $key)
     {
         $attribute = $this->attributes()->forAttribute($key)->first();
+
         return $attribute?->getTypedValue();
     }
 
@@ -32,13 +31,14 @@ trait HasAttributesTrait
      */
     public function setTypedAttributeValue(string $key, $value, array $options = []): bool
     {
-        $attributeModel = $this instanceof \App\Models\Product ? 
-            \App\Models\ProductAttribute::class : 
+        $attributeModel = $this instanceof \App\Models\Product ?
+            \App\Models\ProductAttribute::class :
             \App\Models\VariantAttribute::class;
 
         try {
             $relationKey = $this instanceof \App\Models\Product ? 'product_id' : 'variant_id';
             $attribute = $attributeModel::createOrUpdate($this, $key, $value, $options);
+
             return $attribute !== null;
         } catch (\InvalidArgumentException $e) {
             return false;
@@ -53,11 +53,11 @@ trait HasAttributesTrait
     public function getTypedAttributesArray(): array
     {
         $attributes = [];
-        
+
         foreach ($this->validAttributes as $attribute) {
             $attributes[$attribute->getAttributeKey()] = $attribute->getTypedValue();
         }
-        
+
         return $attributes;
     }
 
@@ -98,10 +98,10 @@ trait HasAttributesTrait
         foreach ($this->attributes as $attribute) {
             $attribute->revalidate();
             $attribute->save();
-            
+
             $results['validated_count']++;
-            
-            if (!$attribute->is_valid) {
+
+            if (! $attribute->is_valid) {
                 $results['valid'] = false;
                 $results['errors'][$attribute->getAttributeKey()] = $attribute->validation_errors;
             }
@@ -127,9 +127,9 @@ trait HasAttributesTrait
             try {
                 $existingAttribute = $this->attributes()->forAttribute($key)->first();
                 $wasUpdate = (bool) $existingAttribute;
-                
+
                 $success = $this->setTypedAttributeValue($key, $value, $options);
-                
+
                 if ($success) {
                     if ($wasUpdate) {
                         $results['updated'][] = $key;
@@ -158,7 +158,7 @@ trait HasAttributesTrait
 
         foreach ($this->attributes as $attribute) {
             $key = $attribute->getAttributeKey();
-            
+
             if ($marketplace) {
                 $statuses[$key] = [
                     'needs_sync' => $attribute->needsSyncTo($marketplace),
@@ -183,7 +183,7 @@ trait HasAttributesTrait
         $total = $this->attributes->count();
         $valid = $this->validAttributes->count();
         $invalid = $total - $valid;
-        
+
         $bySource = $this->attributes->groupBy('source')->map->count();
         $byGroup = $this->attributes->load('attributeDefinition')
             ->groupBy('attributeDefinition.group')
@@ -208,20 +208,20 @@ trait HasAttributesTrait
     public function searchAttributes(string $query, array $options = []): Collection
     {
         $searchIn = $options['search_in'] ?? ['key', 'value', 'display_value'];
-        
+
         return $this->attributes()->with('attributeDefinition')
             ->where(function ($queryBuilder) use ($query, $searchIn) {
                 if (in_array('key', $searchIn)) {
                     $queryBuilder->orWhereHas('attributeDefinition', function ($q) use ($query) {
                         $q->where('key', 'like', "%{$query}%")
-                          ->orWhere('name', 'like', "%{$query}%");
+                            ->orWhere('name', 'like', "%{$query}%");
                     });
                 }
-                
+
                 if (in_array('value', $searchIn)) {
                     $queryBuilder->orWhere('value', 'like', "%{$query}%");
                 }
-                
+
                 if (in_array('display_value', $searchIn)) {
                     $queryBuilder->orWhere('display_value', 'like', "%{$query}%");
                 }
@@ -265,7 +265,7 @@ trait HasAttributesTrait
 
         foreach ($invalidAttributes as $attribute) {
             $results['processed']++;
-            
+
             try {
                 switch ($action) {
                     case 'fix':
@@ -288,12 +288,12 @@ trait HasAttributesTrait
                             }
                         }
                         break;
-                        
+
                     case 'remove':
                         $attribute->delete();
                         $results['removed']++;
                         break;
-                        
+
                     case 'report':
                         // Just report, don't fix
                         $results['errors'][$attribute->getAttributeKey()] = $attribute->validation_errors;

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Services\Shopify\API\ShopifyApiClient;
 use GuzzleHttp\Client;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -60,6 +59,7 @@ class ShopifyConnectService
                 if (isset($apiTest['overall_success'])) {
                     $apiTest['success'] = $apiTest['overall_success'];
                 }
+
                 return $apiTest;
             }
 
@@ -89,7 +89,7 @@ class ShopifyConnectService
     public function getShopInfo(): array
     {
         try {
-            $client = new Client();
+            $client = new Client;
             $response = $client->get("https://{$this->config['store_url']}/admin/api/{$this->config['api_version']}/shop.json", [
                 'headers' => [
                     'X-Shopify-Access-Token' => $this->config['access_token'],
@@ -143,7 +143,7 @@ class ShopifyConnectService
     public function createProduct(array $productData): array
     {
         try {
-            $client = new Client();
+            $client = new Client;
             $response = $client->post("https://{$this->config['store_url']}/admin/api/{$this->config['api_version']}/products.json", [
                 'headers' => [
                     'X-Shopify-Access-Token' => $this->config['access_token'],
@@ -177,13 +177,12 @@ class ShopifyConnectService
      *
      * Retrieve a product from Shopify
      *
-     * @param  int  $productId
      * @return array<string, mixed>
      */
     public function getProduct(int $productId): array
     {
         try {
-            $client = new Client();
+            $client = new Client;
             $response = $client->get("https://{$this->config['store_url']}/admin/api/{$this->config['api_version']}/products/{$productId}.json", [
                 'headers' => [
                     'X-Shopify-Access-Token' => $this->config['access_token'],

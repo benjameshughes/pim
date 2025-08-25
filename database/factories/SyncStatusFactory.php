@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Product;
-use App\Models\ProductVariant;
 use App\Models\SyncAccount;
 use App\Models\SyncStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;

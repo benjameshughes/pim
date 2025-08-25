@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * 🏷️ FIX SHOPIFY TAG GENERATION ACTION
- * 
+ *
  * Centralized action to fix Shopify tag generation issues.
  * Addresses empty brand fields and other tag-related problems.
  * Can be used for both individual products and bulk operations.
@@ -17,10 +17,9 @@ class FixShopifyTagGenerationAction extends BaseAction
 {
     /**
      * Execute tag generation fixes
-     * 
-     * @param Product|null $product Specific product to fix, or null for all products
-     * @param array $options Fix options
-     * @return array
+     *
+     * @param  Product|null  $product  Specific product to fix, or null for all products
+     * @param  array  $options  Fix options
      */
     protected function performAction(...$params): array
     {
@@ -51,7 +50,7 @@ class FixShopifyTagGenerationAction extends BaseAction
 
             if (empty($errors)) {
                 return $this->success(
-                    'Successfully fixed ' . count($fixed) . ' product(s) tag generation',
+                    'Successfully fixed '.count($fixed).' product(s) tag generation',
                     [
                         'fixed_count' => count($fixed),
                         'fixed_products' => $fixed,
@@ -60,7 +59,7 @@ class FixShopifyTagGenerationAction extends BaseAction
                 );
             } else {
                 return $this->failure(
-                    'Fixed ' . count($fixed) . ' products but encountered ' . count($errors) . ' errors',
+                    'Fixed '.count($fixed).' products but encountered '.count($errors).' errors',
                     [
                         'fixed_count' => count($fixed),
                         'error_count' => count($errors),
@@ -73,9 +72,9 @@ class FixShopifyTagGenerationAction extends BaseAction
 
         } catch (\Exception $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             return $this->failure(
-                'Tag generation fix failed: ' . $e->getMessage(),
+                'Tag generation fix failed: '.$e->getMessage(),
                 [
                     'error' => $e->getMessage(),
                     'duration_ms' => $duration,
@@ -90,14 +89,14 @@ class FixShopifyTagGenerationAction extends BaseAction
     protected function fixSingleProduct(Product $product, array $options = []): array
     {
         $fixes = [];
-        
+
         // Fix empty brand
         if (empty($product->brand) || trim($product->brand) === '') {
             $defaultBrand = $options['default_brand'] ?? 'Window Treatments Co';
-            
+
             $product->brand = $defaultBrand;
             $product->save();
-            
+
             $fixes[] = "Set brand to '{$defaultBrand}'";
         }
 
@@ -131,14 +130,14 @@ class FixShopifyTagGenerationAction extends BaseAction
     {
         $fixed = [];
         $errors = [];
-        
+
         $defaultBrand = $options['default_brand'] ?? 'Window Treatments Co';
-        
+
         // Get products with empty brands
         $productsToFix = Product::where(function ($query) {
             $query->whereNull('brand')
-                  ->orWhere('brand', '')
-                  ->orWhere('brand', ' ');
+                ->orWhere('brand', '')
+                ->orWhere('brand', ' ');
         })->get();
 
         foreach ($productsToFix as $product) {
@@ -177,7 +176,7 @@ class FixShopifyTagGenerationAction extends BaseAction
     public function validateProductForShopifyTagGeneration(Product $product): array
     {
         $issues = [];
-        
+
         // Check brand field
         if (empty($product->brand) || trim($product->brand) === '') {
             $issues[] = [
@@ -220,8 +219,8 @@ class FixShopifyTagGenerationAction extends BaseAction
         // Products with empty brands
         $emptyBrandCount = Product::where(function ($query) {
             $query->whereNull('brand')
-                  ->orWhere('brand', '')
-                  ->orWhere('brand', ' ');
+                ->orWhere('brand', '')
+                ->orWhere('brand', ' ');
         })->count();
 
         // Empty marketplace attributes

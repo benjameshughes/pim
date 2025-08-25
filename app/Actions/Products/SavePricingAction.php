@@ -2,18 +2,18 @@
 
 namespace App\Actions\Products;
 
+use App\Exceptions\ProductWizard\ProductSaveException;
 use App\Models\Pricing;
 use App\Models\ProductVariant;
-use App\Exceptions\ProductWizard\ProductSaveException;
 
 /**
  * 💰 SAVE PRICING ACTION
- * 
+ *
  * Handles Step 4: Stock and Pricing
- * - Individual variant pricing and stock management  
+ * - Individual variant pricing and stock management
  * - Bulk update capabilities
  * - Integration with existing Pricing model
- * 
+ *
  * Follows ProductWizard.md specification for Step 4
  */
 class SavePricingAction
@@ -22,14 +22,14 @@ class SavePricingAction
     {
         try {
             $updatedRecords = 0;
-            
+
             foreach ($pricingData as $variantId => $pricing) {
                 // Update variant stock level
                 if (isset($pricing['stock_level'])) {
                     ProductVariant::where('id', $variantId)
                         ->update(['stock_level' => $pricing['stock_level']]);
                 }
-                
+
                 // Update/create pricing record
                 if (isset($pricing['retail_price'])) {
                     Pricing::updateOrCreate(
@@ -48,7 +48,7 @@ class SavePricingAction
             return [
                 'success' => true,
                 'updated_records' => $updatedRecords,
-                'message' => "Pricing and stock updated for {$updatedRecords} variants"
+                'message' => "Pricing and stock updated for {$updatedRecords} variants",
             ];
         } catch (\Exception $e) {
             throw ProductSaveException::pricingUpdateFailed($e);
@@ -86,7 +86,7 @@ class SavePricingAction
             return [
                 'success' => true,
                 'updated_variants' => count($variantIds),
-                'message' => 'Bulk pricing update completed for ' . count($variantIds) . ' variants'
+                'message' => 'Bulk pricing update completed for '.count($variantIds).' variants',
             ];
         } catch (\Exception $e) {
             throw ProductSaveException::bulkPricingUpdateFailed($e);

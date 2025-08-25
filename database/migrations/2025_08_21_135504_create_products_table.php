@@ -13,18 +13,18 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            
+
             // Core product identity
             $table->string('name'); // "Blackout Roller Blind"
-            $table->string('parent_sku', 50)->unique(); // "026"  
+            $table->string('parent_sku', 50)->unique(); // "026"
             $table->text('description')->nullable();
             $table->string('status', 20)->default('active'); // active, inactive
-            
+
             // Simple product image
             $table->string('image_url')->nullable();
-            
+
             $table->timestamps();
-            
+
             // Simple indexes
             $table->index('status');
             $table->index('parent_sku');

@@ -2,8 +2,8 @@
 
 namespace App\Livewire\DAM;
 
-use App\Models\Image;
 use App\Actions\Images\DeleteImageAction;
+use App\Models\Image;
 use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
 use Livewire\Component;
@@ -21,9 +21,9 @@ class ImageShow extends Component
     public function mount(Image $image)
     {
         $this->image = $image->load([
-            'products', 
+            'products',
             'variants.product',
-            'createdBy'
+            'createdBy',
         ]);
     }
 
@@ -38,7 +38,7 @@ class ImageShow extends Component
         $this->dispatch('notify', [
             'type' => 'success',
             'message' => "Image '{$imageName}' deleted successfully! 🗑️",
-            'persist' => true
+            'persist' => true,
         ]);
 
         return $this->redirect(route('dam.index'), navigate: true);
@@ -50,16 +50,16 @@ class ImageShow extends Component
     public function duplicateImage()
     {
         $newImage = $this->image->replicate();
-        $newImage->title = ($this->image->title ?? $this->image->display_title) . ' (Copy)';
-        $newImage->filename = pathinfo($this->image->filename, PATHINFO_FILENAME) . '-copy.' . pathinfo($this->image->filename, PATHINFO_EXTENSION);
-        
+        $newImage->title = ($this->image->title ?? $this->image->display_title).' (Copy)';
+        $newImage->filename = pathinfo($this->image->filename, PATHINFO_FILENAME).'-copy.'.pathinfo($this->image->filename, PATHINFO_EXTENSION);
+
         // Note: This would need file duplication logic in ImageUploadService
         // For now, just duplicate metadata
         $newImage->save();
 
         $this->dispatch('notify', [
-            'type' => 'success', 
-            'message' => 'Image metadata duplicated successfully! ✨'
+            'type' => 'success',
+            'message' => 'Image metadata duplicated successfully! ✨',
         ]);
 
         return $this->redirect(route('dam.images.show', $newImage), navigate: true);

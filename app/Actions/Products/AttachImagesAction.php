@@ -2,19 +2,19 @@
 
 namespace App\Actions\Products;
 
+use App\Exceptions\ProductWizard\ProductSaveException;
+use App\Models\Image;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\Image;
-use App\Exceptions\ProductWizard\ProductSaveException;
 
 /**
  * 📸 ATTACH IMAGES ACTION
- * 
+ *
  * Handles Step 3: Images
  * - Integration with DAM (Digital Asset Management) system
  * - Image relationships to products and variants
  * - Polymorphic relationship management
- * 
+ *
  * Follows ProductWizard.md specification for Step 3 and Images section
  */
 class AttachImagesAction
@@ -23,12 +23,12 @@ class AttachImagesAction
     {
         try {
             $attachedImages = [];
-            
+
             foreach ($imageIds as $imageId) {
                 // Per ProductWizard.md: "images should be assigned the parent product"
                 $this->attachImageToProduct($product, $imageId);
                 $attachedImages[] = $imageId;
-                
+
                 // Per ProductWizard.md: "images can also be assigned to the variants"
                 if ($variantAssignments && isset($variantAssignments[$imageId])) {
                     $this->attachImageToVariants($imageId, $variantAssignments[$imageId]);
@@ -38,7 +38,7 @@ class AttachImagesAction
             return [
                 'success' => true,
                 'attached_images' => $attachedImages,
-                'message' => count($attachedImages) . ' images attached successfully'
+                'message' => count($attachedImages).' images attached successfully',
             ];
         } catch (\Exception $e) {
             throw ProductSaveException::imageAttachmentFailed($e);
@@ -109,7 +109,7 @@ class AttachImagesAction
             return [
                 'success' => true,
                 'detached_images' => $imageIds,
-                'message' => count($imageIds) . ' images detached successfully'
+                'message' => count($imageIds).' images detached successfully',
             ];
         } catch (\Exception $e) {
             throw ProductSaveException::imageDetachmentFailed($e);

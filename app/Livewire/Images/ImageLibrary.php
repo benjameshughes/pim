@@ -24,17 +24,24 @@ class ImageLibrary extends Component
 
     // Search and filtering
     public string $search = '';
+
     public string $selectedFolder = '';
+
     public string $selectedTag = '';
+
     public string $filterBy = 'all'; // all, attached, unattached
+
     public string $sortBy = 'created_at';
+
     public string $sortDirection = 'desc';
 
     // New image metadata (for simple interface)
     public string $newImageFolder = '';
+
     public array $newImageTags = [];
+
     public string $newTagInput = '';
-    
+
     // Upload metadata (for modal interface)
     public array $uploadMetadata = [
         'title' => '',
@@ -46,8 +53,9 @@ class ImageLibrary extends Component
 
     // View options
     public string $view = 'grid'; // grid or list
+
     public int $perPage = 24;
-    
+
     // Modal state
     public bool $showUploadModal = false;
 
@@ -59,7 +67,6 @@ class ImageLibrary extends Component
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
     ];
-
 
     /**
      * 📤 OPEN UPLOAD MODAL
@@ -80,7 +87,7 @@ class ImageLibrary extends Component
 
         try {
             // Convert tags string to array if needed
-            $tags = is_string($this->uploadMetadata['tags']) 
+            $tags = is_string($this->uploadMetadata['tags'])
                 ? array_filter(array_map('trim', explode(',', $this->uploadMetadata['tags'])))
                 : ($this->uploadMetadata['tags'] ?? []);
 
@@ -97,9 +104,9 @@ class ImageLibrary extends Component
                 logger()->info('R2 Upload Debug', [
                     'disk_config' => config('filesystems.disks.images'),
                     'file_count' => count($this->newImages),
-                    'has_r2_key' => !empty(config('filesystems.disks.images.key')),
-                    'has_r2_secret' => !empty(config('filesystems.disks.images.secret')),
-                    'has_r2_bucket' => !empty(config('filesystems.disks.images.bucket')),
+                    'has_r2_key' => ! empty(config('filesystems.disks.images.key')),
+                    'has_r2_secret' => ! empty(config('filesystems.disks.images.secret')),
+                    'has_r2_bucket' => ! empty(config('filesystems.disks.images.bucket')),
                 ]);
             }
 
@@ -107,7 +114,7 @@ class ImageLibrary extends Component
 
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => count($this->newImages) . ' images uploaded successfully! 🎉'
+                'message' => count($this->newImages).' images uploaded successfully! 🎉',
             ]);
 
             $this->reset(['newImages', 'uploadMetadata']);
@@ -121,10 +128,10 @@ class ImageLibrary extends Component
                 'trace' => $e->getTraceAsString(),
                 'file_count' => count($this->newImages ?? []),
             ]);
-            
+
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Upload failed: ' . $e->getMessage()
+                'message' => 'Upload failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -135,20 +142,22 @@ class ImageLibrary extends Component
     public function deleteImage(int $imageId, ImageUploadService $uploadService)
     {
         $image = Image::find($imageId);
-        if (!$image) return;
+        if (! $image) {
+            return;
+        }
 
         try {
             $uploadService->delete($image);
-            
+
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Image deleted successfully! 🗑️'
+                'message' => 'Image deleted successfully! 🗑️',
             ]);
 
         } catch (\Exception $e) {
             $this->dispatch('notify', [
-                'type' => 'error', 
-                'message' => 'Delete failed: ' . $e->getMessage()
+                'type' => 'error',
+                'message' => 'Delete failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -158,13 +167,15 @@ class ImageLibrary extends Component
      */
     public function addTag()
     {
-        if (empty($this->newTagInput)) return;
+        if (empty($this->newTagInput)) {
+            return;
+        }
 
         $tag = trim($this->newTagInput);
-        if (!in_array($tag, $this->newImageTags)) {
+        if (! in_array($tag, $this->newImageTags)) {
             $this->newImageTags[] = $tag;
         }
-        
+
         $this->newTagInput = '';
     }
 
@@ -173,7 +184,7 @@ class ImageLibrary extends Component
      */
     public function removeTag(string $tag)
     {
-        $this->newImageTags = array_values(array_filter($this->newImageTags, fn($t) => $t !== $tag));
+        $this->newImageTags = array_values(array_filter($this->newImageTags, fn ($t) => $t !== $tag));
     }
 
     /**
@@ -260,7 +271,6 @@ class ImageLibrary extends Component
             'folders' => Image::select('folder')->whereNotNull('folder')->distinct()->count(),
         ];
     }
-
 
     /**
      * 🔍 UPDATE FILTERS - Reset pagination when filters change

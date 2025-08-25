@@ -3,12 +3,11 @@
 namespace App\Services;
 
 use App\Models\Pricing;
-use App\Models\ProductVariant;
 use App\Models\SalesChannel;
 
 /**
  * 💰 PRICING SERVICE - Independent Pricing Management
- * 
+ *
  * Pricing operates independently from variants and manages its own lifecycle
  */
 class PricingService
@@ -69,6 +68,7 @@ class PricingService
     public function updatePricing(Pricing $pricing, array $data): Pricing
     {
         $pricing->update($data);
+
         return $pricing->fresh();
     }
 
@@ -93,9 +93,9 @@ class PricingService
             $pricing = $this->createPricing([
                 'product_variant_id' => $variantId,
                 'sales_channel_id' => $channelId,
-                ...$priceData
+                ...$priceData,
             ]);
-            
+
             $pricingRecords->push($pricing);
         }
 
@@ -109,23 +109,23 @@ class PricingService
     public function getVariantPricingStats(int $variantId): array
     {
         $pricingRecords = $this->getActivePricingForVariant($variantId);
-        
+
         if ($pricingRecords->isEmpty()) {
             return [
                 'min_price' => 0,
                 'max_price' => 0,
                 'avg_price' => 0,
-                'channel_count' => 0
+                'channel_count' => 0,
             ];
         }
 
-        $prices = $pricingRecords->map(fn($pricing) => $pricing->calculateSalePrice());
+        $prices = $pricingRecords->map(fn ($pricing) => $pricing->calculateSalePrice());
 
         return [
             'min_price' => $prices->min(),
             'max_price' => $prices->max(),
             'avg_price' => $prices->avg(),
-            'channel_count' => $pricingRecords->count()
+            'channel_count' => $pricingRecords->count(),
         ];
     }
 
@@ -137,14 +137,17 @@ class PricingService
     {
         // Priority: Default channel -> First active -> 0.0
         $defaultChannel = SalesChannel::getDefault();
-        
+
         if ($defaultChannel) {
             $price = $this->getPriceForVariantAndChannel($variantId, $defaultChannel->id);
-            if ($price !== null) return $price;
+            if ($price !== null) {
+                return $price;
+            }
         }
 
         // Fallback to first active pricing
         $pricing = Pricing::where('product_variant_id', $variantId)->active()->first();
+
         return $pricing ? $pricing->calculateSalePrice() : 0.0;
     }
 }

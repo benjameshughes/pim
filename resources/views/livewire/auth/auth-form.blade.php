@@ -17,8 +17,7 @@
                         wire:model.live.debounce.300ms="email"
                         type="email"
                         placeholder="your.email@example.com"
-                        size="lg"
-                        icon="at"
+                        icon="at-sign"
                         :disabled="$isLoading"
                         class="text-center"
                     />
@@ -32,7 +31,6 @@
                 <flux:button
                     type="submit"
                     variant="primary"
-                    size="lg"
                     class="w-full"
                     :disabled="$isLoading || empty($email)"
                     wire:loading.attr="disabled"

@@ -4,7 +4,7 @@ namespace App\Contracts;
 
 /**
  * Draft Storage Contract
- * 
+ *
  * Defines the interface for draft storage operations.
  * Allows swapping between cache, session, database, or any other storage backend.
  */

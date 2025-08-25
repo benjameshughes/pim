@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Product extends Model
 {
-    use HasFactory, HasAttributesTrait;
+    use HasAttributesTrait, HasFactory;
 
     protected $fillable = [
         'name',
@@ -66,7 +66,6 @@ class Product extends Model
     {
         return $this->images()->primary()->first();
     }
-
 
     /**
      * 📊 SYNC STATUSES
@@ -184,6 +183,7 @@ class Product extends Model
 
         // Try to get from attributes system
         $attribute = $this->attributes()->forAttribute($key)->first();
+
         return $attribute?->getTypedValue();
     }
 
@@ -210,12 +210,13 @@ class Product extends Model
     public function getSmartBrandValue()
     {
         // First check direct brand field
-        if (!empty($this->getOriginal('brand'))) {
+        if (! empty($this->getOriginal('brand'))) {
             return $this->getOriginal('brand');
         }
 
         // Fallback to attributes system
         $brandAttribute = $this->attributes()->forAttribute('brand')->first();
+
         return $brandAttribute?->getTypedValue();
     }
 

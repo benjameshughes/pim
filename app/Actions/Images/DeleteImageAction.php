@@ -78,7 +78,7 @@ class DeleteImageAction
             $productCount = $image->products()->count();
             $image->products()->detach();
             Log::debug("Detached image from {$productCount} products", [
-                'image_id' => $image->id
+                'image_id' => $image->id,
             ]);
         }
 
@@ -87,7 +87,7 @@ class DeleteImageAction
             $variantCount = $image->variants()->count();
             $image->variants()->detach();
             Log::debug("Detached image from {$variantCount} variants", [
-                'image_id' => $image->id
+                'image_id' => $image->id,
             ]);
         }
     }

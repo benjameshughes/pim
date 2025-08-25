@@ -15,16 +15,17 @@ class VariantSkuRule implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         // Check format: must be 000-000 (3 digits, dash, 3 digits)
-        if (!preg_match('/^[0-9]{3}-[0-9]{3}$/', $value)) {
+        if (! preg_match('/^[0-9]{3}-[0-9]{3}$/', $value)) {
             $fail('The :attribute must follow format 000-000 (e.g., 123-001, 456-002).');
+
             return;
         }
 
         // Check uniqueness
         $query = ProductVariant::where('sku', $value);
-        
+
         if ($this->excludeProductId) {
-            $query->whereHas('product', function($q) {
+            $query->whereHas('product', function ($q) {
                 $q->where('id', '!=', $this->excludeProductId);
             });
         }

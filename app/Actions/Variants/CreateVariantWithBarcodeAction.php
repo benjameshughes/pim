@@ -112,7 +112,7 @@ class CreateVariantWithBarcodeAction extends BaseAction
     {
         // Handle manual barcode data (legacy support)
         $barcodes = $data['barcodes'] ?? [];
-        if (!empty($barcodes)) {
+        if (! empty($barcodes)) {
             foreach ($barcodes as $barcodeData) {
                 // Create barcode record directly (manual assignment)
                 Barcode::create([
@@ -122,34 +122,36 @@ class CreateVariantWithBarcodeAction extends BaseAction
                     'status' => 'active',
                 ]);
             }
+
             return;
         }
 
         // Handle pool-based assignment (new system)
-        if (!empty($data['barcode_pool_id'])) {
+        if (! empty($data['barcode_pool_id'])) {
             $barcodePool = BarcodePool::find($data['barcode_pool_id']);
             if ($barcodePool && $barcodePool->isAvailable()) {
                 $barcodePool->assignTo($variant);
             }
+
             return;
         }
 
         // Auto-assign from pool (default behavior)
         if ($data['auto_assign_barcode'] ?? true) {
             try {
-                $assignAction = new AssignBarcodeToVariantAction();
+                $assignAction = new AssignBarcodeToVariantAction;
                 $result = $assignAction->execute($variant, $data['barcode_type'] ?? 'EAN13');
-                
+
                 // Log successful assignment
                 if ($result['assigned']) {
-                    \Log::info("Auto-assigned barcode to variant", [
+                    \Log::info('Auto-assigned barcode to variant', [
                         'variant_id' => $variant->id,
                         'barcode' => $result['barcode_pool']->barcode ?? 'unknown',
                     ]);
                 }
             } catch (\Exception $e) {
                 // Log but don't fail variant creation
-                \Log::warning("Failed to auto-assign barcode to variant", [
+                \Log::warning('Failed to auto-assign barcode to variant', [
                     'variant_id' => $variant->id,
                     'error' => $e->getMessage(),
                 ]);

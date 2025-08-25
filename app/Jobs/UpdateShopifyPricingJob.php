@@ -25,7 +25,9 @@ class UpdateShopifyPricingJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public Product $product;
+
     public SyncAccount $syncAccount;
+
     public array $pricingOptions;
 
     /**
@@ -64,8 +66,8 @@ class UpdateShopifyPricingJob implements ShouldQueue
 
         // Create sync log entry
         $syncLog = SyncLog::createEntry(
-            $this->syncAccount, 
-            'pricing_update', 
+            $this->syncAccount,
+            'pricing_update',
             $this->product,
             null // No sync status for pricing updates
         );
@@ -118,7 +120,7 @@ class UpdateShopifyPricingJob implements ShouldQueue
 
             // Mark sync log as failed
             $syncLog->markAsFailed(
-                'Job exception: ' . $e->getMessage(),
+                'Job exception: '.$e->getMessage(),
                 ['duration_ms' => $duration, 'exception' => get_class($e)]
             );
 

@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Validator;
 
 /**
  * 🏗️ ATTRIBUTE DEFINITION MODEL
- * 
+ *
  * Defines the schema and rules for attributes that can be applied
  * to products and variants. This is the foundation of our flexible
  * attribute system that supports inheritance and marketplace sync.
@@ -68,32 +67,31 @@ class AttributeDefinition extends Model
     /**
      * 🔍 SCOPES
      */
-    
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true)->whereNull('deprecated_at');
     }
-    
+
     public function scopeInheritable(Builder $query): Builder
     {
         return $query->where('is_inheritable', true);
     }
-    
+
     public function scopeForGroup(Builder $query, string $group): Builder
     {
         return $query->where('group', $group);
     }
-    
+
     public function scopeSystemAttributes(Builder $query): Builder
     {
         return $query->where('is_system_attribute', true);
     }
-    
+
     public function scopeCustomAttributes(Builder $query): Builder
     {
         return $query->where('is_system_attribute', false);
     }
-    
+
     public function scopeOrderedForDisplay(Builder $query): Builder
     {
         return $query->orderBy('sort_order')->orderBy('name');
@@ -102,24 +100,24 @@ class AttributeDefinition extends Model
     /**
      * 🎯 ATTRIBUTE VALUE VALIDATION
      */
-    
+
     /**
      * Validate a value against this attribute definition
      */
     public function validateValue($value): array
     {
         $rules = $this->buildValidationRules();
-        
+
         if (empty($rules)) {
             return ['valid' => true, 'value' => $this->castValue($value)];
         }
-        
+
         $validator = Validator::make(
             ['value' => $value],
             ['value' => $rules],
             $this->getValidationMessages()
         );
-        
+
         if ($validator->fails()) {
             return [
                 'valid' => false,
@@ -127,20 +125,20 @@ class AttributeDefinition extends Model
                 'value' => $value,
             ];
         }
-        
+
         return [
             'valid' => true,
             'value' => $this->castValue($validator->validated()['value']),
         ];
     }
-    
+
     /**
      * Build Laravel validation rules for this attribute
      */
     protected function buildValidationRules(): array
     {
         $rules = [];
-        
+
         // Required rules
         if ($this->is_required_for_products || $this->is_required_for_variants) {
             // Note: We'll handle required differently for products vs variants in the service layer
@@ -148,57 +146,57 @@ class AttributeDefinition extends Model
         } else {
             $rules[] = 'nullable';
         }
-        
+
         // Data type rules
         switch ($this->data_type) {
             case 'string':
                 $rules[] = 'string';
-                if (!empty($this->validation_rules['max_length'])) {
-                    $rules[] = 'max:' . $this->validation_rules['max_length'];
+                if (! empty($this->validation_rules['max_length'])) {
+                    $rules[] = 'max:'.$this->validation_rules['max_length'];
                 }
                 break;
-                
+
             case 'number':
                 $rules[] = 'numeric';
                 if (isset($this->validation_rules['min'])) {
-                    $rules[] = 'min:' . $this->validation_rules['min'];
+                    $rules[] = 'min:'.$this->validation_rules['min'];
                 }
                 if (isset($this->validation_rules['max'])) {
-                    $rules[] = 'max:' . $this->validation_rules['max'];
+                    $rules[] = 'max:'.$this->validation_rules['max'];
                 }
                 break;
-                
+
             case 'boolean':
                 $rules[] = 'boolean';
                 break;
-                
+
             case 'enum':
-                if (!empty($this->enum_values)) {
-                    $rules[] = 'in:' . implode(',', $this->enum_values);
+                if (! empty($this->enum_values)) {
+                    $rules[] = 'in:'.implode(',', $this->enum_values);
                 }
                 break;
-                
+
             case 'json':
                 $rules[] = 'json';
                 break;
-                
+
             case 'date':
                 $rules[] = 'date';
                 break;
-                
+
             case 'url':
                 $rules[] = 'url';
                 break;
         }
-        
+
         // Custom validation rules from the definition
-        if (!empty($this->validation_rules['custom'])) {
+        if (! empty($this->validation_rules['custom'])) {
             $rules = array_merge($rules, $this->validation_rules['custom']);
         }
-        
+
         return $rules;
     }
-    
+
     /**
      * Get validation error messages
      */
@@ -209,13 +207,13 @@ class AttributeDefinition extends Model
             'value.string' => "The {$this->name} must be a text value.",
             'value.numeric' => "The {$this->name} must be a number.",
             'value.boolean' => "The {$this->name} must be true or false.",
-            'value.in' => "The {$this->name} must be one of: " . implode(', ', $this->enum_values ?? []),
+            'value.in' => "The {$this->name} must be one of: ".implode(', ', $this->enum_values ?? []),
             'value.json' => "The {$this->name} must be valid JSON.",
             'value.date' => "The {$this->name} must be a valid date.",
             'value.url' => "The {$this->name} must be a valid URL.",
         ];
     }
-    
+
     /**
      * Cast value to the correct PHP type
      */
@@ -224,7 +222,7 @@ class AttributeDefinition extends Model
         if ($value === null) {
             return null;
         }
-        
+
         return match ($this->data_type) {
             'number' => is_numeric($value) ? (float) $value : $value,
             'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN),
@@ -237,7 +235,7 @@ class AttributeDefinition extends Model
     /**
      * 🏪 MARKETPLACE INTEGRATION
      */
-    
+
     /**
      * Get marketplace mapping for a specific marketplace
      */
@@ -245,7 +243,7 @@ class AttributeDefinition extends Model
     {
         return $this->marketplace_mappings[$marketplace] ?? null;
     }
-    
+
     /**
      * Check if this attribute should sync to a marketplace
      */
@@ -258,48 +256,48 @@ class AttributeDefinition extends Model
             default => false,
         };
     }
-    
+
     /**
      * Transform value for marketplace sync
      */
     public function transformForMarketplace($value, string $marketplace): mixed
     {
         $mapping = $this->getMarketplaceMapping($marketplace);
-        
-        if (!$mapping) {
+
+        if (! $mapping) {
             return $value;
         }
-        
+
         // Apply transformations defined in marketplace_mappings
         if (isset($mapping['transform'])) {
             $transform = $mapping['transform'];
-            
+
             switch ($transform['type']) {
                 case 'map_values':
                     return $transform['mappings'][$value] ?? $value;
-                    
+
                 case 'prefix':
-                    return $transform['prefix'] . $value;
-                    
+                    return $transform['prefix'].$value;
+
                 case 'suffix':
-                    return $value . $transform['suffix'];
-                    
+                    return $value.$transform['suffix'];
+
                 case 'format':
                     return sprintf($transform['format'], $value);
-                    
+
                 case 'custom':
                     // For complex transformations, we'll use a service
                     return $value;
             }
         }
-        
+
         return $value;
     }
 
     /**
      * 🔄 INHERITANCE LOGIC
      */
-    
+
     /**
      * Check if this attribute supports inheritance
      */
@@ -307,7 +305,7 @@ class AttributeDefinition extends Model
     {
         return $this->is_inheritable && $this->inheritance_strategy !== 'never';
     }
-    
+
     /**
      * Get the inheritance strategy
      */
@@ -315,7 +313,7 @@ class AttributeDefinition extends Model
     {
         return $this->inheritance_strategy;
     }
-    
+
     /**
      * Should this attribute always inherit (never be overridden)?
      */
@@ -323,7 +321,7 @@ class AttributeDefinition extends Model
     {
         return $this->inheritance_strategy === 'always';
     }
-    
+
     /**
      * Should this attribute use fallback inheritance?
      */
@@ -335,7 +333,7 @@ class AttributeDefinition extends Model
     /**
      * 🎨 UI HELPERS
      */
-    
+
     /**
      * Get the appropriate input type for forms
      */
@@ -344,7 +342,7 @@ class AttributeDefinition extends Model
         if ($this->input_type !== 'text') {
             return $this->input_type;
         }
-        
+
         // Auto-determine input type from data type
         return match ($this->data_type) {
             'boolean' => 'checkbox',
@@ -356,7 +354,7 @@ class AttributeDefinition extends Model
             default => 'text',
         };
     }
-    
+
     /**
      * Get options for select inputs (enum types)
      */
@@ -365,12 +363,12 @@ class AttributeDefinition extends Model
         if ($this->data_type !== 'enum' || empty($this->enum_values)) {
             return [];
         }
-        
+
         return collect($this->enum_values)->mapWithKeys(function ($value) {
             return [$value => $value];
         })->toArray();
     }
-    
+
     /**
      * Get UI configuration
      */
@@ -391,7 +389,7 @@ class AttributeDefinition extends Model
     /**
      * 📊 STATIC HELPERS
      */
-    
+
     /**
      * Get all attributes grouped by category
      */
@@ -402,7 +400,7 @@ class AttributeDefinition extends Model
             ->get()
             ->groupBy('group');
     }
-    
+
     /**
      * Get core system attributes (brand, material, etc.)
      */
@@ -413,7 +411,7 @@ class AttributeDefinition extends Model
             ->orderedForDisplay()
             ->get();
     }
-    
+
     /**
      * Get inheritable attributes
      */
@@ -424,7 +422,7 @@ class AttributeDefinition extends Model
             ->orderedForDisplay()
             ->get();
     }
-    
+
     /**
      * Find attribute by key
      */
@@ -432,7 +430,7 @@ class AttributeDefinition extends Model
     {
         return static::where('key', $key)->active()->first();
     }
-    
+
     /**
      * Create a new system attribute
      */
@@ -440,7 +438,7 @@ class AttributeDefinition extends Model
     {
         $data['is_system_attribute'] = true;
         $data['is_active'] = true;
-        
+
         return static::create($data);
     }
 }

@@ -41,7 +41,7 @@ class SyncStatus extends Model
 
     protected $casts = [
         'last_synced_at' => 'datetime',
-        'last_attempted_at' => 'datetime', 
+        'last_attempted_at' => 'datetime',
         'sync_metadata' => 'array',
         'error_count' => 'integer',
         'updated_at' => 'datetime',

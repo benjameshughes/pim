@@ -15,7 +15,7 @@ class AttributeDefinitionFactory extends Factory
     public function definition(): array
     {
         $name = fake()->randomElement(['brand', 'material', 'color', 'size', 'weight', 'style']);
-        
+
         return [
             'name' => $name,
             'label' => ucfirst($name),

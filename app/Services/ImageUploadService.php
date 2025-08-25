@@ -22,7 +22,7 @@ class ImageUploadService
     /** @var string[] */
     protected array $allowedMimeTypes = [
         'image/jpeg',
-        'image/jpg', 
+        'image/jpg',
         'image/png',
         'image/webp',
         'image/gif',
@@ -30,21 +30,21 @@ class ImageUploadService
 
     /**
      * 📤 UPLOAD SINGLE IMAGE
-     * 
+     *
      * Simple upload with metadata support
      */
     public function upload(UploadedFile $file, array $metadata = []): Image
     {
         $this->validateFile($file);
-        
+
         // Generate unique filename
         $extension = $file->getClientOriginalExtension();
-        $filename = Str::uuid() . '.' . $extension;
-        
+        $filename = Str::uuid().'.'.$extension;
+
         // Store to R2
         $path = Storage::disk($this->disk)->putFileAs('', $file, $filename);
         $url = Storage::disk($this->disk)->url($path);
-        
+
         // Create image record
         return Image::create([
             'filename' => $filename,
@@ -64,24 +64,24 @@ class ImageUploadService
 
     /**
      * 📤 UPLOAD MULTIPLE IMAGES
-     * 
-     * @param UploadedFile[] $files
+     *
+     * @param  UploadedFile[]  $files
      * @return Image[]
      */
     public function uploadMultiple(array $files, array $metadata = []): array
     {
         $images = [];
-        
+
         foreach ($files as $file) {
             $images[] = $this->upload($file, $metadata);
         }
-        
+
         return $images;
     }
 
     /**
      * 🗑️ DELETE IMAGE
-     * 
+     *
      * Remove from R2 and database
      */
     public function delete(Image $image): bool
@@ -90,7 +90,7 @@ class ImageUploadService
         if ($image->filename) {
             Storage::disk($this->disk)->delete($image->filename);
         }
-        
+
         // Delete from database
         return $image->delete();
     }
@@ -104,11 +104,11 @@ class ImageUploadService
             throw new \InvalidArgumentException('File too large. Maximum size is 10MB.');
         }
 
-        if (!in_array($file->getMimeType(), $this->allowedMimeTypes)) {
+        if (! in_array($file->getMimeType(), $this->allowedMimeTypes)) {
             throw new \InvalidArgumentException('Invalid file type. Only images are allowed.');
         }
 
-        if (!$file->isValid()) {
+        if (! $file->isValid()) {
             throw new \InvalidArgumentException('Invalid file upload.');
         }
     }

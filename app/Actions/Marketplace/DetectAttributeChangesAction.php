@@ -4,17 +4,16 @@ namespace App\Actions\Marketplace;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
-use App\Models\ProductVariant;
-use App\Models\AttributeDefinition;
 use App\Models\ProductAttribute;
+use App\Models\ProductVariant;
 use App\Models\VariantAttribute;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * 🔍 DETECT ATTRIBUTE CHANGES ACTION
- * 
+ *
  * Identifies attributes that need syncing to marketplaces based on
  * change detection, sync status, and marketplace requirements.
  */
@@ -22,9 +21,9 @@ class DetectAttributeChangesAction extends BaseAction
 {
     /**
      * 🎯 EXECUTE DETECTION
-     * 
-     * @param Model $model Product or ProductVariant
-     * @param array $options Detection options
+     *
+     * @param  Model  $model  Product or ProductVariant
+     * @param  array  $options  Detection options
      */
     public function execute(Model $model, array $options = []): array
     {
@@ -33,7 +32,7 @@ class DetectAttributeChangesAction extends BaseAction
         try {
             $marketplaces = $options['marketplaces'] ?? ['shopify', 'ebay', 'mirakl'];
             $changeThreshold = $options['change_threshold'] ?? null; // Carbon date or null for all
-            
+
             $results = [
                 'model_type' => get_class($model),
                 'model_id' => $model->id,
@@ -50,7 +49,7 @@ class DetectAttributeChangesAction extends BaseAction
             foreach ($marketplaces as $marketplace) {
                 $marketplaceResults = $this->detectForMarketplace($model, $marketplace, $options);
                 $results['marketplaces'][$marketplace] = $marketplaceResults;
-                
+
                 // Update summary
                 $results['summary']['by_marketplace'][$marketplace] = [
                     'needs_sync' => count($marketplaceResults['needs_sync']),
@@ -65,7 +64,7 @@ class DetectAttributeChangesAction extends BaseAction
             return $this->success('Attribute change detection completed', $results);
 
         } catch (\Exception $e) {
-            return $this->fail('Change detection failed: ' . $e->getMessage(), [
+            return $this->fail('Change detection failed: '.$e->getMessage(), [
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -75,7 +74,7 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 🔍 DETECT FOR MARKETPLACE
-     * 
+     *
      * Detect changes for a specific marketplace
      */
     protected function detectForMarketplace(Model $model, string $marketplace, array $options): array
@@ -91,11 +90,11 @@ class DetectAttributeChangesAction extends BaseAction
 
         // Get all attributes for this model
         $attributes = $this->getModelAttributes($model);
-        
+
         foreach ($attributes as $attribute) {
             try {
                 $detection = $this->detectAttributeChange($attribute, $marketplace, $options);
-                
+
                 switch ($detection['status']) {
                     case 'needs_sync':
                         $results['needs_sync'][] = $detection;
@@ -120,14 +119,14 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 🔍 DETECT ATTRIBUTE CHANGE
-     * 
+     *
      * Detect if a single attribute needs syncing to a marketplace
      */
     protected function detectAttributeChange($attribute, string $marketplace, array $options): array
     {
         $attributeKey = $attribute->getAttributeKey();
         $definition = $attribute->attributeDefinition;
-        
+
         $detection = [
             'attribute_key' => $attributeKey,
             'attribute_name' => $definition->name,
@@ -141,24 +140,26 @@ class DetectAttributeChangesAction extends BaseAction
         ];
 
         // Check if attribute should sync to this marketplace
-        if (!$definition->shouldSyncToMarketplace($marketplace)) {
+        if (! $definition->shouldSyncToMarketplace($marketplace)) {
             $detection['status'] = 'not_applicable';
             $detection['reasons'][] = 'Attribute not configured for this marketplace';
+
             return $detection;
         }
 
         // Check if attribute is valid
-        if (!$attribute->is_valid) {
+        if (! $attribute->is_valid) {
             $detection['status'] = 'not_applicable';
             $detection['reasons'][] = 'Attribute value is invalid';
             $detection['validation_errors'] = $attribute->validation_errors;
+
             return $detection;
         }
 
         // Check various sync conditions
         $syncReasons = $this->getSyncReasons($attribute, $marketplace, $options);
-        
-        if (!empty($syncReasons)) {
+
+        if (! empty($syncReasons)) {
             $detection['status'] = 'needs_sync';
             $detection['reasons'] = $syncReasons;
             $detection['sync_priority'] = $this->calculateSyncPriority($attribute, $syncReasons);
@@ -170,23 +171,23 @@ class DetectAttributeChangesAction extends BaseAction
 
         // Add sync metadata
         $detection['sync_metadata'] = $this->getSyncMetadata($attribute, $marketplace);
-        
+
         return $detection;
     }
 
     /**
      * 🔍 GET SYNC REASONS
-     * 
+     *
      * Determine all reasons why an attribute needs syncing
      */
     protected function getSyncReasons($attribute, string $marketplace, array $options): array
     {
         $reasons = [];
         $changeThreshold = $options['change_threshold'] ?? null;
-        
+
         // Check if never synced
         $syncStatus = $attribute->sync_status[$marketplace] ?? null;
-        if (!$syncStatus || $syncStatus !== 'synced') {
+        if (! $syncStatus || $syncStatus !== 'synced') {
             $reasons[] = $syncStatus ? "Previous sync failed ({$syncStatus})" : 'Never synced to this marketplace';
         }
 
@@ -195,7 +196,7 @@ class DetectAttributeChangesAction extends BaseAction
             if ($attribute->value_changed_at > $attribute->last_synced_at) {
                 $reasons[] = 'Value changed since last sync';
             }
-        } elseif ($attribute->value_changed_at && !$attribute->last_synced_at) {
+        } elseif ($attribute->value_changed_at && ! $attribute->last_synced_at) {
             $reasons[] = 'Attribute has value but never synced';
         }
 
@@ -225,51 +226,51 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 🧬 CHECK INHERITANCE CHANGES
-     * 
+     *
      * Check if inherited attributes need updating due to parent changes
      */
     protected function hasInheritanceChanges($attribute): bool
     {
-        if (!$attribute->is_inherited || !($attribute instanceof VariantAttribute)) {
+        if (! $attribute->is_inherited || ! ($attribute instanceof VariantAttribute)) {
             return false;
         }
 
         $parentAttribute = $attribute->inheritedFromProductAttribute;
-        if (!$parentAttribute) {
+        if (! $parentAttribute) {
             return false;
         }
 
         // Check if parent attribute changed after this was inherited
-        return $attribute->inherited_at && 
-               $parentAttribute->value_changed_at && 
+        return $attribute->inherited_at &&
+               $parentAttribute->value_changed_at &&
                $parentAttribute->value_changed_at > $attribute->inherited_at;
     }
 
     /**
      * 🏪 GET MARKETPLACE SPECIFIC REASONS
-     * 
+     *
      * Get reasons specific to each marketplace
      */
     protected function getMarketplaceSpecificReasons($attribute, string $marketplace): array
     {
         $reasons = [];
-        
+
         switch ($marketplace) {
             case 'shopify':
                 // Check if Shopify product/variant exists
                 $model = $attribute instanceof ProductAttribute ? $attribute->product : $attribute->variant;
-                if (!$this->isLinkedToMarketplace($model, 'shopify')) {
+                if (! $this->isLinkedToMarketplace($model, 'shopify')) {
                     $reasons[] = 'Product/variant not yet linked to Shopify';
                 }
                 break;
-                
+
             case 'ebay':
                 // eBay-specific checks
                 if ($attribute->getAttributeKey() === 'condition') {
                     $reasons[] = 'Condition changes require eBay listing update';
                 }
                 break;
-                
+
             case 'mirakl':
                 // Mirakl-specific checks
                 if (in_array($attribute->getAttributeKey(), ['brand', 'category'])) {
@@ -277,13 +278,13 @@ class DetectAttributeChangesAction extends BaseAction
                 }
                 break;
         }
-        
+
         return $reasons;
     }
 
     /**
      * ⚡ CALCULATE SYNC PRIORITY
-     * 
+     *
      * Determine sync priority based on reasons and attribute importance
      */
     protected function calculateSyncPriority($attribute, array $reasons): string
@@ -294,29 +295,29 @@ class DetectAttributeChangesAction extends BaseAction
             'Core Mirakl attributes require immediate sync',
             'Condition changes require eBay listing update',
         ];
-        
+
         $criticalAttributes = ['brand', 'condition', 'title', 'price'];
-        
+
         foreach ($reasons as $reason) {
             if (in_array($reason, $highPriorityReasons)) {
                 return 'high';
             }
         }
-        
+
         if (in_array($attribute->getAttributeKey(), $criticalAttributes)) {
             return 'high';
         }
-        
+
         if (count($reasons) > 2) {
             return 'medium';
         }
-        
+
         return 'normal';
     }
 
     /**
      * ⏱️ ESTIMATE SYNC TIME
-     * 
+     *
      * Estimate when the sync should happen based on priority and load
      */
     protected function estimateSyncTime($attribute, string $marketplace): Carbon
@@ -327,7 +328,7 @@ class DetectAttributeChangesAction extends BaseAction
             'normal' => 15,   // 15 minutes
             default => 15,
         };
-        
+
         // Add marketplace-specific delays
         $marketplaceDelay = match ($marketplace) {
             'shopify' => 0,   // Fastest
@@ -335,13 +336,13 @@ class DetectAttributeChangesAction extends BaseAction
             'mirakl' => 5,    // Slower
             default => 2,
         };
-        
+
         return now()->addMinutes($baseDelay + $marketplaceDelay);
     }
 
     /**
      * 📊 GET SYNC METADATA
-     * 
+     *
      * Get current sync metadata for an attribute
      */
     protected function getSyncMetadata($attribute, string $marketplace): array
@@ -358,7 +359,7 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 🔗 CHECK MARKETPLACE LINK
-     * 
+     *
      * Check if model is linked to marketplace
      */
     protected function isLinkedToMarketplace(Model $model, string $marketplace): bool
@@ -370,7 +371,7 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 📝 GET MODEL ATTRIBUTES
-     * 
+     *
      * Get all valid attributes for a model
      */
     protected function getModelAttributes(Model $model): Collection
@@ -380,18 +381,18 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 📊 CALCULATE SUMMARY
-     * 
+     *
      * Calculate summary statistics for the results
      */
     protected function calculateSummary(array &$results): void
     {
         $totalNeedingSync = 0;
         $changeTypes = [];
-        
+
         foreach ($results['marketplaces'] as $marketplace => $marketplaceResults) {
             $needsSync = count($marketplaceResults['needs_sync']);
             $totalNeedingSync += $needsSync;
-            
+
             // Collect change types
             foreach ($marketplaceResults['needs_sync'] as $change) {
                 foreach ($change['reasons'] as $reason) {
@@ -399,15 +400,15 @@ class DetectAttributeChangesAction extends BaseAction
                 }
             }
         }
-        
+
         $results['summary']['total_needing_sync'] = $totalNeedingSync;
         $results['summary']['by_change_type'] = $changeTypes;
-        
+
         // Get total attributes (from first marketplace to avoid double counting)
         $firstMarketplace = array_key_first($results['marketplaces']);
         if ($firstMarketplace) {
             $firstResults = $results['marketplaces'][$firstMarketplace];
-            $results['summary']['total_attributes'] = 
+            $results['summary']['total_attributes'] =
                 count($firstResults['needs_sync']) +
                 count($firstResults['up_to_date']) +
                 count($firstResults['not_applicable']);
@@ -419,26 +420,26 @@ class DetectAttributeChangesAction extends BaseAction
      */
     protected function validateInputs(Model $model, array $options): void
     {
-        if (!in_array(get_class($model), [Product::class, ProductVariant::class])) {
+        if (! in_array(get_class($model), [Product::class, ProductVariant::class])) {
             throw new \InvalidArgumentException('Model must be Product or ProductVariant');
         }
-        
+
         if (isset($options['marketplaces'])) {
             $supportedMarketplaces = ['shopify', 'ebay', 'mirakl'];
             $invalidMarketplaces = array_diff($options['marketplaces'], $supportedMarketplaces);
-            if (!empty($invalidMarketplaces)) {
-                throw new \InvalidArgumentException('Unsupported marketplaces: ' . implode(', ', $invalidMarketplaces));
+            if (! empty($invalidMarketplaces)) {
+                throw new \InvalidArgumentException('Unsupported marketplaces: '.implode(', ', $invalidMarketplaces));
             }
         }
-        
-        if (isset($options['change_threshold']) && !($options['change_threshold'] instanceof Carbon)) {
+
+        if (isset($options['change_threshold']) && ! ($options['change_threshold'] instanceof Carbon)) {
             throw new \InvalidArgumentException('change_threshold must be a Carbon instance');
         }
     }
 
     /**
      * 🔄 BATCH DETECTION
-     * 
+     *
      * Detect changes for multiple models efficiently
      */
     public function batchDetect(array $models, array $options = []): array
@@ -455,7 +456,7 @@ class DetectAttributeChangesAction extends BaseAction
 
         foreach ($models as $model) {
             $detection = $this->execute($model, $options);
-            
+
             if ($detection['success']) {
                 $modelData = $detection['details'];
                 $results['models'][] = [
@@ -465,13 +466,13 @@ class DetectAttributeChangesAction extends BaseAction
                     'changes_count' => $modelData['summary']['total_needing_sync'],
                     'marketplaces' => $modelData['marketplaces'],
                 ];
-                
+
                 if ($modelData['summary']['total_needing_sync'] > 0) {
                     $results['models_with_changes']++;
                     $results['total_changes_detected'] += $modelData['summary']['total_needing_sync'];
                 }
             }
-            
+
             $results['models_processed']++;
         }
 
@@ -480,7 +481,7 @@ class DetectAttributeChangesAction extends BaseAction
 
     /**
      * 📈 GET CHANGE TRENDS
-     * 
+     *
      * Analyze change patterns over time
      */
     public function getChangeTrends(array $options = []): array

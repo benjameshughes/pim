@@ -2,14 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\AttributeDefinition;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use Illuminate\Support\Collection;
 
 /**
  * 🏪 MARKETPLACE ATTRIBUTE MAPPING SERVICE
- * 
+ *
  * Maps PIM attributes to marketplace-specific field formats and values.
  * Handles transformation, validation, and compatibility for each marketplace.
  */
@@ -17,7 +15,7 @@ class MarketplaceAttributeMappingService
 {
     /**
      * 📋 MARKETPLACE CONFIGURATIONS
-     * 
+     *
      * Define each marketplace's attribute requirements, mappings, and constraints
      */
     protected array $marketplaceConfigs = [
@@ -29,7 +27,7 @@ class MarketplaceAttributeMappingService
                 'json', 'link', 'money', 'multi_line_text_field', 'number_decimal',
                 'number_integer', 'rating', 'rich_text_field', 'single_line_text_field',
                 'url', 'weight', 'volume', 'file_reference', 'product_reference',
-                'variant_reference', 'page_reference', 'collection_reference'
+                'variant_reference', 'page_reference', 'collection_reference',
             ],
             'core_fields' => [
                 'title' => ['required' => true, 'max_length' => 255],
@@ -51,7 +49,7 @@ class MarketplaceAttributeMappingService
             'name' => 'eBay',
             'api_version' => 'v1',
             'supported_types' => [
-                'string', 'number', 'boolean', 'date', 'enum'
+                'string', 'number', 'boolean', 'date', 'enum',
             ],
             'core_fields' => [
                 'title' => ['required' => true, 'max_length' => 80],
@@ -64,7 +62,7 @@ class MarketplaceAttributeMappingService
                     2990 => 'Pre-owned - Excellent', 3000 => 'Used',
                     3010 => 'Pre-owned - Fair', 4000 => 'Very Good',
                     5000 => 'Good', 6000 => 'Acceptable',
-                    7000 => 'For parts or not working'
+                    7000 => 'For parts or not working',
                 ]],
                 'brand' => ['required' => false, 'recommended' => true],
                 'mpn' => ['required' => false, 'recommended' => true],
@@ -82,7 +80,7 @@ class MarketplaceAttributeMappingService
             'name' => 'Mirakl',
             'api_version' => 'v2',
             'supported_types' => [
-                'text', 'number', 'boolean', 'date', 'list', 'media'
+                'text', 'number', 'boolean', 'date', 'list', 'media',
             ],
             'core_fields' => [
                 'title' => ['required' => true, 'max_length' => 200],
@@ -101,7 +99,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🗺️ ATTRIBUTE MAPPING DEFINITIONS
-     * 
+     *
      * Maps PIM attributes to marketplace-specific fields
      */
     protected array $attributeMappings = [
@@ -184,7 +182,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🎯 GET MARKETPLACE REQUIREMENTS
-     * 
+     *
      * Get complete requirements for a specific marketplace
      */
     public function getMarketplaceRequirements(string $marketplace): array
@@ -194,7 +192,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🗺️ MAP PRODUCT TO MARKETPLACE
-     * 
+     *
      * Transform product attributes to marketplace-specific format
      */
     public function mapProductToMarketplace(Product $product, string $marketplace): array
@@ -222,13 +220,13 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🗺️ MAP VARIANT TO MARKETPLACE
-     * 
+     *
      * Transform variant attributes to marketplace-specific format
      */
     public function mapVariantToMarketplace(ProductVariant $variant, string $marketplace): array
     {
         $productMapping = $this->mapProductToMarketplace($variant->product, $marketplace);
-        
+
         $mappedData = [
             'core_fields' => $this->mapVariantCoreFields($variant, $marketplace),
             'custom_attributes' => $this->mapVariantCustomAttributes($variant, $marketplace),
@@ -248,7 +246,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🎯 MAP CORE FIELDS
-     * 
+     *
      * Map product core fields to marketplace format
      */
     protected function mapCoreFields(Product $product, string $marketplace): array
@@ -292,12 +290,12 @@ class MarketplaceAttributeMappingService
                 break;
         }
 
-        return array_filter($mapped, fn($value) => $value !== null);
+        return array_filter($mapped, fn ($value) => $value !== null);
     }
 
     /**
      * 🎯 MAP VARIANT CORE FIELDS
-     * 
+     *
      * Map variant-specific core fields
      */
     protected function mapVariantCoreFields(ProductVariant $variant, string $marketplace): array
@@ -331,22 +329,22 @@ class MarketplaceAttributeMappingService
                 break;
         }
 
-        return array_filter($mapped, fn($value) => $value !== null);
+        return array_filter($mapped, fn ($value) => $value !== null);
     }
 
     /**
      * 🏷️ MAP CUSTOM ATTRIBUTES
-     * 
+     *
      * Map PIM attributes to marketplace custom fields
      */
     protected function mapCustomAttributes(Product $product, string $marketplace): array
     {
         $mapped = [];
-        
+
         foreach ($this->attributeMappings as $pimKey => $marketplaceMappings) {
             $value = $product->getSmartAttributeValue($pimKey);
-            
-            if ($value === null || !isset($marketplaceMappings[$marketplace])) {
+
+            if ($value === null || ! isset($marketplaceMappings[$marketplace])) {
                 continue;
             }
 
@@ -378,18 +376,18 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🏷️ MAP VARIANT CUSTOM ATTRIBUTES
-     * 
+     *
      * Map variant-specific custom attributes with inheritance
      */
     protected function mapVariantCustomAttributes(ProductVariant $variant, string $marketplace): array
     {
         $mapped = [];
-        
+
         foreach ($this->attributeMappings as $pimKey => $marketplaceMappings) {
             // Use variant's smart attribute value (includes inheritance)
             $value = $variant->getSmartAttributeValue($pimKey);
-            
-            if ($value === null || !isset($marketplaceMappings[$marketplace])) {
+
+            if ($value === null || ! isset($marketplaceMappings[$marketplace])) {
                 continue;
             }
 
@@ -422,7 +420,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * ✨ TRANSFORM VALUE
-     * 
+     *
      * Transform PIM value to marketplace-specific format
      */
     protected function transformValue($value, string $pimKey, string $marketplace)
@@ -468,7 +466,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * ✅ VALIDATE MAPPED DATA
-     * 
+     *
      * Validate mapped data against marketplace requirements
      */
     protected function validateMappedData(array $mappedData, string $marketplace): array
@@ -484,6 +482,7 @@ class MarketplaceAttributeMappingService
             // Check required fields
             if ($requirements['required'] && empty($value)) {
                 $errors[] = "Required field '{$field}' is missing or empty";
+
                 continue;
             }
 
@@ -493,7 +492,7 @@ class MarketplaceAttributeMappingService
             }
 
             // Check enum values
-            if (isset($requirements['enum']) && $value && !in_array($value, array_keys($requirements['enum'])) && !in_array($value, $requirements['enum'])) {
+            if (isset($requirements['enum']) && $value && ! in_array($value, array_keys($requirements['enum'])) && ! in_array($value, $requirements['enum'])) {
                 $warnings[] = "Field '{$field}' value '{$value}' is not in the recommended enum list";
             }
 
@@ -521,7 +520,7 @@ class MarketplaceAttributeMappingService
 
     /**
      * ✅ VALIDATE VARIANT MAPPED DATA
-     * 
+     *
      * Validate variant-specific mapped data
      */
     protected function validateVariantMappedData(array $mappedData, string $marketplace): array
@@ -533,25 +532,25 @@ class MarketplaceAttributeMappingService
         switch ($marketplace) {
             case 'shopify':
                 if (empty($mappedData['core_fields']['sku'])) {
-                    $errors[] = "Variant SKU is required for Shopify";
+                    $errors[] = 'Variant SKU is required for Shopify';
                 }
-                if (!isset($mappedData['core_fields']['price']) || $mappedData['core_fields']['price'] <= 0) {
-                    $errors[] = "Valid variant price is required for Shopify";
+                if (! isset($mappedData['core_fields']['price']) || $mappedData['core_fields']['price'] <= 0) {
+                    $errors[] = 'Valid variant price is required for Shopify';
                 }
                 break;
 
             case 'ebay':
                 if (empty($mappedData['core_fields']['sku'])) {
-                    $errors[] = "Variant SKU is required for eBay";
+                    $errors[] = 'Variant SKU is required for eBay';
                 }
                 break;
 
             case 'mirakl':
                 if (empty($mappedData['core_fields']['sku'])) {
-                    $errors[] = "Variant SKU is required for Mirakl";
+                    $errors[] = 'Variant SKU is required for Mirakl';
                 }
-                if (!isset($mappedData['core_fields']['price'])) {
-                    $errors[] = "Variant price is required for Mirakl";
+                if (! isset($mappedData['core_fields']['price'])) {
+                    $errors[] = 'Variant price is required for Mirakl';
                 }
                 break;
         }
@@ -562,7 +561,6 @@ class MarketplaceAttributeMappingService
     /**
      * 🛠️ HELPER METHODS
      */
-
     protected function generateHandle(string $title): string
     {
         return mb_strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', trim($title)), 'UTF-8');
@@ -571,11 +569,11 @@ class MarketplaceAttributeMappingService
     protected function generateShopifyTags(Product $product): array
     {
         $tags = [];
-        
+
         if ($brand = $product->getSmartAttributeValue('brand')) {
             $tags[] = "Brand-{$brand}";
         }
-        
+
         if ($material = $product->getSmartAttributeValue('material')) {
             $tags[] = "Material-{$material}";
         }
@@ -610,7 +608,7 @@ class MarketplaceAttributeMappingService
 
     protected function validateShopifyMetafields(array $mappedData, array &$errors, array &$warnings): void
     {
-        if (!isset($mappedData['custom_attributes']['metafields'])) {
+        if (! isset($mappedData['custom_attributes']['metafields'])) {
             return;
         }
 
@@ -618,7 +616,7 @@ class MarketplaceAttributeMappingService
         $config = $this->marketplaceConfigs['shopify'];
 
         if (count($metafields) > $config['metafield_limits']['max_metafields_per_resource']) {
-            $errors[] = "Too many metafields: " . count($metafields) . " (max: {$config['metafield_limits']['max_metafields_per_resource']})";
+            $errors[] = 'Too many metafields: '.count($metafields)." (max: {$config['metafield_limits']['max_metafields_per_resource']})";
         }
 
         foreach ($metafields as $metafield) {
@@ -633,7 +631,7 @@ class MarketplaceAttributeMappingService
 
     protected function validateEbayAspects(array $mappedData, array &$errors, array &$warnings): void
     {
-        if (!isset($mappedData['custom_attributes']['aspects'])) {
+        if (! isset($mappedData['custom_attributes']['aspects'])) {
             return;
         }
 
@@ -641,12 +639,12 @@ class MarketplaceAttributeMappingService
         $config = $this->marketplaceConfigs['ebay'];
 
         if (count($aspects) > $config['aspects_requirements']['max_aspects']) {
-            $errors[] = "Too many aspects: " . count($aspects) . " (max: {$config['aspects_requirements']['max_aspects']})";
+            $errors[] = 'Too many aspects: '.count($aspects)." (max: {$config['aspects_requirements']['max_aspects']})";
         }
 
         foreach ($aspects as $aspectName => $values) {
             if (count($values) > $config['aspects_requirements']['max_values_per_aspect']) {
-                $errors[] = "Too many values for aspect '{$aspectName}': " . count($values) . " (max: {$config['aspects_requirements']['max_values_per_aspect']})";
+                $errors[] = "Too many values for aspect '{$aspectName}': ".count($values)." (max: {$config['aspects_requirements']['max_values_per_aspect']})";
             }
         }
     }
@@ -656,26 +654,26 @@ class MarketplaceAttributeMappingService
         // Mirakl validations would be operator-specific
         // This would need to be extended based on specific Mirakl operator requirements
         if (isset($mappedData['custom_attributes']) && empty($mappedData['custom_attributes'])) {
-            $warnings[] = "No custom attributes defined - may not meet operator requirements";
+            $warnings[] = 'No custom attributes defined - may not meet operator requirements';
         }
     }
 
     /**
      * 📊 GET MAPPING STATISTICS
-     * 
+     *
      * Get statistics about attribute mappings for a marketplace
      */
     public function getMappingStatistics(string $marketplace): array
     {
         $config = $this->getMarketplaceRequirements($marketplace);
-        $mappedAttributes = array_filter($this->attributeMappings, fn($mappings) => isset($mappings[$marketplace]));
+        $mappedAttributes = array_filter($this->attributeMappings, fn ($mappings) => isset($mappings[$marketplace]));
 
         return [
             'marketplace' => $marketplace,
-            'supported' => !empty($config),
+            'supported' => ! empty($config),
             'total_pim_attributes' => count($this->attributeMappings),
             'mapped_attributes' => count($mappedAttributes),
-            'mapping_coverage' => count($this->attributeMappings) > 0 ? 
+            'mapping_coverage' => count($this->attributeMappings) > 0 ?
                 round((count($mappedAttributes) / count($this->attributeMappings)) * 100, 1) : 0,
             'core_fields' => count($config['core_fields'] ?? []),
             'supported_types' => count($config['supported_types'] ?? []),
@@ -684,20 +682,20 @@ class MarketplaceAttributeMappingService
 
     /**
      * 🔍 GET UNMAPPED ATTRIBUTES
-     * 
+     *
      * Get list of PIM attributes that aren't mapped to a marketplace
      */
     public function getUnmappedAttributes(string $marketplace): array
     {
         return array_keys(array_filter(
-            $this->attributeMappings, 
-            fn($mappings) => !isset($mappings[$marketplace])
+            $this->attributeMappings,
+            fn ($mappings) => ! isset($mappings[$marketplace])
         ));
     }
 
     /**
      * ✨ GET MARKETPLACE FIELD SUGGESTIONS
-     * 
+     *
      * Suggest marketplace fields for an unmapped PIM attribute
      */
     public function getFieldSuggestions(string $pimKey, string $marketplace): array

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Splits PIM products into separate Shopify products based on color variants.
  * Each color becomes its own Shopify product with width/drop as variants.
- * 
+ *
  * Benefits:
  * - No 100 variant limit per product (each color gets own limit)
  * - Better SEO (each color gets own URL)
@@ -24,7 +24,7 @@ class ColorBasedProductSplitter
     /**
      * Split a PIM product into color-based Shopify products
      *
-     * @param Product $product The PIM product to split
+     * @param  Product  $product  The PIM product to split
      * @return array<string, array> Array of Shopify product data keyed by color
      */
     public function splitProductByColor(Product $product): array
@@ -39,11 +39,12 @@ class ColorBasedProductSplitter
 
         // Group variants by color
         $colorGroups = $this->groupVariantsByColor($product->variants);
-        
+
         if ($colorGroups->isEmpty()) {
             Log::warning('⚠️ No color variants found for product splitting', [
                 'product_id' => $product->id,
             ]);
+
             return [];
         }
 
@@ -78,7 +79,7 @@ class ColorBasedProductSplitter
     /**
      * Group product variants by color
      *
-     * @param Collection<ProductVariant> $variants
+     * @param  Collection<ProductVariant>  $variants
      * @return Collection<string, Collection<ProductVariant>>
      */
     protected function groupVariantsByColor(Collection $variants): Collection
@@ -95,19 +96,19 @@ class ColorBasedProductSplitter
     /**
      * Create Shopify product data for a specific color
      *
-     * @param Product $product Base PIM product
-     * @param string $color Color name for this Shopify product
-     * @param Collection<ProductVariant> $variants Variants for this color
+     * @param  Product  $product  Base PIM product
+     * @param  string  $color  Color name for this Shopify product
+     * @param  Collection<ProductVariant>  $variants  Variants for this color
      * @return array Shopify product data
      */
     protected function createShopifyProductForColor(Product $product, string $color, Collection $variants): array
     {
         // Create color-specific product title
         $colorTitle = $this->generateColorSpecificTitle($product->name, $color);
-        
+
         // Build Shopify variants for this color
         $shopifyVariants = $this->buildShopifyVariants($variants, $color);
-        
+
         // Determine product options based on available dimensions
         $productOptions = $this->determineProductOptions($variants, $color);
 
@@ -162,14 +163,14 @@ class ColorBasedProductSplitter
     protected function generateColorSpecificDescription(Product $product, string $color): string
     {
         $baseDescription = $product->description ?? '';
-        
+
         if ($color === 'Default') {
             return $baseDescription;
         }
 
         $colorDescription = "Available in {$color}. ";
-        
-        return $colorDescription . $baseDescription;
+
+        return $colorDescription.$baseDescription;
     }
 
     /**
@@ -178,7 +179,7 @@ class ColorBasedProductSplitter
     protected function generateColorSpecificTags(Product $product, string $color): array
     {
         $tags = [];
-        
+
         // Add existing tags if any
         if ($product->tags) {
             $tags = is_array($product->tags) ? $product->tags : explode(',', $product->tags);
@@ -257,7 +258,7 @@ class ColorBasedProductSplitter
     protected function determineProductOptions(Collection $variants, string $color): array
     {
         $options = [
-            ['name' => 'Color', 'values' => [$color]]
+            ['name' => 'Color', 'values' => [$color]],
         ];
 
         // Check if we have width variations
@@ -266,12 +267,12 @@ class ColorBasedProductSplitter
             $widthValues = $variants->whereNotNull('width')
                 ->pluck('width')
                 ->unique()
-                ->map(fn($width) => "{$width}cm")
+                ->map(fn ($width) => "{$width}cm")
                 ->sort()
                 ->values()
                 ->toArray();
-            
-            if (!empty($widthValues)) {
+
+            if (! empty($widthValues)) {
                 $options[] = ['name' => 'Width', 'values' => $widthValues];
             }
         }
@@ -282,12 +283,12 @@ class ColorBasedProductSplitter
             $dropValues = $variants->whereNotNull('drop')
                 ->pluck('drop')
                 ->unique()
-                ->map(fn($drop) => "{$drop}cm")
+                ->map(fn ($drop) => "{$drop}cm")
                 ->sort()
                 ->values()
                 ->toArray();
-            
-            if (!empty($dropValues)) {
+
+            if (! empty($dropValues)) {
                 $options[] = ['name' => 'Drop', 'values' => $dropValues];
             }
         }
@@ -311,13 +312,12 @@ class ColorBasedProductSplitter
     /**
      * Get split summary for a product
      *
-     * @param Product $product
      * @return array Split analysis summary
      */
     public function getSplitSummary(Product $product): array
     {
         $colorGroups = $this->groupVariantsByColor($product->variants);
-        
+
         $summary = [
             'product_id' => $product->id,
             'product_name' => $product->name,
@@ -347,7 +347,7 @@ class ColorBasedProductSplitter
     public function shouldSplitProduct(Product $product): bool
     {
         $colorGroups = $this->groupVariantsByColor($product->variants);
-        
+
         // Split if multiple colors OR if single color has too many variants
         return $colorGroups->count() > 1 || $product->variants->count() > 80;
     }

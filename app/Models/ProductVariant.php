@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class ProductVariant extends Model
 {
-    use HasFactory, HasAttributesTrait, InheritsAttributesTrait;
+    use HasAttributesTrait, HasFactory, InheritsAttributesTrait;
 
     protected $fillable = [
         'product_id',
@@ -146,10 +146,10 @@ class ProductVariant extends Model
      */
     public function getPriceForChannel($channelId = null)
     {
-        if (!$channelId) {
+        if (! $channelId) {
             return $this->price; // Use default price accessor
         }
-        
+
         return app(\App\Services\PricingService::class)->getPriceForVariantAndChannel($this->id, $channelId) ?? 0.0;
     }
 
@@ -258,14 +258,13 @@ class ProductVariant extends Model
     {
         // First check if variant has explicit brand override
         $variantBrand = $this->attributes()->forAttribute('brand')->first();
-        if ($variantBrand && !$variantBrand->is_inherited) {
+        if ($variantBrand && ! $variantBrand->is_inherited) {
             return $variantBrand->getTypedValue();
         }
 
         // Fallback to product brand (either direct field or attributes)
         return $this->product?->brand;
     }
-
 
     /**
      * 🎨 BARCODE RELATIONSHIP
@@ -372,7 +371,7 @@ class ProductVariant extends Model
      */
     public function scopeInStock($query)
     {
-        return $query->whereHas('stockRecords', function($q) {
+        return $query->whereHas('stockRecords', function ($q) {
             $q->where('quantity', '>', 0)->where('status', 'available');
         });
     }

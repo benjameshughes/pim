@@ -15,14 +15,15 @@ class ParentSkuRule implements ValidationRule
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         // Check format: must be exactly 3 digits
-        if (!preg_match('/^[0-9]{3}$/', $value)) {
+        if (! preg_match('/^[0-9]{3}$/', $value)) {
             $fail('The :attribute must be exactly 3 digits (e.g., 001, 123, 999).');
+
             return;
         }
 
         // Check uniqueness
         $query = Product::where('parent_sku', $value);
-        
+
         if ($this->excludeProductId) {
             $query->where('id', '!=', $this->excludeProductId);
         }

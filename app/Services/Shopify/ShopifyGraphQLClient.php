@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\Log;
 class ShopifyGraphQLClient
 {
     protected Client $httpClient;
+
     protected array $config;
+
     protected string $graphqlEndpoint;
 
     public function __construct()
@@ -27,7 +29,7 @@ class ShopifyGraphQLClient
         ];
 
         $this->graphqlEndpoint = "https://{$this->config['store_url']}/admin/api/{$this->config['api_version']}/graphql.json";
-        
+
         $this->httpClient = new Client([
             'timeout' => 30,
             'headers' => [
@@ -41,8 +43,8 @@ class ShopifyGraphQLClient
      * 🏭 CREATE PRODUCT WITH GRAPHQL
      *
      * Creates a product using GraphQL productCreate mutation
-     * 
-     * @param array $productData Product data for creation
+     *
+     * @param  array  $productData  Product data for creation
      * @return array Result with success status and product data
      */
     public function createProduct(array $productData): array
@@ -86,26 +88,26 @@ class ShopifyGraphQLClient
         ';
 
         $variables = [
-            'input' => $this->buildProductInput($productData)
+            'input' => $this->buildProductInput($productData),
         ];
 
         $result = $this->executeQuery($mutation, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $result;
         }
 
         $data = $result['data']['productCreate'] ?? null;
 
-        if (!empty($data['userErrors'])) {
+        if (! empty($data['userErrors'])) {
             return [
                 'success' => false,
-                'error' => 'GraphQL user errors: ' . collect($data['userErrors'])->pluck('message')->implode(', '),
+                'error' => 'GraphQL user errors: '.collect($data['userErrors'])->pluck('message')->implode(', '),
                 'user_errors' => $data['userErrors'],
             ];
         }
 
-        if (!isset($data['product'])) {
+        if (! isset($data['product'])) {
             return [
                 'success' => false,
                 'error' => 'Product creation failed - no product returned',
@@ -124,8 +126,8 @@ class ShopifyGraphQLClient
      *
      * Creates multiple variants for a product using productVariantsBulkCreate
      *
-     * @param string $productId Shopify product GID
-     * @param array $variants Array of variant data
+     * @param  string  $productId  Shopify product GID
+     * @param  array  $variants  Array of variant data
      * @return array Result with success status and variant data
      */
     public function createBulkVariants(string $productId, array $variants): array
@@ -164,21 +166,21 @@ class ShopifyGraphQLClient
 
         $variables = [
             'productId' => $productId,
-            'variants' => $this->buildVariantsInput($variants)
+            'variants' => $this->buildVariantsInput($variants),
         ];
 
         $result = $this->executeQuery($mutation, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $result;
         }
 
         $data = $result['data']['productVariantsBulkCreate'] ?? null;
 
-        if (!empty($data['userErrors'])) {
+        if (! empty($data['userErrors'])) {
             return [
                 'success' => false,
-                'error' => 'GraphQL user errors: ' . collect($data['userErrors'])->pluck('message')->implode(', '),
+                'error' => 'GraphQL user errors: '.collect($data['userErrors'])->pluck('message')->implode(', '),
                 'user_errors' => $data['userErrors'],
             ];
         }
@@ -197,7 +199,7 @@ class ShopifyGraphQLClient
      *
      * Retrieves a product using GraphQL query
      *
-     * @param string $productId Shopify product GID or numeric ID
+     * @param  string  $productId  Shopify product GID or numeric ID
      * @return array Result with success status and product data
      */
     public function getProduct(string $productId): array
@@ -244,13 +246,13 @@ class ShopifyGraphQLClient
 
         $result = $this->executeQuery($query, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $result;
         }
 
         $product = $result['data']['product'] ?? null;
 
-        if (!$product) {
+        if (! $product) {
             return [
                 'success' => false,
                 'error' => 'Product not found',
@@ -268,7 +270,7 @@ class ShopifyGraphQLClient
      *
      * Deletes a product using GraphQL mutation
      *
-     * @param string $productId Shopify product GID
+     * @param  string  $productId  Shopify product GID
      * @return array Result with success status
      */
     public function deleteProduct(string $productId): array
@@ -287,22 +289,22 @@ class ShopifyGraphQLClient
 
         $variables = [
             'input' => [
-                'id' => $productId
-            ]
+                'id' => $productId,
+            ],
         ];
 
         $result = $this->executeQuery($mutation, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return $result;
         }
 
         $data = $result['data']['productDelete'] ?? null;
 
-        if (!empty($data['userErrors'])) {
+        if (! empty($data['userErrors'])) {
             return [
                 'success' => false,
-                'error' => 'GraphQL user errors: ' . collect($data['userErrors'])->pluck('message')->implode(', '),
+                'error' => 'GraphQL user errors: '.collect($data['userErrors'])->pluck('message')->implode(', '),
                 'user_errors' => $data['userErrors'],
             ];
         }
@@ -339,16 +341,16 @@ class ShopifyGraphQLClient
 
         $result = $this->executeQuery($query);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return [
                 'success' => false,
-                'error' => 'GraphQL connection test failed: ' . ($result['error'] ?? 'Unknown error'),
+                'error' => 'GraphQL connection test failed: '.($result['error'] ?? 'Unknown error'),
             ];
         }
 
         $shop = $result['data']['shop'] ?? null;
 
-        if (!$shop) {
+        if (! $shop) {
             return [
                 'success' => false,
                 'error' => 'GraphQL connection test failed: No shop data returned',
@@ -372,16 +374,16 @@ class ShopifyGraphQLClient
      *
      * Core method to execute GraphQL queries and mutations
      *
-     * @param string $query GraphQL query or mutation
-     * @param array $variables Query variables
+     * @param  string  $query  GraphQL query or mutation
+     * @param  array  $variables  Query variables
      * @return array Result with success status and data
      */
     protected function executeQuery(string $query, array $variables = []): array
     {
         try {
             $payload = ['query' => $query];
-            
-            if (!empty($variables)) {
+
+            if (! empty($variables)) {
                 $payload['variables'] = $variables;
             }
 
@@ -404,7 +406,7 @@ class ShopifyGraphQLClient
 
             if (isset($data['errors'])) {
                 $errors = collect($data['errors'])->pluck('message')->implode(', ');
-                
+
                 return [
                     'success' => false,
                     'error' => "GraphQL errors: {$errors}",
@@ -511,7 +513,7 @@ class ShopifyGraphQLClient
                 $optionValues[] = ['name' => $variant['option3']];
             }
 
-            if (!empty($optionValues)) {
+            if (! empty($optionValues)) {
                 $input['optionValues'] = $optionValues;
             }
 
@@ -528,7 +530,7 @@ class ShopifyGraphQLClient
         $locationId = cache()->remember('shopify_default_location', 3600, function () {
             return $this->fetchDefaultLocationId();
         });
-        
+
         return $locationId ?: 'gid://shopify/Location/1'; // Fallback
     }
 
@@ -551,10 +553,10 @@ class ShopifyGraphQLClient
 
         $result = $this->executeQuery($query);
 
-        if ($result['success'] && 
-            isset($result['data']['locations']['nodes']) && 
-            !empty($result['data']['locations']['nodes'])) {
-            
+        if ($result['success'] &&
+            isset($result['data']['locations']['nodes']) &&
+            ! empty($result['data']['locations']['nodes'])) {
+
             return $result['data']['locations']['nodes'][0]['id'];
         }
 
@@ -587,17 +589,17 @@ class ShopifyGraphQLClient
 
     /**
      * 💰 UPDATE PRODUCT VARIANTS PRICING
-     * 
+     *
      * Bulk update pricing for product variants using GraphQL productVariantsBulkUpdate
-     * 
-     * @param array $variantUpdates Array of variant updates with GIDs and pricing
+     *
+     * @param  array  $variantUpdates  Array of variant updates with GIDs and pricing
      * @return array Result with success status and updated variants
      */
     public function updateProductVariantsPricing(array $variantUpdates): array
     {
         Log::info('💰 Updating variants pricing with GraphQL', [
             'variants_count' => count($variantUpdates),
-            'sample_update' => !empty($variantUpdates) ? $variantUpdates[0] : null,
+            'sample_update' => ! empty($variantUpdates) ? $variantUpdates[0] : null,
         ]);
 
         if (empty($variantUpdates)) {
@@ -643,7 +645,7 @@ class ShopifyGraphQLClient
 
         // Group variants by product ID (all variants should belong to same product for this method)
         $productId = $this->extractProductIdFromVariant($variantUpdates[0]['id']);
-        
+
         $variables = [
             'productId' => $productId,
             'variants' => $variantsInput,
@@ -651,10 +653,10 @@ class ShopifyGraphQLClient
 
         $result = $this->executeQuery($mutation, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return [
                 'success' => false,
-                'error' => 'GraphQL query failed: ' . $result['error'],
+                'error' => 'GraphQL query failed: '.$result['error'],
                 'updated_count' => 0,
             ];
         }
@@ -662,9 +664,9 @@ class ShopifyGraphQLClient
         $bulkUpdateData = $result['data']['productVariantsBulkUpdate'];
 
         // Check for user errors
-        if (!empty($bulkUpdateData['userErrors'])) {
-            $errors = array_map(fn($error) => $error['message'], $bulkUpdateData['userErrors']);
-            
+        if (! empty($bulkUpdateData['userErrors'])) {
+            $errors = array_map(fn ($error) => $error['message'], $bulkUpdateData['userErrors']);
+
             Log::error('❌ Shopify pricing update had user errors', [
                 'errors' => $errors,
                 'variants_attempted' => count($variantUpdates),
@@ -672,7 +674,7 @@ class ShopifyGraphQLClient
 
             return [
                 'success' => false,
-                'error' => 'Shopify validation errors: ' . implode(', ', $errors),
+                'error' => 'Shopify validation errors: '.implode(', ', $errors),
                 'updated_count' => 0,
                 'user_errors' => $bulkUpdateData['userErrors'],
             ];
@@ -687,7 +689,7 @@ class ShopifyGraphQLClient
 
         return [
             'success' => true,
-            'message' => 'Successfully updated ' . count($updatedVariants) . ' variant prices',
+            'message' => 'Successfully updated '.count($updatedVariants).' variant prices',
             'updated_count' => count($updatedVariants),
             'updated_variants' => $updatedVariants,
             'product_id' => $productId,
@@ -696,10 +698,10 @@ class ShopifyGraphQLClient
 
     /**
      * 🔍 GET PRODUCT VARIANTS WITH PRICING
-     * 
+     *
      * Fetch product variants with their current pricing information
-     * 
-     * @param string $productId Shopify product GID
+     *
+     * @param  string  $productId  Shopify product GID
      * @return array Result with variants and pricing data
      */
     public function getProductVariantsWithPricing(string $productId): array
@@ -735,15 +737,15 @@ class ShopifyGraphQLClient
         $variables = ['productId' => $productId];
         $result = $this->executeQuery($query, $variables);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return [
                 'success' => false,
-                'error' => 'Failed to fetch variants: ' . $result['error'],
+                'error' => 'Failed to fetch variants: '.$result['error'],
             ];
         }
 
         $product = $result['data']['product'] ?? null;
-        if (!$product) {
+        if (! $product) {
             return [
                 'success' => false,
                 'error' => 'Product not found',
@@ -760,18 +762,18 @@ class ShopifyGraphQLClient
 
     /**
      * 🔧 EXTRACT PRODUCT ID FROM VARIANT GID
-     * 
+     *
      * Helper to extract product GID from variant GID
      * Note: This is a simple approach - in production you might want to query Shopify
-     * 
-     * @param string $variantId Shopify variant GID
+     *
+     * @param  string  $variantId  Shopify variant GID
      * @return string Product GID (best guess)
      */
     protected function extractProductIdFromVariant(string $variantId): string
     {
         // For bulk pricing updates, all variants should belong to the same product
         // In our color-based system, this will always be true per job
-        
+
         // We'll need to query Shopify to get the actual product ID
         $query = '
             query getVariantProduct($variantId: ID!) {
@@ -784,13 +786,14 @@ class ShopifyGraphQLClient
         ';
 
         $result = $this->executeQuery($query, ['variantId' => $variantId]);
-        
+
         if ($result['success'] && isset($result['data']['productVariant']['product']['id'])) {
             return $result['data']['productVariant']['product']['id'];
         }
 
         // Fallback: this shouldn't happen in normal operation
         Log::warning('⚠️ Could not determine product ID from variant', ['variant_id' => $variantId]);
+
         return '';
     }
 
@@ -799,8 +802,8 @@ class ShopifyGraphQLClient
      */
     public function isConfigured(): bool
     {
-        return !empty($this->config['store_url']) &&
-               !empty($this->config['access_token']) &&
-               !empty($this->config['api_version']);
+        return ! empty($this->config['store_url']) &&
+               ! empty($this->config['access_token']) &&
+               ! empty($this->config['api_version']);
     }
 }

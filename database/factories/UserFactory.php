@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class UserFactory extends Factory
@@ -17,7 +16,7 @@ class UserFactory extends Factory
     {
         return [
             'name' => 'Test User',
-            'email' => 'test' . rand(1000, 9999) . '@example.com',
+            'email' => 'test'.rand(1000, 9999).'@example.com',
             'email_verified_at' => now(),
             'password' => 'password',
             'remember_token' => Str::random(10),

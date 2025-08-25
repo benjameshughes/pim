@@ -5,15 +5,15 @@ namespace App\Actions\Marketplace;
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Services\MarketplaceAttributeMappingService;
-use App\Services\Shopify\API\ShopifyApiClient;
 use App\Services\EbayConnectService;
 use App\Services\Marketplace\MiraklConnectService;
+use App\Services\MarketplaceAttributeMappingService;
+use App\Services\Shopify\API\ShopifyApiClient;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * 🔄 SYNC ATTRIBUTES TO MARKETPLACE ACTION
- * 
+ *
  * Synchronizes product/variant attributes to specific marketplaces
  * using the MarketplaceAttributeMappingService for proper field mapping.
  */
@@ -28,10 +28,10 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 🎯 EXECUTE SYNC
-     * 
-     * @param Model $model Product or ProductVariant
-     * @param string $marketplace Target marketplace
-     * @param array $options Sync options
+     *
+     * @param  Model  $model  Product or ProductVariant
+     * @param  string  $marketplace  Target marketplace
+     * @param  array  $options  Sync options
      */
     public function execute(Model $model, string $marketplace, array $options = []): array
     {
@@ -40,8 +40,8 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         try {
             // Map attributes to marketplace format
             $mappedData = $this->mapToMarketplace($model, $marketplace);
-            
-            if (!$mappedData['is_valid']) {
+
+            if (! $mappedData['is_valid']) {
                 return $this->fail('Attribute mapping validation failed', [
                     'validation_errors' => $mappedData['validation_errors'],
                     'warnings' => $mappedData['warnings'],
@@ -50,15 +50,15 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
             // Perform the actual sync
             $syncResult = $this->performSync($model, $marketplace, $mappedData, $options);
-            
-            if (!$syncResult['success']) {
+
+            if (! $syncResult['success']) {
                 return $this->fail($syncResult['error'], $syncResult['details'] ?? []);
             }
 
             // Update sync status on attributes
             $this->updateAttributeSyncStatus($model, $marketplace, $syncResult);
 
-            return $this->success('Attributes synced successfully to ' . $marketplace, [
+            return $this->success('Attributes synced successfully to '.$marketplace, [
                 'marketplace' => $marketplace,
                 'model_type' => get_class($model),
                 'model_id' => $model->id,
@@ -68,7 +68,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
             ]);
 
         } catch (\Exception $e) {
-            return $this->fail('Sync failed: ' . $e->getMessage(), [
+            return $this->fail('Sync failed: '.$e->getMessage(), [
                 'exception' => get_class($e),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -78,7 +78,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 🔄 BATCH SYNC
-     * 
+     *
      * Sync multiple models to marketplace efficiently
      */
     public function batchSync(array $models, string $marketplace, array $options = []): array
@@ -97,9 +97,9 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         foreach ($chunks as $chunk) {
             foreach ($chunk as $model) {
                 $results['total_processed']++;
-                
+
                 $result = $this->execute($model, $marketplace, $options);
-                
+
                 if ($result['success']) {
                     $results['successful'][] = [
                         'model' => get_class($model),
@@ -117,7 +117,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
                     $results['total_failed']++;
                 }
             }
-            
+
             // Optional delay between batches
             if (isset($options['delay_between_batches'])) {
                 sleep($options['delay_between_batches']);
@@ -136,12 +136,12 @@ class SyncAttributesToMarketplaceAction extends BaseAction
      */
     protected function validateInputs(Model $model, string $marketplace, array $options): void
     {
-        if (!in_array(get_class($model), [Product::class, ProductVariant::class])) {
+        if (! in_array(get_class($model), [Product::class, ProductVariant::class])) {
             throw new \InvalidArgumentException('Model must be Product or ProductVariant');
         }
 
         $supportedMarketplaces = ['shopify', 'ebay', 'mirakl'];
-        if (!in_array($marketplace, $supportedMarketplaces)) {
+        if (! in_array($marketplace, $supportedMarketplaces)) {
             throw new \InvalidArgumentException("Unsupported marketplace: {$marketplace}");
         }
 
@@ -163,7 +163,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 🔄 PERFORM SYNC
-     * 
+     *
      * Execute the actual marketplace sync
      */
     protected function performSync(Model $model, string $marketplace, array $mappedData, array $options): array
@@ -185,7 +185,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
      */
     protected function syncToShopify(Model $model, array $mappedData, array $options): array
     {
-        if (!$this->shopifyClient) {
+        if (! $this->shopifyClient) {
             throw new \RuntimeException('Shopify client not available');
         }
 
@@ -198,7 +198,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => 'Shopify sync failed: ' . $e->getMessage(),
+                'error' => 'Shopify sync failed: '.$e->getMessage(),
                 'details' => ['exception' => get_class($e)],
             ];
         }
@@ -221,16 +221,16 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         if ($existingLinks->isNotEmpty()) {
             // Update existing product
             $shopifyProductId = $existingLinks->first()->external_id;
-            
+
             $updateData = [
                 'input' => array_merge($coreFields, [
                     'id' => $shopifyProductId,
                     'metafields' => $metafields,
-                ])
+                ]),
             ];
 
             $result = $this->shopifyClient->updateProduct($updateData);
-            
+
             if ($result['success']) {
                 return [
                     'success' => true,
@@ -245,14 +245,14 @@ class SyncAttributesToMarketplaceAction extends BaseAction
             $createData = [
                 'input' => array_merge($coreFields, [
                     'metafields' => $metafields,
-                ])
+                ]),
             ];
 
             $result = $this->shopifyClient->createProduct($createData);
-            
+
             if ($result['success']) {
                 $shopifyProductId = $result['data']['product']['id'] ?? null;
-                
+
                 if ($shopifyProductId) {
                     // Create marketplace link
                     $product->marketplaceLinks()->create([
@@ -297,16 +297,16 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         if ($existingLink) {
             // Update existing variant
             $shopifyVariantId = $existingLink->external_id;
-            
+
             $updateData = [
                 'input' => array_merge($coreFields, [
                     'id' => $shopifyVariantId,
                     'metafields' => $metafields,
-                ])
+                ]),
             ];
 
             $result = $this->shopifyClient->updateVariant($updateData);
-            
+
             if ($result['success']) {
                 return [
                     'success' => true,
@@ -329,7 +329,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
      */
     protected function syncToEbay(Model $model, array $mappedData, array $options): array
     {
-        if (!$this->ebayService) {
+        if (! $this->ebayService) {
             throw new \RuntimeException('eBay service not available');
         }
 
@@ -346,7 +346,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
      */
     protected function syncToMirakl(Model $model, array $mappedData, array $options): array
     {
-        if (!$this->miraklService) {
+        if (! $this->miraklService) {
             throw new \RuntimeException('Mirakl service not available');
         }
 
@@ -360,7 +360,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 📝 UPDATE ATTRIBUTE SYNC STATUS
-     * 
+     *
      * Mark attributes as synced in the PIM system
      */
     protected function updateAttributeSyncStatus(Model $model, string $marketplace, array $syncResult): void
@@ -371,7 +371,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
         foreach ($syncedAttributes as $attributeKey) {
             $attributes = $model->attributes()->forAttribute($attributeKey)->get();
-            
+
             foreach ($attributes as $attribute) {
                 $attribute->markAsSynced($marketplace, [
                     'external_id' => $externalId,
@@ -391,17 +391,17 @@ class SyncAttributesToMarketplaceAction extends BaseAction
     {
         switch ($marketplace) {
             case 'shopify':
-                if (!$this->shopifyClient) {
+                if (! $this->shopifyClient) {
                     $this->shopifyClient = app(ShopifyApiClient::class);
                 }
                 break;
             case 'ebay':
-                if (!$this->ebayService) {
+                if (! $this->ebayService) {
                     $this->ebayService = app(EbayConnectService::class);
                 }
                 break;
             case 'mirakl':
-                if (!$this->miraklService) {
+                if (! $this->miraklService) {
                     // Mirakl service would be injected here
                     // $this->miraklService = app(MiraklConnectService::class);
                 }
@@ -411,7 +411,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 🔍 GET SYNC STATUS
-     * 
+     *
      * Get current sync status for a model across all marketplaces
      */
     public function getSyncStatus(Model $model): array
@@ -425,7 +425,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
         ];
 
         $marketplaces = ['shopify', 'ebay', 'mirakl'];
-        
+
         foreach ($marketplaces as $marketplace) {
             $marketplaceStatus = [
                 'marketplace' => $marketplace,
@@ -463,7 +463,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
             $status['marketplaces'][$marketplace] = $marketplaceStatus;
 
             // Track pending syncs
-            if (!empty($marketplaceStatus['attributes_needing_sync'])) {
+            if (! empty($marketplaceStatus['attributes_needing_sync'])) {
                 $status['pending_syncs'][] = $marketplace;
             }
         }
@@ -482,7 +482,7 @@ class SyncAttributesToMarketplaceAction extends BaseAction
 
     /**
      * 📊 GET SYNC STATISTICS
-     * 
+     *
      * Get sync statistics for reporting
      */
     public function getSyncStatistics(string $marketplace, array $options = []): array

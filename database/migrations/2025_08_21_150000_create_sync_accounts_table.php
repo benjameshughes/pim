@@ -13,21 +13,21 @@ return new class extends Migration
     {
         Schema::create('sync_accounts', function (Blueprint $table) {
             $table->id();
-            
+
             // Account identification
             $table->string('name'); // "My Shopify Store"
             $table->string('channel'); // "shopify", "ebay", "amazon"
             $table->string('display_name')->nullable(); // User-friendly name
-            
+
             // Status
             $table->boolean('is_active')->default(true);
-            
+
             // Encrypted credentials and settings
             $table->text('credentials')->nullable(); // JSON encrypted credentials
             $table->json('settings')->nullable(); // Channel-specific settings
-            
+
             $table->timestamps();
-            
+
             // Indexes
             $table->index('channel');
             $table->index('is_active');

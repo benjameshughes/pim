@@ -6,7 +6,7 @@ use Exception;
 
 /**
  * 📝 WIZARD VALIDATION EXCEPTION
- * 
+ *
  * Thrown when wizard validation fails during step transitions
  * or when required data is missing for specific operations.
  */
@@ -20,7 +20,7 @@ class WizardValidationException extends Exception
     ) {
         parent::__construct($message);
     }
-    
+
     /**
      * Create exception for missing variants in pricing step
      */
@@ -33,7 +33,7 @@ class WizardValidationException extends Exception
             data: ['required_step' => 2, 'current_step' => 4]
         );
     }
-    
+
     /**
      * Create exception for missing variant attributes
      */
@@ -46,7 +46,7 @@ class WizardValidationException extends Exception
             data: ['required_attributes' => ['colors', 'widths', 'drops']]
         );
     }
-    
+
     /**
      * Get user-friendly message
      */
@@ -58,7 +58,7 @@ class WizardValidationException extends Exception
             default => $this->getMessage()
         };
     }
-    
+
     /**
      * Get the step where the error occurred
      */
@@ -66,7 +66,7 @@ class WizardValidationException extends Exception
     {
         return $this->step;
     }
-    
+
     /**
      * Get validation errors
      */

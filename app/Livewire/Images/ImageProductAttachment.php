@@ -18,6 +18,7 @@ class ImageProductAttachment extends Component
 
     // Attachment state
     public string $attachmentType = '';
+
     public int $attachmentId = 0;
 
     // Listeners
@@ -45,6 +46,7 @@ class ImageProductAttachment extends Component
         if ($productAttachment) {
             $this->attachmentType = 'product';
             $this->attachmentId = $productAttachment->id;
+
             return;
         }
 

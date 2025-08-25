@@ -3,13 +3,11 @@
 namespace App\Traits;
 
 use App\Models\AttributeDefinition;
-use App\Models\ProductAttribute;
 use App\Models\VariantAttribute;
-use Illuminate\Support\Collection;
 
 /**
  * 🧬 INHERITS ATTRIBUTES TRAIT
- * 
+ *
  * Provides inheritance functionality for ProductVariant models.
  * Handles inheriting attributes from parent products with smart fallback logic.
  */
@@ -20,7 +18,7 @@ trait InheritsAttributesTrait
      *
      * Get attribute value with full inheritance logic:
      * 1. Check variant's explicit value
-     * 2. Check variant's inherited value 
+     * 2. Check variant's inherited value
      * 3. Fallback to product's value
      * 4. Fallback to attribute's default value
      */
@@ -48,14 +46,14 @@ trait InheritsAttributesTrait
 
         // 3. Check if we should inherit from product
         $attributeDefinition = AttributeDefinition::findByKey($key);
-        if (!$attributeDefinition || !$attributeDefinition->supportsInheritance()) {
+        if (! $attributeDefinition || ! $attributeDefinition->supportsInheritance()) {
             return null;
         }
 
         // 4. Get value from product
         if ($this->product) {
             $productValue = $this->product->getTypedAttributeValue($key);
-            
+
             // If strategy is 'always' or 'fallback', use product value
             $strategy = $attributeDefinition->getInheritanceStrategy();
             if (in_array($strategy, ['always', 'fallback']) && $productValue !== null) {
@@ -74,12 +72,12 @@ trait InheritsAttributesTrait
      */
     public function inheritAttribute(string $key, array $options = []): bool
     {
-        if (!$this->product) {
+        if (! $this->product) {
             return false;
         }
 
         $attributeDefinition = AttributeDefinition::findByKey($key);
-        if (!$attributeDefinition || !$attributeDefinition->supportsInheritance()) {
+        if (! $attributeDefinition || ! $attributeDefinition->supportsInheritance()) {
             return false;
         }
 
@@ -87,7 +85,7 @@ trait InheritsAttributesTrait
             ->where('attribute_definition_id', $attributeDefinition->id)
             ->first();
 
-        if (!$productAttribute) {
+        if (! $productAttribute) {
             return false;
         }
 
@@ -96,7 +94,7 @@ trait InheritsAttributesTrait
             ->where('attribute_definition_id', $attributeDefinition->id)
             ->first();
 
-        if (!$variantAttribute) {
+        if (! $variantAttribute) {
             $variantAttribute = new VariantAttribute([
                 'variant_id' => $this->id,
                 'attribute_definition_id' => $attributeDefinition->id,
@@ -126,7 +124,7 @@ trait InheritsAttributesTrait
             'total_processed' => 0,
         ];
 
-        if (!$this->product) {
+        if (! $this->product) {
             return $results;
         }
 
@@ -135,18 +133,19 @@ trait InheritsAttributesTrait
 
         foreach ($inheritableDefinitions as $definition) {
             $results['total_processed']++;
-            
+
             try {
                 // Check if product has this attribute
                 $productAttribute = $this->product->attributes()
                     ->where('attribute_definition_id', $definition->id)
                     ->first();
 
-                if (!$productAttribute) {
+                if (! $productAttribute) {
                     $results['skipped'][] = [
                         'key' => $definition->key,
                         'reason' => 'Product does not have this attribute',
                     ];
+
                     continue;
                 }
 
@@ -157,20 +156,22 @@ trait InheritsAttributesTrait
 
                 if ($variantAttribute) {
                     // Skip if already inherited and not forcing
-                    if ($variantAttribute->is_inherited && !$force) {
+                    if ($variantAttribute->is_inherited && ! $force) {
                         $results['skipped'][] = [
                             'key' => $definition->key,
                             'reason' => 'Already inherited',
                         ];
+
                         continue;
                     }
 
                     // Skip if explicitly set (override) and not forcing
-                    if (!$variantAttribute->is_inherited && !$force) {
+                    if (! $variantAttribute->is_inherited && ! $force) {
                         $results['skipped'][] = [
                             'key' => $definition->key,
                             'reason' => 'Explicitly set (override)',
                         ];
+
                         continue;
                     }
                 }
@@ -203,7 +204,7 @@ trait InheritsAttributesTrait
             'errors' => [],
         ];
 
-        if (!$this->product) {
+        if (! $this->product) {
             return $results;
         }
 
@@ -226,13 +227,14 @@ trait InheritsAttributesTrait
                     ->where('attribute_definition_id', $variantAttribute->attribute_definition_id)
                     ->first();
 
-                if (!$productAttribute) {
+                if (! $productAttribute) {
                     // Product no longer has this attribute, remove inheritance
                     $variantAttribute->delete();
                     $results['refreshed'][] = [
                         'key' => $key,
                         'action' => 'removed (parent no longer has attribute)',
                     ];
+
                     continue;
                 }
 
@@ -273,7 +275,7 @@ trait InheritsAttributesTrait
     public function overrideAttribute(string $key, $value, array $options = []): bool
     {
         $attributeDefinition = AttributeDefinition::findByKey($key);
-        if (!$attributeDefinition) {
+        if (! $attributeDefinition) {
             return false;
         }
 
@@ -281,7 +283,7 @@ trait InheritsAttributesTrait
             ->where('attribute_definition_id', $attributeDefinition->id)
             ->first();
 
-        if (!$variantAttribute) {
+        if (! $variantAttribute) {
             // Create new override attribute
             $variantAttribute = new VariantAttribute([
                 'variant_id' => $this->id,
@@ -309,7 +311,7 @@ trait InheritsAttributesTrait
             ->where('is_override', true)
             ->first();
 
-        if (!$variantAttribute) {
+        if (! $variantAttribute) {
             return false; // No override to clear
         }
 
@@ -324,6 +326,7 @@ trait InheritsAttributesTrait
                 $success = $variantAttribute->inheritFromProduct($productAttribute);
                 if ($success) {
                     $variantAttribute->save();
+
                     return true;
                 }
             }
@@ -331,6 +334,7 @@ trait InheritsAttributesTrait
 
         // If can't inherit, remove the attribute entirely
         $variantAttribute->delete();
+
         return true;
     }
 
@@ -350,7 +354,7 @@ trait InheritsAttributesTrait
             'details' => [],
         ];
 
-        if (!$this->product) {
+        if (! $this->product) {
             return $summary;
         }
 
@@ -360,7 +364,7 @@ trait InheritsAttributesTrait
 
         foreach ($variantAttributes as $attribute) {
             $key = $attribute->getAttributeKey();
-            
+
             if ($attribute->is_inherited) {
                 $summary['inherited']++;
                 $status = 'inherited';
@@ -384,9 +388,9 @@ trait InheritsAttributesTrait
         // Check for inheritable attributes that variant doesn't have
         $inheritableDefinitions = AttributeDefinition::getInheritableAttributes();
         $variantAttributeKeys = $variantAttributes->pluck('attributeDefinition.key')->toArray();
-        
+
         foreach ($inheritableDefinitions as $definition) {
-            if (!in_array($definition->key, $variantAttributeKeys)) {
+            if (! in_array($definition->key, $variantAttributeKeys)) {
                 // Check if product has this attribute
                 $productHasAttribute = $this->product->attributes()
                     ->where('attribute_definition_id', $definition->id)
@@ -435,6 +439,7 @@ trait InheritsAttributesTrait
                 'source' => $variantAttribute->source,
                 'assigned_by' => $variantAttribute->assigned_by,
             ];
+
             return $path;
         }
 
@@ -461,7 +466,7 @@ trait InheritsAttributesTrait
                 ->first();
 
             if ($productAttribute) {
-                if (!$inheritedAttribute) {
+                if (! $inheritedAttribute) {
                     $path['final_value'] = $productAttribute->getTypedValue();
                 }
 

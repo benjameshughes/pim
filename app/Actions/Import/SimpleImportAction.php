@@ -18,9 +18,11 @@ class SimpleImportAction
     private $progressCallback;
 
     private $createdProducts = 0;
+
     private $updatedProducts = 0;
 
     private $createdVariants = 0;
+
     private $updatedVariants = 0;
 
     private $skippedRows = 0;
@@ -43,8 +45,8 @@ class SimpleImportAction
         try {
             return DB::transaction(function () use ($filePath, $mappings, $startTime) {
                 // Read and process CSV
-                $csv = array_map(function($line) { 
-                    return str_getcsv($line, ',', '"', '\\'); 
+                $csv = array_map(function ($line) {
+                    return str_getcsv($line, ',', '"', '\\');
                 }, file($filePath));
                 $headers = array_shift($csv); // Remove header row
 

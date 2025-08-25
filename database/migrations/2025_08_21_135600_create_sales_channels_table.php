@@ -13,18 +13,18 @@ return new class extends Migration
     {
         Schema::create('sales_channels', function (Blueprint $table) {
             $table->id();
-            
+
             // Channel identity
             $table->string('name'); // "Shopify", "eBay", "Direct Sales"
             $table->string('code', 20)->unique(); // "shopify", "ebay", "direct"
             $table->text('description')->nullable();
-            
+
             // Channel configuration
             $table->json('config')->nullable(); // API keys, settings, etc
             $table->string('status', 20)->default('active');
-            
+
             $table->timestamps();
-            
+
             // Indexes
             $table->index('status');
         });

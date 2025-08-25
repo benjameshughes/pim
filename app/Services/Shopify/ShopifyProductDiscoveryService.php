@@ -4,7 +4,6 @@ namespace App\Services\Shopify;
 
 use App\Models\Product;
 use App\Models\SyncAccount;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +17,9 @@ use Illuminate\Support\Facades\Log;
 class ShopifyProductDiscoveryService
 {
     private SyncAccount $syncAccount;
+
     private string $baseUrl;
+
     private array $headers;
 
     public function __construct(SyncAccount $syncAccount)
@@ -49,19 +50,18 @@ class ShopifyProductDiscoveryService
                     // Remove 'status' parameter to get all products (defaults to active + draft)
                 ]);
 
-
             if ($response->failed()) {
                 Log::error('Failed to discover Shopify products', [
                     'status' => $response->status(),
                     'error' => $response->body(),
                     'full_response' => $response->json(),
                 ]);
-                
+
                 return collect();
             }
 
             $products = $response->json('products', []);
-            
+
             Log::info('✅ Shopify products discovered', [
                 'count' => count($products),
             ]);
@@ -105,7 +105,7 @@ class ShopifyProductDiscoveryService
     public function findPotentialMatches(Product $product): Collection
     {
         $shopifyProducts = $this->discoverProducts();
-        
+
         if ($shopifyProducts->isEmpty()) {
             return collect();
         }
@@ -118,7 +118,7 @@ class ShopifyProductDiscoveryService
 
         return $shopifyProducts->map(function ($shopifyProduct) use ($product) {
             $matchScore = $this->calculateMatchScore($product, $shopifyProduct);
-            
+
             return array_merge($shopifyProduct, [
                 'match_score' => $matchScore,
                 'match_reasons' => $this->getMatchReasons($product, $shopifyProduct),
@@ -152,7 +152,7 @@ class ShopifyProductDiscoveryService
 
         // Variant SKU matching
         foreach ($shopifyProduct['variants'] as $variant) {
-            if (!empty($variant['sku']) && str_contains($variant['sku'], $parentSku)) {
+            if (! empty($variant['sku']) && str_contains($variant['sku'], $parentSku)) {
                 $score += 30;
             }
         }
@@ -179,7 +179,7 @@ class ShopifyProductDiscoveryService
         }
 
         foreach ($shopifyProduct['variants'] as $variant) {
-            if (!empty($variant['sku']) && str_contains($variant['sku'], $parentSku)) {
+            if (! empty($variant['sku']) && str_contains($variant['sku'], $parentSku)) {
                 $reasons[] = "SKU '{$parentSku}' matches variant SKU";
                 break;
             }
@@ -201,14 +201,14 @@ class ShopifyProductDiscoveryService
     private function extractSuggestedColor(string $title): ?string
     {
         $colors = [
-            'black', 'white', 'grey', 'gray', 'charcoal', 'natural', 
-            'cream', 'beige', 'brown', 'red', 'blue', 'green', 
+            'black', 'white', 'grey', 'gray', 'charcoal', 'natural',
+            'cream', 'beige', 'brown', 'red', 'blue', 'green',
             'yellow', 'orange', 'pink', 'purple', 'aubergine',
-            'lime green', 'dark grey', 'light grey', 'burnt orange'
+            'lime green', 'dark grey', 'light grey', 'burnt orange',
         ];
 
         // Sort by length descending to match longer color names first
-        usort($colors, fn($a, $b) => strlen($b) - strlen($a));
+        usort($colors, fn ($a, $b) => strlen($b) - strlen($a));
 
         foreach ($colors as $color) {
             if (stripos($title, $color) !== false) {
@@ -235,6 +235,7 @@ class ShopifyProductDiscoveryService
         return $productColors->map(function ($color) use ($potentialMatches) {
             $colorMatches = $potentialMatches->filter(function ($shopifyProduct) use ($color) {
                 $title = strtolower($shopifyProduct['title']);
+
                 return str_contains($title, strtolower($color));
             });
 

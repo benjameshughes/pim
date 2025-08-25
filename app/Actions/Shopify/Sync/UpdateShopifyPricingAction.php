@@ -34,19 +34,19 @@ class UpdateShopifyPricingAction extends BaseAction
         $product = $params[0] ?? null;
         $options = $params[1] ?? [];
 
-        if (!$product instanceof Product) {
+        if (! $product instanceof Product) {
             throw new \InvalidArgumentException('First parameter must be a Product instance');
         }
 
         $syncAccountId = $options['sync_account_id'] ?? null;
         $pricingSource = $options['pricing_source'] ?? 'base_price'; // base_price, channel_price, etc.
 
-        if (!$syncAccountId) {
+        if (! $syncAccountId) {
             return $this->failure('Sync account ID is required');
         }
 
         $syncAccount = SyncAccount::find($syncAccountId);
-        if (!$syncAccount || $syncAccount->channel !== 'shopify') {
+        if (! $syncAccount || $syncAccount->channel !== 'shopify') {
             return $this->failure('Valid Shopify sync account is required');
         }
 
@@ -121,7 +121,7 @@ class UpdateShopifyPricingAction extends BaseAction
                     'duration_ms' => $duration,
                 ]);
 
-                return $this->success("Successfully updated pricing for {$totalUpdated} variants across " . count($results) . ' colors', [
+                return $this->success("Successfully updated pricing for {$totalUpdated} variants across ".count($results).' colors', [
                     'method' => 'shopify_pricing_update',
                     'variants_updated' => $totalUpdated,
                     'colors_updated' => count($results),
@@ -155,7 +155,7 @@ class UpdateShopifyPricingAction extends BaseAction
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->failure('Shopify pricing update failed: ' . $e->getMessage(), [
+            return $this->failure('Shopify pricing update failed: '.$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -185,12 +185,13 @@ class UpdateShopifyPricingAction extends BaseAction
             $color = $link->marketplace_data['color_filter'] ?? null;
             $shopifyProductId = $link->external_product_id;
 
-            if (!$color || !$shopifyProductId) {
+            if (! $color || ! $shopifyProductId) {
                 Log::warning('⚠️ Skipping MarketplaceLink with missing data', [
                     'link_id' => $link->id,
                     'color' => $color,
                     'shopify_product_id' => $shopifyProductId,
                 ]);
+
                 continue;
             }
 
@@ -208,13 +209,14 @@ class UpdateShopifyPricingAction extends BaseAction
                     'product_id' => $product->id,
                     'color' => $color,
                 ]);
+
                 continue;
             }
 
             // Build variant updates for this color
             $variantUpdates = $this->buildVariantUpdates($colorVariants, $pricingSource, $shopifyProductId);
 
-            if (!empty($variantUpdates)) {
+            if (! empty($variantUpdates)) {
                 $updatesByShopifyProduct->put($shopifyProductId, [
                     'color' => $color,
                     'variant_updates' => $variantUpdates,
@@ -234,13 +236,14 @@ class UpdateShopifyPricingAction extends BaseAction
 
         foreach ($variants as $variant) {
             $price = $this->extractPrice($variant, $pricingSource);
-            
+
             if ($price === null) {
-                Log::info("⏭️ Skipping variant with no pricing", [
+                Log::info('⏭️ Skipping variant with no pricing', [
                     'variant_id' => $variant->id,
                     'variant_sku' => $variant->sku,
                     'pricing_source' => $pricingSource,
                 ]);
+
                 continue;
             }
 
@@ -248,11 +251,12 @@ class UpdateShopifyPricingAction extends BaseAction
             // This could be optimized by storing them in MarketplaceLinks
             $shopifyVariantId = $this->findShopifyVariantId($shopifyProductId, $variant->sku);
 
-            if (!$shopifyVariantId) {
+            if (! $shopifyVariantId) {
                 Log::warning('⚠️ Could not find Shopify variant ID', [
                     'variant_sku' => $variant->sku,
                     'shopify_product_id' => $shopifyProductId,
                 ]);
+
                 continue;
             }
 
@@ -274,7 +278,7 @@ class UpdateShopifyPricingAction extends BaseAction
     {
         // First try to get from Pricing relationship
         $pricing = $variant->pricing->first();
-        
+
         if ($pricing) {
             $basePrice = match ($pricingSource) {
                 'base_price' => $pricing->base_price,
@@ -289,6 +293,7 @@ class UpdateShopifyPricingAction extends BaseAction
 
         // Fallback to variant price field with attribute modifications
         $basePrice = $variant->price;
+
         return $this->applyAttributePricingModifications($variant, $basePrice);
     }
 
@@ -334,7 +339,7 @@ class UpdateShopifyPricingAction extends BaseAction
     {
         $material = $variant->getSmartAttributeValue('material');
         $premiumMaterials = ['silk', 'linen', 'organic cotton', 'bamboo', 'hemp'];
-        
+
         return $material && in_array(strtolower($material), $premiumMaterials);
     }
 
@@ -357,11 +362,12 @@ class UpdateShopifyPricingAction extends BaseAction
         // Fetch variants for this Shopify product and find matching SKU
         $result = $this->graphqlClient->getProductVariantsWithPricing($shopifyProductId);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             Log::warning('⚠️ Failed to fetch Shopify variants', [
                 'shopify_product_id' => $shopifyProductId,
                 'error' => $result['error'],
             ]);
+
             return null;
         }
 
@@ -429,9 +435,9 @@ class UpdateShopifyPricingAction extends BaseAction
         ];
 
         // Filter out null values
-        $attributes = array_filter($attributes, fn($value) => $value !== null);
+        $attributes = array_filter($attributes, fn ($value) => $value !== null);
 
-        if (!empty($attributes)) {
+        if (! empty($attributes)) {
             Log::info('🏷️ Pricing-relevant smart attributes detected', [
                 'product_id' => $product->id,
                 'attributes' => $attributes,

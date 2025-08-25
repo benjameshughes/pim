@@ -13,35 +13,35 @@ return new class extends Migration
     {
         Schema::create('sync_statuses', function (Blueprint $table) {
             $table->id();
-            
+
             // What's synced
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->foreignId('sync_account_id')->constrained()->onDelete('cascade');
-            
+
             // Current status
             $table->string('channel'); // "shopify", "ebay", etc.
             $table->string('status'); // "never_synced", "synced", "needs_update", "sync_failed"
             $table->string('external_id')->nullable(); // ID on the marketplace
-            
+
             // Sync tracking
             $table->timestamp('last_synced_at')->nullable();
             $table->timestamp('last_attempted_at')->nullable();
             $table->text('last_error')->nullable();
             $table->integer('error_count')->default(0);
-            
+
             // Data checksums for change detection
             $table->string('product_checksum')->nullable(); // Hash of product data
             $table->string('pricing_checksum')->nullable(); // Hash of pricing data
             $table->string('inventory_checksum')->nullable(); // Hash of inventory data
-            
+
             // Metadata
             $table->json('sync_metadata')->nullable(); // Channel-specific data
-            
+
             $table->timestamps();
-            
+
             // Unique constraint - one status per product per channel
             $table->unique(['product_id', 'sync_account_id']);
-            
+
             // Indexes
             $table->index(['channel', 'status']);
             $table->index('last_synced_at');

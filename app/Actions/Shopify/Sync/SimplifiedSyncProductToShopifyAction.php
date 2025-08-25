@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 class SimplifiedSyncProductToShopifyAction extends BaseAction
 {
     private ShopifyConnectService $shopifyService;
+
     private ?GraphQLSyncProductToShopifyAction $graphqlAction = null;
 
     public function __construct(ShopifyConnectService $shopifyService)
@@ -71,14 +72,14 @@ class SimplifiedSyncProductToShopifyAction extends BaseAction
         // Route to appropriate sync method
         if ($useGraphQL) {
             $graphqlResult = $this->syncWithGraphQL($product, $options);
-            
+
             // If GraphQL fails and product is small enough, fallback to REST
-            if (!$graphqlResult['success'] && $product->variants->count() <= 100) {
+            if (! $graphqlResult['success'] && $product->variants->count() <= 100) {
                 Log::warning('🔄 GraphQL sync failed, falling back to REST', [
                     'product_id' => $product->id,
                     'graphql_error' => $graphqlResult['message'] ?? 'Unknown error',
                 ]);
-                
+
                 // Continue to REST sync below
             } else {
                 return $graphqlResult;
@@ -163,7 +164,7 @@ class SimplifiedSyncProductToShopifyAction extends BaseAction
                 'error' => $e->getMessage(),
             ]);
 
-            return $this->failure('Product sync failed: ' . $e->getMessage(), [
+            return $this->failure('Product sync failed: '.$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -307,6 +308,7 @@ class SimplifiedSyncProductToShopifyAction extends BaseAction
         }
 
         $storeUrl = config('services.shopify.store_url');
+
         return "https://{$storeUrl}/admin/products/{$productId}";
     }
 
@@ -332,7 +334,7 @@ class SimplifiedSyncProductToShopifyAction extends BaseAction
         // - Product has >80 variants (approaching REST limit)
         // - Product has multiple colors (benefits from splitting)
         // - Product has >50 variants and multiple colors
-        return $variantCount > 80 || 
+        return $variantCount > 80 ||
                ($colorCount > 1 && $variantCount > 50) ||
                $colorCount > 3;
     }
@@ -347,7 +349,7 @@ class SimplifiedSyncProductToShopifyAction extends BaseAction
         ]);
 
         // Lazy load GraphQL action to avoid circular dependencies
-        if (!$this->graphqlAction) {
+        if (! $this->graphqlAction) {
             $this->graphqlAction = app(GraphQLSyncProductToShopifyAction::class);
         }
 

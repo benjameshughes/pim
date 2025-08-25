@@ -3,19 +3,21 @@
 namespace App\Livewire;
 
 use App\Services\LogParserService;
-use Livewire\Component;
 use Livewire\Attributes\Title;
+use Livewire\Component;
 
 /**
  * 📊 LOG DASHBOARD COMPONENT
- * 
+ *
  * Simple dashboard for viewing application logs and performance metrics
  */
 #[Title('Log Dashboard')]
 class LogDashboard extends Component
 {
     public string $activeTab = 'overview';
+
     public int $refreshInterval = 30; // seconds
+
     public bool $autoRefresh = false;
 
     protected LogParserService $logParser;
@@ -32,7 +34,7 @@ class LogDashboard extends Component
 
     public function toggleAutoRefresh(): void
     {
-        $this->autoRefresh = !$this->autoRefresh;
+        $this->autoRefresh = ! $this->autoRefresh;
     }
 
     public function refreshData(): void

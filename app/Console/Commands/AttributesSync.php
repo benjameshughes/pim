@@ -2,16 +2,16 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AttributeDefinition;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\AttributeDefinition;
 use App\Services\AttributeInheritanceService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
  * 🔄 ATTRIBUTES SYNC COMMAND
- * 
+ *
  * Synchronizes attributes from parent products to child variants
  * with comprehensive reporting and recovery options.
  */
@@ -29,7 +29,7 @@ class AttributesSync extends Command
     protected $description = 'Sync attributes from parent products to child variants using inheritance rules';
 
     protected AttributeInheritanceService $inheritanceService;
-    
+
     protected array $stats = [
         'products_processed' => 0,
         'variants_processed' => 0,
@@ -51,7 +51,7 @@ class AttributesSync extends Command
 
         $startTime = microtime(true);
         $isDryRun = $this->option('dry-run');
-        
+
         if ($isDryRun) {
             $this->warn('🔍 DRY RUN MODE - No changes will be made');
             $this->newLine();
@@ -63,9 +63,10 @@ class AttributesSync extends Command
 
             // Get target products and variants
             $targets = $this->getTargets();
-            
+
             if (empty($targets['products']) && empty($targets['variants'])) {
                 $this->warn('⚠️ No products or variants found to sync');
+
                 return Command::SUCCESS;
             }
 
@@ -73,8 +74,9 @@ class AttributesSync extends Command
             $this->displaySyncPlan($targets, $isDryRun);
 
             // Confirm if not dry run and processing many items
-            if (!$isDryRun && !$this->confirmLargeOperation($targets)) {
+            if (! $isDryRun && ! $this->confirmLargeOperation($targets)) {
                 $this->info('Operation cancelled by user');
+
                 return Command::SUCCESS;
             }
 
@@ -88,8 +90,9 @@ class AttributesSync extends Command
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('❌ Sync failed: ' . $e->getMessage());
-            $this->line('Trace: ' . $e->getFile() . ':' . $e->getLine());
+            $this->error('❌ Sync failed: '.$e->getMessage());
+            $this->line('Trace: '.$e->getFile().':'.$e->getLine());
+
             return Command::FAILURE;
         }
     }
@@ -104,59 +107,59 @@ class AttributesSync extends Command
         $attributes = $this->option('attribute');
 
         // Validate product IDs exist
-        if (!empty($productIds)) {
+        if (! empty($productIds)) {
             $existingIds = Product::whereIn('id', $productIds)->pluck('id')->toArray();
             $missingIds = array_diff($productIds, $existingIds);
-            
-            if (!empty($missingIds)) {
-                throw new \InvalidArgumentException('Product IDs not found: ' . implode(', ', $missingIds));
+
+            if (! empty($missingIds)) {
+                throw new \InvalidArgumentException('Product IDs not found: '.implode(', ', $missingIds));
             }
         }
 
         // Validate variant IDs exist
-        if (!empty($variantIds)) {
+        if (! empty($variantIds)) {
             $existingIds = ProductVariant::whereIn('id', $variantIds)->pluck('id')->toArray();
             $missingIds = array_diff($variantIds, $existingIds);
-            
-            if (!empty($missingIds)) {
-                throw new \InvalidArgumentException('Variant IDs not found: ' . implode(', ', $missingIds));
+
+            if (! empty($missingIds)) {
+                throw new \InvalidArgumentException('Variant IDs not found: '.implode(', ', $missingIds));
             }
         }
 
         // Validate attribute keys exist
-        if (!empty($attributes)) {
+        if (! empty($attributes)) {
             $existingKeys = AttributeDefinition::whereIn('key', $attributes)->pluck('key')->toArray();
             $missingKeys = array_diff($attributes, $existingKeys);
-            
-            if (!empty($missingKeys)) {
-                throw new \InvalidArgumentException('Attribute keys not found: ' . implode(', ', $missingKeys));
+
+            if (! empty($missingKeys)) {
+                throw new \InvalidArgumentException('Attribute keys not found: '.implode(', ', $missingKeys));
             }
         }
     }
 
     /**
      * 🎯 GET TARGETS
-     * 
+     *
      * Get products and variants to sync based on options
      */
     protected function getTargets(): array
     {
         $productIds = $this->option('product-id');
         $variantIds = $this->option('variant-id');
-        
+
         $targets = [
             'products' => collect(),
             'variants' => collect(),
         ];
 
         // If specific product IDs provided
-        if (!empty($productIds)) {
+        if (! empty($productIds)) {
             $targets['products'] = Product::whereIn('id', $productIds)
                 ->with(['variants', 'attributes.attributeDefinition'])
                 ->get();
         }
         // If specific variant IDs provided
-        elseif (!empty($variantIds)) {
+        elseif (! empty($variantIds)) {
             $targets['variants'] = ProductVariant::whereIn('id', $variantIds)
                 ->with(['product.attributes.attributeDefinition', 'attributes.attributeDefinition'])
                 ->get();
@@ -164,16 +167,17 @@ class AttributesSync extends Command
         // Otherwise, get all products with inheritable attributes
         else {
             $inheritableDefinitions = AttributeDefinition::getInheritableAttributes();
-            
+
             if ($inheritableDefinitions->isEmpty()) {
                 $this->warn('⚠️ No inheritable attribute definitions found');
+
                 return $targets;
             }
 
             $targets['products'] = Product::whereHas('attributes', function ($query) use ($inheritableDefinitions) {
                 $query->whereIn('attribute_definition_id', $inheritableDefinitions->pluck('id'));
             })->with(['variants', 'attributes.attributeDefinition'])
-            ->get();
+                ->get();
         }
 
         return $targets;
@@ -185,26 +189,26 @@ class AttributesSync extends Command
     protected function displaySyncPlan(array $targets, bool $isDryRun): void
     {
         $this->info('📋 Sync Plan:');
-        
+
         if ($targets['products']->isNotEmpty()) {
-            $variantCount = $targets['products']->sum(fn($p) => $p->variants->count());
+            $variantCount = $targets['products']->sum(fn ($p) => $p->variants->count());
             $this->line("  • Products: {$targets['products']->count()}");
             $this->line("  • Variants: {$variantCount}");
         }
-        
+
         if ($targets['variants']->isNotEmpty()) {
             $this->line("  • Variants: {$targets['variants']->count()}");
         }
 
         $attributes = $this->option('attribute');
-        if (!empty($attributes)) {
-            $this->line('  • Attributes: ' . implode(', ', $attributes));
+        if (! empty($attributes)) {
+            $this->line('  • Attributes: '.implode(', ', $attributes));
         } else {
             $this->line('  • Attributes: All inheritable attributes');
         }
 
-        $this->line('  • Force: ' . ($this->option('force') ? 'Yes' : 'No'));
-        $this->line('  • Batch size: ' . $this->option('batch-size'));
+        $this->line('  • Force: '.($this->option('force') ? 'Yes' : 'No'));
+        $this->line('  • Batch size: '.$this->option('batch-size'));
         $this->newLine();
     }
 
@@ -213,12 +217,12 @@ class AttributesSync extends Command
      */
     protected function confirmLargeOperation(array $targets): bool
     {
-        $totalVariants = $targets['products']->sum(fn($p) => $p->variants->count()) + $targets['variants']->count();
-        
+        $totalVariants = $targets['products']->sum(fn ($p) => $p->variants->count()) + $targets['variants']->count();
+
         if ($totalVariants > 100) {
             return $this->confirm("You are about to sync {$totalVariants} variants. Continue?", false);
         }
-        
+
         return true;
     }
 
@@ -252,15 +256,15 @@ class AttributesSync extends Command
 
         foreach ($products as $product) {
             $this->stats['products_processed']++;
-            
+
             $this->line("Processing Product: {$product->name} (ID: {$product->id})");
-            
+
             foreach ($product->variants->chunk($batchSize) as $variantChunk) {
                 foreach ($variantChunk as $variant) {
                     $this->syncVariant($variant, $force, $specificAttributes, $isDryRun);
                 }
             }
-            
+
             $progressBar->advance();
         }
 
@@ -293,42 +297,42 @@ class AttributesSync extends Command
     protected function syncVariant(ProductVariant $variant, bool $force, array $specificAttributes, bool $isDryRun): void
     {
         $this->stats['variants_processed']++;
-        
+
         try {
             $options = [
                 'force' => $force,
                 'dry_run' => $isDryRun,
             ];
 
-            if (!empty($specificAttributes)) {
+            if (! empty($specificAttributes)) {
                 $options['attributes'] = $specificAttributes;
             }
 
             $result = $this->inheritanceService->inheritAttributesForVariant($variant, $options);
-            
+
             $this->stats['attributes_inherited'] += count($result['inherited']);
             $this->stats['attributes_skipped'] += count($result['skipped']);
 
-            if (!empty($result['errors'])) {
+            if (! empty($result['errors'])) {
                 $this->stats['errors'] += count($result['errors']);
-                
+
                 foreach ($result['errors'] as $attributeKey => $error) {
                     $this->warn("  ⚠️ Variant {$variant->sku}: Failed to inherit '{$attributeKey}': {$error}");
                 }
             }
 
             if ($this->output->isVerbose()) {
-                if (!empty($result['inherited'])) {
-                    $this->line("  ✅ Variant {$variant->sku}: Inherited " . implode(', ', $result['inherited']));
+                if (! empty($result['inherited'])) {
+                    $this->line("  ✅ Variant {$variant->sku}: Inherited ".implode(', ', $result['inherited']));
                 }
-                if (!empty($result['skipped'])) {
-                    $this->line("  ⏭️ Variant {$variant->sku}: Skipped " . count($result['skipped']) . ' attributes');
+                if (! empty($result['skipped'])) {
+                    $this->line("  ⏭️ Variant {$variant->sku}: Skipped ".count($result['skipped']).' attributes');
                 }
             }
 
         } catch (\Exception $e) {
             $this->stats['errors']++;
-            $this->error("  ❌ Variant {$variant->sku}: " . $e->getMessage());
+            $this->error("  ❌ Variant {$variant->sku}: ".$e->getMessage());
         }
     }
 
@@ -349,7 +353,7 @@ class AttributesSync extends Command
                 ['Attributes Inherited', number_format($this->stats['attributes_inherited'])],
                 ['Attributes Skipped', number_format($this->stats['attributes_skipped'])],
                 ['Errors', number_format($this->stats['errors'])],
-                ['Duration', round($duration, 2) . 's'],
+                ['Duration', round($duration, 2).'s'],
             ]
         );
 
@@ -396,7 +400,7 @@ class AttributesSync extends Command
             ->where('is_inherited', true)
             ->count();
 
-        $stats['current_inheritance_rate'] = $stats['inheritance_opportunities'] > 0 
+        $stats['current_inheritance_rate'] = $stats['inheritance_opportunities'] > 0
             ? round(($currentInherited / $stats['inheritance_opportunities']) * 100, 1)
             : 0;
 

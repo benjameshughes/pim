@@ -3,11 +3,10 @@
 namespace App\Services;
 
 use App\Models\Stock;
-use App\Models\ProductVariant;
 
 /**
  * 📦 STOCK SERVICE - Independent Stock Management
- * 
+ *
  * Stock operates independently from variants and manages its own lifecycle
  */
 class StockService
@@ -19,7 +18,7 @@ class StockService
     public function getStockForVariant(int $variantId, ?string $location = null): ?Stock
     {
         return Stock::where('product_variant_id', $variantId)
-            ->when($location, fn($q) => $q->where('location', $location))
+            ->when($location, fn ($q) => $q->where('location', $location))
             ->first();
     }
 
@@ -30,6 +29,7 @@ class StockService
     public function getStockLevelForVariant(int $variantId, ?string $location = null): int
     {
         $stock = $this->getStockForVariant($variantId, $location);
+
         return $stock ? $stock->quantity : 0;
     }
 
@@ -40,6 +40,7 @@ class StockService
     public function getAvailableStockForVariant(int $variantId, ?string $location = null): int
     {
         $stock = $this->getStockForVariant($variantId, $location);
+
         return $stock ? $stock->getAvailableQuantity() : 0;
     }
 
@@ -80,6 +81,7 @@ class StockService
     public function updateStock(Stock $stock, array $data): Stock
     {
         $stock->update($data);
+
         return $stock->fresh();
     }
 
@@ -87,11 +89,11 @@ class StockService
      * 🔧 ADJUST STOCK LEVEL
      * Adjust stock quantity with reason logging
      */
-    public function adjustStock(int $variantId, int $adjustment, string $reason = null, ?string $location = null): ?Stock
+    public function adjustStock(int $variantId, int $adjustment, ?string $reason = null, ?string $location = null): ?Stock
     {
         $stock = $this->getStockForVariant($variantId, $location);
-        
-        if (!$stock) {
+
+        if (! $stock) {
             // Create stock record if it doesn't exist
             $stock = $this->createStock([
                 'product_variant_id' => $variantId,
@@ -109,11 +111,11 @@ class StockService
      * 📝 SET STOCK LEVEL
      * Set specific stock quantity with reason logging
      */
-    public function setStock(int $variantId, int $newQuantity, string $reason = null, ?string $location = null): ?Stock
+    public function setStock(int $variantId, int $newQuantity, ?string $reason = null, ?string $location = null): ?Stock
     {
         $stock = $this->getStockForVariant($variantId, $location);
-        
-        if (!$stock) {
+
+        if (! $stock) {
             // Create stock record if it doesn't exist
             $stock = $this->createStock([
                 'product_variant_id' => $variantId,
@@ -134,8 +136,8 @@ class StockService
     public function reserveStock(int $variantId, int $quantity, ?string $location = null): bool
     {
         $stock = $this->getStockForVariant($variantId, $location);
-        
-        if (!$stock) {
+
+        if (! $stock) {
             return false; // Can't reserve what doesn't exist
         }
 
@@ -149,12 +151,13 @@ class StockService
     public function releaseReservedStock(int $variantId, int $quantity, ?string $location = null): bool
     {
         $stock = $this->getStockForVariant($variantId, $location);
-        
-        if (!$stock) {
+
+        if (! $stock) {
             return false;
         }
 
         $stock->releaseReserved($quantity);
+
         return true;
     }
 
@@ -190,7 +193,7 @@ class StockService
     public function getVariantStockStats(int $variantId): array
     {
         $stockRecords = Stock::where('product_variant_id', $variantId)->get();
-        
+
         if ($stockRecords->isEmpty()) {
             return [
                 'total_quantity' => 0,
@@ -198,17 +201,17 @@ class StockService
                 'total_available' => 0,
                 'total_incoming' => 0,
                 'location_count' => 0,
-                'low_stock_locations' => 0
+                'low_stock_locations' => 0,
             ];
         }
 
         return [
             'total_quantity' => $stockRecords->sum('quantity'),
             'total_reserved' => $stockRecords->sum('reserved'),
-            'total_available' => $stockRecords->sum(fn($stock) => $stock->getAvailableQuantity()),
+            'total_available' => $stockRecords->sum(fn ($stock) => $stock->getAvailableQuantity()),
             'total_incoming' => $stockRecords->sum('incoming'),
             'location_count' => $stockRecords->count(),
-            'low_stock_locations' => $stockRecords->filter(fn($stock) => $stock->isLowStock())->count()
+            'low_stock_locations' => $stockRecords->filter(fn ($stock) => $stock->isLowStock())->count(),
         ];
     }
 

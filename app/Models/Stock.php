@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * 📦 STOCK MODEL - Independent Stock Management
- * 
+ *
  * Stock operates independently but references variants
  */
 class Stock extends Model
@@ -79,7 +79,7 @@ class Stock extends Model
     public function scopeLowStock($query)
     {
         return $query->whereColumn('quantity', '<=', 'minimum_level')
-                    ->whereNotNull('minimum_level');
+            ->whereNotNull('minimum_level');
     }
 
     /**
@@ -113,31 +113,33 @@ class Stock extends Model
     /**
      * 📊 STOCK OPERATIONS
      */
-    public function adjustStock(int $adjustment, string $reason = null): self
+    public function adjustStock(int $adjustment, ?string $reason = null): self
     {
         $this->quantity += $adjustment;
-        
+
         if ($reason) {
-            $adjustmentText = $adjustment >= 0 ? "+{$adjustment}" : (string)$adjustment;
-            $this->notes = ($this->notes ? $this->notes . "\n" : '') . 
-                          now()->format('Y-m-d H:i') . ": {$reason} ({$adjustmentText})";
+            $adjustmentText = $adjustment >= 0 ? "+{$adjustment}" : (string) $adjustment;
+            $this->notes = ($this->notes ? $this->notes."\n" : '').
+                          now()->format('Y-m-d H:i').": {$reason} ({$adjustmentText})";
         }
-        
+
         $this->save();
+
         return $this;
     }
 
-    public function setStock(int $newQuantity, string $reason = null): self
+    public function setStock(int $newQuantity, ?string $reason = null): self
     {
         $oldQuantity = $this->quantity;
         $this->quantity = $newQuantity;
-        
+
         if ($reason) {
-            $this->notes = ($this->notes ? $this->notes . "\n" : '') . 
-                          now()->format('Y-m-d H:i') . ": {$reason} ({$oldQuantity} → {$newQuantity})";
+            $this->notes = ($this->notes ? $this->notes."\n" : '').
+                          now()->format('Y-m-d H:i').": {$reason} ({$oldQuantity} → {$newQuantity})";
         }
-        
+
         $this->save();
+
         return $this;
     }
 
@@ -146,9 +148,10 @@ class Stock extends Model
         if ($this->getAvailableQuantity() >= $quantity) {
             $this->reserved = ($this->reserved ?? 0) + $quantity;
             $this->save();
+
             return true;
         }
-        
+
         return false;
     }
 
@@ -156,6 +159,7 @@ class Stock extends Model
     {
         $this->reserved = max(0, ($this->reserved ?? 0) - $quantity);
         $this->save();
+
         return $this;
     }
 }

@@ -350,6 +350,6 @@ class AttributeDefinitionsSeeder extends Seeder
             'icon' => 'star',
         ]);
 
-        $this->command->info('✅ Created ' . AttributeDefinition::count() . ' attribute definitions');
+        $this->command->info('✅ Created '.AttributeDefinition::count().' attribute definitions');
     }
 }

@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -67,10 +66,9 @@ class Image extends Model
         return $query->orderBy('images.sort_order')->orderBy('images.created_at');
     }
 
-
     /**
      * 📦 PRODUCTS RELATIONSHIP
-     * 
+     *
      * Many-to-many relationship with products
      */
     public function products(): BelongsToMany
@@ -80,7 +78,7 @@ class Image extends Model
 
     /**
      * 💎 VARIANTS RELATIONSHIP
-     * 
+     *
      * Many-to-many relationship with product variants
      */
     public function variants(): BelongsToMany
@@ -91,7 +89,7 @@ class Image extends Model
     /**
      * 🎯 DAM SCOPES
      */
-    
+
     /**
      * 🆓 Unattached images - not linked to any model
      */
@@ -130,7 +128,7 @@ class Image extends Model
      * 🏷️ Images with any of the specified tags
      */
     /**
-     * @param string[] $tags
+     * @param  string[]  $tags
      */
     public function scopeWithAnyTag(Builder $query, array $tags): Builder
     {
@@ -148,12 +146,11 @@ class Image extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('title', 'like', "%{$search}%")
-              ->orWhere('filename', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('alt_text', 'like', "%{$search}%");
+                ->orWhere('filename', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%")
+                ->orWhere('alt_text', 'like', "%{$search}%");
         });
     }
-
 
     /**
      * 🎯 DAM HELPER METHODS
@@ -165,10 +162,11 @@ class Image extends Model
     public function addTag(string $tag): self
     {
         $tags = $this->tags ?? [];
-        if (!in_array($tag, $tags)) {
+        if (! in_array($tag, $tags)) {
             $tags[] = $tag;
             $this->update(['tags' => $tags]);
         }
+
         return $this;
     }
 
@@ -178,8 +176,9 @@ class Image extends Model
     public function removeTag(string $tag): self
     {
         $tags = $this->tags ?? [];
-        $tags = array_values(array_filter($tags, fn($t) => $t !== $tag));
+        $tags = array_values(array_filter($tags, fn ($t) => $t !== $tag));
         $this->update(['tags' => $tags]);
+
         return $this;
     }
 
@@ -197,9 +196,9 @@ class Image extends Model
     public function moveToFolder(string $folder): self
     {
         $this->update(['folder' => $folder]);
+
         return $this;
     }
-
 
     /**
      * 📊 Check if image is attached to a model
@@ -226,7 +225,7 @@ class Image extends Model
         if ($this->title && str_contains($this->title, '.')) {
             return $this->title;
         }
-        
+
         // Otherwise use the stored filename
         return $this->filename;
     }
@@ -238,10 +237,11 @@ class Image extends Model
     {
         $bytes = $this->size;
         if ($bytes >= 1024 * 1024) {
-            return round($bytes / (1024 * 1024), 2) . ' MB';
+            return round($bytes / (1024 * 1024), 2).' MB';
         } elseif ($bytes >= 1024) {
-            return round($bytes / 1024, 2) . ' KB';
+            return round($bytes / 1024, 2).' KB';
         }
-        return $bytes . ' bytes';
+
+        return $bytes.' bytes';
     }
 }

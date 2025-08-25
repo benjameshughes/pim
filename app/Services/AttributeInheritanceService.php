@@ -2,17 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\AttributeDefinition;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\AttributeDefinition;
-use App\Models\ProductAttribute;
 use App\Models\VariantAttribute;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
  * 🧬 ATTRIBUTE INHERITANCE SERVICE
- * 
+ *
  * Centralized service for handling attribute inheritance logic between
  * products and their variants. Provides efficient bulk operations and
  * maintains inheritance consistency across the system.
@@ -35,8 +33,9 @@ class AttributeInheritanceService
             'total_processed' => 0,
         ];
 
-        if (!$variant->product) {
+        if (! $variant->product) {
             $results['errors']['product'] = 'Variant has no associated product';
+
             return $results;
         }
 
@@ -45,17 +44,17 @@ class AttributeInheritanceService
 
         // Get inheritable attribute definitions
         $inheritableDefinitions = AttributeDefinition::getInheritableAttributes();
-        
+
         if ($attributeKeys) {
             $inheritableDefinitions = $inheritableDefinitions->whereIn('key', $attributeKeys);
         }
 
         foreach ($inheritableDefinitions as $definition) {
             $results['total_processed']++;
-            
+
             try {
                 $result = $this->inheritSingleAttribute($variant, $definition, $options);
-                
+
                 if ($result['success']) {
                     $results['inherited'][] = [
                         'key' => $definition->key,
@@ -110,21 +109,22 @@ class AttributeInheritanceService
         $variants = $product->variants;
         if ($variants->isEmpty()) {
             $results['summary'][] = 'Product has no variants';
+
             return $results;
         }
 
         foreach ($variants as $variant) {
             $results['variants_processed']++;
-            
+
             $variantResult = $this->inheritAttributesForVariant($variant, $options);
             $results['variant_results'][$variant->id] = $variantResult;
-            
+
             if (empty($variantResult['errors'])) {
                 $results['variants_succeeded']++;
             } else {
                 $results['variants_with_errors']++;
             }
-            
+
             $results['total_inherited'] += count($variantResult['inherited']);
         }
 
@@ -158,8 +158,9 @@ class AttributeInheritanceService
             'errors' => [],
         ];
 
-        if (!$variant->product) {
+        if (! $variant->product) {
             $results['errors']['product'] = 'Variant has no associated product';
+
             return $results;
         }
 
@@ -177,20 +178,21 @@ class AttributeInheritanceService
 
         foreach ($inheritedAttributes as $variantAttribute) {
             $key = $variantAttribute->getAttributeKey();
-            
+
             try {
                 // Get corresponding product attribute
                 $productAttribute = $variant->product->attributes()
                     ->where('attribute_definition_id', $variantAttribute->attribute_definition_id)
                     ->first();
 
-                if (!$productAttribute) {
+                if (! $productAttribute) {
                     // Product no longer has this attribute
                     $variantAttribute->delete();
                     $results['removed'][] = [
                         'key' => $key,
                         'reason' => 'Product no longer has this attribute',
                     ];
+
                     continue;
                 }
 
@@ -227,7 +229,7 @@ class AttributeInheritanceService
      *
      * Remove inheritance records where parent attribute no longer exists
      */
-    public function cleanupOrphanedInheritance(Product $product = null): array
+    public function cleanupOrphanedInheritance(?Product $product = null): array
     {
         $results = [
             'total_checked' => 0,
@@ -238,7 +240,7 @@ class AttributeInheritanceService
 
         // Build query
         $query = VariantAttribute::inherited()->with(['variant.product', 'attributeDefinition']);
-        
+
         if ($product) {
             $query->whereHas('variant', function ($q) use ($product) {
                 $q->where('product_id', $product->id);
@@ -251,7 +253,7 @@ class AttributeInheritanceService
         foreach ($inheritedAttributes as $variantAttribute) {
             try {
                 $variant = $variantAttribute->variant;
-                if (!$variant || !$variant->product) {
+                if (! $variant || ! $variant->product) {
                     continue;
                 }
 
@@ -260,12 +262,12 @@ class AttributeInheritanceService
                     ->where('attribute_definition_id', $variantAttribute->attribute_definition_id)
                     ->first();
 
-                if (!$productAttribute) {
+                if (! $productAttribute) {
                     // Orphaned inheritance - remove it
                     $variantAttribute->delete();
                     $results['orphans_found']++;
                     $results['orphans_removed']++;
-                    
+
                     Log::info('Removed orphaned inheritance', [
                         'variant_id' => $variant->id,
                         'attribute_key' => $variantAttribute->getAttributeKey(),
@@ -288,7 +290,7 @@ class AttributeInheritanceService
      *
      * Get statistics about inheritance across the system
      */
-    public function getInheritanceStatistics(Product $product = null): array
+    public function getInheritanceStatistics(?Product $product = null): array
     {
         $stats = [
             'products' => 0,
@@ -360,7 +362,7 @@ class AttributeInheritanceService
             ->where('attribute_definition_id', $definition->id)
             ->first();
 
-        if (!$productAttribute) {
+        if (! $productAttribute) {
             return [
                 'success' => false,
                 'reason' => 'Product does not have this attribute',
@@ -374,7 +376,7 @@ class AttributeInheritanceService
 
         if ($variantAttribute) {
             // Skip if already inherited and not forcing
-            if ($variantAttribute->is_inherited && !$force) {
+            if ($variantAttribute->is_inherited && ! $force) {
                 return [
                     'success' => false,
                     'reason' => 'Already inherited',
@@ -382,7 +384,7 @@ class AttributeInheritanceService
             }
 
             // Skip if explicitly set (not inherited) and not forcing
-            if (!$variantAttribute->is_inherited && !$force) {
+            if (! $variantAttribute->is_inherited && ! $force) {
                 return [
                     'success' => false,
                     'reason' => 'Explicitly set (would override)',
@@ -399,7 +401,7 @@ class AttributeInheritanceService
         // Perform inheritance
         if ($variantAttribute->inheritFromProduct($productAttribute)) {
             $variantAttribute->save();
-            
+
             return [
                 'success' => true,
                 'action' => $variantAttribute->wasRecentlyCreated ? 'created' : 'updated',
@@ -418,7 +420,7 @@ class AttributeInheritanceService
      *
      * Find potential conflicts in inheritance setup
      */
-    public function findInheritanceConflicts(Product $product = null): array
+    public function findInheritanceConflicts(?Product $product = null): array
     {
         $conflicts = [
             'missing_definitions' => [],
@@ -479,7 +481,7 @@ class AttributeInheritanceService
                 VariantAttribute::where('variant_id', $conflict['variant_id'])
                     ->where('attribute_definition_id', $conflict['attribute_definition_id'])
                     ->delete();
-                    
+
                 $results['repaired'][] = [
                     'type' => 'missing_definition',
                     'variant_id' => $conflict['variant_id'],
@@ -503,7 +505,7 @@ class AttributeInheritanceService
                         'attributes' => [$conflict['attribute_key']],
                         'force' => true,
                     ]);
-                    
+
                     $results['repaired'][] = [
                         'type' => 'validation_failure',
                         'variant_id' => $conflict['variant_id'],

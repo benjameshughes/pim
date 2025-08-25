@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 /**
  * 🎨 VARIANT ATTRIBUTE MODEL
- * 
+ *
  * Stores attribute values for product variants. Each instance represents
  * one attribute value for one variant, with inheritance tracking from
  * the parent product, full audit trail, validation, and marketplace sync.
@@ -64,7 +64,6 @@ class VariantAttribute extends Model
     /**
      * 🔗 RELATIONSHIPS
      */
-    
     public function variant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
@@ -74,7 +73,7 @@ class VariantAttribute extends Model
     {
         return $this->belongsTo(AttributeDefinition::class);
     }
-    
+
     public function inheritedFromProductAttribute(): BelongsTo
     {
         return $this->belongsTo(ProductAttribute::class, 'inherited_from_product_attribute_id');
@@ -83,57 +82,56 @@ class VariantAttribute extends Model
     /**
      * 🔍 SCOPES
      */
-    
     public function scopeValid(Builder $query): Builder
     {
         return $query->where('is_valid', true);
     }
-    
+
     public function scopeInvalid(Builder $query): Builder
     {
         return $query->where('is_valid', false);
     }
-    
+
     public function scopeForAttribute(Builder $query, string $attributeKey): Builder
     {
         return $query->whereHas('attributeDefinition', function ($q) use ($attributeKey) {
             $q->where('key', $attributeKey);
         });
     }
-    
+
     public function scopeFromSource(Builder $query, string $source): Builder
     {
         return $query->where('source', $source);
     }
-    
+
     public function scopeInherited(Builder $query): Builder
     {
         return $query->where('is_inherited', true);
     }
-    
+
     public function scopeOverrides(Builder $query): Builder
     {
         return $query->where('is_override', true);
     }
-    
+
     public function scopeExplicitlySet(Builder $query): Builder
     {
         return $query->where('is_inherited', false);
     }
-    
+
     public function scopeNeedingSync(Builder $query, string $marketplace): Builder
     {
         return $query->where(function ($q) use ($marketplace) {
             $q->whereNull('sync_status')
-              ->orWhereJsonDoesntContain('sync_status', [$marketplace => 'synced'])
-              ->orWhere('value_changed_at', '>', 'last_synced_at');
+                ->orWhereJsonDoesntContain('sync_status', [$marketplace => 'synced'])
+                ->orWhere('value_changed_at', '>', 'last_synced_at');
         });
     }
 
     /**
      * 🎯 VALUE HANDLING
      */
-    
+
     /**
      * Get the typed value based on attribute definition
      */
@@ -142,10 +140,10 @@ class VariantAttribute extends Model
         if ($this->value === null) {
             return null;
         }
-        
+
         return $this->attributeDefinition->castValue($this->value);
     }
-    
+
     /**
      * Set value with automatic validation, type casting, and inheritance tracking
      */
@@ -153,50 +151,51 @@ class VariantAttribute extends Model
     {
         // Track previous value for change detection
         $this->previous_value = $this->value;
-        
+
         // Validate the value
         $validationResult = $this->attributeDefinition->validateValue($value);
-        
-        if (!$validationResult['valid']) {
+
+        if (! $validationResult['valid']) {
             $this->is_valid = false;
             $this->validation_errors = $validationResult['errors'];
             $this->last_validated_at = now();
+
             return false;
         }
-        
+
         // Set the validated value
         $this->value = $this->convertValueForStorage($validationResult['value']);
         $this->display_value = $this->formatDisplayValue($validationResult['value']);
         $this->is_valid = true;
         $this->validation_errors = null;
         $this->last_validated_at = now();
-        
+
         // Update change tracking
         if ($this->value !== $this->previous_value) {
             $this->value_changed_at = now();
             $this->version++;
         }
-        
+
         // Update assignment metadata
         $this->source = $options['source'] ?? 'manual';
         $this->assigned_at = now();
         $this->assigned_by = $options['assigned_by'] ?? Auth::user()?->name ?? 'system';
         $this->assignment_metadata = $options['metadata'] ?? null;
-        
+
         // Handle inheritance tracking
         $this->is_inherited = $options['is_inherited'] ?? false;
         $this->inherited_from_product_attribute_id = $options['inherited_from_product_attribute_id'] ?? null;
         $this->inherited_at = $options['inherited_at'] ?? null;
         $this->is_override = $options['is_override'] ?? false;
-        
+
         // Reset sync status since value changed
         if ($this->value !== $this->previous_value) {
             $this->resetSyncStatus();
         }
-        
+
         return true;
     }
-    
+
     /**
      * Inherit value from parent product attribute
      */
@@ -213,10 +212,10 @@ class VariantAttribute extends Model
                 'parent_product_id' => $productAttribute->product_id,
             ],
         ]);
-        
+
         return $result;
     }
-    
+
     /**
      * Override inherited value with explicit value
      */
@@ -225,10 +224,10 @@ class VariantAttribute extends Model
         $options['is_override'] = true;
         $options['is_inherited'] = false;
         $options['source'] = $options['source'] ?? 'manual';
-        
+
         return $this->setValue($value, $options);
     }
-    
+
     /**
      * Convert value to storage format
      */
@@ -237,7 +236,7 @@ class VariantAttribute extends Model
         if ($value === null) {
             return null;
         }
-        
+
         return match ($this->attributeDefinition->data_type) {
             'json' => is_string($value) ? $value : json_encode($value),
             'boolean' => $value ? '1' : '0',
@@ -245,7 +244,7 @@ class VariantAttribute extends Model
             default => (string) $value,
         };
     }
-    
+
     /**
      * Format value for display
      */
@@ -254,7 +253,7 @@ class VariantAttribute extends Model
         if ($value === null) {
             return null;
         }
-        
+
         $displayValue = match ($this->attributeDefinition->data_type) {
             'boolean' => $value ? 'Yes' : 'No',
             'number' => is_numeric($value) ? number_format((float) $value, 2) : (string) $value,
@@ -262,21 +261,21 @@ class VariantAttribute extends Model
             'date' => $value instanceof Carbon ? $value->format('M j, Y') : (string) $value,
             default => (string) $value,
         };
-        
+
         // Add inheritance indicator
         if ($this->is_inherited) {
             $displayValue .= ' (inherited)';
         } elseif ($this->is_override) {
             $displayValue .= ' (override)';
         }
-        
+
         return $displayValue;
     }
 
     /**
      * 🧬 INHERITANCE LOGIC
      */
-    
+
     /**
      * Check if this attribute can be inherited from parent product
      */
@@ -284,65 +283,65 @@ class VariantAttribute extends Model
     {
         return $this->attributeDefinition->supportsInheritance();
     }
-    
+
     /**
      * Get the parent product attribute that this could inherit from
      */
     public function getParentProductAttribute(): ?ProductAttribute
     {
-        if (!$this->variant || !$this->variant->product) {
+        if (! $this->variant || ! $this->variant->product) {
             return null;
         }
-        
+
         return ProductAttribute::where('product_id', $this->variant->product_id)
             ->where('attribute_definition_id', $this->attribute_definition_id)
             ->first();
     }
-    
+
     /**
      * Check if this variant should inherit from product (no explicit value set)
      */
     public function shouldInheritFromProduct(): bool
     {
-        if (!$this->canInheritFromProduct()) {
+        if (! $this->canInheritFromProduct()) {
             return false;
         }
-        
+
         // Check inheritance strategy
         $strategy = $this->attributeDefinition->getInheritanceStrategy();
-        
+
         return match ($strategy) {
             'always' => true,
-            'fallback' => $this->value === null && !$this->is_override,
+            'fallback' => $this->value === null && ! $this->is_override,
             'never' => false,
             default => false,
         };
     }
-    
+
     /**
      * Refresh inheritance from parent product
      */
     public function refreshInheritance(): bool
     {
-        if (!$this->shouldInheritFromProduct()) {
+        if (! $this->shouldInheritFromProduct()) {
             return false;
         }
-        
+
         $parentAttribute = $this->getParentProductAttribute();
-        if (!$parentAttribute) {
+        if (! $parentAttribute) {
             return false;
         }
-        
+
         return $this->inheritFromProduct($parentAttribute);
     }
-    
+
     /**
      * Clear inheritance and make explicit
      */
     public function clearInheritance($newValue = null): bool
     {
         $valueToSet = $newValue ?? $this->value;
-        
+
         return $this->setValue($valueToSet, [
             'source' => 'manual',
             'is_inherited' => false,
@@ -355,28 +354,27 @@ class VariantAttribute extends Model
     /**
      * 🏪 MARKETPLACE SYNC (same as ProductAttribute)
      */
-    
     public function markAsSynced(string $marketplace, array $metadata = []): void
     {
         $syncStatus = $this->sync_status ?? [];
         $syncStatus[$marketplace] = 'synced';
         $this->sync_status = $syncStatus;
-        
-        if (!empty($metadata)) {
+
+        if (! empty($metadata)) {
             $syncMetadata = $this->sync_metadata ?? [];
             $syncMetadata[$marketplace] = $metadata;
             $this->sync_metadata = $syncMetadata;
         }
-        
+
         $this->last_synced_at = now();
     }
-    
+
     public function markSyncFailed(string $marketplace, string $error, array $metadata = []): void
     {
         $syncStatus = $this->sync_status ?? [];
         $syncStatus[$marketplace] = 'failed';
         $this->sync_status = $syncStatus;
-        
+
         $syncMetadata = $this->sync_metadata ?? [];
         $syncMetadata[$marketplace] = array_merge($metadata, [
             'error' => $error,
@@ -384,29 +382,30 @@ class VariantAttribute extends Model
         ]);
         $this->sync_metadata = $syncMetadata;
     }
-    
+
     public function needsSyncTo(string $marketplace): bool
     {
-        if (!$this->attributeDefinition->shouldSyncToMarketplace($marketplace)) {
+        if (! $this->attributeDefinition->shouldSyncToMarketplace($marketplace)) {
             return false;
         }
-        
+
         $status = $this->sync_status[$marketplace] ?? null;
-        
+
         if ($status !== 'synced') {
             return true;
         }
-        
-        return $this->value_changed_at && $this->last_synced_at && 
+
+        return $this->value_changed_at && $this->last_synced_at &&
                $this->value_changed_at > $this->last_synced_at;
     }
-    
+
     public function getValueForMarketplace(string $marketplace)
     {
         $value = $this->getTypedValue();
+
         return $this->attributeDefinition->transformForMarketplace($value, $marketplace);
     }
-    
+
     protected function resetSyncStatus(): void
     {
         $this->sync_status = [];
@@ -416,17 +415,16 @@ class VariantAttribute extends Model
     /**
      * 📊 HELPER METHODS
      */
-    
     public function getAttributeKey(): string
     {
         return $this->attributeDefinition->key;
     }
-    
+
     public function getAttributeName(): string
     {
         return $this->attributeDefinition->name;
     }
-    
+
     public function getInheritanceInfo(): array
     {
         return [
@@ -439,7 +437,7 @@ class VariantAttribute extends Model
             'inheritance_strategy' => $this->attributeDefinition->getInheritanceStrategy(),
         ];
     }
-    
+
     public function getChangeHistory(): array
     {
         return [
@@ -456,57 +454,57 @@ class VariantAttribute extends Model
     /**
      * 🏗️ STATIC HELPERS
      */
-    
     public static function createOrUpdate(ProductVariant $variant, string $attributeKey, $value, array $options = []): self
     {
         $attributeDefinition = AttributeDefinition::findByKey($attributeKey);
-        
-        if (!$attributeDefinition) {
+
+        if (! $attributeDefinition) {
             throw new \InvalidArgumentException("Attribute definition '{$attributeKey}' not found");
         }
-        
+
         $attribute = static::firstOrNew([
             'variant_id' => $variant->id,
             'attribute_definition_id' => $attributeDefinition->id,
         ]);
-        
+
         $attribute->setValue($value, $options);
         $attribute->save();
-        
+
         return $attribute;
     }
-    
+
     public static function getValueFor(ProductVariant $variant, string $attributeKey)
     {
         $attribute = static::forAttribute($attributeKey)
             ->where('variant_id', $variant->id)
             ->first();
-            
+
         return $attribute?->getTypedValue();
     }
-    
+
     public static function inheritFromProductFor(ProductVariant $variant, string $attributeKey): ?self
     {
         $attributeDefinition = AttributeDefinition::findByKey($attributeKey);
-        if (!$attributeDefinition || !$attributeDefinition->supportsInheritance()) {
+        if (! $attributeDefinition || ! $attributeDefinition->supportsInheritance()) {
             return null;
         }
-        
+
         $productAttribute = ProductAttribute::getValueFor($variant->product, $attributeKey);
-        if (!$productAttribute) {
+        if (! $productAttribute) {
             return null;
         }
-        
+
         $variantAttribute = static::firstOrNew([
             'variant_id' => $variant->id,
             'attribute_definition_id' => $attributeDefinition->id,
         ]);
-        
+
         if ($variantAttribute->inheritFromProduct($productAttribute)) {
             $variantAttribute->save();
+
             return $variantAttribute;
         }
-        
+
         return null;
     }
 }

@@ -18,6 +18,7 @@ class ImageEditCore extends Component
     public function deleteImage(DeleteImageAction $deleteImageAction)
     {
         $deleteImageAction->execute($this->image);
+
         return $this->redirect('/dam');
     }
 

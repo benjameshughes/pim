@@ -19,7 +19,8 @@ class UpdateImageAction
     /**
      * Execute image update with validation and transaction safety
      *
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
+     *
      * @throws ValidationException When validation fails
      * @throws \Exception When update fails
      */
@@ -54,7 +55,7 @@ class UpdateImageAction
 
             // Track what actually changed
             $originalData = $image->only(array_keys($validatedData));
-            
+
             // Update the image
             $image->update($validatedData);
 
@@ -64,7 +65,7 @@ class UpdateImageAction
                 if ($originalData[$key] !== $value) {
                     $changes[$key] = [
                         'from' => $originalData[$key],
-                        'to' => $value
+                        'to' => $value,
                     ];
                 }
             }

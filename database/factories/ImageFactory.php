@@ -21,11 +21,11 @@ class ImageFactory extends Factory
      */
     public function definition(): array
     {
-        $filename = $this->faker->slug(2) . '.jpg';
-        
+        $filename = $this->faker->slug(2).'.jpg';
+
         return [
             'filename' => $filename,
-            'url' => 'https://example.com/storage/images/' . $filename,
+            'url' => 'https://example.com/storage/images/'.$filename,
             'size' => $this->faker->numberBetween(10240, 5242880), // 10KB to 5MB
             'mime_type' => $this->faker->randomElement(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
             'is_primary' => false,
@@ -36,7 +36,7 @@ class ImageFactory extends Factory
             'description' => $this->faker->optional(0.3)->paragraph(),
             'folder' => $this->faker->optional(0.7)->randomElement(['products', 'variants', 'general', 'hero', 'gallery']),
             'tags' => $this->faker->optional(0.6)->randomElements([
-                'product', 'hero', 'gallery', 'banner', 'lifestyle', 'detail', 'swatch', 'color', 'texture', 'environment'
+                'product', 'hero', 'gallery', 'banner', 'lifestyle', 'detail', 'swatch', 'color', 'texture', 'environment',
             ], $this->faker->numberBetween(1, 3)),
         ];
     }
@@ -94,7 +94,7 @@ class ImageFactory extends Factory
             'alt_text' => $this->faker->sentence(4),
             'description' => $this->faker->paragraph(),
             'tags' => $this->faker->randomElements([
-                'product', 'hero', 'gallery', 'banner', 'lifestyle', 'detail'
+                'product', 'hero', 'gallery', 'banner', 'lifestyle', 'detail',
             ], 2),
         ]);
     }

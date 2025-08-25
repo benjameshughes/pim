@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 
 /**
  * 📊 LOG PARSER SERVICE
- * 
+ *
  * Parses Laravel log files and performance logs for dashboard display
  */
 class LogParserService
 {
     protected string $logPath;
+
     protected string $performancePath;
 
     public function __construct()
@@ -27,15 +27,15 @@ class LogParserService
      */
     public function getRecentRequests(int $limit = 50): Collection
     {
-        if (!File::exists($this->logPath)) {
+        if (! File::exists($this->logPath)) {
             return collect();
         }
 
         $content = File::get($this->logPath);
         $lines = array_reverse(explode("\n", $content));
-        
+
         $requests = collect();
-        
+
         foreach ($lines as $line) {
             if (empty($line) || $requests->count() >= $limit) {
                 continue;
@@ -58,7 +58,7 @@ class LogParserService
      */
     public function getPerformanceMetrics(): array
     {
-        if (!File::exists($this->performancePath)) {
+        if (! File::exists($this->performancePath)) {
             return [
                 'total_requests' => 0,
                 'avg_response_time' => 0,
@@ -69,36 +69,38 @@ class LogParserService
 
         $content = File::get($this->performancePath);
         $lines = explode("\n", $content);
-        
+
         $totalRequests = 0;
         $totalTime = 0;
         $slowRequests = 0;
         $errors = 0;
-        
+
         foreach ($lines as $line) {
-            if (empty($line) || !str_contains($line, 'Performance Metrics')) {
+            if (empty($line) || ! str_contains($line, 'Performance Metrics')) {
                 continue;
             }
-            
+
             $data = $this->extractJsonFromLogLine($line);
-            if (!$data) continue;
-            
+            if (! $data) {
+                continue;
+            }
+
             $totalRequests++;
-            
+
             if (isset($data['duration_ms'])) {
                 $duration = (float) $data['duration_ms'];
                 $totalTime += $duration;
-                
+
                 if ($duration > 1000) {
                     $slowRequests++;
                 }
             }
-            
+
             if (isset($data['status']) && $data['status'] >= 400) {
                 $errors++;
             }
         }
-        
+
         return [
             'total_requests' => $totalRequests,
             'avg_response_time' => $totalRequests > 0 ? round($totalTime / $totalRequests, 2) : 0,
@@ -112,25 +114,25 @@ class LogParserService
      */
     public function getSlowestEndpoints(int $limit = 10): Collection
     {
-        if (!File::exists($this->performancePath)) {
+        if (! File::exists($this->performancePath)) {
             return collect();
         }
 
         $content = File::get($this->performancePath);
         $lines = explode("\n", $content);
-        
+
         $endpoints = collect();
-        
+
         foreach ($lines as $line) {
-            if (empty($line) || !str_contains($line, 'Performance Metrics')) {
+            if (empty($line) || ! str_contains($line, 'Performance Metrics')) {
                 continue;
             }
-            
+
             $data = $this->extractJsonFromLogLine($line);
-            if (!$data || !isset($data['path'], $data['duration_ms'])) {
+            if (! $data || ! isset($data['path'], $data['duration_ms'])) {
                 continue;
             }
-            
+
             $endpoints->push([
                 'path' => $data['path'],
                 'method' => $data['method'] ?? 'GET',
@@ -139,7 +141,7 @@ class LogParserService
                 'timestamp' => $data['timestamp'] ?? now()->toISOString(),
             ]);
         }
-        
+
         return $endpoints
             ->sortByDesc('duration_ms')
             ->take($limit)
@@ -151,15 +153,15 @@ class LogParserService
      */
     public function getRecentErrors(int $limit = 20): Collection
     {
-        if (!File::exists($this->logPath)) {
+        if (! File::exists($this->logPath)) {
             return collect();
         }
 
         $content = File::get($this->logPath);
         $lines = array_reverse(explode("\n", $content));
-        
+
         $errors = collect();
-        
+
         foreach ($lines as $line) {
             if (empty($line) || $errors->count() >= $limit) {
                 continue;
@@ -182,7 +184,7 @@ class LogParserService
     protected function parseLogLine(string $line): ?array
     {
         // Laravel log format: [timestamp] environment.level: message context
-        if (!preg_match('/\[(.*?)\]\s+(\w+)\.(\w+):\s+(.*?)(\{.*\})?$/', $line, $matches)) {
+        if (! preg_match('/\[(.*?)\]\s+(\w+)\.(\w+):\s+(.*?)(\{.*\})?$/', $line, $matches)) {
             return null;
         }
 
@@ -230,11 +232,11 @@ class LogParserService
     public function getLogFileSizes(): array
     {
         return [
-            'laravel_log_size' => File::exists($this->logPath) 
-                ? $this->formatBytes(File::size($this->logPath)) 
+            'laravel_log_size' => File::exists($this->logPath)
+                ? $this->formatBytes(File::size($this->logPath))
                 : '0 B',
-            'performance_log_size' => File::exists($this->performancePath) 
-                ? $this->formatBytes(File::size($this->performancePath)) 
+            'performance_log_size' => File::exists($this->performancePath)
+                ? $this->formatBytes(File::size($this->performancePath))
                 : '0 B',
         ];
     }
@@ -245,13 +247,13 @@ class LogParserService
     protected function formatBytes(int $bytes): string
     {
         if ($bytes >= 1073741824) {
-            return number_format($bytes / 1073741824, 2) . ' GB';
+            return number_format($bytes / 1073741824, 2).' GB';
         } elseif ($bytes >= 1048576) {
-            return number_format($bytes / 1048576, 2) . ' MB';
+            return number_format($bytes / 1048576, 2).' MB';
         } elseif ($bytes >= 1024) {
-            return number_format($bytes / 1024, 2) . ' KB';
+            return number_format($bytes / 1024, 2).' KB';
         }
-        
-        return $bytes . ' B';
+
+        return $bytes.' B';
     }
 }

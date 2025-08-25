@@ -15,7 +15,7 @@ class ProductInfoStepRequest extends FormRequest
     public function rules(): array
     {
         $productId = $this->input('product_id'); // For edit mode
-        
+
         return [
             'name' => ['required', 'string', 'min:3', 'max:255'],
             'parent_sku' => ['required', new ParentSkuRule($productId)],

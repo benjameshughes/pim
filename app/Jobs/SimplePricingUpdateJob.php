@@ -19,6 +19,7 @@ class SimplePricingUpdateJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public Product $product;
+
     public SyncAccount $syncAccount;
 
     public function __construct(Product $product, SyncAccount $syncAccount)
@@ -37,7 +38,7 @@ class SimplePricingUpdateJob implements ShouldQueue
 
         // Get variants and their pricing
         $variants = $this->product->variants()->get();
-        
+
         Log::info('Found variants for pricing', [
             'count' => $variants->count(),
             'variant_ids' => $variants->pluck('id')->toArray(),

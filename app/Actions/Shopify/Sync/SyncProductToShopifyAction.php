@@ -6,8 +6,8 @@ use App\Actions\Base\BaseAction;
 use App\Models\Product;
 use App\Models\ShopifyProductSync;
 use App\Services\Shopify\API\ShopifyDataComparatorService;
-use App\Services\ShopifyConnectService;
 use App\Services\Shopify\Services\ShopifyExportService;
+use App\Services\ShopifyConnectService;
 use Illuminate\Support\Facades\Log;
 
 /**

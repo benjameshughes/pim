@@ -255,5 +255,4 @@ class Pricing extends Model
     {
         return $query->where('currency', $currency);
     }
-
 }

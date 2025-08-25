@@ -2,19 +2,19 @@
 
 namespace App\Actions\Products;
 
+use App\Exceptions\ProductWizard\ProductSaveException;
+use App\Models\AttributeDefinition;
 use App\Models\Product;
 use App\Models\ProductAttribute;
-use App\Models\AttributeDefinition;
-use App\Exceptions\ProductWizard\ProductSaveException;
 
 /**
  * 💾 SAVE PRODUCT ACTION
- * 
+ *
  * Handles Step 1: Parent Product creation/update
  * - Product creation/update with validation
  * - Brand attribute management
  * - Clean separation from Livewire UI logic
- * 
+ *
  * Follows ProductWizard.md specification for Step 1
  */
 class SaveProductAction
@@ -23,7 +23,7 @@ class SaveProductAction
     {
         try {
             $isEditMode = $product && $product->exists;
-            
+
             // 1. Save/Update Product
             if ($isEditMode) {
                 $product->update([
@@ -42,14 +42,14 @@ class SaveProductAction
             }
 
             // 2. Handle Brand Attribute (per ProductWizard.md Step 1 requirements)
-            if (!empty($data['brand'])) {
+            if (! empty($data['brand'])) {
                 $this->saveBrandAttribute($product, $data['brand']);
             }
 
             return [
                 'success' => true,
                 'product' => $product->fresh(),
-                'message' => $isEditMode ? 'Product updated successfully' : 'Product created successfully'
+                'message' => $isEditMode ? 'Product updated successfully' : 'Product created successfully',
             ];
         } catch (\Exception $e) {
             throw ProductSaveException::productCreationFailed($e);
@@ -64,7 +64,7 @@ class SaveProductAction
         try {
             // Ensure brand attribute definition exists
             $brandDef = AttributeDefinition::findByKey('brand');
-            if (!$brandDef) {
+            if (! $brandDef) {
                 $brandDef = AttributeDefinition::create([
                     'key' => 'brand',
                     'name' => 'Brand',

@@ -20,9 +20,13 @@ class ImageEditForm extends Component
 
     // Edit form data
     public string $title = '';
+
     public string $alt_text = '';
+
     public string $description = '';
+
     public string $folder = '';
+
     public string $tagsString = '';
 
     // UI state
@@ -90,7 +94,7 @@ class ImageEditForm extends Component
             foreach ($e->errors() as $field => $messages) {
                 $this->addError($field, implode(', ', $messages));
             }
-            
+
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'Please correct the validation errors and try again.',

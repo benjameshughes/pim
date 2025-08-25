@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->id();
-            
+
             // Core image data
             $table->string('filename')->nullable(); // "product-123.jpg"
             $table->string('path')->nullable(); // R2 storage path
@@ -22,20 +22,20 @@ return new class extends Migration
             $table->integer('size'); // bytes (changed from file_size to match model)
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();
-            
+
             // Image organization
             $table->boolean('is_primary')->default(false); // Primary image flag
             $table->integer('sort_order')->default(0); // Display order
-            
+
             // Metadata
             $table->string('title')->nullable();
             $table->string('alt_text')->nullable();
             $table->text('description')->nullable();
             $table->string('folder', 100)->nullable();
             $table->json('tags')->nullable();
-            
+
             $table->timestamps();
-            
+
             // Indexes
             $table->index('folder');
             $table->index('is_primary');
