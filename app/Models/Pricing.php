@@ -91,7 +91,7 @@ class Pricing extends Model
      */
     public function calculateSalePrice(): float
     {
-        $basePrice = $this->channel_price ?? $this->base_price;
+        $basePrice = $this->channel_price ?? $this->base_price ?? 0.0;
 
         if ($this->discount_percentage) {
             return $basePrice * (1 - ($this->discount_percentage / 100));
@@ -208,11 +208,12 @@ class Pricing extends Model
     }
 
     /**
-     * 🎯 SCOPE: Active pricing only
+     * 🎯 SCOPE: Active pricing only - TEMPORARILY DISABLED
+     * Will be redesigned when pricing/stock are decoupled from products
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query; // Removed is_active filter - will be redesigned later
     }
 
     /**

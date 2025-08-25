@@ -4,7 +4,6 @@ namespace App\Livewire\Shopify;
 
 use App\Actions\Shopify\ShopifyImport;
 use App\Models\Product;
-use App\Models\ShopifySyncStatus;
 use App\Services\Marketplace\Facades\Sync;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
@@ -138,9 +137,7 @@ class ShopifyDashboard extends Component
      */
     protected function getSyncHistoryData(): array
     {
-        $syncHistory = ShopifySyncStatus::with(['product'])
-            ->orderBy('updated_at', 'desc')
-            ->paginate(20);
+        $syncHistory = collect(); // Empty collection for now - sync status will be redesigned later
 
         return [
             'syncHistory' => $syncHistory,
@@ -189,18 +186,11 @@ class ShopifyDashboard extends Component
         $totalProducts = Product::count();
         $syncableProducts = Product::where('status', \App\Enums\ProductStatus::ACTIVE->value)->whereHas('variants')->count();
 
-        // Get sync status stats from ShopifySyncStatus if it exists
+        // Sync status stats - will be redesigned later
         $syncedCount = 0;
         $failedCount = 0;
         $pendingCount = 0;
         $lastSync = null;
-
-        if (class_exists(\App\Models\ShopifySyncStatus::class)) {
-            $syncedCount = \App\Models\ShopifySyncStatus::where('sync_status', 'synced')->count();
-            $failedCount = \App\Models\ShopifySyncStatus::where('sync_status', 'failed')->count();
-            $pendingCount = \App\Models\ShopifySyncStatus::where('sync_status', 'pending')->count();
-            $lastSync = \App\Models\ShopifySyncStatus::orderBy('updated_at', 'desc')->first()?->updated_at;
-        }
 
         $this->statsCache = [
             'total_products' => $totalProducts,
@@ -222,25 +212,7 @@ class ShopifyDashboard extends Component
     {
         $recentActivity = [];
 
-        // Get recent ShopifySyncStatus records if they exist
-        if (class_exists(\App\Models\ShopifySyncStatus::class)) {
-            $recentSyncs = \App\Models\ShopifySyncStatus::with('product')
-                ->orderBy('updated_at', 'desc')
-                ->take(5)
-                ->get();
-
-            $recentActivity = $recentSyncs->map(function ($sync) {
-                return [
-                    'id' => $sync->id,
-                    'product' => $sync->product,
-                    'action' => 'sync',
-                    'success' => $sync->sync_status === 'synced',
-                    'created_at' => $sync->updated_at,
-                    'error_message' => $sync->sync_status === 'failed' ? 'Sync failed' : null,
-                    'status' => $sync->sync_status,
-                ];
-            })->toArray();
-        }
+        // Recent activity - will be redesigned later
 
         return $recentActivity;
     }
@@ -753,12 +725,8 @@ class ShopifyDashboard extends Component
     protected function getPushStats(): array
     {
         $readyToPush = Product::where('status', \App\Enums\ProductStatus::ACTIVE->value)->whereHas('variants')->count();
-        $neverSynced = Product::whereDoesntHave('shopifySyncStatus')->count();
-        $needsUpdate = 0;
-
-        if (class_exists(\App\Models\ShopifySyncStatus::class)) {
-            $needsUpdate = \App\Models\ShopifySyncStatus::where('sync_status', '!=', 'synced')->count();
-        }
+        $neverSynced = Product::where('shopify_id', null)->count();
+        $needsUpdate = 0; // Will be redesigned later
 
         return [
             'ready_to_push' => $readyToPush,

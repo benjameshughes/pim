@@ -203,7 +203,7 @@ class PricingDashboard extends Component
      */
     protected function getAnalysisData(): array
     {
-        $allPricing = Pricing::active()->with(['salesChannel'])->get();
+        $allPricing = Pricing::with(['salesChannel'])->get(); // Removed ->active() scope for now
 
         return [
             'profitAnalysis' => $allPricing->profitAnalysis(),
@@ -367,7 +367,7 @@ class PricingDashboard extends Component
      */
     public function refreshAnalysis()
     {
-        $allPricing = Pricing::active()->with(['salesChannel'])->get();
+        $allPricing = Pricing::with(['salesChannel'])->get(); // Removed ->active() scope for now
         $this->analysisData = [
             'profit' => $allPricing->profitAnalysis(),
             'channels' => $allPricing->channelComparison(),

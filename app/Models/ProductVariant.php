@@ -75,13 +75,12 @@ class ProductVariant extends Model
     }
 
     /**
-     * 🔢 BARCODES
-     *
-     * Each variant can have multiple barcodes (Caecus + System)
+     * 🔢 BARCODES - DISABLED
+     * Barcode system has been removed
      */
-    public function barcodes(): HasMany
+    public function barcodes()
     {
-        return $this->hasMany(Barcode::class);
+        return collect(); // Return empty collection - barcode system removed
     }
 
     /**

@@ -46,13 +46,6 @@
                     Image Library
                 </flux:navlist.item>
 
-                {{-- 🔢 BARCODES --}}
-                <flux:navlist.item 
-                    icon="qr-code" 
-                    href="{{ route('barcodes.index') }}"
-                >
-                    Barcodes
-                </flux:navlist.item>
 
                 {{-- 🛍️ SHOPIFY SYNC --}}
                 <flux:navlist.item 
@@ -62,13 +55,6 @@
                     Shopify
                 </flux:navlist.item>
 
-                {{-- 🎨 SHOPIFY COLORS --}}
-                <flux:navlist.item 
-                    icon="swatch" 
-                    href="{{ route('shopify.colors') }}" 
-                >
-                    Color Manager
-                </flux:navlist.item>
 
                 {{-- 💰 PRICING --}}
                 <flux:navlist.item 
@@ -94,13 +80,6 @@
                     Marketplace Identifiers
                 </flux:navlist.item>
 
-                {{-- 🎛️ CHANNEL MAPPING --}}
-                <flux:navlist.item 
-                    icon="adjustments-horizontal" 
-                    href="{{ route('channel.mapping.dashboard') }}" 
-                >
-                    Channel Mapping
-                </flux:navlist.item>
 
                 {{-- 📊 LOG DASHBOARD --}}
                 <flux:navlist.item 

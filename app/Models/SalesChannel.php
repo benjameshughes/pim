@@ -139,7 +139,7 @@ class SalesChannel extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query; // Removed is_active filter - will be redesigned later
     }
 
     /**
@@ -147,7 +147,7 @@ class SalesChannel extends Model
      */
     public function scopeAutoSync($query)
     {
-        return $query->where('auto_sync', true)->where('is_active', true);
+        return $query->where('auto_sync', true); // Removed is_active filter
     }
 
     /**
@@ -155,7 +155,7 @@ class SalesChannel extends Model
      */
     public function scopeByPriority($query)
     {
-        return $query->orderBy('priority')->orderBy('display_name');
+        return $query->orderBy('name'); // Order by name instead of missing columns
     }
 
     /**

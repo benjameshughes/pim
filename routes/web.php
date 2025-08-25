@@ -1,7 +1,6 @@
 <?php
 
 use App\Livewire\Pricing\PricingDashboard;
-use App\Livewire\Shopify\ShopifyColorDashboard;
 use App\Livewire\Shopify\ShopifyDashboard;
 use App\Livewire\Shopify\WebhookDashboard;
 use Illuminate\Support\Facades\Route;
@@ -117,19 +116,9 @@ Route::middleware(['auth'])->group(function () {
         return view('variants.edit', compact('variant'));
     })->name('variants.edit');
 
-    // 🔢 BARCODES
-    Route::view('barcodes', 'barcodes.index')->name('barcodes.index');
-    Route::view('barcodes/create', 'barcodes.create')->name('barcodes.create');
-    Route::get('barcodes/{barcode}', function (App\Models\Barcode $barcode) {
-        return view('barcodes.show', compact('barcode'));
-    })->name('barcodes.show');
-    Route::get('barcodes/{barcode}/edit', function (App\Models\Barcode $barcode) {
-        return view('barcodes.edit', compact('barcode'));
-    })->name('barcodes.edit');
 
     // 🛍️ SHOPIFY SYNC
     Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');
-    Route::get('shopify/colors', ShopifyColorDashboard::class)->name('shopify.colors');
     Route::get('shopify/webhooks', WebhookDashboard::class)->name('shopify.webhooks');
 
     // 💰 PRICING MANAGEMENT
@@ -162,7 +151,6 @@ Route::middleware(['auth'])->group(function () {
     })->name('sync-accounts.show');
 
     // 🎛️ CHANNEL MAPPING SYSTEM
-    Route::get('channel-mapping', \App\Livewire\ChannelMapping\ChannelMapperDashboard::class)->name('channel.mapping.dashboard');
 
     // 📊 LOG DASHBOARD
     Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');

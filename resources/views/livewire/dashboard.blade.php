@@ -28,11 +28,6 @@
                         <p class="text-sm text-green-700 dark:text-green-300">Manage images and media</p>
                     </a>
                     
-                    <a href="{{ route('barcodes.index') }}" 
-                       class="block p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors">
-                        <h3 class="font-medium text-purple-900 dark:text-purple-200">📊 Barcodes</h3>
-                        <p class="text-sm text-purple-700 dark:text-purple-300">Manage product barcodes</p>
-                    </a>
                     
                     <a href="{{ route('settings.profile') }}" 
                        class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
