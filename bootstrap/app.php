@@ -20,8 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
         ]);
         
-        // Add request logging for debugging
-        $middleware->web(\App\Http\Middleware\LogRequests::class);
+        // Add request logging for debugging - TEMPORARILY DISABLED FOR TESTING
+        // $middleware->web(\App\Http\Middleware\LogRequests::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
