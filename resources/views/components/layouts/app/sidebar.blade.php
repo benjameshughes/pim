@@ -209,6 +209,14 @@
         {{-- Global Images Image Selector --}}
         <livewire:images.image-selector />
 
+        {{-- Toast Notifications System --}}
+        <x-flux::toast 
+            x-on:notify.window="addToast($event.detail.message, $event.detail.type, $event.detail.duration)"
+            position="bottom-right" 
+            theme="modern"
+            animation="slide"
+        />
+
         {{-- Beautiful Confirmation Modal --}}
         <x-confirmation-modal />
 
