@@ -155,7 +155,14 @@
                                     type="button"
                                     size="xs"
                                     variant="ghost"
-                                    wire:click="copyUrl('{{ $image->url }}')"
+                                    x-on:click="
+                                        navigator.clipboard.writeText('{{ $image->url }}').then(() => {
+                                            $dispatch('notify', { 
+                                                message: 'Image URL copied to clipboard! 📋', 
+                                                type: 'success' 
+                                            })
+                                        })
+                                    "
                                     class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                             >
                                 <flux:icon.clipboard class="w-3 h-3 mr-1"/>

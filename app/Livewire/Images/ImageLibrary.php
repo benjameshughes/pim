@@ -261,16 +261,6 @@ class ImageLibrary extends Component
         ];
     }
 
-    /**
-     * 📋 COPY URL TO CLIPBOARD
-     */
-    public function copyUrl(string $url): void
-    {
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => 'Image URL copied to clipboard!'
-        ]);
-    }
 
     /**
      * 🔍 UPDATE FILTERS - Reset pagination when filters change
