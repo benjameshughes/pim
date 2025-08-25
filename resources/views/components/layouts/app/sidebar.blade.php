@@ -38,12 +38,12 @@
                     Import
                 </flux:navlist.item>
 
-                {{-- 🎨 DIGITAL ASSETS --}}
+                {{-- 🖼️ IMAGES --}}
                 <flux:navlist.item 
-                    icon="photo" 
-                    href="{{ route('dam.index') }}"
+                    icon="image" 
+                    href="{{ route('images.index') }}"
                 >
-                    Image Library
+                    Images
                 </flux:navlist.item>
 
 
@@ -206,8 +206,8 @@
         @fluxScripts
         @livewireScripts
         
-        {{-- Global DAM Image Selector --}}
-        <livewire:dam.image-selector />
+        {{-- Global Images Image Selector --}}
+        <livewire:images.image-selector />
 
         {{-- Beautiful Confirmation Modal --}}
         <x-confirmation-modal />

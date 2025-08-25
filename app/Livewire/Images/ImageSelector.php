@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\DAM;
+namespace App\Livewire\Images;
 
 use App\Models\Image;
 use App\Models\Product;
@@ -291,6 +291,6 @@ class ImageSelector extends Component
      */
     public function render(): View
     {
-        return view('livewire.dam.image-selector');
+        return view('livewire.images.image-selector');
     }
 }

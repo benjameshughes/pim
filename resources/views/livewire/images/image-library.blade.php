@@ -79,24 +79,9 @@
         @endif
     </div>
 
-    {{-- Bulk Selection Controls --}}
+    {{-- Simple image count instead of bulk selection --}}
     @if($this->images->count() > 0)
-        <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="flex items-center space-x-3">
-                <flux:checkbox
-                        wire:model.live="selectAll"
-                />
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    @if($this->allSelected())
-                        All {{ $this->images->count() }} images selected
-                    @elseif($this->someSelected())
-                        {{ count($selectedImages) }} of {{ $this->images->count() }} images selected
-                    @else
-                        Select all ({{ $this->images->count() }} images)
-                    @endif
-                </span>
-            </div>
-
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm text-gray-500 dark:text-gray-400">
                 Showing {{ $this->images->count() }} of {{ $this->images->total() }} images
             </div>
@@ -110,51 +95,24 @@
                     class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     wire:key="image-{{ $image->id }}"
             >
-                {{-- Selection Checkbox --}}
-                <div class="absolute top-3 left-3 z-20">
-                    <flux:checkbox
-                            wire:model.live="selectedImages"
-                            value="{{ $image->id }}"
-                            class="bg-white/90 dark:bg-gray-800/90 rounded shadow-sm"
-                    />
-                </div>
-
                 {{-- Image --}}
                 <div class="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
-                    <a href="{{ route('dam.images.show', $image) }}" class="block w-full h-full" wire:navigate>
                         <img
                                 src="{{ $image->url }}"
                                 alt="{{ $image->alt_text ?? $image->display_title }}"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                         />
-                    </a>
                     
                     {{-- Overlay with attachment status --}}
                     <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                     
-                    {{-- Action Buttons --}}
-                    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
-                        <flux:button
-                                variant="outline"
-                                size="sm"
-                                href="{{ route('dam.images.show.edit', $image) }}"
-                                wire:navigate
-                                class="bg-white/90 hover:bg-white text-gray-700 border-white/20 shadow-sm"
-                        >
-                            <flux:icon.pencil class="w-3 h-3"/>
-                        </flux:button>
-
+                    {{-- Simple Delete Button --}}
+                    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <flux:button
                                 variant="danger"
                                 size="sm"
-                                @click="confirmAction({
-                                    title: 'Delete Image',
-                                    message: 'This will permanently delete the image and cannot be undone.\\n\\nAny product attachments will also be removed.',
-                                    confirmText: 'Yes, Delete It',
-                                    cancelText: 'Cancel',
-                                    variant: 'danger',
-                                    onConfirm: () => $wire.deleteImage({{ $image->id }})
-                                })"
+                                wire:click="deleteImage({{ $image->id }})"
+                                wire:confirm="Are you sure you want to delete this image? This cannot be undone."
                                 class="bg-red-500/90 hover:bg-red-600 text-white border-red-500/20 shadow-sm"
                         >
                             <flux:icon.trash class="w-3 h-3"/>
@@ -263,60 +221,7 @@
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">Upload Images</h2>
             </div>
 
-            {{-- Upload Progress --}}
-            @if($isUploading)
-                <div class="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700/50">
-                    {{-- Progress Header --}}
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center space-x-3">
-                            <flux:icon.arrow-path class="w-5 h-5 text-blue-600 animate-spin"/>
-                            <span class="font-medium text-blue-800 dark:text-blue-200">
-                                Uploading {{ $uploadedCount }} of {{ $totalToUpload }} images
-                            </span>
-                        </div>
-                        <span class="text-sm text-blue-600 dark:text-blue-400">
-                            {{ $totalToUpload > 0 ? round(($uploadedCount / $totalToUpload) * 100) : 0 }}%
-                        </span>
-                    </div>
-
-                    {{-- Progress Bar --}}
-                    <div class="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-4">
-                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: {{ $totalToUpload > 0 ? ($uploadedCount / $totalToUpload) * 100 : 0 }}%"></div>
-                    </div>
-
-                    {{-- Currently Uploading Files --}}
-                    @if(!empty($uploadingFiles))
-                        <div class="space-y-1">
-                            @foreach($uploadingFiles as $filename => $status)
-                                <div class="flex items-center space-x-2 text-sm">
-                                    <flux:icon.arrow-up class="w-4 h-4 text-blue-600 animate-pulse"/>
-                                    <span class="text-blue-700 dark:text-blue-300">{{ $filename }}</span>
-                                    <span class="text-blue-600 dark:text-blue-400">{{ ucfirst($status) }}...</span>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    {{-- Completed Files --}}
-                    @if(!empty($uploadResults))
-                        <div class="mt-3 max-h-32 overflow-y-auto space-y-1">
-                            @foreach($uploadResults as $filename => $result)
-                                <div class="flex items-center space-x-2 text-sm">
-                                    @if($result === 'success')
-                                        <flux:icon.check-circle class="w-4 h-4 text-green-600"/>
-                                        <span class="text-green-700 dark:text-green-300">{{ $filename }}</span>
-                                        <span class="text-green-600 dark:text-green-400">Uploaded</span>
-                                    @else
-                                        <flux:icon.x-circle class="w-4 h-4 text-red-600"/>
-                                        <span class="text-red-700 dark:text-red-300">{{ $filename }}</span>
-                                        <span class="text-red-600 dark:text-red-400">Failed</span>
-                                    @endif
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-            @endif
+            {{-- Upload Progress removed - using simple toast notifications instead --}}
 
             <form wire:submit="uploadImages" class="space-y-4">
                 {{-- File Upload --}}
@@ -401,56 +306,5 @@
     </flux:modal>
 
 
-    {{-- Delete Confirmation Modal --}}
-    <flux:modal wire:model="showDeleteConfirmModal" class="w-full max-w-7xl mx-auto">
-        @if($showDeleteConfirmModal && !empty($pendingDeleteAction))
-            <div class="p-6">
-                <div class="flex items-center mb-6">
-                    <div class="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mr-4">
-                        <flux:icon.exclamation-triangle class="w-6 h-6 text-red-600"/>
-                    </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                            Confirm Deletion
-                        </h2>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            This action cannot be undone
-                        </p>
-                    </div>
-                </div>
-
-                {{-- Confirmation Message --}}
-                <div class="mb-6">
-                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg p-4">
-                        <p class="text-red-800 dark:text-red-200">
-                            Are you sure you want to delete
-                            <span class="font-semibold">{{ count($pendingDeleteAction['items'] ?? []) }}</span>
-                            {{ count($pendingDeleteAction['items'] ?? []) === 1 ? 'image' : 'images' }}?
-                        </p>
-                        <p class="text-sm text-red-700 dark:text-red-300 mt-2">
-                            The selected images will be permanently removed from your DAM library and any products
-                            they're linked to.
-                        </p>
-                    </div>
-                </div>
-
-                {{-- Actions --}}
-                <div class="flex justify-end">
-                    <flux:button
-                            variant="danger"
-                            wire:click="confirmBulkDelete"
-                            wire:loading.attr="disabled"
-                            wire:loading.class="opacity-50"
-                    >
-                        <flux:icon.trash class="w-4 h-4 mr-2"/>
-                        <span wire:loading.remove wire:target="confirmBulkDelete">Delete Images</span>
-                        <span wire:loading wire:target="confirmBulkDelete">Deleting...</span>
-                    </flux:button>
-                </div>
-            </div>
-        @endif
-    </flux:modal>
-
-    {{-- Floating Action Bar --}}
-    <livewire:components.floating-action-bar :selected-items="$selectedImages" wire:key="floating-bar-{{ count($selectedImages) }}"/>
+    {{-- Delete confirmation modal and bulk actions removed - using simple inline delete --}}
 </div>

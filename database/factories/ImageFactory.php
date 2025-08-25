@@ -25,21 +25,19 @@ class ImageFactory extends Factory
         
         return [
             'filename' => $filename,
-            'path' => 'images/' . $filename,
             'url' => 'https://example.com/storage/images/' . $filename,
             'size' => $this->faker->numberBetween(10240, 5242880), // 10KB to 5MB
             'mime_type' => $this->faker->randomElement(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
             'is_primary' => false,
             'sort_order' => $this->faker->numberBetween(0, 10),
-            // DAM metadata
+            // Metadata
             'title' => $this->faker->optional(0.7)->sentence(3),
             'alt_text' => $this->faker->optional(0.5)->sentence(4),
             'description' => $this->faker->optional(0.3)->paragraph(),
-            'folder' => $this->faker->randomElement(['products', 'variants', 'general', 'uncategorized', 'hero', 'gallery']),
+            'folder' => $this->faker->optional(0.7)->randomElement(['products', 'variants', 'general', 'hero', 'gallery']),
             'tags' => $this->faker->optional(0.6)->randomElements([
                 'product', 'hero', 'gallery', 'banner', 'lifestyle', 'detail', 'swatch', 'color', 'texture', 'environment'
             ], $this->faker->numberBetween(1, 3)),
-            'created_by_user_id' => \App\Models\User::factory(),
         ];
     }
 

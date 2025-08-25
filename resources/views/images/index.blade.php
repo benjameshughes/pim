@@ -7,7 +7,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                                Digital Assets
+                                Images
                             </h1>
                             <p class="mt-2 text-gray-600 dark:text-gray-400">
                                 Manage your product images and media library
@@ -31,7 +31,7 @@
 
         {{-- Main Content --}}
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <livewire:dam.image-library key="library-{{ now()->timestamp }}" />
+            <livewire:images.image-library key="library-{{ now()->timestamp }}" />
         </div>
     </div>
 </x-layouts.app>

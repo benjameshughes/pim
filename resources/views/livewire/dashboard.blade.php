@@ -22,10 +22,10 @@
                         <p class="text-sm text-blue-700 dark:text-blue-300">Manage your product catalog</p>
                     </a>
                     
-                    <a href="{{ route('dam.index') }}" 
+                    <a href="{{ route('images.index') }}" 
                        class="block p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
-                        <h3 class="font-medium text-green-900 dark:text-green-200">🎨 Digital Assets</h3>
-                        <p class="text-sm text-green-700 dark:text-green-300">Manage images and media</p>
+                        <h3 class="font-medium text-green-900 dark:text-green-200">🖼️ Images</h3>
+                        <p class="text-sm text-green-700 dark:text-green-300">Manage your image library</p>
                     </a>
                     
                     

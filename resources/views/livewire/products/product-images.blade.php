@@ -5,7 +5,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $product->images->count() }} image(s)</p>
         </div>
         
-        <flux:button wire:navigate href="{{ route('dam.index') }}" variant="outline" icon="plus">
+        <flux:button wire:navigate href="{{ route('images.index') }}" variant="outline" icon="plus">
             Manage Images
         </flux:button>
     </div>
@@ -47,7 +47,7 @@
             <flux:icon name="photo" class="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">No images</h3>
             <p class="text-gray-500 dark:text-gray-400 mt-2">Upload images using the Product Wizard or Image Library.</p>
-            <flux:button wire:navigate href="{{ route('dam.index') }}" variant="primary" icon="plus" class="mt-4">
+            <flux:button wire:navigate href="{{ route('images.index') }}" variant="primary" icon="plus" class="mt-4">
                 Add Images
             </flux:button>
         </div>

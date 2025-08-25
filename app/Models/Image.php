@@ -20,26 +20,19 @@ class Image extends Model
     use HasFactory;
 
     protected $fillable = [
+        // Core file data
         'filename',
-        'path',
         'url',
         'size',
-        'file_size',
-        'width',
-        'height',
         'mime_type',
         'is_primary',
         'sort_order',
-        // DAM metadata
+        // Metadata
         'title',
         'alt_text',
         'description',
         'folder',
         'tags',
-        'created_by_user_id',
-        // Polymorphic relationship fields - UNUSED but kept for migrations
-        'imageable_type',
-        'imageable_id',
     ];
 
     protected $casts = [
@@ -47,7 +40,6 @@ class Image extends Model
         'is_primary' => 'boolean',
         'sort_order' => 'integer',
         'tags' => 'array',
-        'created_by_user_id' => 'integer',
     ];
 
     // REMOVED: Polymorphic relationship - using pivot tables instead
@@ -64,7 +56,7 @@ class Image extends Model
      */
     public function scopePrimary(Builder $query): Builder
     {
-        return $query->where('is_primary', true);
+        return $query->where('images.is_primary', true);
     }
 
     /**
@@ -72,18 +64,9 @@ class Image extends Model
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query->orderBy('sort_order')->orderBy('created_at');
+        return $query->orderBy('images.sort_order')->orderBy('images.created_at');
     }
 
-    /**
-     * 👤 USER RELATIONSHIP
-     * 
-     * Track who uploaded this image
-     */
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\User::class, 'created_by_user_id');
-    }
 
     /**
      * 📦 PRODUCTS RELATIONSHIP
@@ -171,13 +154,6 @@ class Image extends Model
         });
     }
 
-    /**
-     * 👤 Images created by specific user
-     */
-    public function scopeByUser(Builder $query, int $userId): Builder
-    {
-        return $query->where('created_by_user_id', $userId);
-    }
 
     /**
      * 🎯 DAM HELPER METHODS
@@ -224,30 +200,6 @@ class Image extends Model
         return $this;
     }
 
-    /**
-     * 🔗 Attach to model (link image to product/variant)
-     */
-    public function attachTo(Model $model): self
-    {
-        $this->update([
-            'imageable_type' => get_class($model),
-            'imageable_id' => $model->id,
-        ]);
-        return $this;
-    }
-
-    /**
-     * 🔓 Detach from model (unlink image)
-     */
-    public function detach(): self
-    {
-        $this->update([
-            'imageable_type' => null,
-            'imageable_id' => null,
-            'is_primary' => false,
-        ]);
-        return $this;
-    }
 
     /**
      * 📊 Check if image is attached to a model
@@ -291,26 +243,5 @@ class Image extends Model
             return round($bytes / 1024, 2) . ' KB';
         }
         return $bytes . ' bytes';
-    }
-
-    /**
-     * 📊 Get human readable file size (alias)
-     */
-    public function getFileSizeHumanAttribute(): string
-    {
-        return $this->getFormattedSizeAttribute();
-    }
-
-    /**
-     * 📊 Get width and height attributes for tests
-     */
-    public function getWidthAttribute(): ?int
-    {
-        return $this->attributes['width'] ?? null;
-    }
-
-    public function getHeightAttribute(): ?int
-    {
-        return $this->attributes['height'] ?? null;
     }
 }

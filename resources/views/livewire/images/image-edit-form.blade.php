@@ -86,7 +86,7 @@
         <div class="flex items-center gap-3">
             <flux:button 
                 wire:navigate 
-                href="{{ route('dam.images.show.overview', $image) }}" 
+                href="{{ route('images.show', $image) }}" 
                 variant="ghost"
                 :disabled="$isSaving"
             >

@@ -80,30 +80,10 @@ Route::middleware(['auth'])->group(function () {
     // 📤 IMPORT
     Route::view('import/products', 'import.products')->name('import.products');
 
-    // 🎨 DIGITAL ASSET MANAGEMENT (DAM) - CONSISTENT MODEL BINDING
-    Route::view('dam', 'dam.index')->name('dam.index');
-    
-    // Main image view (like products show)
-    Route::get('dam/{image}', function (App\Models\Image $image) {
-        return view('dam.show', compact('image'));
-    })->name('dam.images.show');
-    
-    // Image tabs - consistent with products pattern
-    Route::get('dam/{image}/overview', function (App\Models\Image $image) {
-        return view('dam.show', compact('image'));
-    })->name('dam.images.show.overview');
-    
-    Route::get('dam/{image}/edit', function (App\Models\Image $image) {
-        return view('dam.show', compact('image'));
-    })->name('dam.images.show.edit');
-    
-    Route::get('dam/{image}/attachments', function (App\Models\Image $image) {
-        return view('dam.show', compact('image'));
-    })->name('dam.images.show.attachments');
-    
-    Route::get('dam/{image}/history', function (App\Models\Image $image) {
-        return view('dam.show', compact('image'));
-    })->name('dam.images.show.history');
+    // 🖼️ IMAGES MANAGEMENT
+    Route::view('images', 'images.index')->name('images.index');
+    Route::view('images/{image}', 'images.show')->name('images.show');
+    Route::view('images/{image}/edit', 'images.edit')->name('images.edit');
     
 
     // 💎 VARIANTS - UNIFIED WITH PRODUCTS

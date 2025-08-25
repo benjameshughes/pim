@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between">
         <div>
             <div class="flex items-center gap-4 mb-2">
-                <a href="{{ route('dam.index') }}" class="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
+                <a href="{{ route('images.index') }}" class="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition-colors">
                     <flux:icon name="arrow-left" class="h-4 w-4" />
                     <span>Back to Library</span>
                 </a>
@@ -13,7 +13,7 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <flux:button wire:navigate href="{{ route('dam.images.show.edit', $image) }}" variant="primary" icon="pencil">
+            <flux:button wire:navigate href="{{ route('images.edit', $image) }}" variant="primary" icon="pencil">
                 Edit
             </flux:button>
             
@@ -76,19 +76,19 @@
         $isEdit = str_contains($currentRoute, '.edit');
         $isAttachments = str_contains($currentRoute, '.attachments');
         $isHistory = str_contains($currentRoute, '.history');
-        $isOverview = str_contains($currentRoute, '.overview') || $currentRoute === 'dam.images.show';
+        $isOverview = str_contains($currentRoute, '.overview') || $currentRoute === 'images.show';
     @endphp
 
     @if($isEdit)
         {{-- ✏️ EDIT TAB CONTENT --}}
         <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
-            <livewire:dam.image-edit-form :image="$image" />
+            <livewire:images.image-edit-form :image="$image" />
         </div>
     @elseif($isAttachments)
         {{-- 🔗 ATTACHMENTS TAB CONTENT --}}
         <div class="space-y-6">
             <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
-                <livewire:dam.image-product-attachment :image="$image" />
+                <livewire:images.image-product-attachment :image="$image" />
             </div>
         </div>
     @elseif($isHistory)
@@ -234,12 +234,7 @@
                         @endforeach
                     </div>
                     
-                    <div class="mt-4">
-                        <flux:button wire:navigate href="{{ route('dam.images.show.attachments', $image) }}" size="sm" variant="ghost">
-                            View All Attachments
-                            <flux:icon name="arrow-right" class="h-4 w-4" />
-                        </flux:button>
-                    </div>
+                    {{-- Attachments view simplified - use main tabs above --}}
                 </div>
                 @endif
             </div>

@@ -1,44 +1,23 @@
 <?php
 
-namespace App\Livewire\DAM;
+namespace App\Livewire\Images;
 
 use App\Models\Image;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
-use App\Services\ImageUploadService;
 
 /**
- * 🎨✏️ IMAGE EDIT - DEDICATED FULL-PAGE EDITING
+ * 🔗 IMAGE PRODUCT ATTACHMENT - STANDALONE ATTACHMENT MANAGER
  *
- * Clean, dedicated page for editing image metadata and properties
- * Replaces modal-based editing with better UX and more space
+ * Handles attaching/detaching images to products and variants
+ * Separated from core image editing for cleaner lifecycle management
  */
-class ImageEdit extends Component
+class ImageProductAttachment extends Component
 {
     public Image $image;
 
-    // Edit form data
-    public string $title = '';
-
-    public string $alt_text = '';
-
-    public string $description = '';
-
-    public string $folder = '';
-
-    /** @var array<string> */
-    public array $tags = [];
-
-    // UI state
-    public bool $isSaving = false;
-
-    public string $tagsString = ''; // For easier form input
-
     // Attachment state
-    public bool $showAttachSection = false;
-
     public string $attachmentType = '';
-
     public int $attachmentId = 0;
 
     // Listeners
@@ -48,121 +27,12 @@ class ImageEdit extends Component
     ];
 
     /**
-     * 🎪 MOUNT - Initialize with image data
+     * 🎪 MOUNT - Initialize with image
      */
     public function mount(Image $image): void
     {
         $this->image = $image;
-
-        // Load current values
-        $this->title = $image->title ?? '';
-        $this->alt_text = $image->alt_text ?? '';
-        $this->description = $image->description ?? '';
-        $this->folder = $image->folder ?? 'uncategorized';
-        $this->tags = $image->tags ?? [];
-
-        // Convert tags array to string for easier editing
-        $this->tagsString = implode(', ', $this->tags);
-
-        // Check if image is already attached
         $this->loadExistingAttachments();
-    }
-
-    /**
-     * 💾 SAVE IMAGE CHANGES
-     */
-    public function save()
-    {
-        $this->isSaving = true;
-
-        try {
-            $this->validate([
-                'title' => 'nullable|string|max:255',
-                'alt_text' => 'nullable|string|max:255',
-                'description' => 'nullable|string|max:1000',
-                'folder' => 'required|string|max:255',
-                'tagsString' => 'nullable|string|max:500',
-            ]);
-
-            // Convert tags string to array
-            $tags = array_filter(
-                array_map('trim', explode(',', $this->tagsString))
-            );
-
-            // Update the image
-            $this->image->update([
-                'title' => $this->title,
-                'alt_text' => $this->alt_text,
-                'description' => $this->description,
-                'folder' => $this->folder,
-                'tags' => $tags,
-            ]);
-
-            // Handle attachment if specified
-            if ($this->attachmentType && $this->attachmentId) {
-                $this->attachToItem();
-            }
-
-            $this->dispatch('notify', [
-                'type' => 'success',
-                'message' => 'Image updated successfully!',
-            ]);
-
-            // Redirect back to library
-            return $this->redirect('/dam', navigate: true);
-
-        } catch (\Exception $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Failed to update image: '.$e->getMessage(),
-            ]);
-        } finally {
-            $this->isSaving = false;
-        }
-        
-        return null;
-    }
-
-    /**
-     * 🗑️ DELETE IMAGE
-     */
-    public function deleteImage(\App\Actions\Images\DeleteImageAction $deleteImageAction)
-    {
-        $imageName = $this->image->display_title;
-        
-        $deleteImageAction->execute($this->image);
-
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => "Image '{$imageName}' deleted successfully!",
-            'persist' => true
-        ]);
-        
-        $this->redirect(route('dam.index'), navigate: true);
-    }
-
-    /**
-     * ❌ CANCEL AND GO BACK
-     */
-    public function cancel(): void
-    {
-        $this->redirect('/dam', navigate: true);
-    }
-
-    /**
-     * 📁 GET AVAILABLE FOLDERS FOR DROPDOWN
-     *
-     * @return array<string>
-     */
-    public function getFoldersProperty(): array
-    {
-        // Guard against deleted model - return folders from all images
-        return Image::query()
-            ->select('folder')
-            ->distinct()
-            ->whereNotNull('folder')
-            ->pluck('folder')
-            ->toArray();
     }
 
     /**
@@ -175,7 +45,6 @@ class ImageEdit extends Component
         if ($productAttachment) {
             $this->attachmentType = 'product';
             $this->attachmentId = $productAttachment->id;
-
             return;
         }
 
@@ -275,11 +144,6 @@ class ImageEdit extends Component
      */
     public function getCurrentAttachments(): array
     {
-        // Guard against deleted model
-        if (!$this->image->exists) {
-            return [];
-        }
-        
         $attachments = [];
 
         // Get product attachments
@@ -312,6 +176,6 @@ class ImageEdit extends Component
      */
     public function render(): View
     {
-        return view('livewire.dam.image-edit');
+        return view('livewire.images.image-product-attachment');
     }
 }

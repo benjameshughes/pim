@@ -7,6 +7,7 @@ use App\Traits\InheritsAttributesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -57,13 +58,13 @@ class ProductVariant extends Model
     }
 
     /**
-     * 🖼️ IMAGES - Polymorphic relationship to Image model
+     * 🖼️ IMAGES - Many-to-many relationship with Image model via pivot
      *
      * Each variant can have specific images stored in R2
      */
-    public function images(): MorphMany
+    public function images(): BelongsToMany
     {
-        return $this->morphMany(Image::class, 'imageable')->ordered();
+        return $this->belongsToMany(Image::class, 'image_variant')->orderBy('sort_order')->orderBy('created_at');
     }
 
     /**
