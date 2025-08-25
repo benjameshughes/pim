@@ -68,7 +68,7 @@ class SaveProductAction
                 $brandDef = AttributeDefinition::create([
                     'key' => 'brand',
                     'name' => 'Brand',
-                    'type' => 'string',
+                    'data_type' => 'string',
                     'is_required' => false,
                     'applies_to_products' => true,
                     'applies_to_variants' => true,
@@ -76,7 +76,19 @@ class SaveProductAction
             }
 
             // Set brand value for product
-            ProductAttribute::setValueFor($product, 'brand', $brand);
+            ProductAttribute::updateOrCreate([
+                'product_id' => $product->id,
+                'attribute_definition_id' => $brandDef->id,
+            ], [
+                'value' => $brand,
+                'display_value' => $brand,
+                'is_valid' => true,
+                'source' => 'product_wizard',
+                'assigned_at' => now(),
+                'assigned_by' => auth()->id(),
+                'value_changed_at' => now(),
+                'version' => 1,
+            ]);
         } catch (\Exception $e) {
             throw ProductSaveException::attributeCreationFailed('brand', $e);
         }

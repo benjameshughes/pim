@@ -46,10 +46,11 @@ class CreateVariantsAction
 
             // Invoke barcode assignment job for all variants
             // Per ProductWizard.md: "auto assign is done via a job"
-            if (! empty($createdVariants)) {
-                $variantIds = collect($createdVariants)->pluck('id')->toArray();
-                AssignBarcodesJob::dispatch('product_variants', $variantIds);
-            }
+            // TODO: Implement AssignBarcodesJob when barcode system is ready
+            // if (! empty($createdVariants)) {
+            //     $variantIds = collect($createdVariants)->pluck('id')->toArray();
+            //     AssignBarcodesJob::dispatch('product_variants', $variantIds);
+            // }
 
             return [
                 'success' => true,
@@ -57,7 +58,7 @@ class CreateVariantsAction
                 'message' => count($createdVariants).' variants created successfully',
             ];
         } catch (\Exception $e) {
-            throw ProductSaveException::variantCreationFailed($e);
+            throw ProductSaveException::variantCreationFailed($variantData, $e);
         }
     }
 

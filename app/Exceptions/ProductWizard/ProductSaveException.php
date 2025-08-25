@@ -47,6 +47,18 @@ class ProductSaveException extends Exception
     }
 
     /**
+     * Create exception for product creation failure
+     */
+    public static function productCreationFailed(Throwable $previous, array $productData = []): self
+    {
+        return new self(
+            message: 'Failed to create product: '.$previous->getMessage(),
+            productData: $productData,
+            previousException: $previous
+        );
+    }
+
+    /**
      * Create exception for variant creation failure
      */
     public static function variantCreationFailed(array $variantData, Throwable $previous): self

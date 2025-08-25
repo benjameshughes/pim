@@ -77,6 +77,15 @@ class ImageLibrary extends Component
     }
 
     /**
+     * 📤 LISTEN FOR SHOW UPLOAD MODAL EVENT
+     */
+    #[\Livewire\Attributes\On('show-upload-modal')]
+    public function showUploadModal()
+    {
+        $this->openUploadModal();
+    }
+
+    /**
      * 📤 UPLOAD IMAGES
      */
     public function uploadImages(ImageUploadService $uploadService)

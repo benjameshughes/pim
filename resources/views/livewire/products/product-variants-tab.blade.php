@@ -92,9 +92,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-2">
-                                    @if($variant->barcodes->count() > 0)
+                                    @if($variant->barcodes()->count() > 0)
                                         <flux:badge color="green" size="sm">
-                                            {{ $variant->barcodes->count() }}
+                                            {{ $variant->barcodes()->count() }}
                                         </flux:badge>
                                     @else
                                         <flux:badge color="gray" size="sm">

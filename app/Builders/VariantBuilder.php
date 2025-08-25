@@ -32,7 +32,14 @@ class VariantBuilder
     {
         $this->product = $product;
         $this->data['product_id'] = $product->id;
-        $this->barcodeService = App::make(BarcodeAssignmentService::class);
+        
+        // Try to get barcode service if it exists
+        try {
+            $this->barcodeService = App::make(BarcodeAssignmentService::class);
+        } catch (\Illuminate\Contracts\Container\BindingResolutionException $e) {
+            // Barcode service not available, skip barcode assignment
+            $this->barcodeService = null;
+        }
     }
 
     /**
@@ -196,14 +203,43 @@ class VariantBuilder
     }
 
     /**
+     * Generate a title for the variant based on available data
+     */
+    protected function generateTitle(): string
+    {
+        $titleParts = [$this->product->name];
+        
+        if (!empty($this->data['color'])) {
+            $titleParts[] = $this->data['color'];
+        }
+        
+        if (!empty($this->data['width']) && !empty($this->data['drop'])) {
+            $titleParts[] = $this->data['width'] . 'x' . $this->data['drop'] . 'cm';
+        } elseif (!empty($this->data['width'])) {
+            $titleParts[] = $this->data['width'] . 'cm';
+        }
+        
+        return implode(' ', $titleParts);
+    }
+
+    /**
      * 🚀 EXECUTE THE BUILDER
      *
      * Create the variant using the appropriate action based on complexity
      */
     public function execute(): ProductVariant
     {
+        // Generate title if not set
+        if (empty($this->data['title'])) {
+            $this->data['title'] = $this->generateTitle();
+        }
+        
+        // Set default price if not provided (new architecture uses separate Pricing table)
+        if (empty($this->data['price'])) {
+            $this->data['price'] = 0.00;  // Default for ProductVariant table
+        }
         // If we need barcode assignment, use the complex action
-        if ($this->needsBarcodeAssignment) {
+        if ($this->needsBarcodeAssignment && $this->barcodeService) {
             // Assign barcode from pool before creating variant
             $nextBarcode = $this->barcodeService->getNextAvailableBarcode($this->data['barcode_type']);
 

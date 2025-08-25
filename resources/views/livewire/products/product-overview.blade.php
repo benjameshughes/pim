@@ -131,7 +131,7 @@
                 
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600 dark:text-gray-400">Total Barcodes</span>
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->sum(fn($v) => $v->barcodes->count()) }}</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->sum(fn($v) => $v->barcodes()->count()) }}</span>
                 </div>
             </div>
         </div>

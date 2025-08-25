@@ -14,7 +14,7 @@ class ProductShow extends Component
     public function mount(Product $product)
     {
         $this->product = $product->load([
-            'variants.barcodes',
+            'variants',  // Remove .barcodes since it's not a proper relationship
             'syncStatuses.syncAccount',
             'syncLogs' => function ($query) {
                 $query->with('syncAccount')->latest()->limit(10);
