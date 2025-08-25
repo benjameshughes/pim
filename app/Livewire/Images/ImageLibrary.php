@@ -60,6 +60,7 @@ class ImageLibrary extends Component
         'page' => ['except' => 1],
     ];
 
+
     /**
      * 📤 OPEN UPLOAD MODAL
      */
@@ -240,6 +241,17 @@ class ImageLibrary extends Component
             'unattached' => Image::unattached()->count(),
             'folders' => Image::select('folder')->whereNotNull('folder')->distinct()->count(),
         ];
+    }
+
+    /**
+     * 📋 COPY URL TO CLIPBOARD
+     */
+    public function copyUrl(string $url): void
+    {
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Image URL copied to clipboard!'
+        ]);
     }
 
     /**

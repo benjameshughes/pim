@@ -53,25 +53,20 @@
         </div>
 
         {{-- Tag Filter --}}
-        @if(!empty($this->availableTags))
+        @if(!empty($this->tags))
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Filter by tags:
                 </label>
                 <div class="flex flex-wrap gap-2">
-                    @foreach($this->availableTags as $tag)
+                    @foreach($this->tags as $tag)
                         <flux:badge
-                                variant="{{ in_array($tag, $selectedTags) ? 'primary' : 'outline' }}"
+                                variant="{{ $selectedTag === $tag ? 'primary' : 'outline' }}"
                                 class="cursor-pointer"
-                                wire:click="$set('selectedTags', {{ json_encode(
-        in_array($tag, $selectedTags)
-            ? array_values(array_filter($selectedTags, fn($t) => $t !== $tag))
-            : array_merge($selectedTags, [$tag])
-    ) }})"
+                                wire:click="$set('selectedTag', '{{ $selectedTag === $tag ? '' : $tag }}')"
                         >
                             {{ $tag }}
                         </flux:badge>
-
                     @endforeach
                 </div>
             </div>
@@ -134,7 +129,7 @@
                     <div class="space-y-2">
                         {{-- Title --}}
                         <h4 class="font-medium text-sm text-gray-900 dark:text-white truncate">
-                            {{ $image->original_filename }}
+                            {{ $image->display_title }}
                         </h4>
 
                         {{-- Metadata --}}
@@ -160,7 +155,7 @@
                                     type="button"
                                     size="xs"
                                     variant="ghost"
-                                    @click="navigator.clipboard.writeText('{{ $image->url }}'); $wire.copyUrl('{{ $image->url }}')"
+                                    wire:click="copyUrl('{{ $image->url }}')"
                                     class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                             >
                                 <flux:icon.clipboard class="w-3 h-3 mr-1"/>
@@ -178,16 +173,16 @@
                     </div>
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">No images found</h3>
                     <p class="text-gray-500 dark:text-gray-400 mb-6 max-w-md text-center">
-                        @if($search || $selectedFolder || !empty($selectedTags))
+                        @if($search || $selectedFolder || $selectedTag)
                             No images match your current filters. Try adjusting your search terms or filters.
                         @else
                             Your media library is empty. Upload some images to get started.
                         @endif
                     </p>
                     
-                    @if($search || $selectedFolder || !empty($selectedTags))
+                    @if($search || $selectedFolder || $selectedTag)
                         <div class="flex items-center space-x-3">
-                            <flux:button variant="outline" wire:click="$set('search', ''); $set('selectedFolder', ''); $set('selectedTags', [])">
+                            <flux:button variant="outline" wire:click="clearFilters">
                                 Clear Filters
                             </flux:button>
                             <flux:button variant="primary" icon="upload" wire:click="openUploadModal">

@@ -200,22 +200,14 @@
             :duration="5000" 
             :max-toasts="3" 
             glitter-intensity="high"
-            x-on:notify.window="$flux.toast({ type: $event.detail.type, text: $event.detail.message, options: { persist: $event.detail.persist || false } })"
+            x-on:notify.window="addToast($event.detail.message, $event.detail.type, $event.detail.duration)"
         />
 
         @fluxScripts
         @livewireScripts
         
-        {{-- Global Images Image Selector --}}
-        <livewire:images.image-selector />
-
-        {{-- Toast Notifications System --}}
-        <x-flux::toast 
-            x-on:notify.window="addToast($event.detail.message, $event.detail.type, $event.detail.duration)"
-            position="bottom-right" 
-            theme="modern"
-            animation="slide"
-        />
+        {{-- Global Images Image Selector - Temporarily disabled to debug Flux errors --}}
+        {{-- <livewire:images.image-selector /> --}}
 
         {{-- Beautiful Confirmation Modal --}}
         <x-confirmation-modal />
