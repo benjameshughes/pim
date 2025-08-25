@@ -5,9 +5,6 @@ namespace Database\Factories;
 use App\Models\SalesChannel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends Factory<SalesChannel>
- */
 class SalesChannelFactory extends Factory
 {
     protected $model = SalesChannel::class;
@@ -15,28 +12,25 @@ class SalesChannelFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->randomElement(['Shopify Store', 'eBay Shop', 'Amazon Marketplace', 'Direct Sales']),
-            'type' => fake()->randomElement(['online', 'marketplace', 'retail']),
-            'currency' => fake()->randomElement(['GBP', 'USD', 'EUR']),
-            'is_active' => true,
+            'name' => $this->faker->randomElement(['Shopify', 'eBay', 'Direct Sales', 'Amazon']),
+            'code' => $this->faker->unique()->word(),
+            'description' => $this->faker->sentence(),
+            'config' => json_encode([]),
+            'status' => 'active',
         ];
     }
 
-    public function shopify(): static
+    public function active(): static
     {
-        return $this->state([
-            'name' => 'Shopify Store',
-            'type' => 'online',
-            'currency' => 'GBP',
+        return $this->state(fn (array $attributes) => [
+            'status' => 'active',
         ]);
     }
 
-    public function ebay(): static
+    public function inactive(): static
     {
-        return $this->state([
-            'name' => 'eBay Shop',
-            'type' => 'marketplace',
-            'currency' => 'GBP',
+        return $this->state(fn (array $attributes) => [
+            'status' => 'inactive',
         ]);
     }
 }

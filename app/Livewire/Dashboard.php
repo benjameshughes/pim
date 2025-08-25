@@ -72,7 +72,7 @@ class Dashboard extends Component
         }
 
         $completeVariants = ProductVariant::whereNotNull('color')
-            ->whereNotNull('size')
+            ->whereNotNull('width')
             ->whereHas('barcodes')
             ->whereHas('pricing')
             ->count();
@@ -88,7 +88,7 @@ class Dashboard extends Component
     private function getVariantsWithCompleteData(): int
     {
         return ProductVariant::whereNotNull('color')
-            ->whereNotNull('size')
+            ->whereNotNull('width')
             ->whereNotNull('stock_level')
             ->whereHas('barcodes')
             ->whereHas('pricing')
@@ -174,7 +174,7 @@ class Dashboard extends Component
     private function getReadyForExport(): int
     {
         return ProductVariant::whereNotNull('color')
-            ->whereNotNull('size')
+            ->whereNotNull('width')
             ->whereHas('barcodes')
             ->whereHas('pricing')
             ->whereHas('product', function ($query) {
@@ -304,9 +304,9 @@ class Dashboard extends Component
     {
         return ProductVariant::where(function ($query) {
             $query->whereNull('color')
-                ->orWhereNull('size')
-                ->orWhereNull('package_weight')
-                ->orWhereNull('package_length');
+                ->orWhereNull('width')
+                ->orWhereNull('parcel_weight')
+                ->orWhereNull('parcel_length');
         })->count();
     }
 
