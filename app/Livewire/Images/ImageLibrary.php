@@ -121,10 +121,7 @@ class ImageLibrary extends Component
 
             $uploadService->uploadMultiple($this->newImages, $metadata);
 
-            $this->dispatch('notify', [
-                'type' => 'success',
-                'message' => count($this->newImages).' images uploaded successfully! 🎉',
-            ]);
+            $this->dispatch('success', count($this->newImages).' images uploaded successfully! 🎉');
 
             $this->reset(['newImages', 'uploadMetadata']);
             $this->showUploadModal = false;
@@ -138,10 +135,7 @@ class ImageLibrary extends Component
                 'file_count' => count($this->newImages ?? []),
             ]);
 
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Upload failed: '.$e->getMessage(),
-            ]);
+            $this->dispatch('error', 'Upload failed: '.$e->getMessage());
         }
     }
 
@@ -158,16 +152,10 @@ class ImageLibrary extends Component
         try {
             $uploadService->delete($image);
 
-            $this->dispatch('notify', [
-                'type' => 'success',
-                'message' => 'Image deleted successfully! 🗑️',
-            ]);
+            $this->dispatch('success', 'Image deleted successfully! 🗑️');
 
         } catch (\Exception $e) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'message' => 'Delete failed: '.$e->getMessage(),
-            ]);
+            $this->dispatch('error', 'Delete failed: '.$e->getMessage());
         }
     }
 
