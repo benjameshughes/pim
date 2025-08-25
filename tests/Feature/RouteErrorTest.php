@@ -57,6 +57,9 @@ describe('Product Routes', function () {
     
     test('products builder loads without errors', function () {
         $response = $this->get(route('products.builder'));
+        if ($response->status() >= 400) {
+            dump('Products builder error status:', $response->status());
+        }
         expect($response->status())->toBeLessThan(400);
     });
     
