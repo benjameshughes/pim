@@ -94,11 +94,12 @@ class ProductVariant extends Model
     }
 
     /**
-     * 💰 PRICING - Multi-channel pricing support
+     * 💰 PRICING - DECOUPLED ACCESS
+     * Pricing system operates independently but can be accessed via variant
      */
-    public function pricing(): HasMany
+    public function getPricingData()
     {
-        return $this->hasMany(Pricing::class);
+        return \App\Models\Pricing::where('product_variant_id', $this->id)->get();
     }
 
     /**
@@ -122,11 +123,42 @@ class ProductVariant extends Model
     }
 
     /**
-     * 💎 ACTIVE PRICING - Only active pricing records
+     * 💎 ACTIVE PRICING - DECOUPLED ACCESS
+     * Get active pricing records without tight coupling
      */
-    public function activePricing(): HasMany
+    public function getActivePricingData()
     {
-        return $this->pricing()->active();
+        return \App\Models\Pricing::where('product_variant_id', $this->id)->active()->get();
+    }
+
+    /**
+     * 💰 PRICE ACCESSOR - $variant->price
+     * Get the default/primary price for this variant via independent pricing service
+     */
+    public function getPriceAttribute()
+    {
+        return app(\App\Services\PricingService::class)->getDefaultPriceForVariant($this->id);
+    }
+
+    /**
+     * 💰 PRICE FOR CHANNEL - Get price for specific sales channel via service
+     */
+    public function getPriceForChannel($channelId = null)
+    {
+        if (!$channelId) {
+            return $this->price; // Use default price accessor
+        }
+        
+        return app(\App\Services\PricingService::class)->getPriceForVariantAndChannel($this->id, $channelId) ?? 0.0;
+    }
+
+    /**
+     * 🔗 PRICING RELATIONSHIP - For Eloquent queries only
+     * Note: This is for query purposes, pricing operates independently
+     */
+    public function pricingRecords(): HasMany
+    {
+        return $this->hasMany(\App\Models\Pricing::class, 'product_variant_id');
     }
 
     /**
@@ -299,13 +331,30 @@ class ProductVariant extends Model
     }
 
     /**
+     * 📦 STOCK ACCESSOR - $variant->stock
+     * Get stock record for this variant via independent stock service
+     */
+    public function getStockAttribute()
+    {
+        return app(\App\Services\StockService::class)->getStockForVariant($this->id);
+    }
+
+    /**
+     * 📦 STOCK LEVEL ACCESSOR - $variant->stock_level
+     * Get current stock quantity for this variant via service
+     */
+    public function getStockLevelAttribute()
+    {
+        return app(\App\Services\StockService::class)->getStockLevelForVariant($this->id);
+    }
+
+    /**
      * 📦 IN STOCK
-     *
-     * Check if variant is in stock
+     * Check if variant is in stock via service
      */
     public function inStock()
     {
-        return $this->stock_level > 0;
+        return app(\App\Services\StockService::class)->isVariantInStock($this->id);
     }
 
     /**
@@ -318,10 +367,13 @@ class ProductVariant extends Model
 
     /**
      * 🔍 SCOPE: In stock variants
+     * Note: This scope queries the actual stock table for accuracy
      */
     public function scopeInStock($query)
     {
-        return $query->where('stock_level', '>', 0);
+        return $query->whereHas('stockRecords', function($q) {
+            $q->where('quantity', '>', 0)->where('status', 'available');
+        });
     }
 
     /**
@@ -338,6 +390,15 @@ class ProductVariant extends Model
     public function scopeByWidth($query, $width)
     {
         return $query->where('width', $width);
+    }
+
+    /**
+     * 📦 STOCK RELATIONSHIP - For Eloquent queries only
+     * Note: This is for query purposes, stock operates independently
+     */
+    public function stockRecords(): HasMany
+    {
+        return $this->hasMany(\App\Models\Stock::class, 'product_variant_id');
     }
 
     /**

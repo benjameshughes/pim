@@ -414,7 +414,7 @@ class PricingDashboard extends Component
      */
     protected function getSearchableProducts()
     {
-        return \App\Models\Product::whereHas('variants.pricing')
+        return \App\Models\Product::whereHas('variants.pricingRecords')
             ->when($this->productSearchQuery, function ($q) {
                 $q->where('name', 'like', '%'.$this->productSearchQuery.'%');
             })
@@ -428,7 +428,7 @@ class PricingDashboard extends Component
      */
     protected function getSearchableVariants()
     {
-        return \App\Models\ProductVariant::whereHas('pricing')
+        return \App\Models\ProductVariant::whereHas('pricingRecords')
             ->with('product')
             ->when($this->variantSearchQuery, function ($q) {
                 $q->where(function ($subQuery) {
