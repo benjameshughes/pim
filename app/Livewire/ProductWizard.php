@@ -4,8 +4,9 @@ namespace App\Livewire;
 
 use App\Actions\Products\AttachImagesAction;
 use App\Actions\Products\CreateVariantsAction;
-use App\Actions\Products\SavePricingAction;
 use App\Actions\Products\SaveProductAction;
+use App\Actions\Products\SaveVariantPricingAction;
+use App\Actions\Products\SaveVariantStockAction;
 use App\Exceptions\ProductWizard\NoVariantsException;
 use App\Exceptions\ProductWizard\ProductSaveException;
 use App\Exceptions\ProductWizard\WizardValidationException;
@@ -704,9 +705,14 @@ class ProductWizard extends Component
 
                 $this->product = $productResult['product'];
 
-                // Step 2: Create Variants (ProductWizard.md Step 2) - only for new products
+                // Step 2: Create Variants (ProductWizard.md Step 2) - get the created variants
+                $createdVariants = null;
                 if (! $this->isEditMode) {
-                    (new CreateVariantsAction)->execute($this->product, $this->generated_variants);
+                    $variantResult = (new CreateVariantsAction)->execute($this->product, $this->generated_variants);
+                    $createdVariants = $variantResult['variants'] ?? collect();
+                } else {
+                    // For edit mode, get existing variants
+                    $createdVariants = $this->product->variants;
                 }
 
                 // Step 3: Attach Images (ProductWizard.md Step 3)
@@ -714,9 +720,20 @@ class ProductWizard extends Component
                     (new AttachImagesAction)->execute($this->product, $this->uploaded_images);
                 }
 
-                // Step 4: Save Pricing & Stock (ProductWizard.md Step 4)
-                if (! empty($this->variant_pricing)) {
-                    (new SavePricingAction)->execute($this->variant_pricing);
+                // Step 4: Save Pricing & Stock (ProductWizard.md Step 4) - NEW ARCHITECTURE
+                if ($createdVariants && $createdVariants->count() > 0) {
+                    // Save pricing using new action
+                    if (! empty($this->variant_pricing)) {
+                        (new SaveVariantPricingAction)->execute($createdVariants, $this->variant_pricing);
+                    }
+
+                    // Save stock using new action
+                    if (! empty($this->variant_stock)) {
+                        (new SaveVariantStockAction)->execute($createdVariants, $this->variant_stock);
+                    } else {
+                        // Create initial stock records with 0 quantity
+                        (new SaveVariantStockAction)->setInitialStock($createdVariants, 0);
+                    }
                 }
 
                 // Clean up: Delete draft on successful save
