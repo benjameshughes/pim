@@ -30,10 +30,19 @@ class ImageLibrary extends Component
     public string $sortBy = 'created_at';
     public string $sortDirection = 'desc';
 
-    // New image metadata
+    // New image metadata (for simple interface)
     public string $newImageFolder = '';
     public array $newImageTags = [];
     public string $newTagInput = '';
+    
+    // Upload metadata (for modal interface)
+    public array $uploadMetadata = [
+        'title' => '',
+        'alt_text' => '',
+        'description' => '',
+        'folder' => '',
+        'tags' => '',
+    ];
 
     // View options
     public string $view = 'grid'; // grid or list
@@ -69,9 +78,17 @@ class ImageLibrary extends Component
         ]);
 
         try {
+            // Convert tags string to array if needed
+            $tags = is_string($this->uploadMetadata['tags']) 
+                ? array_filter(array_map('trim', explode(',', $this->uploadMetadata['tags'])))
+                : ($this->uploadMetadata['tags'] ?? []);
+
             $metadata = [
-                'folder' => $this->newImageFolder ?: null,
-                'tags' => $this->newImageTags,
+                'title' => $this->uploadMetadata['title'] ?: null,
+                'alt_text' => $this->uploadMetadata['alt_text'] ?: null,
+                'description' => $this->uploadMetadata['description'] ?: null,
+                'folder' => $this->uploadMetadata['folder'] ?: null,
+                'tags' => $tags,
             ];
 
             $uploadService->uploadMultiple($this->newImages, $metadata);
@@ -81,7 +98,7 @@ class ImageLibrary extends Component
                 'message' => count($this->newImages) . ' images uploaded successfully! 🎉'
             ]);
 
-            $this->reset(['newImages', 'newImageFolder', 'newImageTags']);
+            $this->reset(['newImages', 'uploadMetadata']);
             $this->showUploadModal = false;
             $this->resetPage();
 
