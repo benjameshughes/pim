@@ -35,6 +35,9 @@ class ImageLibrary extends Component
     // View options
     public string $view = 'grid'; // grid or list
     public int $perPage = 24;
+    
+    // Modal state
+    public bool $showUploadModal = false;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -43,6 +46,14 @@ class ImageLibrary extends Component
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
     ];
+
+    /**
+     * 📤 OPEN UPLOAD MODAL
+     */
+    public function openUploadModal()
+    {
+        $this->showUploadModal = true;
+    }
 
     /**
      * 📤 UPLOAD IMAGES
@@ -67,6 +78,7 @@ class ImageLibrary extends Component
             ]);
 
             $this->reset(['newImages', 'newImageFolder', 'newImageTags']);
+            $this->showUploadModal = false;
             $this->resetPage();
 
         } catch (\Exception $e) {
