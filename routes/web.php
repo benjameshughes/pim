@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+Route::redirect('/', 'login')->name('home');
 
 Route::get('dashboard', function () {
     return view('dashboard');
@@ -84,7 +82,6 @@ Route::middleware(['auth'])->group(function () {
     Route::view('images', 'images.index')->name('images.index');
     Route::view('images/{image}', 'images.show')->name('images.show');
     Route::view('images/{image}/edit', 'images.edit')->name('images.edit');
-    
 
     // 💎 VARIANTS - UNIFIED WITH PRODUCTS
     Route::redirect('variants', 'products')->name('variants.index');
@@ -95,7 +92,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('variants/{variant}/edit', function (App\Models\ProductVariant $variant) {
         return view('variants.edit', compact('variant'));
     })->name('variants.edit');
-
 
     // 🛍️ SHOPIFY SYNC
     Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');

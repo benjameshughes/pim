@@ -4,11 +4,11 @@ namespace App\Livewire\Auth;
 
 use App\Models\User;
 use App\Rules\AllowedEmail;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Maize\MagicLogin\Facades\MagicLink;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 
 /**
  * 🔐 MAGIC LOGIN AUTH FORM
@@ -22,37 +22,40 @@ class AuthForm extends Component
     public string $email = '';
 
     public bool $emailSent = false;
+
     public bool $isLoading = false;
+
     public string $mode = 'login'; // 'login' or 'register'
 
     /**
      * 🎯 SEND MAGIC LINK
-     * 
+     *
      * Validates email, creates user if needed, and sends magic link
      */
     public function sendMagicLink()
     {
         $this->isLoading = true;
-        
+
         try {
             // Rate limiting check
-            $key = 'magic-link:' . request()->ip() . ':' . $this->email;
-            
+            $key = 'magic-link:'.request()->ip().':'.$this->email;
+
             if (RateLimiter::tooManyAttempts($key, 3)) {
                 $seconds = RateLimiter::availableIn($key);
-                
+
                 $this->dispatch('notify', [
                     'type' => 'error',
-                    'message' => "Too many requests. Please wait {$seconds} seconds before trying again."
+                    'message' => "Too many requests. Please wait {$seconds} seconds before trying again.",
                 ]);
-                
+
                 $this->isLoading = false;
+
                 return;
             }
 
             // Validate with custom rule
             $this->validate([
-                'email' => ['required', 'email', new AllowedEmail()]
+                'email' => ['required', 'email', new AllowedEmail],
             ]);
 
             // Find or create user
@@ -61,6 +64,7 @@ class AuthForm extends Component
                 [
                     'name' => $this->extractNameFromEmail($this->email),
                     'email_verified_at' => null,
+                    'password' => Str::random(32), // Random password for magic login users (hashed by model)
                 ]
             );
 
@@ -79,7 +83,7 @@ class AuthForm extends Component
 
             $this->dispatch('notify', [
                 'type' => 'success',
-                'message' => 'Magic link sent! Check your email and click the link to sign in. 📧'
+                'message' => 'Magic link sent! Check your email and click the link to sign in. 📧',
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -90,21 +94,21 @@ class AuthForm extends Component
             logger()->error('Magic link send error', [
                 'email' => $this->email,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to send magic link. Please try again.'
+                'message' => 'Failed to send magic link. Please try again.',
             ]);
         }
-        
+
         $this->isLoading = false;
     }
 
     /**
      * 🔄 REQUEST NEW LINK
-     * 
+     *
      * Allow user to request another magic link
      */
     public function requestNewLink()
@@ -115,7 +119,7 @@ class AuthForm extends Component
 
     /**
      * 🏠 BACK TO FORM
-     * 
+     *
      * Return to the email input form
      */
     public function backToForm()
@@ -125,20 +129,20 @@ class AuthForm extends Component
 
     /**
      * 📧 EXTRACT NAME FROM EMAIL
-     * 
+     *
      * Create a reasonable name from email address
      */
     private function extractNameFromEmail(string $email): string
     {
         $localPart = explode('@', $email)[0];
-        
+
         // Convert dots/underscores to spaces and title case
         return Str::title(str_replace(['.', '_', '-'], ' ', $localPart));
     }
 
     /**
      * 🔄 UPDATED HOOKS
-     * 
+     *
      * Reset email sent state when email changes
      */
     public function updatedEmail()

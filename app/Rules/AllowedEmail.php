@@ -15,19 +15,18 @@ class AllowedEmail implements ValidationRule
 {
     /**
      * 📧 ALLOWED DOMAINS
-     * 
+     *
      * Domains that are allowed to register
      * Add your allowed domains here
      */
     protected array $allowedDomains = [
-        'example.com',
-        'yourdomain.com',
-        'gmail.com',  // Allow Gmail for demo purposes
+        'benjh.com',
+        'blindsoutlet.co.uk',
     ];
 
     /**
      * 📧 ALLOWED SPECIFIC EMAILS
-     * 
+     *
      * Specific email addresses that are allowed
      * Useful for individual access control
      */
@@ -41,14 +40,16 @@ class AllowedEmail implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (!is_string($value) || empty($value)) {
+        if (! is_string($value) || empty($value)) {
             $fail('The :attribute must be a valid email address.');
+
             return;
         }
 
         // Check if it's a valid email format first
-        if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+        if (! filter_var($value, FILTER_VALIDATE_EMAIL)) {
             $fail('The :attribute must be a valid email address.');
+
             return;
         }
 
@@ -71,23 +72,25 @@ class AllowedEmail implements ValidationRule
 
     /**
      * 🔧 SET ALLOWED DOMAINS
-     * 
+     *
      * Dynamically set allowed domains
      */
     public function setAllowedDomains(array $domains): self
     {
         $this->allowedDomains = $domains;
+
         return $this;
     }
 
     /**
      * 🔧 SET ALLOWED EMAILS
-     * 
+     *
      * Dynamically set allowed emails
      */
     public function setAllowedEmails(array $emails): self
     {
         $this->allowedEmails = $emails;
+
         return $this;
     }
 }
