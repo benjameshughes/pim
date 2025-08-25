@@ -92,6 +92,17 @@ class ImageLibrary extends Component
                 'tags' => $tags,
             ];
 
+            // Debug R2 configuration in production
+            if (app()->environment('production')) {
+                logger()->info('R2 Upload Debug', [
+                    'disk_config' => config('filesystems.disks.images'),
+                    'file_count' => count($this->newImages),
+                    'has_r2_key' => !empty(config('filesystems.disks.images.key')),
+                    'has_r2_secret' => !empty(config('filesystems.disks.images.secret')),
+                    'has_r2_bucket' => !empty(config('filesystems.disks.images.bucket')),
+                ]);
+            }
+
             $uploadService->uploadMultiple($this->newImages, $metadata);
 
             $this->dispatch('notify', [
@@ -104,6 +115,13 @@ class ImageLibrary extends Component
             $this->resetPage();
 
         } catch (\Exception $e) {
+            // More detailed error logging for production
+            logger()->error('Image Upload Error', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'file_count' => count($this->newImages ?? []),
+            ]);
+            
             $this->dispatch('notify', [
                 'type' => 'error',
                 'message' => 'Upload failed: ' . $e->getMessage()
