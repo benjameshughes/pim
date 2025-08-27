@@ -3,6 +3,7 @@
 namespace App\Livewire\Barcodes;
 
 use App\Models\Barcode;
+use App\Actions\Barcodes\MarkBarcodesAssigned;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -20,6 +21,12 @@ class BarcodeIndex extends Component
     public int $perPage = 20;
     public string $sortField = 'created_at';
     public string $sortDirection = 'desc';
+    
+    public bool $showMarkAssignedModal = false;
+    public string $upToBarcode = '';
+    public int $markCount = 40000;
+    public bool $setEmptyTitles = false;
+    public string $defaultTitle = 'Assigned Barcode';
 
     public function render()
     {
@@ -56,13 +63,6 @@ class BarcodeIndex extends Component
         }
     }
 
-    public function deleteAll()
-    {
-        $count = Barcode::count();
-        Barcode::truncate();
-        $this->dispatch('success', "Deleted {$count} barcodes");
-        $this->resetPage();
-    }
 
     public function getStatsProperty()
     {
@@ -71,5 +71,37 @@ class BarcodeIndex extends Component
             'assigned' => Barcode::where('is_assigned', true)->count(),
             'unassigned' => Barcode::where('is_assigned', false)->count(),
         ];
+    }
+    
+    public function openMarkAssignedModal()
+    {
+        $this->showMarkAssignedModal = true;
+        $this->upToBarcode = '';
+        $this->markCount = 40000;
+        $this->setEmptyTitles = false;
+        $this->defaultTitle = 'Assigned Barcode';
+    }
+    
+    public function closeMarkAssignedModal()
+    {
+        $this->showMarkAssignedModal = false;
+        $this->upToBarcode = '';
+        $this->markCount = 40000;
+    }
+    
+    public function markBarcodesAssigned()
+    {
+        $action = new MarkBarcodesAssigned();
+        
+        if (!empty($this->upToBarcode)) {
+            $updated = $action->execute($this->upToBarcode, null, $this->setEmptyTitles ? $this->defaultTitle : null);
+            $this->dispatch('success', "Marked {$updated} barcodes up to '{$this->upToBarcode}' as assigned");
+        } else {
+            $updated = $action->execute(null, $this->markCount, $this->setEmptyTitles ? $this->defaultTitle : null);
+            $this->dispatch('success', "Marked {$updated} barcodes as assigned");
+        }
+        
+        $this->closeMarkAssignedModal();
+        $this->resetPage();
     }
 }

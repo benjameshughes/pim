@@ -11,14 +11,11 @@
             </p>
         </div>
         <div class="flex gap-3">
-            <flux:button wire:click="deleteAll" icon="trash" variant="danger" wire:confirm="Are you sure you want to delete ALL barcodes? This cannot be undone.">
-                Delete All
+            <flux:button wire:click="openMarkAssignedModal" icon="check-circle" variant="ghost">
+                Mark Assigned
             </flux:button>
             <flux:button href="{{ route('barcodes.import') }}" icon="arrow-up-tray" variant="ghost" wire:navigate>
                 Import CSV
-            </flux:button>
-            <flux:button icon="plus" variant="primary">
-                Add Barcode
             </flux:button>
         </div>
     </div>
@@ -40,27 +37,28 @@
     </div>
 
     {{-- Search & Filter Bar --}}
-    <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-        <div class="flex gap-4 items-center">
-            <div class="flex-1">
+    <div class="flex gap-4 items-center">
+            <div class="flex-1 max-w-none">
                 <flux:input 
                     wire:model.live.debounce.300ms="search" 
                     placeholder="Search barcodes, SKUs, titles..." 
                     icon="magnifying-glass"
-                    class="w-full"
                 />
             </div>
-            <flux:select wire:model.live="assignedFilter" class="min-w-40">
-                <option value="all">All Barcodes</option>
-                <option value="assigned">Assigned Only</option>
-                <option value="unassigned">Unassigned Only</option>
-            </flux:select>
-            <flux:select wire:model.live="perPage" class="min-w-24">
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </flux:select>
-        </div>
+            <div class="flex-shrink-0">
+                <flux:select wire:model.live="assignedFilter" class="w-28">
+                    <option value="all">All</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="unassigned">Unassigned</option>
+                </flux:select>
+            </div>
+            <div class="flex-shrink-0">
+                <flux:select wire:model.live="perPage" class="w-16">
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </flux:select>
+            </div>
     </div>
 
     {{-- Main Barcodes Table --}}
@@ -96,9 +94,6 @@
                                     <flux:icon name="{{ $sortDirection === 'asc' ? 'chevron-up' : 'chevron-down' }}" class="w-3 h-3" />
                                 @endif
                             </div>
-                        </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Actions
                         </th>
                     </tr>
                 </thead>
@@ -150,16 +145,6 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                 {{ $barcode->created_at->format('M j, Y') }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                <div class="flex items-center justify-end gap-2">
-                                    <flux:button variant="ghost" size="sm">
-                                        Edit
-                                    </flux:button>
-                                    <flux:button variant="ghost" size="sm" color="red">
-                                        Delete
-                                    </flux:button>
-                                </div>
-                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -192,4 +177,78 @@
             </div>
         @endif
     </div>
+
+    {{-- Mark Assigned Modal --}}
+    @if($showMarkAssignedModal)
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+                        Mark Barcodes as Assigned
+                    </h3>
+                </div>
+                
+                <div class="px-6 py-4 space-y-4">
+                    <div>
+                        <flux:field label="Mark up to barcode number (optional)">
+                            <flux:input 
+                                wire:model="upToBarcode" 
+                                placeholder="e.g., 1234567890123"
+                                class="font-mono"
+                            />
+                        </flux:field>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Leave empty to mark by count instead
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <flux:field label="Or mark first N barcodes">
+                            <flux:input 
+                                type="number"
+                                wire:model="markCount" 
+                                :disabled="!empty($upToBarcode)"
+                            />
+                        </flux:field>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <flux:field>
+                            <flux:checkbox wire:model.live="setEmptyTitles">
+                                Set title for barcodes with empty titles
+                            </flux:checkbox>
+                        </flux:field>
+                        
+                        @if($setEmptyTitles)
+                            <div class="mt-3">
+                                <flux:field label="Default title">
+                                    <flux:input wire:model="defaultTitle" placeholder="e.g., Assigned Barcode" />
+                                </flux:field>
+                            </div>
+                        @endif
+                    </div>
+                    
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                            ⚠️ This will mark barcodes as assigned to prevent them from being assigned to new products.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
+                    <flux:button wire:click="closeMarkAssignedModal" variant="ghost">
+                        Cancel
+                    </flux:button>
+                    <flux:button 
+                        wire:click="markBarcodesAssigned" 
+                        variant="primary"
+                        wire:loading.attr="disabled"
+                    >
+                        <span wire:loading.remove>Mark as Assigned</span>
+                        <span wire:loading>Processing...</span>
+                    </flux:button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
