@@ -38,4 +38,5 @@ class BarcodeImportProgress implements ShouldBroadcastNow
             'status' => $this->status,
         ];
     }
+
 }

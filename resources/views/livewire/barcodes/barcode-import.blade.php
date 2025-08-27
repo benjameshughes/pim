@@ -256,9 +256,14 @@
                         @endif
                         
                         <div class="mt-6">
-                            <div class="text-sm text-gray-500 mb-2">Processed: {{ number_format($progressCount) }} records</div>
+                            <div class="text-sm text-gray-500 mb-2">
+                                Processed: {{ number_format($progressCount) }}@if($totalRows > 0) of {{ number_format($totalRows) }}@endif records
+                                @if($totalRows > 0 && $progressCount > 0)
+                                    ({{ round(($progressCount / $totalRows) * 100, 1) }}%)
+                                @endif
+                            </div>
                             <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: {{ $progressCount > 0 ? min(100, ($progressCount / 10000) * 100) : 5 }}%"></div>
+                                <div class="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-out" style="width: {{ $totalRows > 0 && $progressCount > 0 ? min(100, ($progressCount / $totalRows) * 100) : 5 }}%"></div>
                             </div>
                         </div>
                     </div>
@@ -313,3 +318,5 @@
         @endif
     </div>
 </div>
+
+

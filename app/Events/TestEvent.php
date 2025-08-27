@@ -3,22 +3,22 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use App\Models\User;
 
 class TestEvent implements ShouldBroadcastNow
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use Dispatchable, SerializesModels;
 
-    public function __construct(public array $data = []) {}
+    public function __construct(
+        public User $user
+    ) {}
 
-    public function broadcastOn(): array
+    public function broadcastOn(): Channel
     {
-        return [
-            new Channel('test-channel'),
-        ];
+        return new Channel('test');
     }
 
     public function broadcastAs(): string
@@ -28,6 +28,8 @@ class TestEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        return $this->data;
+        return [
+            'user' => $this->user->toArray(),
+        ];
     }
 }

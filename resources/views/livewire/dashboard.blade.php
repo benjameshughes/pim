@@ -34,16 +34,27 @@
                         <h3 class="font-medium text-gray-900 dark:text-gray-200">⚙️ Settings</h3>
                         <p class="text-sm text-gray-700 dark:text-gray-300">Account preferences</p>
                     </a>
-                    
+
                     <div class="block p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                        <h3 class="font-medium text-purple-900 dark:text-purple-200 mb-2">🧪 Test Pusher</h3>
-                        <p class="text-sm text-purple-700 dark:text-purple-300 mb-3">Debug Echo + Pusher connection</p>
-                        <flux:button wire:click="testPusher" variant="outline" size="sm">
-                            Test Broadcasting
+                        <h3 class="font-medium text-purple-900 dark:text-purple-200 mb-2">🧪 Test Broadcast</h3>
+                        <p class="text-sm text-purple-700 dark:text-purple-300 mb-3">Test Laravel broadcasting</p>
+                        <flux:button wire:click="testBroadcast" variant="outline" size="sm">
+                            Send Test Event
                         </flux:button>
                     </div>
+                    
                 </div>
             </div>
         </div>
     </div>
+    @if($showTest)
+        <div class="mt-4 p-4 bg-green-100 dark:bg-green-900 rounded-lg">
+            <p class="text-green-800 dark:text-green-200">
+                <strong>📡 Broadcast Received!</strong>
+                <br>ID: <strong>{{ $user->id }}</strong>
+                <br>Name: <strong>{{ $user->name }}</strong>
+                <br>Email: <strong>{{ $user->email }}</strong>
+            </p>
+        </div>
+    @endif
 </div>

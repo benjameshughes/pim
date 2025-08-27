@@ -28,6 +28,7 @@ class BarcodeImport extends Component
     public $availableColumns = [];
     public $step = 1; // 1: Upload, 2: Map, 3: Import
     public $importResults = [];
+    public $totalRows = 0;
 
     // Available database columns for mapping
     public $databaseColumns = [
@@ -66,6 +67,9 @@ class BarcodeImport extends Component
                 return;
             }
             
+            // Get total row count (fast!)
+            $this->totalRows = count(file($path)) - 1; // -1 for header row
+            
             // Get sample data (next 5 rows for preview)
             $this->csvData = [];
             for ($i = 0; $i < 5 && ($row = fgetcsv($handle)) !== false; $i++) {
@@ -89,11 +93,13 @@ class BarcodeImport extends Component
         foreach ($this->availableColumns as $index => $column) {
             $lowerColumn = strtolower(trim($column));
             
-            if (str_contains($lowerColumn, 'barcode') || str_contains($lowerColumn, 'code')) {
+            if (str_contains($lowerColumn, 'barcode') || str_contains($lowerColumn, 'number')) {
                 $this->columnMapping[$index] = 'barcode';
             } elseif (str_contains($lowerColumn, 'sku')) {
                 $this->columnMapping[$index] = 'sku';
-            } elseif (str_contains($lowerColumn, 'title') || str_contains($lowerColumn, 'description') || str_contains($lowerColumn, 'name')) {
+            } elseif (str_contains($lowerColumn, 'name') || str_contains($lowerColumn, 'product name') || str_contains($lowerColumn, 'title')) {
+                $this->columnMapping[$index] = 'title';
+            } elseif (str_contains($lowerColumn, 'description')) {
                 $this->columnMapping[$index] = 'title';
             } elseif (str_contains($lowerColumn, 'assign')) {
                 $this->columnMapping[$index] = 'is_assigned';
@@ -105,6 +111,19 @@ class BarcodeImport extends Component
     public $isImporting = false;
     public $importProgress = [];
     public $progressCount = 0;
+    
+    public function mount()
+    {
+        // Get importId and totalRows from URL parameters
+        $this->importId = request('id');
+        $this->totalRows = request('total', 0);
+        
+        // If we have an importId, we're on step 3 (importing)
+        if ($this->importId) {
+            $this->step = 3;
+            $this->isImporting = true;
+        }
+    }
 
     public function importBarcodes()
     {
@@ -118,6 +137,10 @@ class BarcodeImport extends Component
             // Generate unique import ID
             $this->importId = uniqid('barcode_import_');
             $this->isImporting = true;
+            
+            // Set initial heartbeat
+            \Cache::put("import_heartbeat_{$this->importId}", now(), 60);
+            
             
             // Make sure imports directory exists
             if (!file_exists(storage_path('app/imports'))) {
@@ -143,6 +166,9 @@ class BarcodeImport extends Component
             
             $this->step = 3;
             $this->dispatch('success', 'Import started! Processing in background...');
+            
+            // Add importId and totalRows to URL so component can listen to the right channel
+            $this->redirectRoute('barcodes.import', ['id' => $this->importId, 'total' => $this->totalRows], navigate: true);
 
         } catch (\Exception $e) {
             $this->dispatch('error', 'Import failed: ' . $e->getMessage());
@@ -152,17 +178,27 @@ class BarcodeImport extends Component
 
     public function getListeners()
     {
+        \Log::info("getListeners called with importId: " . ($this->importId ?? 'null'));
+        
         if (!$this->importId) {
             return [];
         }
         
+        \Log::info("Registering listener: echo:barcode-import.{$this->importId},.BarcodeImportProgress");
+        
         return [
-            "echo:barcode-import.{$this->importId},BarcodeImportProgress" => 'updateProgress',
+            "echo:barcode-import.{$this->importId},.BarcodeImportProgress" => 'updateProgress',
         ];
     }
-
+    
     public function updateProgress($event)
     {
+        \Log::info("Received progress event", ['event' => $event, 'currentImportId' => $this->importId]);
+        
+        // Send heartbeat to keep job alive
+        \Cache::put("import_heartbeat_{$this->importId}", now(), 60);
+        
+        \Log::info("Updating progress count to: " . $event['processed']);
         $this->progressCount = $event['processed'];
         
         if ($event['status'] === 'completed') {
@@ -173,10 +209,8 @@ class BarcodeImport extends Component
                 'skipped' => 0,
                 'errors' => []
             ];
-            $this->dispatch('success', "Import completed! Imported {$event['processed']} barcodes.");
         }
     }
-
 
     private function mapRowData($row)
     {

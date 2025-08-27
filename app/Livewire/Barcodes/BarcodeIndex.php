@@ -56,6 +56,14 @@ class BarcodeIndex extends Component
         }
     }
 
+    public function deleteAll()
+    {
+        $count = Barcode::count();
+        Barcode::truncate();
+        $this->dispatch('success', "Deleted {$count} barcodes");
+        $this->resetPage();
+    }
+
     public function getStatsProperty()
     {
         return [

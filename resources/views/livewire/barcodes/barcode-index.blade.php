@@ -11,6 +11,9 @@
             </p>
         </div>
         <div class="flex gap-3">
+            <flux:button wire:click="deleteAll" icon="trash" variant="danger" wire:confirm="Are you sure you want to delete ALL barcodes? This cannot be undone.">
+                Delete All
+            </flux:button>
             <flux:button href="{{ route('barcodes.import') }}" icon="arrow-up-tray" variant="ghost" wire:navigate>
                 Import CSV
             </flux:button>

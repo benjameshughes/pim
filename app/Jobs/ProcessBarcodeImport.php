@@ -48,8 +48,18 @@ class ProcessBarcodeImport implements ShouldQueue
                     \DB::table('barcodes')->upsert($data, ['barcode'], ['sku', 'title', 'updated_at']);
                     $processed += 1000;
                     
-                    // Broadcast progress event
-                    BarcodeImportProgress::dispatch($this->importId, $processed, 'processing');
+                    // Check heartbeat before continuing
+                    $lastHeartbeat = \Cache::get("import_heartbeat_{$this->importId}");
+                    if (!$lastHeartbeat || now()->diffInSeconds($lastHeartbeat) > 30) {
+                        \Log::info("Import cancelled - no heartbeat: importId={$this->importId}");
+                        $this->fail('Import cancelled due to client disconnection');
+                        return;
+                    }
+                    
+                    // Broadcast progress event (same as working test)
+                    \Log::info("Broadcasting progress: importId={$this->importId}, processed={$processed}");
+                    broadcast(new BarcodeImportProgress($this->importId, $processed, 'processing'));
+                    
                     
                     $data = [];
                 }
@@ -61,8 +71,10 @@ class ProcessBarcodeImport implements ShouldQueue
             $processed += count($data);
         }
 
-        // Broadcast completion event
-        BarcodeImportProgress::dispatch($this->importId, $processed, 'completed');
+        // Broadcast completion event (same as working test)
+        \Log::info("Broadcasting completion: importId={$this->importId}, processed={$processed}");
+        broadcast(new BarcodeImportProgress($this->importId, $processed, 'completed'));
+        
 
         fclose($handle);
     }
