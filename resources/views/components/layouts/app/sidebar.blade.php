@@ -11,7 +11,7 @@
                 <x-app-logo />
             </a>
 
-            {{-- ✨ PHOENIX NAVIGATION - SACRED THREE ✨ --}}
+            {{-- ✨ PHOENIX NAVIGATION - ORGANIZED & INTUITIVE ✨ --}}
             <flux:navlist variant="outline">
                 {{-- Dashboard --}}
                 <flux:navlist.item 
@@ -22,72 +22,80 @@
                     Dashboard
                 </flux:navlist.item>
 
-                {{-- 🚀 UNIFIED PRODUCTS & VARIANTS --}}
-                <flux:navlist.item 
-                    icon="cube" 
-                    href="{{ route('products.index') }}"
-                >
-                    Products & Variants
-                </flux:navlist.item>
+                {{-- 📦 PRODUCT MANAGEMENT --}}
+                <flux:navlist.group expandable heading="Products">
+                    <flux:navlist.item 
+                        icon="cube" 
+                        href="{{ route('products.index') }}"
+                    >
+                        Products & Variants
+                    </flux:navlist.item>
 
-                {{-- 📤 IMPORT --}}
-                <flux:navlist.item 
-                    icon="arrow-up-tray" 
-                    href="{{ route('import.products') }}"
-                >
-                    Import
-                </flux:navlist.item>
+                    <flux:navlist.item 
+                        icon="bars-2" 
+                        href="{{ route('barcodes.index') }}"
+                    >
+                        Barcodes
+                    </flux:navlist.item>
 
-                {{-- 🖼️ IMAGES --}}
-                <flux:navlist.item 
-                    icon="image" 
-                    href="{{ route('images.index') }}"
-                >
-                    Images
-                </flux:navlist.item>
+                    <flux:navlist.item 
+                        icon="currency-dollar" 
+                        href="{{ route('pricing.dashboard') }}" 
+                    >
+                        Pricing
+                    </flux:navlist.item>
 
+                    <flux:navlist.item 
+                        icon="arrow-up-tray" 
+                        href="{{ route('import.products') }}"
+                    >
+                        Import
+                    </flux:navlist.item>
+                </flux:navlist.group>
 
-                {{-- 🛍️ SHOPIFY SYNC --}}
-                <flux:navlist.item 
-                    icon="cloud-arrow-up" 
-                    href="{{ route('shopify.sync') }}" 
-                >
-                    Shopify
-                </flux:navlist.item>
+                {{-- 🖼️ MEDIA MANAGEMENT --}}
+                <flux:navlist.group expandable heading="Media">
+                    <flux:navlist.item 
+                        icon="image" 
+                        href="{{ route('images.index') }}"
+                    >
+                        Images
+                    </flux:navlist.item>
+                </flux:navlist.group>
 
+                {{-- 🛍️ SALES CHANNELS --}}
+                <flux:navlist.group expandable heading="Sales Channels">
+                    <flux:navlist.item 
+                        icon="cloud-arrow-up" 
+                        href="{{ route('shopify.sync') }}" 
+                    >
+                        Shopify
+                    </flux:navlist.item>
 
-                {{-- 💰 PRICING --}}
-                <flux:navlist.item 
-                    icon="currency-dollar" 
-                    href="{{ route('pricing.dashboard') }}" 
-                >
-                    Pricing
-                </flux:navlist.item>
+                    <flux:navlist.item 
+                        icon="tag" 
+                        href="{{ route('marketplace.identifiers') }}" 
+                    >
+                        Marketplace
+                    </flux:navlist.item>
+                </flux:navlist.group>
 
-                {{-- 🚀 BULK OPERATIONS --}}
-                <flux:navlist.item 
-                    icon="bolt" 
-                    href="{{ route('bulk.operations') }}" 
-                >
-                    Bulk Operations
-                </flux:navlist.item>
+                {{-- ⚡ OPERATIONS --}}
+                <flux:navlist.group expandable heading="Operations">
+                    <flux:navlist.item 
+                        icon="bolt" 
+                        href="{{ route('bulk.operations') }}" 
+                    >
+                        Bulk Operations
+                    </flux:navlist.item>
 
-                {{-- 🏷️ MARKETPLACE IDENTIFIERS --}}
-                <flux:navlist.item 
-                    icon="tag" 
-                    href="{{ route('marketplace.identifiers') }}" 
-                >
-                    Marketplace Identifiers
-                </flux:navlist.item>
-
-
-                {{-- 📊 LOG DASHBOARD --}}
-                <flux:navlist.item 
-                    icon="chart-bar" 
-                    href="{{ route('logs.dashboard') }}" 
-                >
-                    Log Dashboard
-                </flux:navlist.item>
+                    <flux:navlist.item 
+                        icon="chart-bar" 
+                        href="{{ route('logs.dashboard') }}" 
+                    >
+                        Logs
+                    </flux:navlist.item>
+                </flux:navlist.group>
             </flux:navlist>
 
             <flux:spacer />

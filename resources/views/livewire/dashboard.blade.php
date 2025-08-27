@@ -34,6 +34,14 @@
                         <h3 class="font-medium text-gray-900 dark:text-gray-200">⚙️ Settings</h3>
                         <p class="text-sm text-gray-700 dark:text-gray-300">Account preferences</p>
                     </a>
+                    
+                    <div class="block p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                        <h3 class="font-medium text-purple-900 dark:text-purple-200 mb-2">🧪 Test Pusher</h3>
+                        <p class="text-sm text-purple-700 dark:text-purple-300 mb-3">Debug Echo + Pusher connection</p>
+                        <flux:button wire:click="testPusher" variant="outline" size="sm">
+                            Test Broadcasting
+                        </flux:button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -37,29 +37,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Styling**: Tailwind CSS 4.0
 - **Testing**: Pest PHP framework
 - **Build Tool**: Vite
-- **Database**: SQLite (development)
-- **Architecture**: Builder Pattern + Actions Pattern
+- **Database**: MySQL (used in production so needs to match)
+- **Architecture**: FluentAPI + Actions Pattern
 
 ### Core Structure
 - **Actions Pattern**: Single-responsibility business logic classes with transaction safety
 - **Error Handling**: Custom exceptions with user-friendly messages and recovery suggestions
-- **UI Components**: Toast notifications from App\UI
-### Core Performance Metrics
-- **7.92ms** - Complex variant creation with pricing + attributes (98% improvement)
-- **0.64ms** - Cached queries (99% faster than database hits)
-- **12.22ms** - Cache warmup for entire system
-- **Sub-10ms** - All critical operations optimized
-
+- **UI Components**: Toast notifications from custom Flux toast and free Flux UI components
 
 ### Actions Pattern Implementation
-Actions encapsulate single-responsibility business logic with transaction safety
+Actions encapsulate single-responsibility business logic with transaction safety and organised into \App\Actions
 
 ## Coding Best Practices
+
+### Organisation
+Everything needs to be organised into their respective folders and subfolders. Example: App\Services\API or App\Actions\Products\CreateProduct.php. Livewire components and blade templates follow this pattern as well
 
 ### Error Handling
 - Do not use try catches. Use laravel exceptions and make custom exceptions where possible
 
 ### Flux UI Memories
+- Flux Free components
+- Custom Flux toast component
 - Flux UI select dropdown is flux::select.option not flux::option
 
 ### Flux Icons

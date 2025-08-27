@@ -93,6 +93,10 @@ Route::middleware(['auth'])->group(function () {
         return view('variants.edit', compact('variant'));
     })->name('variants.edit');
 
+    // 📊 BARCODES
+    Route::view('barcodes', 'barcodes.index')->name('barcodes.index');
+    Route::view('barcodes/import', 'barcodes.import')->name('barcodes.import');
+
     // 🛍️ SHOPIFY SYNC
     Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');
     Route::get('shopify/webhooks', WebhookDashboard::class)->name('shopify.webhooks');
