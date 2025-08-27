@@ -51,13 +51,11 @@ class ProcessBarcodeImport implements ShouldQueue
                     // Check heartbeat before continuing
                     $lastHeartbeat = \Cache::get("import_heartbeat_{$this->importId}");
                     if (!$lastHeartbeat || now()->diffInSeconds($lastHeartbeat) > 30) {
-                        \Log::info("Import cancelled - no heartbeat: importId={$this->importId}");
                         $this->fail('Import cancelled due to client disconnection');
                         return;
                     }
                     
-                    // Broadcast progress event (same as working test)
-                    \Log::info("Broadcasting progress: importId={$this->importId}, processed={$processed}");
+                    // Broadcast progress event
                     broadcast(new BarcodeImportProgress($this->importId, $processed, 'processing'));
                     
                     
@@ -71,8 +69,7 @@ class ProcessBarcodeImport implements ShouldQueue
             $processed += count($data);
         }
 
-        // Broadcast completion event (same as working test)
-        \Log::info("Broadcasting completion: importId={$this->importId}, processed={$processed}");
+        // Broadcast completion event
         broadcast(new BarcodeImportProgress($this->importId, $processed, 'completed'));
         
 

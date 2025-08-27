@@ -178,13 +178,9 @@ class BarcodeImport extends Component
 
     public function getListeners()
     {
-        \Log::info("getListeners called with importId: " . ($this->importId ?? 'null'));
-        
         if (!$this->importId) {
             return [];
         }
-        
-        \Log::info("Registering listener: echo:barcode-import.{$this->importId},.BarcodeImportProgress");
         
         return [
             "echo:barcode-import.{$this->importId},.BarcodeImportProgress" => 'updateProgress',
@@ -193,12 +189,9 @@ class BarcodeImport extends Component
     
     public function updateProgress($event)
     {
-        \Log::info("Received progress event", ['event' => $event, 'currentImportId' => $this->importId]);
-        
         // Send heartbeat to keep job alive
         \Cache::put("import_heartbeat_{$this->importId}", now(), 60);
         
-        \Log::info("Updating progress count to: " . $event['processed']);
         $this->progressCount = $event['processed'];
         
         if ($event['status'] === 'completed') {
