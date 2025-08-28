@@ -3,6 +3,7 @@
 namespace App\Livewire\Import;
 
 use App\Actions\Import\SimpleImportAction;
+use App\Jobs\ProcessProductImport;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -183,9 +184,8 @@ class SimpleProductImport extends Component
         \Log::info('✅ VALIDATIONS PASSED - PROCEEDING WITH IMPORT');
 
         try {
-            // Generate unique import ID and start import
+            // Generate unique import ID
             $this->importId = uniqid('import_' . time() . '_');
-            $this->importing = true;
             
             // Get the correct file path for Livewire uploaded files
             $filePath = $this->file->getRealPath();
@@ -195,7 +195,7 @@ class SimpleProductImport extends Component
                 throw new \Exception("Uploaded file not found or not readable: {$filePath}");
             }
 
-            \Log::info('🚀 Starting import execution', [
+            \Log::info('🚀 Starting queued import', [
                 'file_name' => $this->file->getClientOriginalName(),
                 'file_size' => $this->file->getSize(),
                 'mappings' => $this->mappings,
@@ -215,40 +215,25 @@ class SimpleProductImport extends Component
                 throw new \Exception('Failed to copy file to permanent location');
             }
 
-            $action = new SimpleImportAction;
-
-            $this->results = $action->execute([
-                'file' => $permanentPath,
-                'mappings' => $this->mappings,
-                'importId' => $this->importId,
-            ]);
-
-            \Log::info('✅ Import completed successfully', $this->results);
-
-            $this->step = 'complete';
-            $this->importing = false;
+            // Dispatch the queue job for background processing
+            ProcessProductImport::dispatch($permanentPath, $this->importId, $this->mappings);
+            
+            $this->step = 'importing';
+            $this->importing = true;
+            
+            $this->dispatch('success', 'Import started! Processing in background...');
             
             // Redirect with importId so component can listen to real-time updates
             $this->redirectRoute('import.products', ['id' => $this->importId], navigate: true);
 
         } catch (\Exception $e) {
-            \Log::error('💥 Import failed with exception', [
+            \Log::error('💥 Import setup failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'file_path' => $this->file ? $this->file->getRealPath() : 'no file',
             ]);
 
-            $this->results = [
-                'success' => false,
-                'message' => 'Import failed: '.$e->getMessage(),
-                'created_products' => 0,
-                'updated_products' => 0,
-                'created_variants' => 0,
-                'updated_variants' => 0,
-            ];
-
-            $this->step = 'complete';
-            $this->importing = false;
+            $this->addError('import', 'Import setup failed: '.$e->getMessage());
         }
     }
 
@@ -281,18 +266,44 @@ class SimpleProductImport extends Component
             $this->importStats = array_merge($this->importStats, $event['stats']);
         }
         
-        // Handle completion
+        // Handle completion - create results from the final stats
         if ($event['status'] === 'completed') {
             $this->importing = false;
             $this->step = 'complete';
             $this->progress = 100;
+            
+            // Build results from final stats
+            $stats = $event['stats'] ?? [];
+            $this->results = [
+                'success' => true,
+                'message' => 'Import completed successfully',
+                'created_products' => $stats['products_created'] ?? 0,
+                'updated_products' => $stats['products_updated'] ?? 0,
+                'created_variants' => $stats['variants_created'] ?? 0,
+                'updated_variants' => $stats['variants_updated'] ?? 0,
+                'skipped_rows' => $stats['skipped_rows'] ?? 0,
+                'total_processed' => ($stats['products_created'] ?? 0) + ($stats['products_updated'] ?? 0) + ($stats['variants_created'] ?? 0) + ($stats['variants_updated'] ?? 0),
+                'errors' => [],
+                'duration' => 'N/A'
+            ];
         }
         
         // Handle errors
         if ($event['status'] === 'error') {
             $this->importing = false;
             $this->step = 'complete';
-            $this->addError('import', $event['currentItem'] ?? 'Import failed');
+            $this->results = [
+                'success' => false,
+                'message' => $event['currentItem'] ?? 'Import failed',
+                'created_products' => 0,
+                'updated_products' => 0,
+                'created_variants' => 0,
+                'updated_variants' => 0,
+                'skipped_rows' => 0,
+                'total_processed' => 0,
+                'errors' => [$event['currentItem'] ?? 'Import failed'],
+                'duration' => 'N/A'
+            ];
         }
     }
 
