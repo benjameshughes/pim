@@ -131,19 +131,55 @@
                 <flux:card.description>Processing your CSV file...</flux:card.description>
             </flux:card.header>
             
-            <flux:card.content class="space-y-4">
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ $progress }}%"></div>
+            <flux:card.content class="space-y-6">
+                {{-- Progress Bar --}}
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div class="bg-blue-500 h-3 rounded-full transition-all duration-500 ease-out" style="width: {{ $progress }}%"></div>
                 </div>
                 
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ $progress }}%</div>
-                    <div class="text-sm text-gray-600">Processing rows...</div>
+                {{-- Progress Stats --}}
+                <div class="text-center space-y-2">
+                    <div class="text-3xl font-bold text-blue-600">{{ $progress }}%</div>
+                    @if($currentAction)
+                        <div class="text-lg font-medium text-gray-900 dark:text-white">{{ $currentAction }}</div>
+                    @endif
+                    @if($currentItem)
+                        <div class="text-sm text-gray-600 dark:text-gray-400">{{ $currentItem }}</div>
+                    @endif
                 </div>
                 
+                {{-- Live Statistics --}}
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div class="text-xl font-bold text-green-600">{{ $importStats['products_created'] ?? 0 }}</div>
+                        <div class="text-xs text-green-600">Products Created</div>
+                    </div>
+                    <div class="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        <div class="text-xl font-bold text-emerald-600">{{ $importStats['products_updated'] ?? 0 }}</div>
+                        <div class="text-xs text-emerald-600">Products Updated</div>
+                    </div>
+                    <div class="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div class="text-xl font-bold text-blue-600">{{ $importStats['variants_created'] ?? 0 }}</div>
+                        <div class="text-xs text-blue-600">Variants Created</div>
+                    </div>
+                    <div class="text-center p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+                        <div class="text-xl font-bold text-sky-600">{{ $importStats['variants_updated'] ?? 0 }}</div>
+                        <div class="text-xs text-sky-600">Variants Updated</div>
+                    </div>
+                    <div class="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div class="text-xl font-bold text-yellow-600">{{ $importStats['skipped_rows'] ?? 0 }}</div>
+                        <div class="text-xs text-yellow-600">Skipped</div>
+                    </div>
+                    <div class="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div class="text-xl font-bold text-red-600">{{ $importStats['errors'] ?? 0 }}</div>
+                        <div class="text-xs text-red-600">Errors</div>
+                    </div>
+                </div>
+                
+                {{-- Status Indicator --}}
                 <div class="flex items-center justify-center space-x-2">
                     <flux:icon name="arrow-path" class="w-5 h-5 animate-spin text-blue-500" />
-                    <span class="text-sm text-gray-600">Please wait while we import your products</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Processing import...</span>
                 </div>
             </flux:card.content>
         </flux:card>

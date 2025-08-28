@@ -3,6 +3,7 @@
 namespace App\Livewire\Import;
 
 use App\Actions\Import\SimpleImportAction;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -25,6 +26,22 @@ class SimpleProductImport extends Component
     public $importing = false;
 
     public $progress = 0;
+
+    // Real-time import tracking
+    public $importId = null;
+
+    public $currentAction = '';
+
+    public $currentItem = '';
+
+    public $importStats = [
+        'products_created' => 0,
+        'products_updated' => 0,
+        'variants_created' => 0,
+        'variants_updated' => 0,
+        'errors' => 0,
+        'skipped_rows' => 0,
+    ];
 
     // CSV data
     public $headers = [];
@@ -157,11 +174,23 @@ class SimpleProductImport extends Component
         $this->importing = true;
         $this->step = 'importing';
         $this->progress = 0;
+        $this->importId = uniqid('import_' . time() . '_');
+
+        // Reset stats
+        $this->importStats = [
+            'products_created' => 0,
+            'products_updated' => 0,
+            'variants_created' => 0,
+            'variants_updated' => 0,
+            'errors' => 0,
+            'skipped_rows' => 0,
+        ];
 
         \Log::info('🚀 Starting browser import execution', [
             'file_name' => $this->file->getClientOriginalName(),
             'file_size' => $this->file->getSize(),
             'mappings' => $this->mappings,
+            'importId' => $this->importId,
         ]);
 
         try {
@@ -180,6 +209,7 @@ class SimpleProductImport extends Component
             $this->results = $action->execute([
                 'file' => $filePath,
                 'mappings' => $this->mappings,
+                'importId' => $this->importId,
                 'progressCallback' => function ($progress) {
                     $this->progress = $progress;
                     $this->dispatch('import-progress', ['progress' => $progress]);
@@ -209,6 +239,37 @@ class SimpleProductImport extends Component
 
             $this->step = 'complete';
             $this->importing = false;
+        }
+    }
+
+    /**
+     * Handle real-time import progress updates
+     */
+    #[On('echo:product-import.{importId},ProductImportProgress')]
+    public function updateImportProgress($event)
+    {
+        \Log::info('📡 Received import progress update', $event);
+        
+        $this->progress = $event['percentage'] ?? 0;
+        $this->currentAction = $event['currentAction'] ?? '';
+        $this->currentItem = $event['currentItem'] ?? '';
+        
+        if (isset($event['stats'])) {
+            $this->importStats = array_merge($this->importStats, $event['stats']);
+        }
+        
+        // Handle completion
+        if ($event['status'] === 'completed') {
+            $this->importing = false;
+            $this->step = 'complete';
+            $this->progress = 100;
+        }
+        
+        // Handle errors
+        if ($event['status'] === 'error') {
+            $this->importing = false;
+            $this->step = 'complete';
+            $this->addError('import', $event['currentItem'] ?? 'Import failed');
         }
     }
 

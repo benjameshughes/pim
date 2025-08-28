@@ -2,10 +2,8 @@
 
 namespace App\Actions\Import;
 
-use App\Actions\Barcodes\AssignBarcode;
-use App\Actions\Import\AttributeAssignmentAction;
-use App\Actions\Import\ExtractDimensions;
-use App\Actions\Pricing\AssignPricing;
+use App\Actions\Import\ProcessCSVRow;
+use App\Events\Products\ProductImportProgress;
 use App\Models\Barcode;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -40,16 +38,28 @@ class SimpleImportAction
         $mappings = $config['mappings'];
         $adHocAttributes = $config['ad_hoc_attributes'] ?? [];
         $this->progressCallback = $config['progressCallback'] ?? null;
+        $importId = $config['importId'] ?? uniqid('import_');
 
         Log::info('🚀 Starting simple product import', [
             'file' => basename($filePath),
             'mappings' => $mappings,
+            'importId' => $importId,
         ]);
 
         $startTime = microtime(true);
 
         try {
-            return DB::transaction(function () use ($filePath, $mappings, $adHocAttributes, $startTime) {
+            return DB::transaction(function () use ($filePath, $mappings, $adHocAttributes, $startTime, $importId) {
+                // Broadcast initial status
+                ProductImportProgress::dispatch(
+                    $importId,
+                    0,
+                    0,
+                    'reading_file',
+                    'Reading CSV file...',
+                    null
+                );
+
                 // Read and process CSV
                 $csv = array_map(function ($line) {
                     return str_getcsv($line, ',', '"', '\\');
@@ -58,17 +68,72 @@ class SimpleImportAction
 
                 $totalRows = count($csv);
                 $processed = 0;
+                $processRowAction = new ProcessCSVRow();
+
+                // Broadcast file read complete
+                ProductImportProgress::dispatch(
+                    $importId,
+                    0,
+                    $totalRows,
+                    'processing',
+                    'Starting import...',
+                    "Processing {$totalRows} rows",
+                    $this->getCurrentStats()
+                );
 
                 foreach ($csv as $row) {
-                    $this->processRow($row, $mappings, $adHocAttributes, $headers);
+                    $result = $processRowAction->execute(
+                        $row, 
+                        $mappings, 
+                        $adHocAttributes, 
+                        $headers,
+                        function ($action, $message) use ($importId, $processed, $totalRows) {
+                            ProductImportProgress::dispatch(
+                                $importId,
+                                $processed,
+                                $totalRows,
+                                $action,
+                                $this->getActionDisplayName($action),
+                                $message,
+                                $this->getCurrentStats()
+                            );
+                        }
+                    );
 
+                    $this->updateStats($result);
                     $processed++;
+
+                    // Broadcast progress every 10 rows or on completion
+                    if ($processed % 10 === 0 || $processed === $totalRows) {
+                        ProductImportProgress::dispatch(
+                            $importId,
+                            $processed,
+                            $totalRows,
+                            'processing',
+                            "Processed {$processed} of {$totalRows} rows",
+                            $result['sku'] ?? "Row {$processed}",
+                            $this->getCurrentStats()
+                        );
+                    }
+
+                    // Legacy progress callback
                     if ($this->progressCallback) {
                         call_user_func($this->progressCallback, (int) round(($processed / $totalRows) * 100));
                     }
                 }
 
                 $duration = microtime(true) - $startTime;
+
+                // Broadcast completion
+                ProductImportProgress::dispatch(
+                    $importId,
+                    $totalRows,
+                    $totalRows,
+                    'completed',
+                    'Import completed successfully!',
+                    "Processed {$totalRows} rows in " . round($duration, 2) . "s",
+                    $this->getCurrentStats()
+                );
 
                 Log::info('✅ Simple import completed', [
                     'products_created' => $this->createdProducts,
@@ -94,6 +159,16 @@ class SimpleImportAction
             });
 
         } catch (\Exception $e) {
+            // Broadcast error
+            ProductImportProgress::dispatch(
+                $importId ?? uniqid('import_'),
+                0,
+                0,
+                'error',
+                'Import failed',
+                $e->getMessage()
+            );
+
             Log::error('💥 Simple import failed', [
                 'error' => $e->getMessage(),
                 'file' => basename($filePath),
@@ -104,395 +179,66 @@ class SimpleImportAction
     }
 
     /**
-     * Process a single CSV row
+     * Update statistics based on processing result
      */
-    private function processRow(array $row, array $mappings, array $adHocAttributes, array $headers): void
+    private function updateStats(array $result): void
     {
-        try {
-            // Extract data from row using mappings
-            $data = $this->extractRowData($row, $mappings);
-
-            if (! $data['sku'] || ! $data['title']) {
+        if (!$result['success']) {
+            if ($result['action'] === 'skipped') {
                 $this->skippedRows++;
-
-                return;
-            }
-
-            // Extract parent SKU and product info
-            $parentInfo = $this->extractParentInfo($data);
-
-            // Create or update parent product
-            $product = $this->createOrUpdateParentProduct($parentInfo);
-
-            // Create or update variant
-            $variant = $this->createOrUpdateVariant($product, $data, $parentInfo);
-
-            // Assign attributes to product and variant
-            $this->assignAttributes($product, $variant, $row, $mappings, $adHocAttributes, $headers);
-
-            // Assign barcode to variant
-            $this->assignBarcodeToVariant($variant, $data);
-
-            // Assign pricing to variant
-            $this->assignPricingToVariant($variant, $data);
-
-        } catch (\Exception $e) {
-            $this->errors[] = 'Row error: '.$e->getMessage();
-            $this->skippedRows++;
-        }
-    }
-
-    /**
-     * Extract data from CSV row using column mappings
-     */
-    private function extractRowData(array $row, array $mappings): array
-    {
-        $data = [];
-
-        foreach ($mappings as $field => $columnIndex) {
-            $data[$field] = ($columnIndex !== '') ? ($row[$columnIndex] ?? '') : '';
-        }
-
-        return $data;
-    }
-
-    /**
-     * Extract parent SKU and product information from variant data
-     * Supports two patterns:
-     * Pattern 1: "45120RWST-White" → parent_sku: "45120RWST", color: "White"
-     * Pattern 2: "001-002-003" → parent_sku: "001-002", variant: "003"
-     */
-    private function extractParentInfo(array $data): array
-    {
-        $sku = $data['sku'] ?? '';
-        $title = $data['title'] ?? '';
-
-        // Detect SKU pattern and extract accordingly
-        if (preg_match('/^(\d{3}-\d{3})-(\d{3})$/', $sku, $matches)) {
-            // Pattern 2: 001-002-003 (three-part numeric pattern)
-            $parentSku = $matches[1]; // 001-002
-            $variantId = $matches[2]; // 003
-            $color = $this->extractColorFromTitle($title);
-        } elseif (preg_match('/^(\d{3})-(\d{3})$/', $sku, $matches)) {
-            // Pattern 3: 010-108 (parent 010, variant 108)
-            $parentSku = $matches[1]; // 010 (parent)
-            $variantId = $matches[2]; // 108 (variant number)
-            $color = $this->extractColorFromTitle($title);
-        } else {
-            // Pattern 1: RB45120-White (alphanumeric-color pattern)
-            $parentSku = preg_replace('/-[A-Za-z]+$/', '', $sku);
-            $skuParts = explode('-', $sku);
-            // Only use SKU part if it looks like a color (contains letters)
-            if (count($skuParts) > 1 && preg_match('/[A-Za-z]/', end($skuParts))) {
-                $color = end($skuParts);
             } else {
-                $color = $this->extractColorFromTitle($title);
+                $this->errors[] = $result['error'] ?? 'Unknown error';
+                $this->skippedRows++;
             }
+            return;
         }
 
-        // Extract dimensions from title using dedicated action
-        $extractDimensions = new ExtractDimensions();
-        $dimensions = $extractDimensions->execute($title);
-        $width = $dimensions['width'];
-        $drop = $dimensions['drop'];
-
-        // Generate product name by removing dimensions and color
-        $baseName = preg_replace('/\d+cm( x \d+cm)?/', '', $title);
-        $baseName = preg_replace('/\b'.preg_quote($color, '/').'\b/i', '', $baseName);
-        $baseName = trim(preg_replace('/\s+/', ' ', $baseName));
-
-        $result = [
-            'parent_sku' => $parentSku,
-            'product_name' => $baseName ?: 'Product '.$parentSku,
-            'color' => $color,
-            'width' => $width,
-            'drop' => $drop,
-        ];
-
-        // Debug logging
-        Log::debug('Extracted parent info', [
-            'original_sku' => $sku,
-            'original_title' => $title,
-            'extracted_parent_sku' => $parentSku,
-            'extracted_color' => $color,
-            'extracted_width' => $width,
-            'extracted_drop' => $drop,
-            'sku_pattern_detected' => $this->detectSkuPattern($sku),
-            'dimension_pattern_detected' => $extractDimensions->getPatternUsed($title),
-        ]);
-
-        return $result;
-    }
-
-    /**
-     * Create or update parent product using updateOrCreate
-     */
-    private function createOrUpdateParentProduct(array $parentInfo): Product
-    {
-        $product = Product::updateOrCreate(
-            [
-                'parent_sku' => $parentInfo['parent_sku'],
-            ],
-            [
-                'name' => $parentInfo['product_name'],
-                'status' => 'active',
-                'description' => "Imported product - {$parentInfo['product_name']}",
-            ]
-        );
-
-        if ($product->wasRecentlyCreated) {
+        if ($result['product_created'] ?? false) {
             $this->createdProducts++;
-            Log::debug('Created parent product', [
-                'parent_sku' => $parentInfo['parent_sku'],
-                'name' => $parentInfo['product_name'],
-            ]);
         } else {
             $this->updatedProducts++;
-            Log::debug('Updated parent product', [
-                'parent_sku' => $parentInfo['parent_sku'],
-                'name' => $parentInfo['product_name'],
-            ]);
         }
 
-        return $product;
-    }
-
-    /**
-     * Create or update variant using updateOrCreate
-     */
-    private function createOrUpdateVariant(Product $product, array $data, array $parentInfo): ProductVariant
-    {
-        $variant = ProductVariant::updateOrCreate(
-            [
-                'sku' => $data['sku'],
-            ],
-            [
-                'product_id' => $product->id,
-                'external_sku' => $data['sku'],
-                'title' => $data['title'],
-                'color' => $parentInfo['color'],
-                'width' => $parentInfo['width'] ?: 100, // Default width if null
-                'drop' => $parentInfo['drop'] ?: 150,   // Default drop if null
-                'price' => 0, // Use decoupled pricing system instead
-                'status' => 'active',
-                'stock_level' => 0,
-            ]
-        );
-
-        if ($variant->wasRecentlyCreated) {
+        if ($result['variant_created'] ?? false) {
             $this->createdVariants++;
-            Log::debug('Created variant', [
-                'sku' => $data['sku'],
-                'product_id' => $product->id,
-            ]);
         } else {
             $this->updatedVariants++;
-            Log::debug('Updated variant', [
-                'sku' => $data['sku'],
-                'product_id' => $product->id,
-            ]);
-        }
-
-        return $variant;
-    }
-
-    /**
-     * Assign attributes to product and variant using AttributeAssignmentAction
-     */
-    private function assignAttributes(
-        Product $product, 
-        ProductVariant $variant, 
-        array $csvRow, 
-        array $mappings, 
-        array $adHocAttributes, 
-        array $headers
-    ): void {
-        $attributeAction = new AttributeAssignmentAction();
-        
-        $results = $attributeAction->execute(
-            $product,
-            $variant,
-            $csvRow,
-            $mappings,
-            $adHocAttributes,
-            $headers
-        );
-
-        // Log any attribute assignment errors
-        if (!empty($results['product_attributes']['errors'])) {
-            Log::warning('Product attribute assignment errors', [
-                'product_id' => $product->id,
-                'errors' => $results['product_attributes']['errors']
-            ]);
-        }
-
-        if (!empty($results['variant_attributes']['errors'])) {
-            Log::warning('Variant attribute assignment errors', [
-                'variant_id' => $variant->id,
-                'errors' => $results['variant_attributes']['errors']
-            ]);
         }
     }
 
     /**
-     * Assign barcode to variant from CSV data or auto-assign
+     * Get current statistics for broadcasting
      */
-    private function assignBarcodeToVariant(ProductVariant $variant, array $data): void
+    private function getCurrentStats(): array
     {
-        // Always process barcode assignment - don't skip if variant already has one
-
-        try {
-            $csvBarcode = $data['barcode'] ?? null;
-
-            if (!empty($csvBarcode)) {
-                // CSV has barcode - find existing barcode in database and assign to this variant
-                $barcode = Barcode::where('barcode', $csvBarcode)->first();
-                
-                if ($barcode) {
-                    // Found matching barcode - assign it to this variant
-                    $barcode->update([
-                        'product_variant_id' => $variant->id,
-                        'is_assigned' => true,
-                        'sku' => $variant->sku,
-                        'title' => $variant->title
-                    ]);
-
-                    Log::debug('Matched and assigned existing barcode to variant', [
-                        'variant_id' => $variant->id,
-                        'variant_sku' => $variant->sku,
-                        'barcode' => $csvBarcode
-                    ]);
-                } else {
-                    Log::warning('Barcode from CSV not found in database', [
-                        'variant_id' => $variant->id,
-                        'variant_sku' => $variant->sku,
-                        'csv_barcode' => $csvBarcode
-                    ]);
-                }
-            } else {
-                // No barcode in CSV - auto-assign next available
-                $assignBarcodeAction = new AssignBarcode();
-                $barcode = $assignBarcodeAction->execute($variant);
-
-                if ($barcode) {
-                    Log::debug('Auto-assigned barcode to variant', [
-                        'variant_id' => $variant->id,
-                        'barcode' => $barcode->barcode
-                    ]);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::warning('Failed to assign barcode to variant', [
-                'variant_id' => $variant->id,
-                'error' => $e->getMessage()
-            ]);
-            // Don't fail the import, just log the warning
-        }
-    }
-
-    /**
-     * Assign pricing to variant using decoupled pricing system
-     */
-    private function assignPricingToVariant(ProductVariant $variant, array $data): void
-    {
-        try {
-            $price = $this->parsePrice($data['price'] ?? '');
-            
-            if ($price && $price > 0) {
-                $assignPricingAction = new AssignPricing();
-                $pricing = $assignPricingAction->execute($variant, $price);
-
-                if ($pricing) {
-                    Log::debug('Assigned pricing to variant', [
-                        'variant_id' => $variant->id,
-                        'variant_sku' => $variant->sku,
-                        'price' => $price,
-                        'pricing_id' => $pricing->id
-                    ]);
-                }
-            } else {
-                Log::debug('No valid price found for variant', [
-                    'variant_id' => $variant->id,
-                    'variant_sku' => $variant->sku,
-                    'raw_price' => $data['price'] ?? 'not provided'
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::warning('Failed to assign pricing to variant', [
-                'variant_id' => $variant->id,
-                'variant_sku' => $variant->sku,
-                'error' => $e->getMessage()
-            ]);
-            // Don't fail the import, just log the warning
-        }
-    }
-
-    /**
-     * Parse price from string (handles various formats)
-     */
-    private function parsePrice(?string $priceString): ?float
-    {
-        if (empty($priceString)) {
-            return null;
-        }
-
-        // Remove currency symbols and extract numeric value
-        $cleaned = preg_replace('/[^\d.,]/', '', $priceString);
-        $cleaned = str_replace(',', '.', $cleaned);
-
-        return is_numeric($cleaned) ? (float) $cleaned : null;
-    }
-
-    /**
-     * Extract color from product title using common patterns
-     */
-    private function extractColorFromTitle(string $title): string
-    {
-        $commonColors = [
-            // Compound colors first (longer matches take priority)
-            'burnt orange', 'dark grey', 'light grey', 'dark gray', 'light gray',
-            'dark blue', 'light blue', 'navy blue', 'royal blue', 'sky blue',
-            'dark green', 'light green', 'forest green', 'lime green',
-            'dark red', 'light red', 'bright red', 'deep red',
-            'off white', 'cream white', 'pure white',
-
-            // Single word colors
-            'white', 'black', 'grey', 'gray', 'brown', 'beige', 'cream', 'ivory',
-            'blue', 'navy', 'red', 'green', 'yellow', 'orange', 'pink', 'purple',
-            'aubergine', 'charcoal', 'taupe', 'linen', 'natural',
+        return [
+            'products_created' => $this->createdProducts,
+            'products_updated' => $this->updatedProducts,
+            'variants_created' => $this->createdVariants,
+            'variants_updated' => $this->updatedVariants,
+            'errors' => count($this->errors),
+            'skipped_rows' => $this->skippedRows,
         ];
-
-        // Sort by length descending so longer color names are matched first
-        usort($commonColors, function ($a, $b) {
-            return strlen($b) - strlen($a);
-        });
-
-        foreach ($commonColors as $color) {
-            // Use word boundaries to avoid partial matches (e.g., "black" in "blackout")
-            if (preg_match('/\b' . preg_quote($color, '/') . '\b/i', $title)) {
-                return ucwords($color);  // Use ucwords for multi-word colors
-            }
-        }
-
-        // Fallback: try to find any color-like word
-        if (preg_match('/\b([A-Za-z]+)\s+\d+cm/', $title, $matches)) {
-            return ucfirst($matches[1]);
-        }
-
-        return 'Default';
     }
 
     /**
-     * Detect which SKU pattern is being used (for debugging)
+     * Get display name for action
      */
-    private function detectSkuPattern(string $sku): string
+    private function getActionDisplayName(string $action): string
     {
-        if (preg_match('/^(\d{3}-\d{3})-(\d{3})$/', $sku)) {
-            return 'three-part-numeric (001-002-003)';
-        } elseif (preg_match('/^(\d{3})-(\d{3})$/', $sku)) {
-            return 'two-part-numeric (010-108)';
-        } else {
-            return 'alphanumeric-color (RB45120-White)';
-        }
+        return match($action) {
+            'extracting_info' => '📝 Extracting Info',
+            'creating_product' => '🏭 Creating Product',
+            'creating_variant' => '🎨 Creating Variant',
+            'assigning_attributes' => '🏷️ Assigning Attributes',
+            'assigning_barcode' => '📱 Assigning Barcode',
+            'assigning_pricing' => '💰 Setting Price',
+            'processing' => '⚙️ Processing',
+            'reading_file' => '📂 Reading File',
+            'completed' => '✅ Completed',
+            'error' => '❌ Error',
+            default => '🔄 ' . ucfirst(str_replace('_', ' ', $action)),
+        };
     }
+
 }
