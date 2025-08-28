@@ -117,8 +117,8 @@ class ProductShow extends Component
                 Tab::make('variants')
                     ->label('Variants')
                     ->icon('squares-2x2')
-                    ->badge($this->product->variants->count())
-                    ->badgeColor($this->product->variants->count() > 0 ? 'blue' : 'gray'),
+                    ->badge($this->product->variants()->count())
+                    ->badgeColor($this->product->variants()->count() > 0 ? 'blue' : 'gray'),
 
                 Tab::make('marketplace')
                     ->label('Marketplace')

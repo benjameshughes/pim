@@ -96,6 +96,25 @@
                         Logs
                     </flux:navlist.item>
                 </flux:navlist.group>
+
+                {{-- 🏢 MANAGEMENT - Only for admins --}}
+                @can('manage-system')
+                    <flux:navlist.group expandable heading="Management">
+                        <flux:navlist.item 
+                            icon="users" 
+                            href="{{ route('management.users.index') }}"
+                        >
+                            Users
+                        </flux:navlist.item>
+
+                        <flux:navlist.item 
+                            icon="user-group" 
+                            href="{{ route('management.teams.index') }}"
+                        >
+                            Teams
+                        </flux:navlist.item>
+                    </flux:navlist.group>
+                @endcan
             </flux:navlist>
 
             <flux:spacer />

@@ -2,6 +2,9 @@
 
 namespace App\Actions\Import;
 
+use App\Actions\Barcodes\AssignBarcode;
+use App\Actions\Import\AttributeAssignmentAction;
+use App\Models\Barcode;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +36,7 @@ class SimpleImportAction
     {
         $filePath = $config['file'];
         $mappings = $config['mappings'];
+        $adHocAttributes = $config['ad_hoc_attributes'] ?? [];
         $this->progressCallback = $config['progressCallback'] ?? null;
 
         Log::info('🚀 Starting simple product import', [
@@ -43,7 +47,7 @@ class SimpleImportAction
         $startTime = microtime(true);
 
         try {
-            return DB::transaction(function () use ($filePath, $mappings, $startTime) {
+            return DB::transaction(function () use ($filePath, $mappings, $adHocAttributes, $startTime) {
                 // Read and process CSV
                 $csv = array_map(function ($line) {
                     return str_getcsv($line, ',', '"', '\\');
@@ -54,7 +58,7 @@ class SimpleImportAction
                 $processed = 0;
 
                 foreach ($csv as $row) {
-                    $this->processRow($row, $mappings);
+                    $this->processRow($row, $mappings, $adHocAttributes, $headers);
 
                     $processed++;
                     if ($this->progressCallback) {
@@ -100,7 +104,7 @@ class SimpleImportAction
     /**
      * Process a single CSV row
      */
-    private function processRow(array $row, array $mappings): void
+    private function processRow(array $row, array $mappings, array $adHocAttributes, array $headers): void
     {
         try {
             // Extract data from row using mappings
@@ -119,7 +123,13 @@ class SimpleImportAction
             $product = $this->createOrUpdateParentProduct($parentInfo);
 
             // Create or update variant
-            $this->createOrUpdateVariant($product, $data, $parentInfo);
+            $variant = $this->createOrUpdateVariant($product, $data, $parentInfo);
+
+            // Assign attributes to product and variant
+            $this->assignAttributes($product, $variant, $row, $mappings, $adHocAttributes, $headers);
+
+            // Assign barcode to variant
+            $this->assignBarcodeToVariant($variant, $data);
 
         } catch (\Exception $e) {
             $this->errors[] = 'Row error: '.$e->getMessage();
@@ -197,7 +207,6 @@ class SimpleImportAction
             'color' => $color,
             'width' => $width,
             'drop' => $drop,
-            'brand' => $data['brand'] ?? 'Unknown',
         ];
 
         // Debug logging
@@ -222,7 +231,6 @@ class SimpleImportAction
             ],
             [
                 'name' => $parentInfo['product_name'],
-                'brand' => $parentInfo['brand'],
                 'status' => 'active',
                 'description' => "Imported product - {$parentInfo['product_name']}",
             ]
@@ -248,7 +256,7 @@ class SimpleImportAction
     /**
      * Create or update variant using updateOrCreate
      */
-    private function createOrUpdateVariant(Product $product, array $data, array $parentInfo): void
+    private function createOrUpdateVariant(Product $product, array $data, array $parentInfo): ProductVariant
     {
         $variant = ProductVariant::updateOrCreate(
             [
@@ -279,6 +287,110 @@ class SimpleImportAction
                 'sku' => $data['sku'],
                 'product_id' => $product->id,
             ]);
+        }
+
+        return $variant;
+    }
+
+    /**
+     * Assign attributes to product and variant using AttributeAssignmentAction
+     */
+    private function assignAttributes(
+        Product $product, 
+        ProductVariant $variant, 
+        array $csvRow, 
+        array $mappings, 
+        array $adHocAttributes, 
+        array $headers
+    ): void {
+        $attributeAction = new AttributeAssignmentAction();
+        
+        $results = $attributeAction->execute(
+            $product,
+            $variant,
+            $csvRow,
+            $mappings,
+            $adHocAttributes,
+            $headers
+        );
+
+        // Log any attribute assignment errors
+        if (!empty($results['product_attributes']['errors'])) {
+            Log::warning('Product attribute assignment errors', [
+                'product_id' => $product->id,
+                'errors' => $results['product_attributes']['errors']
+            ]);
+        }
+
+        if (!empty($results['variant_attributes']['errors'])) {
+            Log::warning('Variant attribute assignment errors', [
+                'variant_id' => $variant->id,
+                'errors' => $results['variant_attributes']['errors']
+            ]);
+        }
+    }
+
+    /**
+     * Assign barcode to variant from CSV data or auto-assign
+     */
+    private function assignBarcodeToVariant(ProductVariant $variant, array $data): void
+    {
+        // Skip if variant already has a barcode
+        if ($variant->barcode) {
+            Log::debug('Variant already has barcode assigned', [
+                'variant_id' => $variant->id,
+                'barcode' => $variant->barcode->barcode
+            ]);
+            return;
+        }
+
+        try {
+            $csvBarcode = $data['barcode'] ?? null;
+
+            if (!empty($csvBarcode)) {
+                // CSV has barcode - find or create it and assign
+                $barcode = Barcode::firstOrCreate(
+                    ['barcode' => $csvBarcode],
+                    [
+                        'sku' => $variant->sku,
+                        'title' => $variant->title,
+                        'is_assigned' => true,
+                        'product_variant_id' => $variant->id
+                    ]
+                );
+
+                // If barcode existed but wasn't assigned, assign it now
+                if (!$barcode->is_assigned) {
+                    $barcode->update([
+                        'product_variant_id' => $variant->id,
+                        'is_assigned' => true,
+                        'sku' => $variant->sku,
+                        'title' => $variant->title
+                    ]);
+                }
+
+                Log::debug('Assigned CSV barcode to variant', [
+                    'variant_id' => $variant->id,
+                    'barcode' => $csvBarcode
+                ]);
+            } else {
+                // No barcode in CSV - auto-assign next available
+                $assignBarcodeAction = new AssignBarcode();
+                $barcode = $assignBarcodeAction->execute($variant);
+
+                if ($barcode) {
+                    Log::debug('Auto-assigned barcode to variant', [
+                        'variant_id' => $variant->id,
+                        'barcode' => $barcode->barcode
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to assign barcode to variant', [
+                'variant_id' => $variant->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the import, just log the warning
         }
     }
 

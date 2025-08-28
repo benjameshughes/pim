@@ -22,7 +22,7 @@
                         Duplicate Product
                     </flux:menu.item>
                     <flux:menu.separator />
-                    <flux:menu.item wire:click="deleteProduct" wire:confirm="Are you sure you want to delete this product and all {{ $product->variants->count() }} variants?" icon="trash" variant="danger">
+                    <flux:menu.item wire:click="deleteProduct" wire:confirm="Are you sure you want to delete this product and all {{ $product->variants()->count() }} variants?" icon="trash" variant="danger">
                         Delete Product
                     </flux:menu.item>
                 </flux:menu>

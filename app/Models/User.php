@@ -60,6 +60,56 @@ class User extends Authenticatable
             ->implode('');
     }
 
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function hasTeamRole(Team $team, string $role): bool
+    {
+        return $this->teams()
+            ->wherePivot('team_id', $team->id)
+            ->wherePivot('role', $role)
+            ->exists();
+    }
+
+    public function isAdminOf(Team $team): bool
+    {
+        return $this->hasTeamRole($team, 'admin');
+    }
+
+    public function isManagerOf(Team $team): bool
+    {
+        return $this->hasTeamRole($team, 'manager') || $this->isAdminOf($team);
+    }
+
+    public function isMemberOf(Team $team): bool
+    {
+        return $this->teams()->where('team_id', $team->id)->exists();
+    }
+
+    public function canManageTeam(Team $team): bool
+    {
+        return $this->isAdminOf($team);
+    }
+
+    public function canManageAnyTeam(): bool
+    {
+        return $this->teams()->wherePivot('role', 'admin')->exists();
+    }
+
+    public function canManageProducts(Team $team): bool
+    {
+        return $this->isManagerOf($team);
+    }
+
+    public function canViewTeam(Team $team): bool
+    {
+        return $this->isMemberOf($team);
+    }
+
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);

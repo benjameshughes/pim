@@ -22,7 +22,6 @@ class Product extends Model
         'status',
         'image_url',
         'category_id',
-        'brand',
         'meta_description',
         // Import fields (linnworks_sku removed by migration)
         'barcode',

@@ -135,6 +135,12 @@ Route::middleware(['auth'])->group(function () {
     // 📊 LOG DASHBOARD
     Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');
 
+    // 🏢 MANAGEMENT - USER & TEAM ADMINISTRATION (Admin only)
+    Route::prefix('management')->name('management.')->middleware('can:manage-system')->group(function () {
+        Route::get('users', \App\Livewire\Management\Users\UserIndex::class)->name('users.index');
+        Route::get('teams', \App\Livewire\Management\Teams\TeamIndex::class)->name('teams.index');
+    });
+
 });
 
 require __DIR__.'/auth.php';

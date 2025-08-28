@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class ProductVariant extends Model
@@ -76,12 +77,13 @@ class ProductVariant extends Model
     }
 
     /**
-     * 🔢 BARCODES - DISABLED
-     * Barcode system has been removed
+     * 🏷️ BARCODE
+     *
+     * Single barcode assigned to this variant
      */
-    public function barcodes()
+    public function barcode(): HasOne
     {
-        return collect(); // Return empty collection - barcode system removed
+        return $this->hasOne(Barcode::class, 'product_variant_id');
     }
 
     /**
@@ -266,15 +268,6 @@ class ProductVariant extends Model
         return $this->product?->brand;
     }
 
-    /**
-     * 🎨 BARCODE RELATIONSHIP
-     *
-     * Get the primary barcode relationship for this variant (caecus type)
-     */
-    public function barcode()
-    {
-        return $this->hasOne(Barcode::class)->where('type', 'caecus');
-    }
 
     /**
      * 🎨 GET BARCODE VALUE

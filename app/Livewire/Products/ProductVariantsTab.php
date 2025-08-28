@@ -11,7 +11,7 @@ class ProductVariantsTab extends Component
 
     public function mount(Product $product)
     {
-        $this->product = $product->load(['variants.barcodes']);
+        $this->product = $product->load(['variants.barcode']);
     }
 
     public function render()
