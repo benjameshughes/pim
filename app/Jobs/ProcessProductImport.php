@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 class ProcessProductImport implements ShouldQueue
 {
     use Queueable;
+    
+    public $timeout = 0; // No timeout for long-running imports
 
     public function __construct(
         private string $filePath,

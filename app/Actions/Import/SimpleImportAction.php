@@ -109,10 +109,10 @@ class SimpleImportAction
                 $rowInfo = null;
             }
             
-            // ATM theory: Add delay to make process feel substantial
-            usleep(300000); // 300ms delay
+            // Removed delays for production performance
         }
-        sleep(3);
+        unset($rowInfo); // Break reference
+        // Removed sleep delays
         
         // Step 3: Create variants - loop through all variants
         ProductImportProgress::dispatch($importId, $totalRows, $totalWorkUnits, 'creating_variant', '🎨 Creating Variants', 'Creating/updating all product variants...', $this->getCurrentStats());
@@ -139,10 +139,10 @@ class SimpleImportAction
                 $rowInfo = null;
             }
             
-            // ATM theory: Add delay to make process feel substantial
-            usleep(300000); // 300ms delay
+            // Removed delays for production performance
         }
-        sleep(3);
+        unset($rowInfo); // Break reference
+        // Removed sleep delays
         
         // Step 4: Assign attributes - loop through all variants
         ProductImportProgress::dispatch($importId, $totalRows * 2, $totalWorkUnits, 'assigning_attributes', '🏷️ Assigning Attributes', 'Assigning attributes to all products and variants...', $this->getCurrentStats());
@@ -161,32 +161,34 @@ class SimpleImportAction
                 $this->errors[] = "Attributes for {$rowInfo['data']['sku']}: " . $e->getMessage();
             }
             
-            // ATM theory: Add delay to make process feel substantial
-            usleep(300000); // 300ms delay
+            // Removed delays for production performance
         }
-        sleep(3);
+        unset($rowInfo); // Break reference
+        // Removed sleep delays
         
-        // Step 5: Assign barcodes - loop through all variants
+        // Step 5: Assign barcodes - simple loop through variants with CSV data
         ProductImportProgress::dispatch($importId, $totalRows * 3, $totalWorkUnits, 'assigning_barcode', '📱 Assigning Barcodes', 'Assigning barcodes to all variants...', $this->getCurrentStats());
         $assignBarcode = new AssignBarcode();
-        $currentRow = $totalRows * 3; // Start at 3x totalRows (steps 1,2,3 complete)
+        $currentRow = $totalRows * 3;
+        
         foreach ($this->rowData as $rowInfo) {
             if (!$rowInfo || !isset($rowInfo['variant'])) continue;
             
-            // Show current SKU being processed
-            ProductImportProgress::dispatch($importId, $currentRow, $totalWorkUnits, 'assigning_barcode', '📱 Assigning Barcodes', "Assigning barcode for {$rowInfo['data']['sku']}...", $this->getCurrentStats());
+            $variant = $rowInfo['variant'];
+            $csvBarcode = $rowInfo['data']['barcode'] ?? null;
+            
+            ProductImportProgress::dispatch($importId, $currentRow, $totalWorkUnits, 'assigning_barcode', '📱 Assigning Barcodes', "Assigning barcode for {$variant->sku}...", $this->getCurrentStats());
             $currentRow++;
             
             try {
-                $assignBarcode->execute($rowInfo['variant']);
+                $assignBarcode->execute($variant, $csvBarcode);
             } catch (\Exception $e) {
-                $this->errors[] = "Barcode for {$rowInfo['data']['sku']}: " . $e->getMessage();
+                $this->errors[] = "Barcode for {$variant->sku}: " . $e->getMessage();
             }
             
-            // ATM theory: Add delay to make process feel substantial
-            usleep(300000); // 300ms delay
+            usleep(300000);
         }
-        sleep(3);
+        // Removed sleep delays
         
         // Step 6: Assign pricing - loop through all variants
         ProductImportProgress::dispatch($importId, $totalRows * 4, $totalWorkUnits, 'assigning_pricing', '💰 Setting Prices', 'Setting retail prices for all variants...', $this->getCurrentStats());
@@ -210,10 +212,10 @@ class SimpleImportAction
                 }
             }
             
-            // ATM theory: Add delay to make process feel substantial
-            usleep(300000); // 300ms delay
+            // Removed delays for production performance
         }
-        sleep(3);
+        unset($rowInfo); // Break reference
+        // Removed sleep delays
         
         // Step 7: Finishing up
         ProductImportProgress::dispatch($importId, $totalRows * 5, $totalWorkUnits, 'finishing', '✨ Finishing Up', 'Finalizing import and cleaning up...', $this->getCurrentStats());
@@ -382,6 +384,7 @@ class SimpleImportAction
         foreach ($csv as $index => $row) {
             // Extract data from row using mappings
             $data = $this->extractRowData($row, $mappings);
+            
             
             if (!$data['sku'] || !$data['title']) {
                 $this->skippedRows++;

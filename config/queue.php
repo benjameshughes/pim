@@ -57,7 +57,7 @@ return [
             'connection' => env('DB_QUEUE_CONNECTION'),
             'table' => env('DB_QUEUE_TABLE', 'jobs'),
             'queue' => 'imports',
-            'retry_after' => (int) env('DB_QUEUE_RETRY_AFTER', 90),
+            'retry_after' => null, // No timeout for long-running imports
             'after_commit' => false,
         ],
 

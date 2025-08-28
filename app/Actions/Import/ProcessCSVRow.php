@@ -87,7 +87,8 @@ class ProcessCSVRow
             $statusCallback && $statusCallback('assigning_barcode', "Assigning barcode to {$data['sku']}");
 
             // Assign barcode to variant
-            $this->assignBarcode->execute($variant);
+            $csvBarcode = $data['barcode'] ?? null;
+            $this->assignBarcode->execute($variant, $csvBarcode);
 
             $statusCallback && $statusCallback('assigning_pricing', "Setting price for {$data['sku']}");
 
