@@ -186,7 +186,7 @@ class SimpleImportAction
                 $this->errors[] = "Barcode for {$variant->sku}: " . $e->getMessage();
             }
             
-            usleep(300000);
+            // Removed delay
         }
         // Removed sleep delays
         
@@ -219,7 +219,7 @@ class SimpleImportAction
         
         // Step 7: Finishing up
         ProductImportProgress::dispatch($importId, $totalRows * 5, $totalWorkUnits, 'finishing', '✨ Finishing Up', 'Finalizing import and cleaning up...', $this->getCurrentStats());
-        sleep(2);
+        // Removed final delay
     }
 
     public function execute(array $config): array

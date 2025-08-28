@@ -156,6 +156,23 @@ class ProductVariant extends Model
     }
 
     /**
+     * 💰 GET RETAIL PRICE - Get price from default (Retail) sales channel
+     */
+    public function getRetailPrice(): float
+    {
+        $defaultChannel = \App\Models\SalesChannel::getDefault();
+        if (!$defaultChannel) {
+            return 0.0;
+        }
+
+        $retailPricing = $this->pricingRecords()
+            ->where('sales_channel_id', $defaultChannel->id)
+            ->first();
+
+        return $retailPricing ? $retailPricing->price : 0.0;
+    }
+
+    /**
      * 🔗 PRICING RELATIONSHIP - For Eloquent queries only
      * Note: This is for query purposes, pricing operates independently
      */

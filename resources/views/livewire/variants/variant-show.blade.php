@@ -190,10 +190,11 @@
                         </span>
                     </div>
                     
-                    @if($variant->price)
+                    @php $retailPrice = $variant->getRetailPrice(); @endphp
+                    @if($retailPrice > 0)
                     <div class="flex justify-between">
-                        <span class="text-sm text-gray-600 dark:text-gray-400">Price</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">£{{ number_format($variant->price, 2) }}</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Retail Price</span>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">£{{ number_format($retailPrice, 2) }}</span>
                     </div>
                     @endif
                     
@@ -224,28 +225,35 @@
             </div>
 
             {{-- Pricing Details --}}
-            @if($variant->price || $variant->pricingRecords->count() > 0)
+            @if($variant->pricingRecords->count() > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Pricing Details</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Channel Pricing</h3>
                 
                 <div class="space-y-3">
-                    @if($variant->price)
-                    <div class="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    @php 
+                        $retailChannel = $variant->pricingRecords->where('salesChannel.code', 'retail')->first();
+                        $otherChannels = $variant->pricingRecords->where('salesChannel.code', '!=', 'retail');
+                    @endphp
+                    
+                    {{-- Retail Price (highlighted as primary) --}}
+                    @if($retailChannel)
+                    <div class="flex justify-between items-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
                         <div>
-                            <span class="text-sm font-medium text-green-900 dark:text-green-300">Base Price</span>
-                            <p class="text-xs text-green-600 dark:text-green-400">Standard retail price</p>
+                            <span class="text-sm font-medium text-indigo-900 dark:text-indigo-300">{{ $retailChannel->salesChannel->name ?? 'Retail' }}</span>
+                            <p class="text-xs text-indigo-600 dark:text-indigo-400">Base retail price</p>
                         </div>
-                        <span class="font-semibold text-green-900 dark:text-green-300">
-                            £{{ number_format($variant->price, 2) }}
+                        <span class="font-semibold text-indigo-900 dark:text-indigo-300">
+                            £{{ number_format($retailChannel->price, 2) }}
                         </span>
                     </div>
                     @endif
                     
-                    @foreach($variant->pricingRecords as $pricing)
+                    {{-- Other Channel Prices --}}
+                    @foreach($otherChannels as $pricing)
                     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div>
                             <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $pricing->salesChannel->name ?? 'Channel' }}</span>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ ucfirst($pricing->price_type ?? 'retail') }} price</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ ucfirst($pricing->price_type ?? 'marketplace') }} price</p>
                         </div>
                         <span class="font-medium text-gray-900 dark:text-white">
                             £{{ number_format($pricing->price, 2) }}

@@ -42,6 +42,10 @@ describe('Enhanced SimpleImportAction', function () {
     });
 
     test('imports products with CSV barcodes', function () {
+        // Create the specific barcodes that will be referenced in CSV
+        Barcode::create(['barcode' => '9999999999999', 'is_assigned' => false]);
+        Barcode::create(['barcode' => '8888888888888', 'is_assigned' => false]);
+        
         $csvContent = "sku,title,barcode\nTEST123-RED,Test Product Red,9999999999999\nTEST123-BLUE,Test Product Blue,8888888888888";
         $filePath = storage_path('temp_test.csv');
         file_put_contents($filePath, $csvContent);
