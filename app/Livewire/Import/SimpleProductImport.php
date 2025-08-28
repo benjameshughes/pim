@@ -3,7 +3,6 @@
 namespace App\Livewire\Import;
 
 use App\Actions\Import\SimpleImportAction;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -59,6 +58,18 @@ class SimpleProductImport extends Component
 
     // Import results
     public $results = null;
+
+    public function mount()
+    {
+        // Get importId from URL parameters (when redirected back from import start)
+        $this->importId = request('id');
+        
+        // If we have an importId, we're on step 3 (importing)
+        if ($this->importId) {
+            $this->step = 'importing';
+            $this->importing = true;
+        }
+    }
 
     /**
      * Handle file upload and analyze headers
@@ -171,29 +182,11 @@ class SimpleProductImport extends Component
 
         \Log::info('✅ VALIDATIONS PASSED - PROCEEDING WITH IMPORT');
 
-        $this->importing = true;
-        $this->step = 'importing';
-        $this->progress = 0;
-        $this->importId = uniqid('import_' . time() . '_');
-
-        // Reset stats
-        $this->importStats = [
-            'products_created' => 0,
-            'products_updated' => 0,
-            'variants_created' => 0,
-            'variants_updated' => 0,
-            'errors' => 0,
-            'skipped_rows' => 0,
-        ];
-
-        \Log::info('🚀 Starting browser import execution', [
-            'file_name' => $this->file->getClientOriginalName(),
-            'file_size' => $this->file->getSize(),
-            'mappings' => $this->mappings,
-            'importId' => $this->importId,
-        ]);
-
         try {
+            // Generate unique import ID and start import
+            $this->importId = uniqid('import_' . time() . '_');
+            $this->importing = true;
+            
             // Get the correct file path for Livewire uploaded files
             $filePath = $this->file->getRealPath();
 
@@ -202,24 +195,41 @@ class SimpleProductImport extends Component
                 throw new \Exception("Uploaded file not found or not readable: {$filePath}");
             }
 
-            \Log::info('File validation passed', ['path' => $filePath]);
+            \Log::info('🚀 Starting import execution', [
+                'file_name' => $this->file->getClientOriginalName(),
+                'file_size' => $this->file->getSize(),
+                'mappings' => $this->mappings,
+                'importId' => $this->importId,
+            ]);
+
+            // Copy file to permanent location for processing
+            $fileName = 'import_' . $this->importId . '.csv';
+            $permanentPath = storage_path('app/imports/' . $fileName);
+            
+            // Make sure imports directory exists
+            if (!is_dir(dirname($permanentPath))) {
+                mkdir(dirname($permanentPath), 0755, true);
+            }
+            
+            if (!copy($filePath, $permanentPath)) {
+                throw new \Exception('Failed to copy file to permanent location');
+            }
 
             $action = new SimpleImportAction;
 
             $this->results = $action->execute([
-                'file' => $filePath,
+                'file' => $permanentPath,
                 'mappings' => $this->mappings,
                 'importId' => $this->importId,
-                'progressCallback' => function ($progress) {
-                    $this->progress = $progress;
-                    $this->dispatch('import-progress', ['progress' => $progress]);
-                },
             ]);
 
             \Log::info('✅ Import completed successfully', $this->results);
 
             $this->step = 'complete';
             $this->importing = false;
+            
+            // Redirect with importId so component can listen to real-time updates
+            $this->redirectRoute('import.products', ['id' => $this->importId], navigate: true);
 
         } catch (\Exception $e) {
             \Log::error('💥 Import failed with exception', [
@@ -243,9 +253,22 @@ class SimpleProductImport extends Component
     }
 
     /**
+     * Get real-time event listeners
+     */
+    public function getListeners()
+    {
+        if (!$this->importId) {
+            return [];
+        }
+        
+        return [
+            "echo:product-import.{$this->importId},.ProductImportProgress" => 'updateImportProgress',
+        ];
+    }
+
+    /**
      * Handle real-time import progress updates
      */
-    #[On('echo:product-import.{importId},ProductImportProgress')]
     public function updateImportProgress($event)
     {
         \Log::info('📡 Received import progress update', $event);
