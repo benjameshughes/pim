@@ -108,6 +108,9 @@ class SimpleImportAction
                 $this->errors[] = "Product {$parentSku}: " . $e->getMessage();
                 $rowInfo = null;
             }
+            
+            // ATM theory: Add delay to make process feel substantial
+            usleep(300000); // 300ms delay
         }
         sleep(3);
         
@@ -135,6 +138,9 @@ class SimpleImportAction
                 $this->errors[] = "Variant {$rowInfo['data']['sku']}: " . $e->getMessage();
                 $rowInfo = null;
             }
+            
+            // ATM theory: Add delay to make process feel substantial
+            usleep(300000); // 300ms delay
         }
         sleep(3);
         
@@ -154,6 +160,9 @@ class SimpleImportAction
             } catch (\Exception $e) {
                 $this->errors[] = "Attributes for {$rowInfo['data']['sku']}: " . $e->getMessage();
             }
+            
+            // ATM theory: Add delay to make process feel substantial
+            usleep(300000); // 300ms delay
         }
         sleep(3);
         
@@ -173,6 +182,9 @@ class SimpleImportAction
             } catch (\Exception $e) {
                 $this->errors[] = "Barcode for {$rowInfo['data']['sku']}: " . $e->getMessage();
             }
+            
+            // ATM theory: Add delay to make process feel substantial
+            usleep(300000); // 300ms delay
         }
         sleep(3);
         
@@ -197,6 +209,9 @@ class SimpleImportAction
                     }
                 }
             }
+            
+            // ATM theory: Add delay to make process feel substantial
+            usleep(300000); // 300ms delay
         }
         sleep(3);
         
