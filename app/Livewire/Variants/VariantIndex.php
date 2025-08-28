@@ -20,7 +20,7 @@ class VariantIndex extends Component
     {
         // ✨ PHOENIX PAGINATION POWER
         $variants = ProductVariant::query()
-            ->with(['product', 'barcodes'])
+            ->with(['product', 'barcode'])
             ->when($this->search, fn ($query) => $query->where('title', 'like', '%'.$this->search.'%')
                 ->orWhere('sku', 'like', '%'.$this->search.'%')
                 ->orWhere('color', 'like', '%'.$this->search.'%')

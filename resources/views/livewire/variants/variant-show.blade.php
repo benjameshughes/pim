@@ -56,12 +56,12 @@
                         <p class="mt-1 text-sm font-mono text-gray-900 dark:text-white">{{ $variant->sku }}</p>
                     </div>
                     
-                    @if($variant->external_sku)
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">External SKU</label>
-                        <p class="mt-1 text-sm font-mono text-gray-900 dark:text-white">{{ $variant->external_sku }}</p>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Barcode</label>
+                        <p class="mt-1 text-sm font-mono {{ $variant->barcode ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400 italic' }}">
+                            {{ $variant->barcode ? $variant->barcode->barcode : 'No barcode assigned' }}
+                        </p>
                     </div>
-                    @endif
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Product Family</label>
@@ -151,28 +151,26 @@
             </div>
             @endif
 
-            {{-- 🔢 BARCODES --}}
-            @if($variant->barcodes->count() > 0)
+            {{-- 🔢 BARCODE --}}
+            @if($variant->barcode)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Barcodes ({{ $variant->barcodes->count() }})</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Barcode</h3>
                 
                 <div class="space-y-3">
-                    @foreach($variant->barcodes as $barcode)
                     <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div class="flex items-center gap-3">
                             <flux:icon name="qr-code" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
                             <div>
-                                <p class="font-mono text-sm font-medium text-gray-900 dark:text-white">{{ $barcode->barcode }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $barcode->type ?? 'Standard' }}</p>
+                                <p class="font-mono text-sm font-medium text-gray-900 dark:text-white">{{ $variant->barcode->barcode }}</p>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $variant->barcode->type ?? 'Standard' }}</p>
                             </div>
                         </div>
                         @if(Route::has('barcodes.show'))
-                            <flux:button href="{{ route('barcodes.show', $barcode) }}" size="xs" variant="ghost" icon="eye">
+                            <flux:button href="{{ route('barcodes.show', $variant->barcode) }}" size="xs" variant="ghost" icon="eye">
                                 View
                             </flux:button>
                         @endif
                     </div>
-                    @endforeach
                 </div>
             </div>
             @endif
@@ -200,8 +198,8 @@
                     @endif
                     
                     <div class="flex justify-between">
-                        <span class="text-sm text-gray-600 dark:text-gray-400">Barcodes</span>
-                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $variant->barcodes->count() }}</span>
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Barcode</span>
+                        <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $variant->barcode ? '1' : '0' }}</span>
                     </div>
                     
                     <div class="flex justify-between">
@@ -226,7 +224,7 @@
             </div>
 
             {{-- Pricing Details --}}
-            @if($variant->price || $variant->pricing->count() > 0)
+            @if($variant->price || $variant->pricingRecords->count() > 0)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Pricing Details</h3>
                 
@@ -243,7 +241,7 @@
                     </div>
                     @endif
                     
-                    @foreach($variant->pricing as $pricing)
+                    @foreach($variant->pricingRecords as $pricing)
                     <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div>
                             <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $pricing->salesChannel->name ?? 'Channel' }}</span>

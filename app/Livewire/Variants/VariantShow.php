@@ -13,8 +13,8 @@ class VariantShow extends Component
     {
         $this->variant = $variant->load([
             'product',
-            'barcodes',
-            'pricing.salesChannel',
+            'barcode',
+            'pricingRecords.salesChannel',
             'product.variants' => function ($query) {
                 $query->select('id', 'product_id', 'sku', 'color', 'width', 'drop', 'price', 'status')
                     ->orderBy('sku');

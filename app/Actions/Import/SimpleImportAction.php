@@ -4,6 +4,7 @@ namespace App\Actions\Import;
 
 use App\Actions\Barcodes\AssignBarcode;
 use App\Actions\Import\AttributeAssignmentAction;
+use App\Actions\Pricing\AssignPricing;
 use App\Models\Barcode;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -130,6 +131,9 @@ class SimpleImportAction
 
             // Assign barcode to variant
             $this->assignBarcodeToVariant($variant, $data);
+
+            // Assign pricing to variant
+            $this->assignPricingToVariant($variant, $data);
 
         } catch (\Exception $e) {
             $this->errors[] = 'Row error: '.$e->getMessage();
@@ -269,7 +273,7 @@ class SimpleImportAction
                 'color' => $parentInfo['color'],
                 'width' => $parentInfo['width'] ?: 100, // Default width if null
                 'drop' => $parentInfo['drop'] ?: 150,   // Default drop if null
-                'price' => $this->parsePrice($data['price'] ?? ''),
+                'price' => 0, // Use decoupled pricing system instead
                 'status' => 'active',
                 'stock_level' => 0,
             ]
@@ -335,44 +339,36 @@ class SimpleImportAction
      */
     private function assignBarcodeToVariant(ProductVariant $variant, array $data): void
     {
-        // Skip if variant already has a barcode
-        if ($variant->barcode) {
-            Log::debug('Variant already has barcode assigned', [
-                'variant_id' => $variant->id,
-                'barcode' => $variant->barcode->barcode
-            ]);
-            return;
-        }
+        // Always process barcode assignment - don't skip if variant already has one
 
         try {
             $csvBarcode = $data['barcode'] ?? null;
 
             if (!empty($csvBarcode)) {
-                // CSV has barcode - find or create it and assign
-                $barcode = Barcode::firstOrCreate(
-                    ['barcode' => $csvBarcode],
-                    [
-                        'sku' => $variant->sku,
-                        'title' => $variant->title,
-                        'is_assigned' => true,
-                        'product_variant_id' => $variant->id
-                    ]
-                );
-
-                // If barcode existed but wasn't assigned, assign it now
-                if (!$barcode->is_assigned) {
+                // CSV has barcode - find existing barcode in database and assign to this variant
+                $barcode = Barcode::where('barcode', $csvBarcode)->first();
+                
+                if ($barcode) {
+                    // Found matching barcode - assign it to this variant
                     $barcode->update([
                         'product_variant_id' => $variant->id,
                         'is_assigned' => true,
                         'sku' => $variant->sku,
                         'title' => $variant->title
                     ]);
-                }
 
-                Log::debug('Assigned CSV barcode to variant', [
-                    'variant_id' => $variant->id,
-                    'barcode' => $csvBarcode
-                ]);
+                    Log::debug('Matched and assigned existing barcode to variant', [
+                        'variant_id' => $variant->id,
+                        'variant_sku' => $variant->sku,
+                        'barcode' => $csvBarcode
+                    ]);
+                } else {
+                    Log::warning('Barcode from CSV not found in database', [
+                        'variant_id' => $variant->id,
+                        'variant_sku' => $variant->sku,
+                        'csv_barcode' => $csvBarcode
+                    ]);
+                }
             } else {
                 // No barcode in CSV - auto-assign next available
                 $assignBarcodeAction = new AssignBarcode();
@@ -388,6 +384,43 @@ class SimpleImportAction
         } catch (\Exception $e) {
             Log::warning('Failed to assign barcode to variant', [
                 'variant_id' => $variant->id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the import, just log the warning
+        }
+    }
+
+    /**
+     * Assign pricing to variant using decoupled pricing system
+     */
+    private function assignPricingToVariant(ProductVariant $variant, array $data): void
+    {
+        try {
+            $price = $this->parsePrice($data['price'] ?? '');
+            
+            if ($price && $price > 0) {
+                $assignPricingAction = new AssignPricing();
+                $pricing = $assignPricingAction->execute($variant, $price);
+
+                if ($pricing) {
+                    Log::debug('Assigned pricing to variant', [
+                        'variant_id' => $variant->id,
+                        'variant_sku' => $variant->sku,
+                        'price' => $price,
+                        'pricing_id' => $pricing->id
+                    ]);
+                }
+            } else {
+                Log::debug('No valid price found for variant', [
+                    'variant_id' => $variant->id,
+                    'variant_sku' => $variant->sku,
+                    'raw_price' => $data['price'] ?? 'not provided'
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to assign pricing to variant', [
+                'variant_id' => $variant->id,
+                'variant_sku' => $variant->sku,
                 'error' => $e->getMessage()
             ]);
             // Don't fail the import, just log the warning

@@ -80,8 +80,15 @@ class ProductIndex extends Component
             $product = Product::find($productId);
             if ($product) {
                 $this->expandedProducts[$productId] = $product->variants()
-                    ->with(['pricing'])
+                    ->with(['pricingRecords'])
                     ->get()
+                    ->map(function ($variant) {
+                        $variantArray = $variant->toArray();
+                        // Add pricing from decoupled system
+                        $pricing = $variant->pricingRecords->first();
+                        $variantArray['display_price'] = $pricing ? $pricing->price : 0;
+                        return $variantArray;
+                    })
                     ->toArray();
             }
         }

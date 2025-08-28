@@ -193,7 +193,7 @@
                                                         @if($variant['width'] ?? false)
                                                             <span class="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">{{ $variant['width'] }}cm × {{ $variant['drop'] ?? 'N/A' }}cm</span>
                                                         @endif
-                                                        <span class="font-semibold text-green-600">£{{ number_format($variant['price'] ?? 0, 2) }}</span>
+                                                        <span class="font-semibold text-green-600">£{{ number_format($variant['display_price'] ?? 0, 2) }}</span>
                                                     </div>
                                                     <div class="flex items-center gap-3">
                                                         <div class="text-sm text-gray-500 flex items-center gap-1">
