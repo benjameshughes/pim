@@ -46,10 +46,9 @@ describe('Import System Integration', function () {
         // Verify broadcasting events were dispatched
         Event::assertDispatched(ProductImportProgress::class);
         
-        // Count total events (should be multiple for reading, processing, completion)
-        Event::assertDispatchedTimes(ProductImportProgress::class, function () {
-            return true; // Count all events
-        });
+        // Count total events (clean step-by-step approach)
+        // We expect: 6 step phases + completed = 7 events total
+        Event::assertDispatchedTimes(ProductImportProgress::class, 7);
 
         unlink($filePath);
     });

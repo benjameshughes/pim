@@ -4,6 +4,7 @@ namespace App\Actions\Pricing;
 
 use App\Models\Pricing;
 use App\Models\ProductVariant;
+use App\Models\SalesChannel;
 use Exception;
 
 class AssignPricing
@@ -18,7 +19,11 @@ class AssignPricing
 
             // Use default sales channel if none provided
             if ($salesChannelId === null) {
-                $salesChannelId = 1; // Default sales channel ID
+                $defaultChannel = SalesChannel::getDefault();
+                if (!$defaultChannel) {
+                    throw new Exception('No default sales channel available. Please run sales channel seeder.');
+                }
+                $salesChannelId = $defaultChannel->id;
             }
 
             // Create or update pricing record for this variant

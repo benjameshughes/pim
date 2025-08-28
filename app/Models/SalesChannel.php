@@ -19,40 +19,13 @@ class SalesChannel extends Model
     protected $fillable = [
         'name',
         'code',
-        'display_name',
-        'slug',
-        'icon',
-        'color',
         'description',
-        'default_markup_percentage',
-        'platform_fee_percentage',
-        'payment_fee_percentage',
-        'default_currency',
-        'base_shipping_cost',
-        'free_shipping_available',
-        'free_shipping_threshold',
+        'config',
         'status',
-        'is_active',
-        'auto_sync',
-        'priority',
-        'api_credentials',
-        'settings',
-        'metadata',
     ];
 
     protected $casts = [
-        'default_markup_percentage' => 'decimal:2',
-        'platform_fee_percentage' => 'decimal:2',
-        'payment_fee_percentage' => 'decimal:2',
-        'base_shipping_cost' => 'decimal:2',
-        'free_shipping_threshold' => 'decimal:2',
-        'free_shipping_available' => 'boolean',
-        'is_active' => 'boolean',
-        'auto_sync' => 'boolean',
-        'priority' => 'integer',
-        'api_credentials' => 'encrypted:array',
-        'settings' => 'array',
-        'metadata' => 'array',
+        'config' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -139,7 +112,7 @@ class SalesChannel extends Model
      */
     public function scopeActive($query)
     {
-        return $query; // Removed is_active filter - will be redesigned later
+        return $query->where('status', 'active');
     }
 
     /**
@@ -147,7 +120,7 @@ class SalesChannel extends Model
      */
     public function scopeAutoSync($query)
     {
-        return $query->where('auto_sync', true); // Removed is_active filter
+        return $query->where('config->auto_sync', true);
     }
 
     /**
@@ -155,7 +128,7 @@ class SalesChannel extends Model
      */
     public function scopeByPriority($query)
     {
-        return $query->orderBy('name'); // Order by name instead of missing columns
+        return $query->orderBy('config->priority');
     }
 
     /**
@@ -173,7 +146,7 @@ class SalesChannel extends Model
     {
         return static::active()
             ->byPriority()
-            ->whereIn('name', ['shopify', 'ebay', 'amazon', 'direct'])
+            ->whereIn('code', ['shopify', 'ebay', 'amazon', 'direct'])
             ->get();
     }
 }
