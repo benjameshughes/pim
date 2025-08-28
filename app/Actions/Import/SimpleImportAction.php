@@ -4,6 +4,7 @@ namespace App\Actions\Import;
 
 use App\Actions\Barcodes\AssignBarcode;
 use App\Actions\Import\AttributeAssignmentAction;
+use App\Actions\Import\ExtractDimensions;
 use App\Actions\Pricing\AssignPricing;
 use App\Models\Barcode;
 use App\Models\Product;
@@ -189,16 +190,11 @@ class SimpleImportAction
             }
         }
 
-        // Extract dimensions from title: "45cm x 120cm" or "60cm x 160cm"
-        $width = null;
-        $drop = null;
-
-        if (preg_match('/(\d+)cm x (\d+)cm/', $title, $matches)) {
-            $width = (int) $matches[1];
-            $drop = (int) $matches[2];
-        } elseif (preg_match('/(\d+)cm/', $title, $matches)) {
-            $width = (int) $matches[1];
-        }
+        // Extract dimensions from title using dedicated action
+        $extractDimensions = new ExtractDimensions();
+        $dimensions = $extractDimensions->execute($title);
+        $width = $dimensions['width'];
+        $drop = $dimensions['drop'];
 
         // Generate product name by removing dimensions and color
         $baseName = preg_replace('/\d+cm( x \d+cm)?/', '', $title);
@@ -216,9 +212,13 @@ class SimpleImportAction
         // Debug logging
         Log::debug('Extracted parent info', [
             'original_sku' => $sku,
+            'original_title' => $title,
             'extracted_parent_sku' => $parentSku,
             'extracted_color' => $color,
-            'pattern_detected' => $this->detectSkuPattern($sku),
+            'extracted_width' => $width,
+            'extracted_drop' => $drop,
+            'sku_pattern_detected' => $this->detectSkuPattern($sku),
+            'dimension_pattern_detected' => $extractDimensions->getPatternUsed($title),
         ]);
 
         return $result;
@@ -468,7 +468,8 @@ class SimpleImportAction
         });
 
         foreach ($commonColors as $color) {
-            if (stripos($title, $color) !== false) {
+            // Use word boundaries to avoid partial matches (e.g., "black" in "blackout")
+            if (preg_match('/\b' . preg_quote($color, '/') . '\b/i', $title)) {
                 return ucwords($color);  // Use ucwords for multi-word colors
             }
         }
