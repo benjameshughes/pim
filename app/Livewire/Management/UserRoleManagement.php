@@ -6,9 +6,11 @@ use App\Actions\Users\AssignUserRoleAction;
 use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\GetUsersWithRolesAction;
 use App\Models\User;
+use App\Services\PermissionTemplateService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
 
 /**
  * 👑 USER ROLE MANAGEMENT COMPONENT
@@ -26,10 +28,16 @@ class UserRoleManagement extends Component
     public string $sortBy = 'name';
     public string $sortDirection = 'asc';
 
-    // Modal state
+    // Modal state  
     public bool $showRoleModal = false;
     public ?User $selectedUser = null;
     public string $selectedRole = '';
+    
+    // Permission template modal state
+    public bool $showPermissionModal = false;
+    public ?User $selectedUserForPermissions = null;
+    public string $selectedTemplate = '';
+    public bool $showCustomPermissions = false;
     
     // Create user modal state
     public bool $showCreateModal = false;
@@ -242,12 +250,90 @@ class UserRoleManagement extends Component
         return $result['success'] ? $result['data']['role_statistics'] : [];
     }
 
+    // ===== PERMISSION TEMPLATE METHODS =====
+
+    public function openPermissionModal(User $user)
+    {
+        $this->selectedUserForPermissions = $user;
+        $this->selectedTemplate = '';
+        $this->showCustomPermissions = false;
+        $this->showPermissionModal = true;
+    }
+
+    public function closePermissionModal()
+    {
+        $this->showPermissionModal = false;
+        $this->selectedUserForPermissions = null;
+        $this->selectedTemplate = '';
+        $this->showCustomPermissions = false;
+    }
+
+    public function selectTemplate(string $templateKey)
+    {
+        $this->selectedTemplate = $templateKey;
+        
+        if ($templateKey === 'custom') {
+            $this->showCustomPermissions = true;
+        } else {
+            $this->showCustomPermissions = false;
+        }
+    }
+
+    public function applyPermissionTemplate()
+    {
+        $this->authorize('manage-role-permissions');
+
+        if (!$this->selectedUserForPermissions || !$this->selectedTemplate) {
+            $this->dispatch('notify', message: 'Please select a template', type: 'error');
+            return;
+        }
+
+        if ($this->selectedTemplate === 'custom') {
+            $this->dispatch('notify', message: 'Custom permissions not implemented yet', type: 'info');
+            return;
+        }
+
+        try {
+            $success = PermissionTemplateService::applyTemplate(
+                $this->selectedTemplate, 
+                $this->selectedUserForPermissions
+            );
+
+            if ($success) {
+                $template = PermissionTemplateService::getTemplate($this->selectedTemplate);
+                $this->dispatch('notify', 
+                    message: "Applied {$template['name']} template ({$template['permission_count']} permissions) to {$this->selectedUserForPermissions->name} 🎭", 
+                    type: 'success'
+                );
+                $this->closePermissionModal();
+                $this->dispatch('user-role-updated');
+            } else {
+                $this->dispatch('notify', message: 'Failed to apply template', type: 'error');
+            }
+
+        } catch (\Exception $e) {
+            $this->dispatch('notify', message: 'Error applying template: ' . $e->getMessage(), type: 'error');
+        }
+    }
+
+    public function getPermissionTemplates(): array
+    {
+        return PermissionTemplateService::getTemplates();
+    }
+
+    public function getTemplateStats(): array
+    {
+        return PermissionTemplateService::getTemplateStats();
+    }
+
     public function render()
     {
         return view('livewire.management.user-role-management', [
             'users' => $this->getUsers(),
             'roleStatistics' => $this->getRoleStatistics(),
             'availableRoles' => AssignUserRoleAction::getAvailableRoles(),
+            'permissionTemplates' => $this->getPermissionTemplates(),
+            'templateStats' => $this->getTemplateStats(),
         ]);
     }
 }

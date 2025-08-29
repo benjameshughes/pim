@@ -186,13 +186,22 @@
                                 {{ $user->created_at->format('M d, Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <flux:button 
-                                    wire:click="openRoleModal({{ $user->id }})"
-                                    variant="ghost"
-                                    size="sm"
-                                    icon="pencil">
-                                    Edit Role
-                                </flux:button>
+                                <div class="flex items-center gap-2 justify-end">
+                                    <flux:button 
+                                        wire:click="openPermissionModal({{ $user->id }})"
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="key">
+                                        Permissions
+                                    </flux:button>
+                                    <flux:button 
+                                        wire:click="openRoleModal({{ $user->id }})"
+                                        variant="ghost"
+                                        size="sm"
+                                        icon="pencil">
+                                        Role
+                                    </flux:button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -317,6 +326,176 @@
                 </flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    {{-- 🎭 PERMISSION TEMPLATE MODAL --}}
+    <flux:modal wire:model="showPermissionModal" class="md:max-w-2xl">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                🎭 Permission Templates for {{ $selectedUserForPermissions?->name }}
+            </h3>
+            
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Choose a pre-configured permission template to quickly assign appropriate access levels. 
+                Templates organize our 241 permissions into logical groups.
+            </p>
+
+            {{-- Template Selection Grid --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                @foreach($permissionTemplates as $key => $template)
+                    <div class="relative">
+                        <input 
+                            type="radio" 
+                            wire:model.live="selectedTemplate"
+                            value="{{ $key }}"
+                            id="template_{{ $key }}"
+                            class="sr-only"
+                        >
+                        <label 
+                            for="template_{{ $key }}"
+                            class="flex flex-col p-4 border-2 rounded-lg cursor-pointer transition-all
+                                {{ $selectedTemplate === $key 
+                                    ? 'border-' . $template['color'] . '-500 bg-' . $template['color'] . '-50 dark:bg-' . $template['color'] . '-900/20' 
+                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600' }}">
+                            
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <div class="p-2 rounded-md bg-{{ $template['color'] }}-100 dark:bg-{{ $template['color'] }}-900">
+                                        <flux:icon name="{{ $template['icon'] }}" class="h-5 w-5 text-{{ $template['color'] }}-600 dark:text-{{ $template['color'] }}-400" />
+                                    </div>
+                                    <div class="ml-3">
+                                        <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                                            {{ $template['name'] }}
+                                        </h4>
+                                        <p class="text-xs text-{{ $template['color'] }}-600 dark:text-{{ $template['color'] }}-400">
+                                            {{ $template['permission_count'] }} permissions
+                                        </p>
+                                    </div>
+                                </div>
+                                @if($selectedTemplate === $key)
+                                    <flux:icon name="check-circle" class="h-5 w-5 text-{{ $template['color'] }}-600" />
+                                @endif
+                            </div>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                                {{ $template['description'] }}
+                            </p>
+                            
+                            {{-- Permission Count Bar --}}
+                            <div class="mt-3 flex items-center">
+                                <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                    <div class="bg-{{ $template['color'] }}-500 h-2 rounded-full" 
+                                         style="width: {{ round(($template['permission_count'] / 241) * 100, 1) }}%"></div>
+                                </div>
+                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                    {{ round(($template['permission_count'] / 241) * 100, 1) }}%
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+                @endforeach
+
+                {{-- Custom Template Option --}}
+                <div class="relative">
+                    <input 
+                        type="radio" 
+                        wire:model.live="selectedTemplate"
+                        value="custom"
+                        id="template_custom"
+                        class="sr-only"
+                    >
+                    <label 
+                        for="template_custom"
+                        class="flex flex-col p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all
+                            {{ $selectedTemplate === 'custom' 
+                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' 
+                                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500' }}">
+                        
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-md bg-purple-100 dark:bg-purple-900">
+                                    <flux:icon name="adjustments-horizontal" class="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+                                        Custom Permissions
+                                    </h4>
+                                    <p class="text-xs text-purple-600 dark:text-purple-400">
+                                        Individual control
+                                    </p>
+                                </div>
+                            </div>
+                            @if($selectedTemplate === 'custom')
+                                <flux:icon name="check-circle" class="h-5 w-5 text-purple-600" />
+                            @endif
+                        </div>
+                        
+                        <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                            Select individual permissions from all 241 available options. 
+                            <span class="text-purple-600 dark:text-purple-400 font-medium">(Coming Soon)</span>
+                        </p>
+                    </label>
+                </div>
+            </div>
+
+            {{-- Template Stats --}}
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">📊 Permission System Overview</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    @foreach($templateStats['templates'] as $stat)
+                        <div class="text-center">
+                            <div class="text-lg font-bold text-gray-900 dark:text-white">{{ $stat['permission_count'] }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $stat['name'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+                <div class="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
+                    Total: {{ $templateStats['total_permissions'] }} permissions across {{ $templateStats['total_templates'] }} templates
+                </div>
+            </div>
+
+            @if($showCustomPermissions)
+                <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <flux:icon name="information-circle" class="h-5 w-5 text-purple-500 flex-shrink-0" />
+                        <div class="ml-3">
+                            <h4 class="text-sm font-medium text-purple-800 dark:text-purple-200">Custom Permission Builder</h4>
+                            <p class="text-sm text-purple-700 dark:text-purple-300">
+                                The individual permission selector with 241 checkboxes is coming in the next update. 
+                                For now, use the pre-configured templates which cover 99% of use cases.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+        
+        <div class="flex justify-between items-center p-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                @if($selectedTemplate && $selectedTemplate !== 'custom')
+                    @php $template = $permissionTemplates[$selectedTemplate] ?? null; @endphp
+                    @if($template)
+                        Selected: <strong>{{ $template['name'] }}</strong> ({{ $template['permission_count'] }} permissions)
+                    @endif
+                @elseif($selectedTemplate === 'custom')
+                    Custom permissions builder (coming soon)
+                @else
+                    Please select a permission template
+                @endif
+            </div>
+            
+            <div class="flex gap-3">
+                <flux:button wire:click="closePermissionModal" variant="ghost">Cancel</flux:button>
+                <flux:button 
+                    wire:click="applyPermissionTemplate" 
+                    variant="primary"
+                    :disabled="!selectedTemplate || selectedTemplate === 'custom'"
+                    wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="applyPermissionTemplate">Apply Template</span>
+                    <span wire:loading wire:target="applyPermissionTemplate">Applying...</span>
+                </flux:button>
+            </div>
+        </div>
     </flux:modal>
 
     {{-- BULK ROLE ASSIGNMENT CONTROLS --}}
