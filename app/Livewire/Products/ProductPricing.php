@@ -69,7 +69,7 @@ class ProductPricing extends Component
     {
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
-            $this->dispatch('error', 'Variant not found');
+            $this->dispatch('notify', message: 'Variant not found', type: 'error');
             return;
         }
         
@@ -92,7 +92,7 @@ class ProductPricing extends Component
         ]);
 
         if (!$this->selectedVariant || !$this->selectedChannel) {
-            $this->dispatch('error', 'Invalid variant or channel selected');
+            $this->dispatch('notify', message: 'Invalid variant or channel selected', type: 'error');
             return;
         }
 
@@ -109,12 +109,12 @@ class ProductPricing extends Component
             $action = $result['data']['action'];
             
             if ($action === 'removed') {
-                $this->dispatch('success', "Removed {$channel->name} price override for {$this->selectedVariant->sku}");
+                $this->dispatch('notify', message: "Removed {$channel->name} price override for {$this->selectedVariant->sku} ✨", type: 'success');
             } else {
-                $this->dispatch('success', "Updated {$channel->name} price for {$this->selectedVariant->sku}: £{$this->modalPrice}");
+                $this->dispatch('notify', message: "Updated {$channel->name} price for {$this->selectedVariant->sku}: £{$this->modalPrice} 💰", type: 'success');
             }
         } else {
-            $this->dispatch('error', $result['message']);
+            $this->dispatch('notify', message: $result['message'], type: 'error');
         }
 
         $this->closePriceModal();
@@ -134,7 +134,7 @@ class ProductPricing extends Component
     {
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
-            $this->dispatch('error', 'Variant not found');
+            $this->dispatch('notify', message: 'Variant not found', type: 'error');
             return;
         }
         
@@ -150,7 +150,7 @@ class ProductPricing extends Component
         ]);
 
         if (!$this->selectedBaseVariant) {
-            $this->dispatch('error', 'Invalid variant selected');
+            $this->dispatch('notify', message: 'Invalid variant selected', type: 'error');
             return;
         }
 
@@ -161,7 +161,7 @@ class ProductPricing extends Component
         $this->product = $this->product->fresh(['variants']);
         $this->variants = $this->product->variants;
         
-        $this->dispatch('success', "Updated retail price for {$this->selectedBaseVariant->sku}: £{$oldPrice} → £{$this->basePriceValue}");
+        $this->dispatch('notify', message: "Updated retail price for {$this->selectedBaseVariant->sku}: £{$oldPrice} → £{$this->basePriceValue} 💰", type: 'success');
         
         $this->closeBasePriceModal();
     }
@@ -178,7 +178,7 @@ class ProductPricing extends Component
     {
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
-            $this->dispatch('error', 'Variant not found');
+            $this->dispatch('notify', message: 'Variant not found', type: 'error');
             return;
         }
         
@@ -187,10 +187,10 @@ class ProductPricing extends Component
         
         if ($result['success']) {
             $channel = $this->channels->firstWhere('code', $channelCode);
-            $this->dispatch('success', "Removed {$channel->name} price override for {$variant->sku}");
+            $this->dispatch('notify', message: "Removed {$channel->name} price override for {$variant->sku} ✨", type: 'success');
             $this->dispatch('channel-price-updated');
         } else {
-            $this->dispatch('error', $result['message']);
+            $this->dispatch('notify', message: $result['message'], type: 'error');
         }
     }
 
@@ -238,10 +238,10 @@ class ProductPricing extends Component
         if ($result['success']) {
             $channel = $this->channels->firstWhere('code', $this->markupChannel);
             $count = $result['data']['summary']['updates_successful'];
-            $this->dispatch('success', "{$message} to {$count} variants for {$channel->name}");
+            $this->dispatch('notify', message: "{$message} to {$count} variants for {$channel->name} 🎉", type: 'success');
             $this->dispatch('channel-price-updated');
         } else {
-            $this->dispatch('error', $result['message']);
+            $this->dispatch('notify', message: $result['message'], type: 'error');
         }
 
         $this->closeBulkMarkupModal();
@@ -273,10 +273,10 @@ class ProductPricing extends Component
         if ($result['success']) {
             $channel = $this->channels->firstWhere('code', $this->discountChannel);
             $count = $result['data']['summary']['updates_successful'];
-            $this->dispatch('success', "{$message} to {$count} variants for {$channel->name}");
+            $this->dispatch('notify', message: "{$message} to {$count} variants for {$channel->name} 🎉", type: 'success');
             $this->dispatch('channel-price-updated');
         } else {
-            $this->dispatch('error', $result['message']);
+            $this->dispatch('notify', message: $result['message'], type: 'error');
         }
 
         $this->closeBulkDiscountModal();
