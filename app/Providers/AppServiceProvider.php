@@ -27,45 +27,56 @@ class AppServiceProvider extends ServiceProvider
         // $this->registerEventListeners();
         // $this->configureUrlGeneration();
         
-        $this->registerTeamGates();
+        $this->registerRoleGates();
     }
 
-    private function registerTeamGates(): void
+    private function registerRoleGates(): void
     {
-        Gate::define('manage-team', function (User $user, Team $team) {
-            return $user->canManageTeam($team);
-        });
-
+        // System management - Admin only
         Gate::define('manage-system', function (User $user) {
-            return $user->canManageAnyTeam();
+            return $user->isAdmin();
         });
 
-        Gate::define('manage-products', function (User $user, Team $team) {
-            return $user->canManageProducts($team);
+        Gate::define('manage-users', function (User $user) {
+            return $user->isAdmin();
         });
 
-        Gate::define('manage-barcodes', function (User $user, Team $team) {
-            return $user->canManageProducts($team);
+        Gate::define('manage-teams', function (User $user) {
+            return $user->isAdmin();
         });
 
-        Gate::define('manage-integrations', function (User $user, Team $team) {
-            return $user->canManageProducts($team);
+        // Product management - Manager and Admin
+        Gate::define('manage-products', function (User $user) {
+            return $user->isManager();
         });
 
-        Gate::define('view-team', function (User $user, Team $team) {
-            return $user->canViewTeam($team);
+        Gate::define('manage-barcodes', function (User $user) {
+            return $user->isManager();
         });
 
-        Gate::define('view-products', function (User $user, Team $team) {
-            return $user->canViewTeam($team);
+        Gate::define('manage-integrations', function (User $user) {
+            return $user->isManager();
         });
 
-        Gate::define('view-barcodes', function (User $user, Team $team) {
-            return $user->canViewTeam($team);
+        Gate::define('manage-pricing', function (User $user) {
+            return $user->isManager();
         });
 
-        Gate::define('view-analytics', function (User $user, Team $team) {
-            return $user->canViewTeam($team);
+        // View permissions - All authenticated users with roles
+        Gate::define('view-products', function (User $user) {
+            return $user->hasRole();
+        });
+
+        Gate::define('view-barcodes', function (User $user) {
+            return $user->hasRole();
+        });
+
+        Gate::define('view-analytics', function (User $user) {
+            return $user->hasRole();
+        });
+
+        Gate::define('view-integrations', function (User $user) {
+            return $user->hasRole();
         });
     }
 }

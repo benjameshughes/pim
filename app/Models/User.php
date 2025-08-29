@@ -23,6 +23,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -45,6 +46,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => 'string',
         ];
     }
 
@@ -97,25 +99,78 @@ class User extends Authenticatable
 
     public function canManageAnyTeam(): bool
     {
-        return $this->teams()->wherePivot('role', 'admin')->exists();
+        return $this->isAdmin();
     }
 
     public function canManageProducts(Team $team): bool
     {
-        return $this->isManagerOf($team);
+        return $this->isManager() || $this->isAdmin();
     }
 
     public function canViewTeam(Team $team): bool
     {
-        return $this->isMemberOf($team);
+        return $this->hasRole();
     }
 
+    // ===== NEW SIMPLE ROLE-BASED METHODS =====
+
+    /**
+     * Check if user has admin role
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user has manager role or higher
+     */
+    public function isManager(): bool
+    {
+        return in_array($this->role, ['admin', 'manager']);
+    }
+
+    /**
+     * Check if user has any role assigned
+     */
+    public function hasRole(): bool
+    {
+        return !empty($this->role);
+    }
+
+    /**
+     * Check if user has specific role
+     */
+    public function hasSpecificRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+
+    /**
+     * Get user's role display name
+     */
+    public function getRoleDisplayName(): string
+    {
+        return match($this->role) {
+            'admin' => 'Administrator',
+            'manager' => 'Manager',
+            'user' => 'User',
+            default => 'Unassigned'
+        };
+    }
+
+    // ===== LEGACY TEAM-BASED ROLE METHODS (Keep for backward compatibility) =====
+    // NOTE: These methods are deprecated in favor of simple role column
+    
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class);
     }
 
-    public function hasRole($role): bool
+    /**
+     * @deprecated Use hasSpecificRole() instead
+     */
+    public function hasRoleModel($role): bool
     {
         return $this->roles()->where('name', $role)->exists();
     }

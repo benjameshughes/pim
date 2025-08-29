@@ -113,6 +113,13 @@
                         >
                             Teams
                         </flux:navlist.item>
+
+                        <flux:navlist.item 
+                            icon="key" 
+                            href="{{ route('management.user-roles.index') }}"
+                        >
+                            User Roles
+                        </flux:navlist.item>
                     </flux:navlist.group>
                 @endcan
             </flux:navlist>
