@@ -90,7 +90,7 @@ class UserRoleManagement extends Component
         }
 
         $this->selectedUser = $user;
-        $this->selectedRole = $user->role ?? 'user';
+        $this->selectedRole = $user->getPrimaryRole() ?? 'user';
         $this->showRoleModal = true;
     }
 

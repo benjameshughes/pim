@@ -50,11 +50,14 @@ class GetUsersWithRolesAction extends BaseAction
 
         try {
             $query = User::query()
-                ->select(['id', 'name', 'email', 'role', 'email_verified_at', 'created_at']);
+                ->with('roles')
+                ->select(['id', 'name', 'email', 'email_verified_at', 'created_at']);
 
             // Apply role filter
             if (isset($filters['role']) && ! empty($filters['role'])) {
-                $query->where('role', $filters['role']);
+                $query->whereHas('roles', function ($q) use ($filters) {
+                    $q->where('name', $filters['role']);
+                });
             }
 
             // Apply search filter
@@ -70,7 +73,7 @@ class GetUsersWithRolesAction extends BaseAction
             $sortBy = $filters['sort_by'] ?? 'name';
             $sortDirection = $filters['sort_direction'] ?? 'asc';
 
-            if (in_array($sortBy, ['name', 'email', 'role', 'created_at'])) {
+            if (in_array($sortBy, ['name', 'email', 'created_at'])) {
                 $query->orderBy($sortBy, $sortDirection);
             }
 
@@ -108,21 +111,19 @@ class GetUsersWithRolesAction extends BaseAction
     private function getRoleStatistics(): array
     {
         try {
-            $stats = User::selectRaw('role, COUNT(*) as count')
-                ->groupBy('role')
-                ->pluck('count', 'role')
-                ->toArray();
+            // Get role statistics using Spatie
+            $adminCount = User::role('admin')->count();
+            $managerCount = User::role('manager')->count();
+            $userCount = User::role('user')->count();
+            $totalUsers = User::count();
+            $unassignedCount = $totalUsers - ($adminCount + $managerCount + $userCount);
 
-            // Ensure all roles are represented
-            $allRoles = ['admin', 'manager', 'user', null];
-            $roleStats = [];
-
-            foreach ($allRoles as $role) {
-                $roleLabel = $role ?? 'unassigned';
-                $roleStats[$roleLabel] = $stats[$role] ?? 0;
-            }
-
-            return $roleStats;
+            return [
+                'admin' => $adminCount,
+                'manager' => $managerCount,
+                'user' => $userCount,
+                'unassigned' => $unassignedCount,
+            ];
 
         } catch (\Exception $e) {
             Log::warning('GetUsersWithRolesAction: Failed to get role statistics', [
@@ -143,7 +144,7 @@ class GetUsersWithRolesAction extends BaseAction
      */
     public static function getUsersByRole(string $role): Collection
     {
-        return User::where('role', $role)->get();
+        return User::role($role)->get();
     }
 
     /**
@@ -151,6 +152,6 @@ class GetUsersWithRolesAction extends BaseAction
      */
     public static function getUnassignedUsers(): Collection
     {
-        return User::whereNull('role')->get();
+        return User::doesntHave('roles')->get();
     }
 }

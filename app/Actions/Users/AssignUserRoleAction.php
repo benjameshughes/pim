@@ -7,10 +7,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 /**
- * 👑 ASSIGN USER ROLE ACTION
+ * 👑 ASSIGN USER ROLE ACTION - SPATIE PERMISSIONS VERSION
  *
- * Assigns a role to a user in the simplified role-based permission system.
- * Replaces the complex team-based approach with simple user roles.
+ * Assigns a role to a user using Spatie Laravel Permission package.
+ * Replaces old column-based roles with proper role management.
  *
  * Usage: AssignUserRoleAction::run($user, 'admin')
  */
@@ -65,11 +65,11 @@ class AssignUserRoleAction extends BaseAction
             return $this->failure('Invalid role. Must be admin, manager, or user');
         }
 
-        $oldRole = $user->role;
+        $oldRole = $user->getPrimaryRole();
 
         try {
-            // Update user role
-            $user->update(['role' => $role]);
+            // Assign role using Spatie permissions
+            $user->syncRoles([$role]);
 
             Log::info('AssignUserRoleAction: Role assigned successfully', [
                 'user_id' => $user->id,

@@ -99,10 +99,16 @@ class User extends Authenticatable
     }
 
     /**
-     * Get user's primary role name
+     * Get user's primary role name (highest priority role)
      */
     public function getPrimaryRole(): ?string
     {
+        // Return roles in priority order: admin > manager > user
+        if ($this->hasRole('admin')) return 'admin';
+        if ($this->hasRole('manager')) return 'manager';
+        if ($this->hasRole('user')) return 'user';
+        
+        // Fallback to first role if none of the standard ones
         return $this->roles->first()?->name;
     }
 

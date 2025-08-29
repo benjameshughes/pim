@@ -489,7 +489,7 @@
                 <flux:button 
                     wire:click="applyPermissionTemplate" 
                     variant="primary"
-                    :disabled="!selectedTemplate || selectedTemplate === 'custom'"
+                    :disabled="!$selectedTemplate || $selectedTemplate === 'custom'"
                     wire:loading.attr="disabled">
                     <span wire:loading.remove wire:target="applyPermissionTemplate">Apply Template</span>
                     <span wire:loading wire:target="applyPermissionTemplate">Applying...</span>
