@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * ✏️ UPDATE USER ACTION
- * 
+ *
  * Updates user profile information including name, email, and role.
  * Includes validation and prevents self-demotion for admins.
- * 
+ *
  * Usage: UpdateUserAction::run($user, 'New Name', 'new@email.com', 'manager')
  */
 class UpdateUserAction extends BaseAction
@@ -23,14 +23,15 @@ class UpdateUserAction extends BaseAction
      */
     public static function run(User $user, ?string $name = null, ?string $email = null, ?string $role = null): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->handle($user, $name, $email, $role);
     }
 
     /**
      * Handle the user update
-     * 
-     * @param mixed ...$params - User update parameters
+     *
+     * @param  mixed  ...$params  - User update parameters
      */
     public function handle(...$params): array
     {
@@ -38,7 +39,7 @@ class UpdateUserAction extends BaseAction
         $name = $params[1] ?? null;
         $email = $params[2] ?? null;
         $role = $params[3] ?? null;
-        
+
         return $this->execute($user, $name, $email, $role);
     }
 
@@ -53,21 +54,24 @@ class UpdateUserAction extends BaseAction
         $role = $params[3] ?? null;
 
         // Validate inputs
-        if (!$user instanceof User) {
+        if (! $user instanceof User) {
             Log::warning('UpdateUserAction: Invalid user provided', ['user' => $user]);
+
             return $this->failure('Invalid user provided');
         }
 
-        if ($role && !in_array($role, ['admin', 'manager', 'user'])) {
+        if ($role && ! in_array($role, ['admin', 'manager', 'user'])) {
             Log::warning('UpdateUserAction: Invalid role provided', [
                 'role' => $role,
-                'valid_roles' => ['admin', 'manager', 'user']
+                'valid_roles' => ['admin', 'manager', 'user'],
             ]);
+
             return $this->failure('Invalid role. Must be admin, manager, or user');
         }
 
-        if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if ($email && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             Log::warning('UpdateUserAction: Invalid email format', ['email' => $email]);
+
             return $this->failure('Invalid email format');
         }
 
@@ -76,8 +80,9 @@ class UpdateUserAction extends BaseAction
             if (User::where('email', strtolower(trim($email)))->where('id', '!=', $user->id)->exists()) {
                 Log::warning('UpdateUserAction: Email already exists', [
                     'email' => $email,
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ]);
+
                 return $this->failure('A user with this email already exists');
             }
         }
@@ -86,8 +91,9 @@ class UpdateUserAction extends BaseAction
         if ($role && $user->id === auth()->id() && $user->isAdmin() && $role !== 'admin') {
             Log::warning('UpdateUserAction: Admin attempted self-demotion', [
                 'user_id' => $user->id,
-                'attempted_role' => $role
+                'attempted_role' => $role,
             ]);
+
             return $this->failure('You cannot change your own admin role');
         }
 
@@ -96,12 +102,12 @@ class UpdateUserAction extends BaseAction
             $originalData = [
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role
+                'role' => $user->role,
             ];
 
             // Prepare update data
             $updateData = [];
-            
+
             if ($name && trim($name) !== $user->name) {
                 $updateData['name'] = trim($name);
                 $changes['name'] = ['from' => $user->name, 'to' => trim($name)];
@@ -120,9 +126,10 @@ class UpdateUserAction extends BaseAction
             // If no changes, return early
             if (empty($updateData)) {
                 Log::info('UpdateUserAction: No changes detected', ['user_id' => $user->id]);
+
                 return $this->success('No changes detected', [
                     'user' => $user,
-                    'changes_made' => false
+                    'changes_made' => false,
                 ]);
             }
 
@@ -132,13 +139,13 @@ class UpdateUserAction extends BaseAction
             Log::info('UpdateUserAction: User updated successfully', [
                 'user_id' => $user->id,
                 'changes' => $changes,
-                'updated_by' => auth()->id()
+                'updated_by' => auth()->id(),
             ]);
 
             return $this->success('User updated successfully', [
                 'user' => $user->fresh(),
                 'changes' => $changes,
-                'changes_made' => true
+                'changes_made' => true,
             ]);
 
         } catch (\Exception $e) {
@@ -148,10 +155,10 @@ class UpdateUserAction extends BaseAction
                 'email' => $email,
                 'role' => $role,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->failure('Failed to update user: ' . $e->getMessage());
+            return $this->failure('Failed to update user: '.$e->getMessage());
         }
     }
 
@@ -161,11 +168,11 @@ class UpdateUserAction extends BaseAction
     private function getChangesSummary(array $changes): string
     {
         $summary = [];
-        
+
         foreach ($changes as $field => $change) {
             $summary[] = "{$field}: '{$change['from']}' → '{$change['to']}'";
         }
-        
+
         return implode(', ', $summary);
     }
 }

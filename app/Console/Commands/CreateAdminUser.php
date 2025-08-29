@@ -9,10 +9,10 @@ use Illuminate\Support\Facades\Validator;
 
 /**
  * 👑 CREATE ADMIN USER COMMAND
- * 
+ *
  * Interactive command to create admin users safely.
  * Useful as a fallback or for creating additional admins.
- * 
+ *
  * Usage: php artisan user:create-admin
  */
 class CreateAdminUser extends Command
@@ -42,10 +42,10 @@ class CreateAdminUser extends Command
         // Show current admin count
         $adminCount = User::where('role', 'admin')->count();
         $this->info("📊 Current admin users: {$adminCount}");
-        
+
         if ($adminCount > 0) {
             $this->warn('⚠️  Admin users already exist in the system.');
-            if (!$this->option('force') && !$this->confirm('Continue creating another admin?')) {
+            if (! $this->option('force') && ! $this->confirm('Continue creating another admin?')) {
                 return self::SUCCESS;
             }
         }
@@ -71,20 +71,22 @@ class CreateAdminUser extends Command
             foreach ($validator->errors()->all() as $error) {
                 $this->error("  • {$error}");
             }
+
             return self::FAILURE;
         }
 
         // Confirm before creation
-        if (!$this->option('force')) {
+        if (! $this->option('force')) {
             $this->line('');
             $this->info('📝 Admin user details:');
             $this->line("  Name: {$name}");
             $this->line("  Email: {$email}");
-            $this->line("  Role: admin");
+            $this->line('  Role: admin');
             $this->line('');
-            
-            if (!$this->confirm('Create this admin user?')) {
+
+            if (! $this->confirm('Create this admin user?')) {
                 $this->info('🛑 Admin creation cancelled.');
+
                 return self::SUCCESS;
             }
         }
@@ -124,6 +126,7 @@ class CreateAdminUser extends Command
         } catch (\Exception $e) {
             $this->error('❌ Failed to create admin user:');
             $this->error("  {$e->getMessage()}");
+
             return self::FAILURE;
         }
     }
@@ -135,7 +138,7 @@ class CreateAdminUser extends Command
     {
         return [
             'name' => 'System Administrator',
-            'email' => 'admin@' . parse_url(config('app.url'), PHP_URL_HOST),
+            'email' => 'admin@'.parse_url(config('app.url'), PHP_URL_HOST),
             'password' => 'admin123',
         ];
     }
@@ -147,7 +150,7 @@ class CreateAdminUser extends Command
     {
         $this->line('');
         $this->info('📊 System Summary:');
-        
+
         $stats = User::selectRaw('
             COUNT(*) as total,
             SUM(CASE WHEN role = "admin" THEN 1 ELSE 0 END) as admins,

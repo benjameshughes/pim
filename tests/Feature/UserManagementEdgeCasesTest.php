@@ -1,13 +1,12 @@
 <?php
 
 use App\Actions\Users\CreateUserAction;
-use App\Actions\Users\UpdateUserAction;
 use App\Actions\Users\DeleteUserAction;
-use App\Livewire\Management\Users\UserIndex;
+use App\Actions\Users\UpdateUserAction;
 use App\Livewire\Management\UserRoleManagement;
+use App\Livewire\Management\Users\UserIndex;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Maize\MagicLogin\Facades\MagicLink;
 
@@ -21,7 +20,7 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles database connection errors gracefully', function () {
             // Simulate database error by using wrong connection
             DB::shouldReceive('transaction')->andThrow(new PDOException('Connection lost'));
-            
+
             $result = CreateUserAction::run('Test User', 'test@example.com', 'user');
             expect($result['success'])->toBeFalse();
             expect($result['message'])->toContain('Failed to create user');
@@ -30,7 +29,7 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles duplicate email constraint violations', function () {
             // Create a user first
             User::factory()->create(['email' => 'existing@example.com']);
-            
+
             // Try to create another with same email
             $result = CreateUserAction::run('Another User', 'existing@example.com', 'user');
             expect($result['success'])->toBeFalse();
@@ -39,8 +38,8 @@ describe('User Management Edge Cases and Error Handling', function () {
 
         it('handles very long input strings', function () {
             $longName = str_repeat('a', 1000);
-            $longEmail = str_repeat('b', 500) . '@example.com';
-            
+            $longEmail = str_repeat('b', 500).'@example.com';
+
             $result = CreateUserAction::run($longName, $longEmail, 'user');
             expect($result['success'])->toBeFalse();
         });
@@ -48,9 +47,9 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles SQL injection attempts', function () {
             $maliciousName = "'; DROP TABLE users; --";
             $maliciousEmail = "test@example.com'; DROP TABLE users; --";
-            
+
             $result = CreateUserAction::run($maliciousName, $maliciousEmail, 'user');
-            
+
             // Should either succeed with escaped data or fail validation
             if ($result['success']) {
                 expect($result['data']['user']->name)->not->toContain('DROP TABLE');
@@ -61,14 +60,14 @@ describe('User Management Edge Cases and Error Handling', function () {
     describe('Email and External Service Edge Cases', function () {
         it('handles magic link service failures gracefully', function () {
             MagicLink::shouldReceive('send')->andThrow(new Exception('SMTP server unavailable'));
-            
+
             $result = CreateUserAction::run(
                 'Test User',
                 'test@example.com',
                 'user',
                 sendWelcomeEmail: true
             );
-            
+
             // User should still be created even if email fails
             expect($result['success'])->toBeTrue();
             expect($result['data']['magic_link_sent'])->toBeFalse();
@@ -110,14 +109,14 @@ describe('User Management Edge Cases and Error Handling', function () {
             $component = Livewire::test(UserIndex::class)
                 ->set('editingUser', 'invalid-object') // Corrupt state
                 ->call('updateUser');
-                
+
             // Should handle gracefully without crashing
             $component->assertStatus(200);
         });
 
         it('handles concurrent user operations', function () {
             $user = User::factory()->create(['role' => 'user']);
-            
+
             // Simulate user being deleted while editing
             Livewire::test(UserIndex::class)
                 ->call('openEditModal', $user->id)
@@ -145,7 +144,7 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles very large datasets in components', function () {
             // Create many users to test pagination and performance
             User::factory()->count(1000)->create();
-            
+
             $component = Livewire::test(UserIndex::class);
             $component->assertStatus(200);
             $component->assertViewHas('users');
@@ -162,7 +161,7 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles unicode characters in names', function () {
             $unicodeName = '张三 José María';
             $result = CreateUserAction::run($unicodeName, 'unicode@example.com', 'user');
-            
+
             if ($result['success']) {
                 expect($result['data']['user']->name)->toBe($unicodeName);
             }
@@ -177,9 +176,9 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles null byte injection', function () {
             $maliciousName = "Test\0User";
             $maliciousEmail = "test\0@example.com";
-            
+
             $result = CreateUserAction::run($maliciousName, $maliciousEmail, 'user');
-            
+
             if ($result['success']) {
                 expect($result['data']['user']->name)->not->toContain("\0");
             }
@@ -189,20 +188,20 @@ describe('User Management Edge Cases and Error Handling', function () {
     describe('Performance and Memory Edge Cases', function () {
         it('handles bulk operations without memory exhaustion', function () {
             $userIds = User::factory()->count(100)->create()->pluck('id')->toArray();
-            
+
             Livewire::test(UserRoleManagement::class)
                 ->set('selectedUsers', $userIds)
                 ->set('bulkRole', 'manager')
                 ->call('bulkAssignRole')
                 ->assertDispatched('notify');
-                
+
             // Should complete without timeout or memory errors
             expect(true)->toBeTrue();
         });
 
         it('handles search with very long query strings', function () {
             $longQuery = str_repeat('search', 1000);
-            
+
             Livewire::test(UserIndex::class)
                 ->set('search', $longQuery)
                 ->assertStatus(200); // Should not crash
@@ -243,7 +242,7 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles orphaned relationships gracefully', function () {
             // This would test if user had relationships that need cleanup
             $user = User::factory()->create();
-            
+
             $result = DeleteUserAction::run($user);
             expect($result['success'])->toBeTrue();
         });
@@ -252,21 +251,21 @@ describe('User Management Edge Cases and Error Handling', function () {
             // Test with different timezone
             $originalTimezone = date_default_timezone_get();
             date_default_timezone_set('America/New_York');
-            
+
             $result = CreateUserAction::run('TZ Test', 'tz@example.com', 'user');
-            
+
             date_default_timezone_set($originalTimezone);
-            
+
             expect($result['success'])->toBeTrue();
         });
 
         it('handles soft delete edge cases', function () {
             $user = User::factory()->create();
-            
+
             // If model supports soft deletes
             if (method_exists($user, 'delete')) {
                 $user->delete(); // Soft delete
-                
+
                 // Try to create user with same email
                 $result = CreateUserAction::run('Same User', $user->email, 'user');
                 expect($result['success'])->toBeFalse(); // Should prevent duplicate
@@ -285,7 +284,7 @@ describe('User Management Edge Cases and Error Handling', function () {
             $component = Livewire::test(UserIndex::class)
                 ->call('openCreateModal')
                 ->assertSet('showCreateModal', true);
-                
+
             // Component should handle state properly
             expect($component->get('showCreateModal'))->toBeTrue();
         });
@@ -305,13 +304,13 @@ describe('User Management Edge Cases and Error Handling', function () {
         it('handles transaction rollbacks properly', function () {
             // Count users before
             $initialCount = User::count();
-            
+
             // Force an error during user creation
             DB::shouldReceive('transaction')->andThrow(new Exception('Forced error'));
-            
+
             $result = CreateUserAction::run('Test User', 'test@example.com', 'user');
             expect($result['success'])->toBeFalse();
-            
+
             // User count should remain the same
             expect(User::count())->toBe($initialCount);
         });
@@ -320,21 +319,21 @@ describe('User Management Edge Cases and Error Handling', function () {
             $user = User::factory()->create([
                 'name' => 'Original Name',
                 'email' => 'original@example.com',
-                'role' => 'user'
+                'role' => 'user',
             ]);
-            
+
             // Try to update to an existing email
             $existingUser = User::factory()->create(['email' => 'existing@example.com']);
-            
+
             $result = UpdateUserAction::run(
                 $user,
                 'New Name',
                 'existing@example.com', // Should fail
                 'manager'
             );
-            
+
             expect($result['success'])->toBeFalse();
-            
+
             // User should remain unchanged
             $user->refresh();
             expect($user->name)->toBe('Original Name');

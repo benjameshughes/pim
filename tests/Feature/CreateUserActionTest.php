@@ -3,7 +3,6 @@
 use App\Actions\Users\CreateUserAction;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Notification;
 use Maize\MagicLogin\Facades\MagicLink;
 
 beforeEach(function () {
@@ -12,7 +11,7 @@ beforeEach(function () {
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
-    
+
     $this->actingAs($this->admin);
 });
 

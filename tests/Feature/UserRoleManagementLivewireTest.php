@@ -12,7 +12,7 @@ beforeEach(function () {
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
-    
+
     $this->actingAs($this->admin);
 
     // Create test users with different roles
@@ -24,7 +24,7 @@ beforeEach(function () {
         ]),
         User::factory()->create([
             'name' => 'User One',
-            'email' => 'user1@example.com', 
+            'email' => 'user1@example.com',
             'role' => 'user',
         ]),
         User::factory()->create([
@@ -294,7 +294,7 @@ describe('UserRoleManagement Permissions and Security', function () {
         $regularUser = User::factory()->create(['role' => 'user']);
         $this->actingAs($regularUser);
 
-        expect(fn() => Livewire::test(UserRoleManagement::class)
+        expect(fn () => Livewire::test(UserRoleManagement::class)
             ->call('openCreateModal')
             ->set('createName', 'Test User')
             ->set('createEmail', 'test@example.com')
@@ -324,12 +324,12 @@ describe('UserRoleManagement UI and Data Handling', function () {
 
     it('handles component refresh events', function () {
         $component = Livewire::test(UserRoleManagement::class);
-        
+
         // Simulate events that should refresh the component
         $component->dispatch('user-role-updated');
         $component->dispatch('user-created');
         $component->dispatch('refresh-users');
-        
+
         $component->assertDispatched('user-role-updated');
         $component->assertDispatched('user-created');
         $component->assertDispatched('refresh-users');

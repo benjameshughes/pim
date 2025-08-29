@@ -6,7 +6,7 @@ use App\Models\User;
 
 /**
  * 👑 USER OBSERVER
- * 
+ *
  * Handles automatic admin assignment for the first user (ID=1)
  * and ensures new users default to 'user' role unless specified.
  */
@@ -38,23 +38,6 @@ class UserObserver
                 'name' => $user->name,
                 'email' => $user->email,
             ]);
-        }
-    }
-
-    /**
-     * Alternative: Use "creating" event to set admin BEFORE save
-     * This version checks if it would be the first user
-     */
-    public function creatingAlternative(User $user): void
-    {
-        // Check if this will be the first user
-        $userCount = User::count();
-        
-        if ($userCount === 0 && empty($user->role)) {
-            $user->role = 'admin';
-            \Log::info('🎯 Setting first user as admin during creation');
-        } elseif (empty($user->role)) {
-            $user->role = 'user';
         }
     }
 }

@@ -1,6 +1,5 @@
 <?php
 
-use App\Console\Commands\CreateAdminUser;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -12,7 +11,7 @@ beforeEach(function () {
 });
 
 describe('Admin Bootstrapping System', function () {
-    
+
     describe('User Observer First Admin Logic', function () {
         it('automatically makes the first user an admin', function () {
             // Create first user without specifying role
@@ -160,7 +159,7 @@ describe('Admin Bootstrapping System', function () {
 
             $this->artisan('user:create-admin', [
                 '--name' => 'Second Admin',
-                '--email' => 'second@test.com', 
+                '--email' => 'second@test.com',
                 '--password' => 'password123',
                 '--force' => true,
             ])->assertExitCode(0);
@@ -178,7 +177,7 @@ describe('Admin Bootstrapping System', function () {
                     'email' => 'transaction@test.com',
                     'password' => bcrypt('password'),
                 ]);
-                
+
                 expect($user->role)->toBe('admin');
             });
 
@@ -196,7 +195,7 @@ describe('Admin Bootstrapping System', function () {
                     'updated_at' => now(),
                 ],
                 [
-                    'name' => 'Mass User 2', 
+                    'name' => 'Mass User 2',
                     'email' => 'mass2@test.com',
                     'password' => bcrypt('password'),
                     'created_at' => now(),
@@ -236,7 +235,7 @@ describe('Admin Bootstrapping System', function () {
             // Create new user - should not become admin (ID won't be 1)
             $user3 = User::factory()->create(['role' => null]);
             expect($user3->role)->toBe('user');
-            
+
             // System should have 0 admins now
             expect(User::where('role', 'admin')->count())->toBe(0);
         });
@@ -271,7 +270,7 @@ describe('Admin Bootstrapping System', function () {
 
             expect($result['success'])->toBeTrue();
             $user = $result['data']['user'];
-            
+
             // Should be set to admin since it's first user
             expect($user->role)->toBe('admin');
         });

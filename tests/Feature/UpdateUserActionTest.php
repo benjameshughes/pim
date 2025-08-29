@@ -9,7 +9,7 @@ beforeEach(function () {
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
-    
+
     $this->actingAs($this->admin);
 
     // Create a test user to update
@@ -120,7 +120,7 @@ describe('UpdateUserAction', function () {
     it('fails with invalid user object', function () {
         // Since the method has type hinting, we need to test this differently
         // The type hint will cause a TypeError before reaching the validation
-        expect(fn() => UpdateUserAction::run(
+        expect(fn () => UpdateUserAction::run(
             user: null,
             name: 'Test Name'
         ))->toThrow(TypeError::class);
@@ -208,7 +208,7 @@ describe('UpdateUserAction', function () {
 
         foreach ($validRoles as $role) {
             $user = User::factory()->create(['role' => 'user']);
-            
+
             $result = UpdateUserAction::run(
                 user: $user,
                 role: $role
@@ -233,7 +233,7 @@ describe('UpdateUserAction', function () {
 
         expect($result['success'])->toBeTrue();
         $changes = $result['data']['changes'];
-        
+
         expect($changes['name']['from'])->toBe($originalName);
         expect($changes['name']['to'])->toBe('New Name');
         expect($changes['email']['from'])->toBe($originalEmail);

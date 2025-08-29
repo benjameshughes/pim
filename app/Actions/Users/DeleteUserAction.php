@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🗑️ DELETE USER ACTION
- * 
+ *
  * Safely deletes users with comprehensive validation and audit logging.
  * Prevents admins from deleting themselves and handles soft delete if enabled.
- * 
+ *
  * Usage: DeleteUserAction::run($user, $force = false)
  */
 class DeleteUserAction extends BaseAction
@@ -23,20 +23,21 @@ class DeleteUserAction extends BaseAction
      */
     public static function run(User $user, bool $force = false): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->handle($user, $force);
     }
 
     /**
      * Handle the user deletion
-     * 
-     * @param mixed ...$params - User deletion parameters
+     *
+     * @param  mixed  ...$params  - User deletion parameters
      */
     public function handle(...$params): array
     {
         $user = $params[0] ?? null;
         $force = $params[1] ?? false;
-        
+
         return $this->execute($user, $force);
     }
 
@@ -49,8 +50,9 @@ class DeleteUserAction extends BaseAction
         $force = $params[1] ?? false;
 
         // Validate inputs
-        if (!$user instanceof User) {
+        if (! $user instanceof User) {
             Log::warning('DeleteUserAction: Invalid user provided', ['user' => $user]);
+
             return $this->failure('Invalid user provided');
         }
 
@@ -58,19 +60,21 @@ class DeleteUserAction extends BaseAction
         if ($user->id === auth()->id()) {
             Log::warning('DeleteUserAction: User attempted self-deletion', [
                 'user_id' => $user->id,
-                'attempted_by' => auth()->id()
+                'attempted_by' => auth()->id(),
             ]);
+
             return $this->failure('You cannot delete your own account');
         }
 
         // Prevent deletion of the last admin (unless forced)
-        if ($user->isAdmin() && !$force) {
+        if ($user->isAdmin() && ! $force) {
             $adminCount = User::where('role', 'admin')->count();
             if ($adminCount <= 1) {
                 Log::warning('DeleteUserAction: Attempted to delete last admin', [
                     'user_id' => $user->id,
-                    'admin_count' => $adminCount
+                    'admin_count' => $adminCount,
                 ]);
+
                 return $this->failure('Cannot delete the last administrator account');
             }
         }
@@ -82,11 +86,11 @@ class DeleteUserAction extends BaseAction
                 'email' => $user->email,
                 'role' => $user->role,
                 'created_at' => $user->created_at,
-                'email_verified_at' => $user->email_verified_at
+                'email_verified_at' => $user->email_verified_at,
             ];
 
             $deletionType = 'hard';
-            
+
             // Check if User model uses SoftDeletes trait
             if (method_exists($user, 'forceDelete')) {
                 if ($force) {
@@ -104,17 +108,17 @@ class DeleteUserAction extends BaseAction
                 'deleted_user' => $userData,
                 'deletion_type' => $deletionType,
                 'deleted_by' => auth()->id(),
-                'force_delete' => $force
+                'force_delete' => $force,
             ]);
 
-            $message = $deletionType === 'soft' 
-                ? 'User account suspended successfully' 
+            $message = $deletionType === 'soft'
+                ? 'User account suspended successfully'
                 : 'User account deleted successfully';
 
             return $this->success($message, [
                 'user' => $userData,
                 'deletion_type' => $deletionType,
-                'can_restore' => $deletionType === 'soft'
+                'can_restore' => $deletionType === 'soft',
             ]);
 
         } catch (\Exception $e) {
@@ -123,10 +127,10 @@ class DeleteUserAction extends BaseAction
                 'user_email' => $user->email,
                 'force' => $force,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return $this->failure('Failed to delete user: ' . $e->getMessage());
+            return $this->failure('Failed to delete user: '.$e->getMessage());
         }
     }
 
@@ -135,7 +139,7 @@ class DeleteUserAction extends BaseAction
      */
     private function wouldLeaveSystemWithoutAdmins(User $user): bool
     {
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             return false;
         }
 
@@ -158,7 +162,7 @@ class DeleteUserAction extends BaseAction
             'role' => $user->role,
             'created_at' => $user->created_at->toISOString(),
             'last_login' => $user->last_login_at?->toISOString(),
-            'email_verified' => !is_null($user->email_verified_at)
+            'email_verified' => ! is_null($user->email_verified_at),
         ];
     }
 }

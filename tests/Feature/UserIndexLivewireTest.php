@@ -12,7 +12,7 @@ beforeEach(function () {
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
-    
+
     $this->actingAs($this->admin);
 
     // Create test users with different roles and statuses
@@ -57,11 +57,11 @@ describe('UserIndex Livewire Component', function () {
     it('displays user statistics correctly', function () {
         Livewire::test(UserIndex::class)
             ->assertViewHas('userStats');
-            
+
         // Test actual values
         $component = Livewire::test(UserIndex::class);
         $stats = $component->viewData('userStats');
-        
+
         expect($stats['admin'])->toBeGreaterThanOrEqual(2); // Admin + Bob Admin
         expect($stats['manager'])->toBeGreaterThanOrEqual(1); // John Manager
         expect($stats['user'])->toBeGreaterThanOrEqual(1); // Jane User
@@ -266,7 +266,7 @@ describe('UserIndex Permissions and Security', function () {
         $user = User::factory()->create(['role' => 'user']);
         $this->actingAs($user);
 
-        // Test via HTTP request to route instead since component authorization 
+        // Test via HTTP request to route instead since component authorization
         // is handled at the route level via middleware
         $response = $this->get('/management/users');
         $response->assertStatus(403); // Forbidden
@@ -292,14 +292,14 @@ describe('UserIndex UI and UX', function () {
     it('resets page when search is updated', function () {
         Livewire::test(UserIndex::class)
             ->set('search', 'test');
-            // Note: resetPage is automatically called by Livewire pagination
+        // Note: resetPage is automatically called by Livewire pagination
     });
 
     it('resets page when filters are updated', function () {
         Livewire::test(UserIndex::class)
             ->set('roleFilter', 'admin')
             ->set('statusFilter', 'verified');
-            // Note: resetPage is automatically called by Livewire pagination
+        // Note: resetPage is automatically called by Livewire pagination
     });
 
     it('handles empty search results gracefully', function () {
@@ -318,12 +318,12 @@ describe('UserIndex UI and UX', function () {
 
     it('refreshes component when user events are dispatched', function () {
         // Test that component has proper listeners defined in class
-        $userIndex = new \App\Livewire\Management\Users\UserIndex();
+        $userIndex = new \App\Livewire\Management\Users\UserIndex;
         $reflection = new \ReflectionClass($userIndex);
         $listeners = $reflection->getProperty('listeners');
         $listeners->setAccessible(true);
         $listenersArray = $listeners->getValue($userIndex);
-        
+
         expect($listenersArray)->toContain('$refresh');
     });
 });

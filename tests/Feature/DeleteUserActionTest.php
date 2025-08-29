@@ -9,7 +9,7 @@ beforeEach(function () {
         'role' => 'admin',
         'email_verified_at' => now(),
     ]);
-    
+
     $this->actingAs($this->admin);
 
     // Create test users
@@ -37,7 +37,7 @@ describe('DeleteUserAction', function () {
         expect($result['message'])->toContain('successfully');
         expect($result['data']['user']['id'])->toBe($userId);
         expect($result['data']['user']['name'])->toBe($userName);
-        
+
         // User should be deleted from database
         expect(User::find($userId))->toBeNull();
     });
@@ -59,7 +59,7 @@ describe('DeleteUserAction', function () {
     it('prevents deletion of last admin user', function () {
         // Create another regular user to delete first
         $otherUser = User::factory()->create(['role' => 'user']);
-        
+
         // Try to delete the only admin (should fail)
         $result = DeleteUserAction::run($this->admin);
 
@@ -70,7 +70,7 @@ describe('DeleteUserAction', function () {
     it('allows deletion of admin when multiple admins exist', function () {
         // Create another admin
         $secondAdmin = User::factory()->create(['role' => 'admin']);
-        
+
         // Acting as first admin, delete the second admin
         $result = DeleteUserAction::run($secondAdmin);
 
@@ -81,10 +81,10 @@ describe('DeleteUserAction', function () {
     it('prevents deletion of last admin even with multiple admins when deleting the last one', function () {
         // Create another admin
         $secondAdmin = User::factory()->create(['role' => 'admin']);
-        
+
         // Delete the second admin first
         $secondAdmin->delete();
-        
+
         // Now try to delete the last remaining admin (but it's self-deletion, so different error)
         $result = DeleteUserAction::run($this->admin);
 
@@ -95,11 +95,11 @@ describe('DeleteUserAction', function () {
     it('handles soft delete if model supports it', function () {
         // Check if User model has SoftDeletes
         $hasForceDelete = method_exists($this->regularUser, 'forceDelete');
-        
+
         $result = DeleteUserAction::run($this->regularUser);
 
         expect($result['success'])->toBeTrue();
-        
+
         if ($hasForceDelete) {
             expect($result['data']['deletion_type'])->toBe('soft');
             expect($result['data']['can_restore'])->toBeTrue();
@@ -113,12 +113,12 @@ describe('DeleteUserAction', function () {
 
     it('performs force delete when force parameter is true', function () {
         $userId = $this->regularUser->id;
-        
+
         $result = DeleteUserAction::run($this->regularUser, force: true);
 
         expect($result['success'])->toBeTrue();
         expect($result['data']['deletion_type'])->toBe(method_exists($this->regularUser, 'forceDelete') ? 'force' : 'hard');
-        
+
         // User should be completely removed
         expect(User::find($userId))->toBeNull();
     });
@@ -126,7 +126,7 @@ describe('DeleteUserAction', function () {
     it('fails with invalid user object', function () {
         // Since the method has type hinting, we need to test this differently
         // The type hint will cause a TypeError before reaching the validation
-        expect(fn() => DeleteUserAction::run(null))
+        expect(fn () => DeleteUserAction::run(null))
             ->toThrow(TypeError::class);
     });
 
@@ -158,7 +158,7 @@ describe('DeleteUserAction', function () {
         $result = DeleteUserAction::run($admin2);
 
         expect($result['success'])->toBeTrue();
-        
+
         // Count remaining admins
         $remainingAdmins = User::where('role', 'admin')->count();
         expect($remainingAdmins)->toBeGreaterThan(0);
@@ -178,10 +178,10 @@ describe('DeleteUserAction', function () {
     it('prevents deletion when it would leave system without admins through force parameter', function () {
         // This tests the edge case where force=false and user is the last admin
         // First, let's create a scenario where this admin is the only one
-        
+
         $onlyAdmin = User::factory()->create(['role' => 'admin']);
         $this->actingAs($onlyAdmin);
-        
+
         // Try to delete this admin (should fail due to being last admin)
         $result = DeleteUserAction::run($onlyAdmin);
 

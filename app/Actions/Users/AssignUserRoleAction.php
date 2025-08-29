@@ -8,10 +8,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 👑 ASSIGN USER ROLE ACTION
- * 
+ *
  * Assigns a role to a user in the simplified role-based permission system.
  * Replaces the complex team-based approach with simple user roles.
- * 
+ *
  * Usage: AssignUserRoleAction::run($user, 'admin')
  */
 class AssignUserRoleAction extends BaseAction
@@ -23,19 +23,21 @@ class AssignUserRoleAction extends BaseAction
      */
     public static function run(User $user, string $role): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->handle($user, $role);
     }
 
     /**
      * Handle the role assignment
-     * 
-     * @param mixed ...$params - User and role parameters
+     *
+     * @param  mixed  ...$params  - User and role parameters
      */
     public function handle(...$params): array
     {
         $user = $params[0] ?? null;
         $role = $params[1] ?? null;
+
         return $this->execute($user, $role);
     }
 
@@ -48,16 +50,18 @@ class AssignUserRoleAction extends BaseAction
         $role = $params[1] ?? null;
 
         // Validate inputs
-        if (!$user instanceof User) {
+        if (! $user instanceof User) {
             Log::warning('AssignUserRoleAction: Invalid user provided', ['user' => $user]);
+
             return $this->failure('Invalid user provided');
         }
 
-        if (!in_array($role, ['admin', 'manager', 'user'])) {
+        if (! in_array($role, ['admin', 'manager', 'user'])) {
             Log::warning('AssignUserRoleAction: Invalid role provided', [
-                'role' => $role, 
-                'valid_roles' => ['admin', 'manager', 'user']
+                'role' => $role,
+                'valid_roles' => ['admin', 'manager', 'user'],
             ]);
+
             return $this->failure('Invalid role. Must be admin, manager, or user');
         }
 
@@ -71,23 +75,23 @@ class AssignUserRoleAction extends BaseAction
                 'user_id' => $user->id,
                 'user_email' => $user->email,
                 'old_role' => $oldRole,
-                'new_role' => $role
+                'new_role' => $role,
             ]);
 
             return $this->success('Role assigned successfully', [
                 'user' => $user->fresh(),
                 'old_role' => $oldRole,
-                'new_role' => $role
+                'new_role' => $role,
             ]);
 
         } catch (\Exception $e) {
             Log::error('AssignUserRoleAction: Failed to assign role', [
                 'user_id' => $user->id,
                 'role' => $role,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
-            return $this->failure('Failed to assign role: ' . $e->getMessage());
+            return $this->failure('Failed to assign role: '.$e->getMessage());
         }
     }
 
@@ -99,7 +103,7 @@ class AssignUserRoleAction extends BaseAction
         return [
             'admin' => 'Administrator - Full system access',
             'manager' => 'Manager - Product and operations management',
-            'user' => 'User - Basic read access'
+            'user' => 'User - Basic read access',
         ];
     }
 }
