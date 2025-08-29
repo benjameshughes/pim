@@ -62,55 +62,8 @@ class User extends Authenticatable
             ->implode('');
     }
 
-    public function teams(): BelongsToMany
-    {
-        return $this->belongsToMany(Team::class)
-            ->withPivot('role')
-            ->withTimestamps();
-    }
-
-    public function hasTeamRole(Team $team, string $role): bool
-    {
-        return $this->teams()
-            ->wherePivot('team_id', $team->id)
-            ->wherePivot('role', $role)
-            ->exists();
-    }
-
-    public function isAdminOf(Team $team): bool
-    {
-        return $this->hasTeamRole($team, 'admin');
-    }
-
-    public function isManagerOf(Team $team): bool
-    {
-        return $this->hasTeamRole($team, 'manager') || $this->isAdminOf($team);
-    }
-
-    public function isMemberOf(Team $team): bool
-    {
-        return $this->teams()->where('team_id', $team->id)->exists();
-    }
-
-    public function canManageTeam(Team $team): bool
-    {
-        return $this->isAdminOf($team);
-    }
-
-    public function canManageAnyTeam(): bool
-    {
-        return $this->isAdmin();
-    }
-
-    public function canManageProducts(Team $team): bool
-    {
-        return $this->isManager() || $this->isAdmin();
-    }
-
-    public function canViewTeam(Team $team): bool
-    {
-        return $this->hasRole();
-    }
+    // ===== LEGACY TEAM METHODS REMOVED =====
+    // Team-based permissions have been replaced with simple role-based system
 
     // ===== NEW SIMPLE ROLE-BASED METHODS =====
 
@@ -159,19 +112,6 @@ class User extends Authenticatable
         };
     }
 
-    // ===== LEGACY TEAM-BASED ROLE METHODS (Keep for backward compatibility) =====
-    // NOTE: These methods are deprecated in favor of simple role column
-    
-    public function roles(): BelongsToMany
-    {
-        return $this->belongsToMany(Role::class);
-    }
-
-    /**
-     * @deprecated Use hasSpecificRole() instead
-     */
-    public function hasRoleModel($role): bool
-    {
-        return $this->roles()->where('name', $role)->exists();
-    }
+    // ===== LEGACY ROLE MODEL METHODS REMOVED =====
+    // Complex role-based relationships have been replaced with simple role column
 }

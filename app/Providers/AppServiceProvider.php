@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Team;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -41,9 +40,7 @@ class AppServiceProvider extends ServiceProvider
             return $user->isAdmin();
         });
 
-        Gate::define('manage-teams', function (User $user) {
-            return $user->isAdmin();
-        });
+        // manage-teams gate removed - teams feature deprecated
 
         // Product management - Manager and Admin
         Gate::define('manage-products', function (User $user) {

@@ -108,13 +108,6 @@
                         </flux:navlist.item>
 
                         <flux:navlist.item 
-                            icon="user-group" 
-                            href="{{ route('management.teams.index') }}"
-                        >
-                            Teams
-                        </flux:navlist.item>
-
-                        <flux:navlist.item 
                             icon="key" 
                             href="{{ route('management.user-roles.index') }}"
                         >
