@@ -21,7 +21,8 @@
         "maize-tech/laravel-magic-login": "^2.3",
         "mirakl/sdk-php-shop": "^1.22",
         "phpclassic/php-shopify": "^1.2",
-        "pusher/pusher-php-server": "^7.2"
+        "pusher/pusher-php-server": "^7.2",
+        "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
+use Spatie\Permission\Traits\HasRoles;
 
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +27,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
         'email_verified_at',
     ];
 
@@ -50,7 +50,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'role' => 'string',
         ];
     }
 
@@ -66,17 +65,14 @@ class User extends Authenticatable
             ->implode('');
     }
 
-    // ===== LEGACY TEAM METHODS REMOVED =====
-    // Team-based permissions have been replaced with simple role-based system
-
-    // ===== NEW SIMPLE ROLE-BASED METHODS =====
+    // ===== SPATIE PERMISSION HELPER METHODS =====
 
     /**
      * Check if user has admin role
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 
     /**
@@ -84,38 +80,37 @@ class User extends Authenticatable
      */
     public function isManager(): bool
     {
-        return in_array($this->role, ['admin', 'manager']);
+        return $this->hasAnyRole(['admin', 'manager']);
     }
 
     /**
-     * Check if user has any role assigned
-     */
-    public function hasRole(): bool
-    {
-        return !empty($this->role);
-    }
-
-    /**
-     * Check if user has specific role
-     */
-    public function hasSpecificRole(string $role): bool
-    {
-        return $this->role === $role;
-    }
-
-    /**
-     * Get user's role display name
+     * Get user's primary role display name
      */
     public function getRoleDisplayName(): string
     {
-        return match($this->role) {
+        $primaryRole = $this->roles->first();
+        
+        return match($primaryRole?->name) {
             'admin' => 'Administrator',
-            'manager' => 'Manager',
+            'manager' => 'Manager', 
             'user' => 'User',
-            default => 'Unassigned'
+            default => 'No Role Assigned'
         };
     }
 
-    // ===== LEGACY ROLE MODEL METHODS REMOVED =====
-    // Complex role-based relationships have been replaced with simple role column
+    /**
+     * Get user's primary role name
+     */
+    public function getPrimaryRole(): ?string
+    {
+        return $this->roles->first()?->name;
+    }
+
+    /**
+     * Check if user can manage system (admin permissions)
+     */
+    public function canManageSystem(): bool
+    {
+        return $this->can('access-management-area');
+    }
 }

@@ -97,16 +97,16 @@ class CreateUserAction extends BaseAction
                 'email_verified_at' => now(), // Pre-verify since admin is creating
             ];
 
-            // Add role if explicitly provided, otherwise observer handles it
+            // Create user - observer will handle role assignment
+            $user = User::create($userData);
+            
+            // Assign explicit role if provided (after user creation so we have an ID)
             if ($role !== null) {
-                $userData['role'] = $role;
+                $user->assignRole($role);
             }
 
-            // Create user - observer automatically handles first-user admin logic
-            $user = User::create($userData);
-
             Log::info('CreateUserAction: User created', [
-                'role_after_create' => $user->role,
+                'roles_assigned' => $user->roles->pluck('name')->toArray(),
                 'user_count_before' => User::count() - 1,
             ]);
 
@@ -134,14 +134,14 @@ class CreateUserAction extends BaseAction
                 'user_id' => $user->id,
                 'name' => $name,
                 'email' => $email,
-                'role' => $role,
+                'roles' => $user->fresh()->roles->pluck('name')->toArray(),
                 'magic_link_sent' => $magicLinkSent,
             ]);
 
             return $this->success('User created successfully', [
                 'user' => $user->fresh(),
                 'magic_link_sent' => $magicLinkSent,
-                'role_assigned' => $role,
+                'roles_assigned' => $user->fresh()->roles->pluck('name')->toArray(),
             ]);
 
         } catch (\Exception $e) {
