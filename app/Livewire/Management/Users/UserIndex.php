@@ -2,17 +2,49 @@
 
 namespace App\Livewire\Management\Users;
 
-use App\Models\Team;
+use App\Actions\Users\CreateUserAction;
+use App\Actions\Users\UpdateUserAction;
+use App\Actions\Users\DeleteUserAction;
 use App\Models\User;
-use App\Rules\AllowedEmail;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Maize\MagicLogin\Facades\MagicLink;
 
+/**
+ * 👥 USER INDEX COMPONENT
+ * 
+ * Complete user management interface with role-based CRUD operations.
+ * Features user creation, editing, deletion, search, and filtering.
+ * Admin-only access with comprehensive validation and audit logging.
+ */
 class UserIndex extends Component
 {
     use WithPagination;
+
+    // Search and filtering
+    public string $search = '';
+    public string $roleFilter = '';
+    public string $statusFilter = '';
+    public int $perPage = 15;
+    public string $sortField = 'created_at';
+    public string $sortDirection = 'desc';
+    
+    // Modal states
+    public bool $showCreateModal = false;
+    public bool $showEditModal = false;
+    public bool $showDeleteModal = false;
+    public ?User $editingUser = null;
+    public ?User $deletingUser = null;
+    
+    // Form fields
+    public string $name = '';
+    public string $email = '';
+    public string $role = 'user';
+    public bool $sendWelcomeEmail = true;
+
+    protected $listeners = [
+        'user-updated' => '$refresh',
+        'refresh-users' => '$refresh',
+    ];
 
     public function mount()
     {
@@ -20,39 +52,61 @@ class UserIndex extends Component
         $this->authorize('manage-system');
     }
 
-    public string $search = '';
-    public int $perPage = 20;
-    public string $sortField = 'created_at';
-    public string $sortDirection = 'desc';
-    
-    public bool $showCreateModal = false;
-    public bool $showEditModal = false;
-    public ?User $editingUser = null;
-    
-    public string $name = '';
-    public string $email = '';
-    public string $role = 'user';
-    public ?int $teamId = null;
-
     public function render()
     {
-        $users = $this->paginate();
-        $teams = Team::where('is_active', true)->get();
-
-        return view('livewire.management.users.user-index', compact('users', 'teams'));
+        return view('livewire.management.users.user-index', [
+            'users' => $this->getUsers(),
+            'userStats' => $this->getUserStatistics(),
+        ]);
     }
 
-    public function paginate()
+    public function getUsers()
     {
         return User::query()
-            ->when($this->search, fn ($q) => $q->where('name', 'like', "%{$this->search}%")
-                ->orWhere('email', 'like', "%{$this->search}%"))
-            ->with('teams')
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('name', 'like', "%{$this->search}%")
+                      ->orWhere('email', 'like', "%{$this->search}%");
+                });
+            })
+            ->when($this->roleFilter, fn ($q) => $q->where('role', $this->roleFilter))
+            ->when($this->statusFilter === 'verified', fn ($q) => $q->whereNotNull('email_verified_at'))
+            ->when($this->statusFilter === 'unverified', fn ($q) => $q->whereNull('email_verified_at'))
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
     }
 
-    public function updating()
+    public function getUserStatistics(): array
+    {
+        $stats = User::selectRaw('
+            COUNT(*) as total,
+            SUM(CASE WHEN role = "admin" THEN 1 ELSE 0 END) as admin_count,
+            SUM(CASE WHEN role = "manager" THEN 1 ELSE 0 END) as manager_count,
+            SUM(CASE WHEN role = "user" THEN 1 ELSE 0 END) as user_count,
+            SUM(CASE WHEN email_verified_at IS NOT NULL THEN 1 ELSE 0 END) as verified_count
+        ')->first();
+
+        return [
+            'total' => $stats->total ?? 0,
+            'admin' => $stats->admin_count ?? 0,
+            'manager' => $stats->manager_count ?? 0,
+            'user' => $stats->user_count ?? 0,
+            'verified' => $stats->verified_count ?? 0,
+            'unverified' => ($stats->total ?? 0) - ($stats->verified_count ?? 0),
+        ];
+    }
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedRoleFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatusFilter()
     {
         $this->resetPage();
     }
@@ -65,20 +119,32 @@ class UserIndex extends Component
             $this->sortField = $field;
             $this->sortDirection = 'asc';
         }
+        $this->resetPage();
     }
+
+    public function clearFilters()
+    {
+        $this->search = '';
+        $this->roleFilter = '';
+        $this->statusFilter = '';
+        $this->resetPage();
+    }
+
+    // ===== CRUD MODAL OPERATIONS =====
 
     public function openCreateModal()
     {
-        $this->reset(['name', 'email', 'role', 'teamId']);
-        $this->role = 'user'; // Default role
-        $this->teamId = Team::where('is_active', true)->first()?->id; // Default to first active team
+        $this->reset(['name', 'email', 'role', 'sendWelcomeEmail']);
+        $this->role = 'user';
+        $this->sendWelcomeEmail = true;
         $this->showCreateModal = true;
     }
 
     public function closeCreateModal()
     {
         $this->showCreateModal = false;
-        $this->reset(['name', 'email', 'role', 'teamId']);
+        $this->reset(['name', 'email', 'role', 'sendWelcomeEmail']);
+        $this->resetValidation();
     }
 
     public function openEditModal(User $user)
@@ -86,12 +152,7 @@ class UserIndex extends Component
         $this->editingUser = $user;
         $this->name = $user->name;
         $this->email = $user->email;
-        
-        // Get the user's current team and role
-        $userTeam = $user->teams->first();
-        $this->teamId = $userTeam?->id;
-        $this->role = $userTeam?->pivot->role ?? 'user';
-        
+        $this->role = $user->role ?? 'user';
         $this->showEditModal = true;
     }
 
@@ -99,97 +160,104 @@ class UserIndex extends Component
     {
         $this->showEditModal = false;
         $this->editingUser = null;
-        $this->reset(['name', 'email', 'role', 'teamId']);
+        $this->reset(['name', 'email', 'role']);
+        $this->resetValidation();
     }
+
+    public function openDeleteModal(User $user)
+    {
+        $this->deletingUser = $user;
+        $this->showDeleteModal = true;
+    }
+
+    public function closeDeleteModal()
+    {
+        $this->showDeleteModal = false;
+        $this->deletingUser = null;
+    }
+
+    // ===== CRUD ACTIONS =====
 
     public function createUser()
     {
-        // Use Laravel's built-in authorization
         $this->authorize('manage-system');
 
         $this->validate([
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', new AllowedEmail],
+            'email' => 'required|string|email|max:255|unique:users',
             'role' => 'required|in:admin,manager,user',
-            'teamId' => 'required|exists:teams,id',
         ]);
 
-        try {
-            // Create user with random password (like your magic login flow)
-            $user = User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => Str::random(32), // Random password - user will use magic links
-            ]);
+        $result = CreateUserAction::run(
+            $this->name,
+            $this->email,
+            $this->role,
+            $this->sendWelcomeEmail
+        );
 
-            // Get the selected team
-            $team = Team::findOrFail($this->teamId);
-
-            // Assign user to selected team with selected role
-            $user->teams()->attach($this->teamId, ['role' => $this->role]);
-
-            // Send magic link immediately
-            MagicLink::send(
-                authenticatable: $user,
-                redirectUrl: route('dashboard'),
-                expiration: now()->addMinutes(30)
+        if ($result['success']) {
+            $magicLinkStatus = $result['data']['magic_link_sent'] ? ' Magic login link sent!' : '';
+            $this->dispatch('notify', 
+                message: "User {$this->name} created successfully with {$this->role} role.{$magicLinkStatus} 🎉", 
+                type: 'success'
             );
-
-            $this->dispatch('success', 'User created with ' . $this->role . ' role in ' . $team->name . ' and magic login link sent to ' . $this->email);
             $this->closeCreateModal();
-            $this->resetPage();
-
-        } catch (\Exception $e) {
-            logger()->error('Failed to create user or send magic link', [
-                'email' => $this->email,
-                'role' => $this->role,
-                'error' => $e->getMessage()
-            ]);
-
-            $this->dispatch('error', 'Failed to create user or send magic link. Please try again.');
+            $this->dispatch('user-updated');
+        } else {
+            $this->dispatch('notify', message: $result['message'], type: 'error');
         }
     }
 
     public function updateUser()
     {
-        // Use Laravel's built-in authorization
         $this->authorize('manage-system');
 
         $this->validate([
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $this->editingUser->id, new AllowedEmail],
+            'email' => 'required|string|email|max:255|unique:users,email,' . $this->editingUser->id,
             'role' => 'required|in:admin,manager,user',
-            'teamId' => 'required|exists:teams,id',
         ]);
 
-        // Update user basic info
-        $this->editingUser->update([
-            'name' => $this->name,
-            'email' => $this->email,
-        ]);
+        $result = UpdateUserAction::run(
+            $this->editingUser,
+            $this->name,
+            $this->email,
+            $this->role
+        );
 
-        // Update team and role - sync will replace all team relationships
-        $this->editingUser->teams()->sync([
-            $this->teamId => ['role' => $this->role]
-        ]);
-
-        $this->dispatch('success', 'User updated successfully');
-        $this->closeEditModal();
+        if ($result['success']) {
+            $changesSummary = $result['data']['changes_made'] ? ' Changes applied.' : ' No changes made.';
+            $this->dispatch('notify', 
+                message: "User {$this->name} updated successfully.{$changesSummary} ✨", 
+                type: 'success'
+            );
+            $this->closeEditModal();
+            $this->dispatch('user-updated');
+        } else {
+            $this->dispatch('notify', message: $result['message'], type: 'error');
+        }
     }
 
-    public function deleteUser(User $user)
+    public function deleteUser()
     {
-        // Use Laravel's built-in authorization
         $this->authorize('manage-system');
 
-        // Prevent users from deleting themselves
-        if ($user->id === auth()->id()) {
-            $this->dispatch('error', 'You cannot delete yourself!');
+        if (!$this->deletingUser) {
+            $this->dispatch('notify', message: 'No user selected for deletion', type: 'error');
             return;
         }
 
-        $user->delete();
-        $this->dispatch('success', 'User deleted successfully');
-        $this->resetPage();
+        $result = DeleteUserAction::run($this->deletingUser);
+
+        if ($result['success']) {
+            $this->dispatch('notify', 
+                message: "User {$this->deletingUser->name} deleted successfully 🗑️", 
+                type: 'success'
+            );
+            $this->closeDeleteModal();
+            $this->dispatch('user-updated');
+        } else {
+            $this->dispatch('notify', message: $result['message'], type: 'error');
+        }
     }
 }

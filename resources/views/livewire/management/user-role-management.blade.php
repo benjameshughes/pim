@@ -9,6 +9,14 @@
         </div>
         
         <div class="flex items-center gap-3">
+            {{-- Create User Button --}}
+            <flux:button 
+                wire:click="openCreateModal"
+                variant="primary"
+                icon="plus">
+                Create User
+            </flux:button>
+            
             {{-- Clear Filters --}}
             <flux:button 
                 wire:click="clearFilters" 
@@ -243,6 +251,70 @@
             <div class="flex justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-900">
                 <flux:button wire:click="closeRoleModal" variant="ghost">Cancel</flux:button>
                 <flux:button type="submit" variant="primary">Save Role</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
+    {{-- 👤 CREATE USER MODAL --}}
+    <flux:modal wire:model="showCreateModal" class="md:max-w-md">
+        <form wire:submit="createUser">
+            <div class="p-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Create New User with Role
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <flux:field label="Name">
+                            <flux:input wire:model="createName" placeholder="Enter user's full name" />
+                            <flux:error name="createName" />
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field label="Email">
+                            <flux:input type="email" wire:model="createEmail" placeholder="user@example.com" />
+                            <flux:error name="createEmail" />
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field label="Role">
+                            <flux:select wire:model="createRole" placeholder="Select a role">
+                                <flux:select.option value="user">User - Basic read access</flux:select.option>
+                                <flux:select.option value="manager">Manager - Product management</flux:select.option>
+                                <flux:select.option value="admin">Admin - Full system access</flux:select.option>
+                            </flux:select>
+                            <flux:error name="createRole" />
+                        </flux:field>
+                    </div>
+
+                    <div>
+                        <flux:field>
+                            <flux:checkbox wire:model="sendWelcomeEmail">Send welcome email with magic login link</flux:checkbox>
+                        </flux:field>
+                    </div>
+
+                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                        <div class="flex">
+                            <flux:icon name="user-plus" class="h-5 w-5 text-green-400" />
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800 dark:text-green-200">Quick User Creation</h3>
+                                <div class="mt-2 text-sm text-green-700 dark:text-green-300">
+                                    <p>User will be created with immediate role assignment and email verification. Magic login link allows instant access without password setup.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 p-6 bg-gray-50 dark:bg-gray-900">
+                <flux:button type="button" wire:click="closeCreateModal" variant="ghost">Cancel</flux:button>
+                <flux:button type="submit" variant="primary" wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="createUser">Create User & Assign Role</span>
+                    <span wire:loading wire:target="createUser">Creating...</span>
+                </flux:button>
             </div>
         </form>
     </flux:modal>

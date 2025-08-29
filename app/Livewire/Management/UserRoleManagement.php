@@ -3,6 +3,7 @@
 namespace App\Livewire\Management;
 
 use App\Actions\Users\AssignUserRoleAction;
+use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\GetUsersWithRolesAction;
 use App\Models\User;
 use Livewire\Component;
@@ -29,6 +30,13 @@ class UserRoleManagement extends Component
     public bool $showRoleModal = false;
     public ?User $selectedUser = null;
     public string $selectedRole = '';
+    
+    // Create user modal state
+    public bool $showCreateModal = false;
+    public string $createName = '';
+    public string $createEmail = '';
+    public string $createRole = 'user';
+    public bool $sendWelcomeEmail = true;
 
     // Bulk operations
     public array $selectedUsers = [];
@@ -37,6 +45,7 @@ class UserRoleManagement extends Component
 
     protected $listeners = [
         'user-role-updated' => '$refresh',
+        'user-created' => '$refresh',
         'refresh-users' => '$refresh',
     ];
 
@@ -104,6 +113,53 @@ class UserRoleManagement extends Component
         $this->selectedUser = null;
         $this->selectedRole = '';
         $this->resetValidation();
+    }
+
+    // ===== CREATE USER MODAL OPERATIONS =====
+
+    public function openCreateModal()
+    {
+        $this->reset(['createName', 'createEmail', 'createRole', 'sendWelcomeEmail']);
+        $this->createRole = 'user';
+        $this->sendWelcomeEmail = true;
+        $this->showCreateModal = true;
+    }
+
+    public function closeCreateModal()
+    {
+        $this->showCreateModal = false;
+        $this->reset(['createName', 'createEmail', 'createRole', 'sendWelcomeEmail']);
+        $this->resetValidation();
+    }
+
+    public function createUser()
+    {
+        $this->authorize('manage-system');
+
+        $this->validate([
+            'createName' => 'required|string|max:255',
+            'createEmail' => 'required|string|email|max:255|unique:users,email',
+            'createRole' => 'required|in:admin,manager,user',
+        ]);
+
+        $result = CreateUserAction::run(
+            $this->createName,
+            $this->createEmail,
+            $this->createRole,
+            $this->sendWelcomeEmail
+        );
+
+        if ($result['success']) {
+            $magicLinkStatus = $result['data']['magic_link_sent'] ? ' Magic login link sent!' : '';
+            $this->dispatch('notify', 
+                message: "User {$this->createName} created successfully with {$this->createRole} role.{$magicLinkStatus} 🎉", 
+                type: 'success'
+            );
+            $this->closeCreateModal();
+            $this->dispatch('user-created');
+        } else {
+            $this->dispatch('notify', message: $result['message'], type: 'error');
+        }
     }
 
     public function bulkAssignRole()
