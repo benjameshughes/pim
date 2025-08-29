@@ -138,10 +138,6 @@ class ProductVariant extends Model
      * 💰 PRICE ACCESSOR - $variant->price
      * Get the default/primary price for this variant via independent pricing service
      */
-    public function getPriceAttribute()
-    {
-        return app(\App\Services\PricingService::class)->getDefaultPriceForVariant($this->id);
-    }
 
     /**
      * 💰 PRICE FOR CHANNEL - Get price for specific sales channel via service
@@ -152,7 +148,8 @@ class ProductVariant extends Model
             return $this->price; // Use default price accessor
         }
 
-        return app(\App\Services\PricingService::class)->getPriceForVariantAndChannel($this->id, $channelId) ?? 0.0;
+        // Use the new ChannelPricingService instead of old PricingService
+        return $this->getChannelPrice();
     }
 
     /**
@@ -179,6 +176,95 @@ class ProductVariant extends Model
     public function pricingRecords(): HasMany
     {
         return $this->hasMany(\App\Models\Pricing::class, 'product_variant_id');
+    }
+
+    /**
+     * 🎯 NEW CHANNEL PRICING SYSTEM - Using Attribute-Based Pricing
+     * These methods replace the complex Pricing table approach with simple attributes
+     */
+
+    /**
+     * 💰 GET CHANNEL PRICE - New attribute-based channel pricing
+     * Get price for specific channel with fallback to default price
+     */
+    public function getChannelPrice(?string $channelCode = null): float
+    {
+        return app(\App\Services\Pricing\ChannelPricingService::class)
+            ->getPriceForChannel($this, $channelCode);
+    }
+
+    /**
+     * 💰 SET CHANNEL PRICE - New attribute-based channel pricing  
+     * Set price for specific channel (null removes override)
+     */
+    public function setChannelPrice(string $channelCode, ?float $price): array
+    {
+        return app(\App\Services\Pricing\ChannelPricingService::class)
+            ->setPriceForChannel($this, $channelCode, $price);
+    }
+
+    /**
+     * 💰 HAS CHANNEL OVERRIDE - Check if variant has channel-specific pricing
+     */
+    public function hasChannelOverride(string $channelCode): bool
+    {
+        return app(\App\Services\Pricing\ChannelPricingService::class)
+            ->hasChannelOverride($this, $channelCode);
+    }
+
+    /**
+     * 💰 GET ALL CHANNEL PRICES - Get pricing for all channels
+     */
+    public function getAllChannelPrices(): array
+    {
+        return app(\App\Services\Pricing\ChannelPricingService::class)
+            ->getAllChannelPrices($this);
+    }
+
+    /**
+     * 💰 REMOVE CHANNEL OVERRIDE - Remove channel price override
+     */
+    public function removeChannelOverride(string $channelCode): array
+    {
+        return $this->setChannelPrice($channelCode, null);
+    }
+
+    /**
+     * 💰 CHANNEL PRICING SUMMARY - Get summary of all channel pricing
+     */
+    public function getChannelPricingSummary(): array
+    {
+        $allPrices = $this->getAllChannelPrices();
+        
+        $summary = [
+            'variant_id' => $this->id,
+            'variant_sku' => $this->sku,
+            'default_price' => $this->price,
+            'channels_with_overrides' => [],
+            'channels_using_default' => [],
+            'total_channels' => count($allPrices),
+            'overrides_count' => 0,
+        ];
+
+        foreach ($allPrices as $channelCode => $channelData) {
+            if ($channelData['has_override']) {
+                $summary['channels_with_overrides'][$channelCode] = [
+                    'name' => $channelData['name'],
+                    'price' => $channelData['price'],
+                    'markup_percentage' => $this->price > 0 
+                        ? round((($channelData['price'] - $this->price) / $this->price) * 100, 2)
+                        : 0,
+                ];
+                $summary['overrides_count']++;
+            } else {
+                $summary['channels_using_default'][] = [
+                    'code' => $channelCode,
+                    'name' => $channelData['name'],
+                ];
+            }
+        }
+
+        return $summary;
     }
 
     /**

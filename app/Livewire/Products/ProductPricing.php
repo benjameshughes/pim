@@ -1,0 +1,402 @@
+<?php
+
+namespace App\Livewire\Products;
+
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\SalesChannel;
+use App\Services\Pricing\ChannelPricingService;
+use Livewire\Component;
+use Illuminate\Support\Collection;
+
+/**
+ * 💰 PRODUCT PRICING COMPONENT
+ * 
+ * Beautiful channel pricing management interface for products and variants.
+ * Features pricing table, channel price modal, and bulk operations.
+ */
+class ProductPricing extends Component
+{
+    public Product $product;
+    public Collection $variants;
+    public Collection $channels;
+    
+    // Modal state
+    public bool $showPriceModal = false;
+    public ?ProductVariant $selectedVariant = null;
+    public string $selectedChannel = '';
+    public ?float $modalPrice = null;
+    
+    // Base price modal state
+    public bool $showBasePriceModal = false;
+    public ?ProductVariant $selectedBaseVariant = null;
+    public ?float $basePriceValue = null;
+    
+    // Bulk operations modals
+    public bool $showBulkMarkupModal = false;
+    public bool $showBulkDiscountModal = false;
+    
+    // Markup modal properties
+    public string $markupChannel = '';
+    public ?float $markupPercentage = null;
+    public ?float $markupFixedPrice = null;
+    public string $markupPriceType = 'percentage'; // 'percentage' or 'fixed'
+    
+    // Discount modal properties  
+    public string $discountChannel = '';
+    public ?float $discountPercentage = null;
+    public ?float $discountFixedPrice = null;
+    public string $discountPriceType = 'percentage'; // 'percentage' or 'fixed'
+    
+    // Table filters
+    public string $searchVariants = '';
+    public string $filterChannel = '';
+    public bool $showOnlyOverrides = false;
+    
+    protected $listeners = [
+        'channel-price-updated' => '$refresh',
+        'refresh-pricing' => '$refresh',
+    ];
+
+    public function mount(Product $product)
+    {
+        $this->product = $product->load(['variants']);
+        $this->variants = $this->product->variants;
+        $this->channels = SalesChannel::active()->get();
+    }
+
+    public function openPriceModal($variantId, string $channelCode)
+    {
+        $variant = ProductVariant::find($variantId);
+        if (!$variant) {
+            $this->dispatch('error', 'Variant not found');
+            return;
+        }
+        
+        $this->selectedVariant = $variant;
+        $this->selectedChannel = $channelCode;
+        $this->modalPrice = $variant->getChannelPrice($channelCode);
+        
+        // If the price equals default price, it's not an override
+        if ($this->modalPrice == $variant->price && !$variant->hasChannelOverride($channelCode)) {
+            $this->modalPrice = null;
+        }
+        
+        $this->showPriceModal = true;
+    }
+
+    public function savePriceModal()
+    {
+        $this->validate([
+            'modalPrice' => 'nullable|numeric|min:0.01',
+        ]);
+
+        if (!$this->selectedVariant || !$this->selectedChannel) {
+            $this->dispatch('error', 'Invalid variant or channel selected');
+            return;
+        }
+
+        $channelPricingService = app(ChannelPricingService::class);
+        
+        $result = $channelPricingService->setPriceForChannel(
+            $this->selectedVariant, 
+            $this->selectedChannel, 
+            $this->modalPrice
+        );
+
+        if ($result['success']) {
+            $channel = $this->channels->firstWhere('code', $this->selectedChannel);
+            $action = $result['data']['action'];
+            
+            if ($action === 'removed') {
+                $this->dispatch('success', "Removed {$channel->name} price override for {$this->selectedVariant->sku}");
+            } else {
+                $this->dispatch('success', "Updated {$channel->name} price for {$this->selectedVariant->sku}: £{$this->modalPrice}");
+            }
+        } else {
+            $this->dispatch('error', $result['message']);
+        }
+
+        $this->closePriceModal();
+        $this->dispatch('channel-price-updated');
+    }
+
+    public function closePriceModal()
+    {
+        $this->showPriceModal = false;
+        $this->selectedVariant = null;
+        $this->selectedChannel = '';
+        $this->modalPrice = null;
+        $this->resetValidation();
+    }
+
+    public function openBasePriceModal($variantId)
+    {
+        $variant = ProductVariant::find($variantId);
+        if (!$variant) {
+            $this->dispatch('error', 'Variant not found');
+            return;
+        }
+        
+        $this->selectedBaseVariant = $variant;
+        $this->basePriceValue = $variant->price;
+        $this->showBasePriceModal = true;
+    }
+
+    public function saveBasePriceModal()
+    {
+        $this->validate([
+            'basePriceValue' => 'required|numeric|min:0.01',
+        ]);
+
+        if (!$this->selectedBaseVariant) {
+            $this->dispatch('error', 'Invalid variant selected');
+            return;
+        }
+
+        $oldPrice = $this->selectedBaseVariant->price;
+        $this->selectedBaseVariant->update(['price' => $this->basePriceValue]);
+
+        // Refresh the variants collection to pick up the price change
+        $this->product = $this->product->fresh(['variants']);
+        $this->variants = $this->product->variants;
+        
+        $this->dispatch('success', "Updated retail price for {$this->selectedBaseVariant->sku}: £{$oldPrice} → £{$this->basePriceValue}");
+        
+        $this->closeBasePriceModal();
+    }
+
+    public function closeBasePriceModal()
+    {
+        $this->showBasePriceModal = false;
+        $this->selectedBaseVariant = null;
+        $this->basePriceValue = null;
+        $this->resetValidation();
+    }
+
+    public function removeChannelOverride($variantId, string $channelCode)
+    {
+        $variant = ProductVariant::find($variantId);
+        if (!$variant) {
+            $this->dispatch('error', 'Variant not found');
+            return;
+        }
+        
+        $channelPricingService = app(ChannelPricingService::class);
+        $result = $channelPricingService->removeChannelPriceOverride($variant, $channelCode);
+        
+        if ($result['success']) {
+            $channel = $this->channels->firstWhere('code', $channelCode);
+            $this->dispatch('success', "Removed {$channel->name} price override for {$variant->sku}");
+            $this->dispatch('channel-price-updated');
+        } else {
+            $this->dispatch('error', $result['message']);
+        }
+    }
+
+    public function openBulkMarkupModal()
+    {
+        $this->showBulkMarkupModal = true;
+        $this->markupChannel = '';
+        $this->markupPercentage = null;
+        $this->markupFixedPrice = null;
+        $this->markupPriceType = 'percentage';
+    }
+
+    public function openBulkDiscountModal()
+    {
+        $this->showBulkDiscountModal = true;
+        $this->discountChannel = '';
+        $this->discountPercentage = null;
+        $this->discountFixedPrice = null;
+        $this->discountPriceType = 'percentage';
+    }
+
+    public function saveBulkMarkup()
+    {
+        $validationRules = ['markupChannel' => 'required|string'];
+        
+        if ($this->markupPriceType === 'percentage') {
+            $validationRules['markupPercentage'] = 'required|numeric|min:0|max:1000';
+        } else {
+            $validationRules['markupFixedPrice'] = 'required|numeric|min:0.01';
+        }
+        
+        $this->validate($validationRules);
+
+        $channelPricingService = app(ChannelPricingService::class);
+        $variants = $this->getFilteredVariants();
+        
+        if ($this->markupPriceType === 'percentage') {
+            $result = $channelPricingService->applyMarkupToChannel($variants, $this->markupChannel, $this->markupPercentage);
+            $message = "Applied {$this->markupPercentage}% markup";
+        } else {
+            $result = $channelPricingService->setFixedPriceForChannel($variants, $this->markupChannel, $this->markupFixedPrice);
+            $message = "Set fixed price £{$this->markupFixedPrice}";
+        }
+        
+        if ($result['success']) {
+            $channel = $this->channels->firstWhere('code', $this->markupChannel);
+            $count = $result['data']['summary']['updates_successful'];
+            $this->dispatch('success', "{$message} to {$count} variants for {$channel->name}");
+            $this->dispatch('channel-price-updated');
+        } else {
+            $this->dispatch('error', $result['message']);
+        }
+
+        $this->closeBulkMarkupModal();
+    }
+
+    public function saveBulkDiscount()
+    {
+        $validationRules = ['discountChannel' => 'required|string'];
+        
+        if ($this->discountPriceType === 'percentage') {
+            $validationRules['discountPercentage'] = 'required|numeric|min:0|max:100';
+        } else {
+            $validationRules['discountFixedPrice'] = 'required|numeric|min:0.01';
+        }
+        
+        $this->validate($validationRules);
+
+        $channelPricingService = app(ChannelPricingService::class);
+        $variants = $this->getFilteredVariants();
+        
+        if ($this->discountPriceType === 'percentage') {
+            $result = $channelPricingService->applyDiscountToChannel($variants, $this->discountChannel, $this->discountPercentage);
+            $message = "Applied {$this->discountPercentage}% discount";
+        } else {
+            $result = $channelPricingService->setFixedPriceForChannel($variants, $this->discountChannel, $this->discountFixedPrice);
+            $message = "Set fixed price £{$this->discountFixedPrice}";
+        }
+        
+        if ($result['success']) {
+            $channel = $this->channels->firstWhere('code', $this->discountChannel);
+            $count = $result['data']['summary']['updates_successful'];
+            $this->dispatch('success', "{$message} to {$count} variants for {$channel->name}");
+            $this->dispatch('channel-price-updated');
+        } else {
+            $this->dispatch('error', $result['message']);
+        }
+
+        $this->closeBulkDiscountModal();
+    }
+
+    public function closeBulkMarkupModal()
+    {
+        $this->showBulkMarkupModal = false;
+        $this->markupChannel = '';
+        $this->markupPercentage = null;
+        $this->markupFixedPrice = null;
+        $this->markupPriceType = 'percentage';
+        $this->resetValidation();
+    }
+
+    public function closeBulkDiscountModal()
+    {
+        $this->showBulkDiscountModal = false;
+        $this->discountChannel = '';
+        $this->discountPercentage = null;
+        $this->discountFixedPrice = null;
+        $this->discountPriceType = 'percentage';
+        $this->resetValidation();
+    }
+
+    public function getFilteredVariants(): Collection
+    {
+        $variants = $this->variants;
+
+        // Search filter
+        if ($this->searchVariants) {
+            $variants = $variants->filter(function ($variant) {
+                return str_contains(strtolower($variant->sku), strtolower($this->searchVariants)) ||
+                       str_contains(strtolower($variant->color), strtolower($this->searchVariants));
+            });
+        }
+
+        // Override filter
+        if ($this->showOnlyOverrides) {
+            $variants = $variants->filter(function ($variant) {
+                $channelPrices = $variant->getAllChannelPrices();
+                foreach ($channelPrices as $channelData) {
+                    if ($channelData['has_override']) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        return $variants;
+    }
+
+    public function getPricingTableData(): array
+    {
+        $variants = $this->getFilteredVariants();
+        $tableData = [];
+
+        foreach ($variants as $variant) {
+            $channelPrices = $variant->getAllChannelPrices();
+            
+            $variantData = [
+                'variant' => $variant,
+                'default_price' => $variant->price,
+                'channels' => [],
+                'has_any_override' => false,
+            ];
+
+            foreach ($this->channels as $channel) {
+                $channelData = $channelPrices[$channel->code] ?? null;
+                
+                $variantData['channels'][$channel->code] = [
+                    'price' => $channelData ? $channelData['effective_price'] : $variant->price,
+                    'has_override' => $channelData ? $channelData['has_override'] : false,
+                    'markup_percentage' => $variant->price > 0 && $channelData 
+                        ? round((($channelData['effective_price'] - $variant->price) / $variant->price) * 100, 1)
+                        : 0,
+                ];
+
+                if ($channelData && $channelData['has_override']) {
+                    $variantData['has_any_override'] = true;
+                }
+            }
+
+            $tableData[] = $variantData;
+        }
+
+        return $tableData;
+    }
+
+    public function getChannelSummary(): array
+    {
+        $summary = [];
+        
+        foreach ($this->channels as $channel) {
+            $overrideCount = 0;
+            $totalVariants = $this->variants->count();
+            
+            foreach ($this->variants as $variant) {
+                if ($variant->hasChannelOverride($channel->code)) {
+                    $overrideCount++;
+                }
+            }
+            
+            $summary[$channel->code] = [
+                'channel' => $channel,
+                'overrides_count' => $overrideCount,
+                'using_default_count' => $totalVariants - $overrideCount,
+                'percentage_with_overrides' => $totalVariants > 0 ? round(($overrideCount / $totalVariants) * 100, 1) : 0,
+            ];
+        }
+        
+        return $summary;
+    }
+
+    public function render()
+    {
+        return view('livewire.products.product-pricing', [
+            'pricingData' => $this->getPricingTableData(),
+            'channelSummary' => $this->getChannelSummary(),
+        ]);
+    }
+}

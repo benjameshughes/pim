@@ -63,6 +63,10 @@ Route::middleware(['auth'])->group(function () {
         return view('products.show', compact('product'));
     })->name('products.show.attributes');
 
+    Route::get('products/{product}/pricing', function (App\Models\Product $product) {
+        return view('products.show', compact('product'));
+    })->name('products.show.pricing');
+
     Route::get('products/{product}/images', function (App\Models\Product $product) {
         return view('products.show', compact('product'));
     })->name('products.show.images');

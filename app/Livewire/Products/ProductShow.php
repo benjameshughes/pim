@@ -78,6 +78,26 @@ class ProductShow extends Component
     }
 
     /**
+     * Get count of variants with channel pricing overrides
+     */
+    public function getChannelPricingOverridesCount(): int
+    {
+        $overrideCount = 0;
+        
+        foreach ($this->product->variants as $variant) {
+            $channelPrices = $variant->getAllChannelPrices();
+            foreach ($channelPrices as $channelData) {
+                if ($channelData['has_override']) {
+                    $overrideCount++;
+                    break; // Count each variant only once
+                }
+            }
+        }
+        
+        return $overrideCount;
+    }
+
+    /**
      * Get count of Shopify MarketplaceLinks for the product
      */
     public function getShopifyLinkedColorsCount(int $syncAccountId): int
@@ -119,6 +139,12 @@ class ProductShow extends Component
                     ->icon('squares-2x2')
                     ->badge($this->product->variants()->count())
                     ->badgeColor($this->product->variants()->count() > 0 ? 'blue' : 'gray'),
+
+                Tab::make('pricing')
+                    ->label('Pricing')
+                    ->icon('currency-pound')
+                    ->badge($this->getChannelPricingOverridesCount())
+                    ->badgeColor($this->getChannelPricingOverridesCount() > 0 ? 'green' : 'gray'),
 
                 Tab::make('marketplace')
                     ->label('Marketplace')
