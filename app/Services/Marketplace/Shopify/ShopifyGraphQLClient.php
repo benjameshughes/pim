@@ -443,4 +443,90 @@ class ShopifyGraphQLClient
             ]
         ]);
     }
+
+    /**
+     * 🔍 Search for products by SKUs to link existing Shopify products
+     */
+    public function searchProductsBySku(array $skus): array
+    {
+        if (empty($skus)) {
+            return [];
+        }
+
+        // Build SKU search query - Shopify supports searching by variant SKU
+        $skuQueries = array_map(fn($sku) => "sku:{$sku}", $skus);
+        $searchQuery = implode(' OR ', $skuQueries);
+
+        $query = '
+            query searchProducts($query: String!, $first: Int!) {
+                products(query: $query, first: $first) {
+                    edges {
+                        node {
+                            id
+                            title
+                            handle
+                            status
+                            createdAt
+                            updatedAt
+                            variants(first: 100) {
+                                edges {
+                                    node {
+                                        id
+                                        sku
+                                        price
+                                        inventoryQuantity
+                                        title
+                                        selectedOptions {
+                                            name
+                                            value
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ';
+
+        $variables = [
+            'query' => $searchQuery,
+            'first' => 50 // Should be enough for most scenarios
+        ];
+
+        $result = $this->query($query, $variables);
+        
+        // Transform GraphQL response to simpler format
+        $products = [];
+        $productEdges = $result['products']['edges'] ?? [];
+        
+        foreach ($productEdges as $edge) {
+            $product = $edge['node'];
+            $variants = [];
+            
+            foreach ($product['variants']['edges'] ?? [] as $variantEdge) {
+                $variant = $variantEdge['node'];
+                $variants[] = [
+                    'id' => $variant['id'],
+                    'sku' => $variant['sku'],
+                    'price' => $variant['price'],
+                    'title' => $variant['title'],
+                    'inventoryQuantity' => $variant['inventoryQuantity'],
+                    'selectedOptions' => $variant['selectedOptions'],
+                ];
+            }
+            
+            $products[] = [
+                'id' => $product['id'],
+                'title' => $product['title'],
+                'handle' => $product['handle'],
+                'status' => $product['status'],
+                'createdAt' => $product['createdAt'],
+                'updatedAt' => $product['updatedAt'],
+                'variants' => $variants,
+            ];
+        }
+        
+        return $products;
+    }
 }

@@ -6,6 +6,7 @@ use App\Actions\Marketplace\Shopify\CreateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\UpdateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\RecreateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\DeleteShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\LinkShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\SplitProductByColourAction;
 use App\Actions\Marketplace\Shopify\TransformToShopifyAction;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
@@ -87,6 +88,18 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
+     * 🔗 SET UP LINK OPERATION
+     * Links existing Shopify products to local product by SKU matching
+     */
+    public function link(int $productId): self
+    {
+        $this->operationType = 'link';
+        $this->currentProductId = $productId;
+        
+        return $this;
+    }
+
+    /**
      * 💰 ADD PRICING TO UPDATE FIELDS
      */
     public function pricing(array $pricingData = []): self
@@ -138,7 +151,8 @@ class ShopifyAdapter extends AbstractAdapter
             'update' => $this->executeUpdate($syncAccount),
             'recreate' => $this->executeRecreate($syncAccount),
             'delete' => $this->executeDelete($syncAccount),
-            default => SyncResult::failure('No operation type set. Use create(), update(), recreate(), or delete() first.')
+            'link' => $this->executeLink($syncAccount),
+            default => SyncResult::failure('No operation type set. Use create(), update(), recreate(), delete(), or link() first.')
         };
     }
 
@@ -184,6 +198,15 @@ class ShopifyAdapter extends AbstractAdapter
     {
         $deleteAction = new DeleteShopifyProductsAction();
         return $deleteAction->execute($this->currentProductId, $syncAccount);
+    }
+
+    /**
+     * Execute link operation
+     */
+    protected function executeLink(SyncAccount $syncAccount): SyncResult
+    {
+        $linkAction = new LinkShopifyProductsAction();
+        return $linkAction->execute($this->currentProductId, $syncAccount);
     }
 
     /**

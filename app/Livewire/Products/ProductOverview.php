@@ -208,6 +208,54 @@ class ProductOverview extends Component
         }
     }
 
+    public function linkToShopify()
+    {
+        $this->authorize('manage-products');
+        
+        try {
+            // KISS fluent API for link operation
+            $result = Sync::marketplace('shopify')
+                ->link($this->product->id)
+                ->push();
+            
+            $this->shopifyPushResult = [
+                'success' => $result->isSuccess(),
+                'message' => $result->getMessage(),
+                'data' => $result->getData(),
+            ];
+            
+            if ($result->isSuccess()) {
+                $data = $result->getData();
+                $colorGroups = $data['color_groups_count'] ?? 0;
+                $coverage = $data['coverage_percent'] ?? 0;
+                
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => "Successfully linked to Shopify! Found {$colorGroups} color groups ({$coverage}% coverage)",
+                ]);
+                
+                // Refresh to show new sync status
+                $this->product->refresh();
+            } else {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Link failed: ' . $result->getMessage(),
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            $this->shopifyPushResult = [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ];
+            
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Link failed: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
     public function render()
     {
         return view('livewire.products.product-overview');

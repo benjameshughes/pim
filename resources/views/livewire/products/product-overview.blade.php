@@ -192,6 +192,18 @@
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Marketplace Actions</h4>
                 
                 <div class="space-y-2">
+                    @if(!$shopifyStatus)
+                        <flux:button 
+                            wire:click="linkToShopify" 
+                            variant="outline" 
+                            size="sm"
+                            class="w-full text-blue-600 hover:text-blue-700 border-blue-300 hover:border-blue-400"
+                            icon="link"
+                        >
+                            Link to Shopify
+                        </flux:button>
+                    @endif
+
                     <flux:button 
                         wire:click="pushToShopify" 
                         variant="filled" 
