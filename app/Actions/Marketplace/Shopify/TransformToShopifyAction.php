@@ -85,8 +85,8 @@ class TransformToShopifyAction
                 'weight' => $variant->parcel_weight ?? 0.5,
                 'weightUnit' => 'KILOGRAMS',
                 'options' => [
-                    $variant->color,
-                    $variant->width . 'cm x ' . $variant->drop . 'cm'
+                    $variant->width . 'cm',
+                    $variant->drop . 'cm'
                 ],
             ];
         }
@@ -157,25 +157,33 @@ class TransformToShopifyAction
             return [];
         }
         
-        // Get unique sizes from variants
-        $sizes = [];
+        // Get unique widths and drops from variants
+        $widths = [];
+        $drops = [];
         foreach ($variants as $variant) {
-            $size = $variant->width . 'cm x ' . $variant->drop . 'cm';
-            if (!in_array($size, $sizes)) {
-                $sizes[] = $size;
+            $width = $variant->width . 'cm';
+            $drop = $variant->drop . 'cm';
+            
+            if (!in_array($width, $widths)) {
+                $widths[] = $width;
+            }
+            if (!in_array($drop, $drops)) {
+                $drops[] = $drop;
             }
         }
         
+        // Sort dimensions numerically for better UX
+        usort($widths, fn($a, $b) => (int)$a <=> (int)$b);
+        usort($drops, fn($a, $b) => (int)$a <=> (int)$b);
+        
         return [
             [
-                'name' => 'Color',
-                'values' => [
-                    ['name' => $variants[0]->color], // All variants in this group have same color
-                ],
+                'name' => 'Width',
+                'values' => array_map(fn($width) => ['name' => $width], $widths),
             ],
             [
-                'name' => 'Size', 
-                'values' => array_map(fn($size) => ['name' => $size], $sizes),
+                'name' => 'Drop', 
+                'values' => array_map(fn($drop) => ['name' => $drop], $drops),
             ],
         ];
     }
