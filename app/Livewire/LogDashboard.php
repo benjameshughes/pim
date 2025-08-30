@@ -22,6 +22,12 @@ class LogDashboard extends Component
 
     protected LogParserService $logParser;
 
+    public function mount(): void
+    {
+        // Authorize access to system logs
+        $this->authorize('view-system-logs');
+    }
+
     public function boot(LogParserService $logParser): void
     {
         $this->logParser = $logParser;

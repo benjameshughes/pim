@@ -173,6 +173,9 @@ class VariantCreate extends Component
      */
     public function mount(?Product $product = null, ?ProductVariant $variant = null): void
     {
+        // Authorize creating variants
+        $this->authorize('create-variants');
+        
         $this->product = $product;
         $this->variant = $variant;
 

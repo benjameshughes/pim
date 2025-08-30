@@ -3,6 +3,7 @@
 namespace App\Actions\Users;
 
 use App\Actions\Base\BaseAction;
+use App\Actions\Traits\HasAuthorization;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +20,8 @@ use Maize\MagicLogin\Facades\MagicLink;
  */
 class CreateUserAction extends BaseAction
 {
+    use HasAuthorization;
+    
     protected bool $useTransactions = true;
 
     /**
@@ -51,6 +54,9 @@ class CreateUserAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize user creation
+        $this->authorizeWithRole('create-users', 'admin');
+
         $name = $params[0] ?? null;
         $email = $params[1] ?? null;
         $role = $params[2] ?? null;

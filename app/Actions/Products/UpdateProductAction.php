@@ -36,6 +36,9 @@ class UpdateProductAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize editing products
+        $this->authorizeWithRole('edit-products', 'admin');
+        
         $product = $params[0];
         $data = $params[1] ?? [];
 

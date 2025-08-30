@@ -13,6 +13,9 @@ class ProductShow extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing product details
+        $this->authorize('view-product-details');
+
         $this->product = $product->load([
             'variants',  // Remove .barcodes since it's not a proper relationship
             'syncStatuses.syncAccount',
@@ -24,6 +27,9 @@ class ProductShow extends Component
 
     public function deleteProduct()
     {
+        // Authorize product deletion
+        $this->authorize('delete-products');
+
         $productName = $this->product->name;
         $this->product->delete();
 

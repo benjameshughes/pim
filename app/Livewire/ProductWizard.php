@@ -156,6 +156,13 @@ class ProductWizard extends Component
      */
     public function mount(?Product $product = null): void
     {
+        // Authorize product creation/editing
+        if ($product && $product->exists) {
+            $this->authorize('edit-products');
+        } else {
+            $this->authorize('create-products');
+        }
+
         $routeName = request()->route()?->getName() ?? 'unknown';
 
         \Log::info('🚀 ProductWizard mount() called', [
@@ -682,6 +689,13 @@ class ProductWizard extends Component
      */
     public function saveProduct(): void
     {
+        // Authorize save operation
+        if ($this->isEditMode) {
+            $this->authorize('edit-products');
+        } else {
+            $this->authorize('create-products');
+        }
+
         $this->isSaving = true;
 
         try {

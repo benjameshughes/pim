@@ -17,6 +17,12 @@ class BarcodeIndex extends Component
     use WithPagination;
 
     public string $search = '';
+    
+    public function mount()
+    {
+        // Authorize viewing barcodes
+        $this->authorize('view-barcodes');
+    }
     public string $assignedFilter = 'all'; // all, assigned, unassigned
     public int $perPage = 20;
     public string $sortField = 'created_at';
@@ -91,6 +97,9 @@ class BarcodeIndex extends Component
     
     public function markBarcodesAssigned()
     {
+        // Authorize editing barcodes
+        $this->authorize('edit-barcodes');
+        
         $action = new MarkBarcodesAssigned();
         
         if (!empty($this->upToBarcode)) {

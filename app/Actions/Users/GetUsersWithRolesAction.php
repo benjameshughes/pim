@@ -3,6 +3,7 @@
 namespace App\Actions\Users;
 
 use App\Actions\Base\BaseAction;
+use App\Actions\Traits\HasAuthorization;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Log;
  */
 class GetUsersWithRolesAction extends BaseAction
 {
+    use HasAuthorization;
+    
     protected bool $useTransactions = false;
 
     /**
@@ -46,6 +49,8 @@ class GetUsersWithRolesAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize viewing users
+        $this->authorizeWithRole('view-users', 'admin');
         $filters = $params[0] ?? [];
 
         try {

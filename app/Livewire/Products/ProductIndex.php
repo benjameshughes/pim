@@ -30,6 +30,12 @@ class ProductIndex extends Component
     // Simple expandable state
     public array $expandedProducts = [];
 
+    public function mount()
+    {
+        // Authorize view access
+        $this->authorize('view-products');
+    }
+
     public function render()
     {
         $products = $this->paginate();

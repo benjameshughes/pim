@@ -67,6 +67,9 @@ class PricingDashboard extends Component
      */
     public function mount()
     {
+        // Authorize viewing pricing
+        $this->authorize('view-pricing');
+        
         $this->priceCalculator = app(PriceCalculatorService::class);
         $this->refreshAnalysis();
     }
@@ -279,6 +282,9 @@ class PricingDashboard extends Component
      */
     public function applyBulkDiscount()
     {
+        // Authorize bulk pricing updates
+        $this->authorize('bulk-update-pricing');
+        
         if (empty($this->selectedPricing) || $this->bulkDiscountPercentage <= 0) {
             $this->dispatch('toast', [
                 'type' => 'warning',
@@ -321,6 +327,9 @@ class PricingDashboard extends Component
      */
     public function applyBulkMarkup()
     {
+        // Authorize bulk pricing updates
+        $this->authorize('bulk-update-pricing');
+        
         if (empty($this->selectedPricing) || $this->bulkMarkupPercentage <= 0) {
             $this->dispatch('toast', [
                 'type' => 'warning',

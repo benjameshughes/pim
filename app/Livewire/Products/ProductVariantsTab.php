@@ -11,6 +11,9 @@ class ProductVariantsTab extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing variants
+        $this->authorize('view-variants');
+
         $this->product = $product->load(['variants.barcode']);
     }
 

@@ -224,6 +224,9 @@ class BulkOperationsCenter extends Component
      */
     public function mount(): void
     {
+        // Authorize bulk operations access
+        $this->authorize('bulk-edit-products');
+
         if (session()->has('bulk_operation_success')) {
             $this->successMessage = session('bulk_operation_success');
             session()->forget('bulk_operation_success');

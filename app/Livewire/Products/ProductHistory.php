@@ -11,6 +11,9 @@ class ProductHistory extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing product history
+        $this->authorize('view-product-history');
+
         $this->product = $product->load([
             'syncLogs' => function ($query) {
                 $query->with('syncAccount')->latest()->limit(50);

@@ -31,49 +31,17 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerRoleGates(): void
     {
-        // System management - Admin only
-        Gate::define('manage-system', function (User $user) {
-            return $user->isAdmin();
+        // MINIMAL GATES - Only define gates for permissions that don't exist in database
+        // Most permissions will be handled directly by Spatie Permission system
+        
+        // Define only custom gates that combine multiple permissions or add business logic
+        Gate::define('access-management-area', function (User $user) {
+            return $user->hasRole('admin');
         });
-
-        Gate::define('manage-users', function (User $user) {
-            return $user->isAdmin();
-        });
-
-        // manage-teams gate removed - teams feature deprecated
-
-        // Product management - Manager and Admin
-        Gate::define('manage-products', function (User $user) {
-            return $user->isManager();
-        });
-
-        Gate::define('manage-barcodes', function (User $user) {
-            return $user->isManager();
-        });
-
-        Gate::define('manage-integrations', function (User $user) {
-            return $user->isManager();
-        });
-
-        Gate::define('manage-pricing', function (User $user) {
-            return $user->isManager();
-        });
-
-        // View permissions - All authenticated users with roles
-        Gate::define('view-products', function (User $user) {
-            return $user->hasRole();
-        });
-
-        Gate::define('view-barcodes', function (User $user) {
-            return $user->hasRole();
-        });
-
-        Gate::define('view-analytics', function (User $user) {
-            return $user->hasRole();
-        });
-
-        Gate::define('view-integrations', function (User $user) {
-            return $user->hasRole();
+        
+        // Super admin gate for emergency access
+        Gate::define('super-admin', function (User $user) {
+            return $user->hasRole('admin') && $user->email === 'admin@example.com';
         });
     }
 }

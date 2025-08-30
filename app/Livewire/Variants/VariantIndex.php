@@ -15,6 +15,12 @@ class VariantIndex extends Component
     public $status = 'all';
 
     public $color = 'all';
+    
+    public function mount()
+    {
+        // Authorize viewing variants
+        $this->authorize('view-variants');
+    }
 
     public function render()
     {

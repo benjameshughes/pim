@@ -11,6 +11,9 @@ class ProductMarketplace extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing marketplace connections
+        $this->authorize('view-marketplace-connections');
+        
         $this->product = $product->load([
             'syncStatuses.syncAccount',
             'syncLogs' => function ($query) {

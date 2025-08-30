@@ -67,6 +67,12 @@ class ImageLibrary extends Component
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
     ];
+    
+    public function mount()
+    {
+        // Authorize managing images
+        $this->authorize('manage-images');
+    }
 
     /**
      * 📤 OPEN UPLOAD MODAL
@@ -90,6 +96,9 @@ class ImageLibrary extends Component
      */
     public function uploadImages(ImageUploadService $uploadService)
     {
+        // Authorize uploading images
+        $this->authorize('upload-images');
+        
         $this->validate([
             'newImages.*' => 'required|image|max:10240', // 10MB
         ]);
@@ -144,6 +153,9 @@ class ImageLibrary extends Component
      */
     public function deleteImage(int $imageId, ImageUploadService $uploadService)
     {
+        // Authorize deleting images
+        $this->authorize('delete-images');
+        
         $image = Image::find($imageId);
         if (! $image) {
             return;

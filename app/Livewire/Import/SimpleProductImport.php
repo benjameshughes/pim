@@ -62,6 +62,9 @@ class SimpleProductImport extends Component
 
     public function mount()
     {
+        // Authorize importing products
+        $this->authorize('import-products');
+        
         // Get importId from URL parameters (when redirected back from import start)
         $this->importId = request('id');
         

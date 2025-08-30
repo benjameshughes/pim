@@ -36,6 +36,13 @@ class VariantForm extends Component
 
     public function mount(?ProductVariant $variant = null)
     {
+        // Authorize based on mode (create or edit)
+        if ($variant && $variant->exists) {
+            $this->authorize('edit-variants');
+        } else {
+            $this->authorize('create-variants');
+        }
+        
         if ($variant && $variant->exists) {
             $this->variant = $variant;
             $this->isEditing = true;
@@ -71,6 +78,13 @@ class VariantForm extends Component
 
     public function save()
     {
+        // Authorize save operation
+        if ($this->isEditing) {
+            $this->authorize('edit-variants');
+        } else {
+            $this->authorize('create-variants');
+        }
+        
         $this->validate();
 
         try {

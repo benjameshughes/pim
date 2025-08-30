@@ -29,22 +29,29 @@ Route::middleware(['auth'])->group(function () {
     Route::view('settings/password', 'settings.password')->name('settings.password');
     Route::view('settings/appearance', 'settings.appearance')->name('settings.appearance');
 
-    // 📦 PRODUCTS
-    Route::view('products', 'products.index')->name('products.index');
-    Route::get('products/create', function () {
-        return view('products.create', ['product' => null]);
-    })->name('products.create');
+    // 📦 PRODUCTS - with authorization
+    Route::middleware('can:view-products')->group(function () {
+        Route::view('products', 'products.index')->name('products.index');
+        
+        Route::get('products/{product}', function (App\Models\Product $product) {
+            return view('products.show', compact('product'));
+        })->name('products.show');
+    });
 
-    // 🏗️ BUILDER PATTERN WIZARD
-    Route::view('products/builder', 'products.builder')->name('products.builder');
+    Route::middleware('can:create-products')->group(function () {
+        Route::get('products/create', function () {
+            return view('products.create', ['product' => null]);
+        })->name('products.create');
 
-    Route::get('products/{product}/builder', function (App\Models\Product $product) {
-        return view('products.builder', compact('product'));
-    })->name('products.builder.edit');
+        // 🏗️ BUILDER PATTERN WIZARD
+        Route::view('products/builder', 'products.builder')->name('products.builder');
+    });
 
-    Route::get('products/{product}', function (App\Models\Product $product) {
-        return view('products.show', compact('product'));
-    })->name('products.show');
+    Route::middleware('can:edit-products')->group(function () {
+        Route::get('products/{product}/builder', function (App\Models\Product $product) {
+            return view('products.builder', compact('product'));
+        })->name('products.builder.edit');
+    });
 
     // 📑 PRODUCT TABS - Clean TabSet Integration
     Route::get('products/{product}/overview', function (App\Models\Product $product) {
@@ -80,67 +87,97 @@ Route::middleware(['auth'])->group(function () {
     })->name('products.edit');
 
     // 📤 IMPORT
-    Route::view('import/products', 'import.products')->name('import.products');
+    Route::middleware('can:import-products')->group(function () {
+        Route::view('import/products', 'import.products')->name('import.products');
+    });
 
     // 🖼️ IMAGES MANAGEMENT
-    Route::view('images', 'images.index')->name('images.index');
-    Route::view('images/{image}', 'images.show')->name('images.show');
-    Route::view('images/{image}/edit', 'images.edit')->name('images.edit');
+    Route::middleware('can:view-images')->group(function () {
+        Route::view('images', 'images.index')->name('images.index');
+        Route::view('images/{image}', 'images.show')->name('images.show');
+    });
+    Route::middleware('can:manage-images')->group(function () {
+        Route::view('images/{image}/edit', 'images.edit')->name('images.edit');
+    });
 
     // 💎 VARIANTS - UNIFIED WITH PRODUCTS
     Route::redirect('variants', 'products')->name('variants.index');
-    Route::view('variants/create', 'variants.create')->name('variants.create');
-    Route::get('variants/{variant}', function (App\Models\ProductVariant $variant) {
-        return view('variants.show', compact('variant'));
-    })->name('variants.show');
-    Route::get('variants/{variant}/edit', function (App\Models\ProductVariant $variant) {
-        return view('variants.edit', compact('variant'));
-    })->name('variants.edit');
+    Route::middleware('can:create-variants')->group(function () {
+        Route::view('variants/create', 'variants.create')->name('variants.create');
+    });
+    Route::middleware('can:view-variant-details')->group(function () {
+        Route::get('variants/{variant}', function (App\Models\ProductVariant $variant) {
+            return view('variants.show', compact('variant'));
+        })->name('variants.show');
+    });
+    Route::middleware('can:edit-variants')->group(function () {
+        Route::get('variants/{variant}/edit', function (App\Models\ProductVariant $variant) {
+            return view('variants.edit', compact('variant'));
+        })->name('variants.edit');
+    });
 
     // 📊 BARCODES
-    Route::view('barcodes', 'barcodes.index')->name('barcodes.index');
-    Route::view('barcodes/import', 'barcodes.import')->name('barcodes.import');
+    Route::middleware('can:view-barcodes')->group(function () {
+        Route::view('barcodes', 'barcodes.index')->name('barcodes.index');
+    });
+    Route::middleware('can:import-barcodes')->group(function () {
+        Route::view('barcodes/import', 'barcodes.import')->name('barcodes.import');
+    });
 
     // 🛍️ SHOPIFY SYNC
-    Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');
-    Route::get('shopify/webhooks', WebhookDashboard::class)->name('shopify.webhooks');
+    Route::middleware('can:sync-to-marketplace')->group(function () {
+        Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');
+        Route::get('shopify/webhooks', WebhookDashboard::class)->name('shopify.webhooks');
+    });
 
     // 💰 PRICING MANAGEMENT
-    Route::get('pricing', PricingDashboard::class)->name('pricing.dashboard');
-    Route::get('pricing/create', \App\Livewire\Pricing\PricingForm::class)->name('pricing.create');
-    Route::get('pricing/{pricing}', \App\Livewire\Pricing\PricingShow::class)->name('pricing.show');
-    Route::get('pricing/{pricing}/edit', \App\Livewire\Pricing\PricingForm::class)->name('pricing.edit');
+    Route::middleware('can:view-pricing')->group(function () {
+        Route::get('pricing', PricingDashboard::class)->name('pricing.dashboard');
+        Route::get('pricing/{pricing}', \App\Livewire\Pricing\PricingShow::class)->name('pricing.show');
+    });
+    Route::middleware('can:edit-pricing')->group(function () {
+        Route::get('pricing/create', \App\Livewire\Pricing\PricingForm::class)->name('pricing.create');
+        Route::get('pricing/{pricing}/edit', \App\Livewire\Pricing\PricingForm::class)->name('pricing.edit');
+    });
 
     // 🚀 BULK OPERATIONS
-    Route::view('bulk-operations', 'bulk-operations.index')->name('bulk.operations');
-    Route::get('bulk-operations/pricing/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
-        return view('bulk-operations.pricing', compact('targetType', 'selectedItems'));
-    })->name('bulk.pricing');
-    Route::get('bulk-operations/images/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
-        return view('bulk-operations.images', compact('targetType', 'selectedItems'));
-    })->name('bulk.images');
-    Route::get('bulk-operations/attributes/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
-        return view('bulk-operations.attributes', compact('targetType', 'selectedItems'));
-    })->name('bulk.attributes');
+    Route::middleware('can:bulk-operations')->group(function () {
+        Route::view('bulk-operations', 'bulk-operations.index')->name('bulk.operations');
+        Route::get('bulk-operations/pricing/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
+            return view('bulk-operations.pricing', compact('targetType', 'selectedItems'));
+        })->name('bulk.pricing');
+        Route::get('bulk-operations/images/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
+            return view('bulk-operations.images', compact('targetType', 'selectedItems'));
+        })->name('bulk.images');
+        Route::get('bulk-operations/attributes/{targetType}/{selectedItems}', function (string $targetType, string $selectedItems) {
+            return view('bulk-operations.attributes', compact('targetType', 'selectedItems'));
+        })->name('bulk.attributes');
+    });
 
     // 🏷️ MARKETPLACE IDENTIFIERS & INTEGRATIONS
-    Route::get('marketplace/identifiers', \App\Livewire\Marketplace\IdentifiersDashboard::class)->name('marketplace.identifiers');
-    Route::get('marketplace/add-integration', \App\Livewire\Marketplace\AddIntegrationWizard::class)->name('marketplace.add-integration');
+    Route::middleware('can:manage-marketplace-connections')->group(function () {
+        Route::get('marketplace/identifiers', \App\Livewire\Marketplace\IdentifiersDashboard::class)->name('marketplace.identifiers');
+        Route::get('marketplace/add-integration', \App\Livewire\Marketplace\AddIntegrationWizard::class)->name('marketplace.add-integration');
+    });
 
     // 🔗 SYNC ACCOUNTS MANAGEMENT
-    Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
-    Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\CreateSyncAccount::class)->name('sync-accounts.create');
-    Route::get('sync-accounts/{syncAccount}', function (App\Models\SyncAccount $syncAccount) {
-        return view('sync-accounts.show', compact('syncAccount'));
-    })->name('sync-accounts.show');
+    Route::middleware('can:manage-marketplace-connections')->group(function () {
+        Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
+        Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\CreateSyncAccount::class)->name('sync-accounts.create');
+        Route::get('sync-accounts/{syncAccount}', function (App\Models\SyncAccount $syncAccount) {
+            return view('sync-accounts.show', compact('syncAccount'));
+        })->name('sync-accounts.show');
+    });
 
     // 🎛️ CHANNEL MAPPING SYSTEM
 
     // 📊 LOG DASHBOARD
-    Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');
+    Route::middleware('can:view-system-logs')->group(function () {
+        Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');
+    });
 
     // 🏢 MANAGEMENT - USER ADMINISTRATION (Admin only)
-    Route::prefix('management')->name('management.')->middleware('can:manage-system')->group(function () {
+    Route::prefix('management')->name('management.')->middleware('can:manage-system-settings')->group(function () {
         Route::get('users', \App\Livewire\Management\Users\UserIndex::class)->name('users.index');
         Route::get('user-roles', \App\Livewire\Management\UserRoleManagement::class)->name('user-roles.index');
     });

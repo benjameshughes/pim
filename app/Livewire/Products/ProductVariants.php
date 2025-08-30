@@ -22,6 +22,9 @@ class ProductVariants extends Component
      */
     public function mount(Product $product): void
     {
+        // Authorize viewing variants
+        $this->authorize('view-variants');
+
         $this->product = $product;
     }
 
@@ -104,6 +107,9 @@ class ProductVariants extends Component
      */
     public function updateColor(int $variantId, string $color): void
     {
+        // Authorize editing variants
+        $this->authorize('edit-variants');
+
         try {
             // Find the variant and update the color
             $variant = $this->product->variants()->findOrFail($variantId);

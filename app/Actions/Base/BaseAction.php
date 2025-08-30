@@ -2,6 +2,7 @@
 
 namespace App\Actions\Base;
 
+use App\Actions\Traits\HasAuthorization;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Log;
  */
 abstract class BaseAction
 {
+    use HasAuthorization;
+    
     protected bool $useTransactions = true;
 
     protected string $actionName;

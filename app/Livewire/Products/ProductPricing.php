@@ -60,6 +60,9 @@ class ProductPricing extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing pricing
+        $this->authorize('view-pricing');
+        
         $this->product = $product->load(['variants']);
         $this->variants = $this->product->variants;
         $this->channels = SalesChannel::active()->get();
@@ -67,6 +70,9 @@ class ProductPricing extends Component
 
     public function openPriceModal($variantId, string $channelCode)
     {
+        // Authorize editing pricing
+        $this->authorize('edit-pricing');
+        
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
             $this->dispatch('notify', message: 'Variant not found', type: 'error');
@@ -132,6 +138,9 @@ class ProductPricing extends Component
 
     public function openBasePriceModal($variantId)
     {
+        // Authorize editing pricing
+        $this->authorize('edit-pricing');
+        
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
             $this->dispatch('notify', message: 'Variant not found', type: 'error');
@@ -176,6 +185,9 @@ class ProductPricing extends Component
 
     public function removeChannelOverride($variantId, string $channelCode)
     {
+        // Authorize editing pricing
+        $this->authorize('edit-pricing');
+        
         $variant = ProductVariant::find($variantId);
         if (!$variant) {
             $this->dispatch('notify', message: 'Variant not found', type: 'error');
@@ -214,6 +226,9 @@ class ProductPricing extends Component
 
     public function saveBulkMarkup()
     {
+        // Authorize bulk pricing updates
+        $this->authorize('bulk-update-pricing');
+        
         $validationRules = ['markupChannel' => 'required|string'];
         
         if ($this->markupPriceType === 'percentage') {
@@ -249,6 +264,9 @@ class ProductPricing extends Component
 
     public function saveBulkDiscount()
     {
+        // Authorize bulk pricing updates
+        $this->authorize('bulk-update-pricing');
+        
         $validationRules = ['discountChannel' => 'required|string'];
         
         if ($this->discountPriceType === 'percentage') {

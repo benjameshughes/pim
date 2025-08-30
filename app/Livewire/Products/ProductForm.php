@@ -37,6 +37,9 @@ class ProductForm extends Component
     public function mount(?Product $product = null)
     {
         if ($product && $product->exists) {
+            // Authorize edit access
+            $this->authorize('edit-products');
+            
             $this->product = $product;
             $this->isEditing = true;
 
@@ -46,6 +49,9 @@ class ProductForm extends Component
             // Fill form properties using Collection operations
             $this->fillFromDTO($this->productDto);
         } else {
+            // Authorize create access
+            $this->authorize('create-products');
+            
             // Create empty DTO with defaults
             $this->productDto = ProductDTO::fromArray([
                 'name' => '',
@@ -78,6 +84,13 @@ class ProductForm extends Component
      */
     public function save()
     {
+        // Authorize the save operation
+        if ($this->isEditing) {
+            $this->authorize('edit-products');
+        } else {
+            $this->authorize('create-products');
+        }
+
         // Create DTO from current form data using Collections
         $formData = $this->getFormDataCollection();
 

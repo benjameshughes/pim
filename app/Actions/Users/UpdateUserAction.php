@@ -3,6 +3,7 @@
 namespace App\Actions\Users;
 
 use App\Actions\Base\BaseAction;
+use App\Actions\Traits\HasAuthorization;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  */
 class UpdateUserAction extends BaseAction
 {
+    use HasAuthorization;
+    
     protected bool $useTransactions = true;
 
     /**
@@ -48,6 +51,9 @@ class UpdateUserAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize user update
+        $this->authorizeWithRole('edit-users', 'admin');
+
         $user = $params[0] ?? null;
         $name = $params[1] ?? null;
         $email = $params[2] ?? null;

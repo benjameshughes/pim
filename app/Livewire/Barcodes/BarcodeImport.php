@@ -114,6 +114,9 @@ class BarcodeImport extends Component
     
     public function mount()
     {
+        // Authorize importing barcodes
+        $this->authorize('import-barcodes');
+        
         // Get importId and totalRows from URL parameters
         $this->importId = request('id');
         $this->totalRows = request('total', 0);

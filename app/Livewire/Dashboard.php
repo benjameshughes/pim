@@ -9,9 +9,14 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class Dashboard extends Component
 {
-
     public $showTest = false;
     public $user = null;
+    
+    public function mount()
+    {
+        // Authorize viewing dashboard
+        $this->authorize('view-dashboard');
+    }
 
     #[On('echo:test,.TestEvent')]
     public function showUser($event)

@@ -26,6 +26,9 @@ class CreateVariantAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize creating variants
+        $this->authorizeWithRole('create-variants', 'admin');
+        
         $data = $params[0] ?? [];
 
         $this->validateVariantData($data);

@@ -15,6 +15,9 @@ class ShopifySync extends Component
 
     public function mount()
     {
+        // Authorize syncing products to marketplaces
+        $this->authorize('sync-to-marketplace');
+        
         // Simple initialization - no complex services needed!
     }
 
@@ -44,6 +47,9 @@ class ShopifySync extends Component
 
     public function syncAll()
     {
+        // Authorize syncing products to marketplaces
+        $this->authorize('sync-to-marketplace');
+        
         try {
             // Get products that need syncing
             $products = \App\Models\Product::with('variants')->where('status', 'active')->get();
@@ -86,6 +92,9 @@ class ShopifySync extends Component
      */
     public function testConnection()
     {
+        // Authorize testing marketplace connections
+        $this->authorize('test-marketplace-connection');
+        
         try {
             $result = Sync::shopify()->testConnection();
 

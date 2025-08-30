@@ -17,6 +17,9 @@ class MarketplaceSyncCards extends Component
 
     public function mount(Product $product)
     {
+        // Authorize managing marketplace sync operations
+        $this->authorize('manage-marketplace-sync');
+        
         $this->product = $product->load([
             'syncStatuses.syncAccount',
             'marketplaceLinks.syncAccount',
@@ -57,6 +60,9 @@ class MarketplaceSyncCards extends Component
 
     public function syncToMarketplace(int $syncAccountId)
     {
+        // Authorize syncing to marketplace
+        $this->authorize('sync-to-marketplace');
+        
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
 
         // Dispatch the job using your existing Actions
@@ -78,6 +84,9 @@ class MarketplaceSyncCards extends Component
 
     public function updateMarketplaceListing(int $syncAccountId)
     {
+        // Authorize updating marketplace listings
+        $this->authorize('update-marketplace-listings');
+        
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
 
         // Dispatch the update job using your existing Actions
@@ -114,6 +123,9 @@ class MarketplaceSyncCards extends Component
 
     public function linkToMarketplace()
     {
+        // Authorize linking to marketplace
+        $this->authorize('link-marketplace-products');
+        
         $this->validate([
             'externalProductId' => 'required|string|min:1',
         ]);
@@ -185,6 +197,9 @@ class MarketplaceSyncCards extends Component
 
     public function unlinkFromMarketplace(int $syncAccountId)
     {
+        // Authorize unlinking from marketplace
+        $this->authorize('unlink-marketplace-products');
+        
         $syncAccount = SyncAccount::findOrFail($syncAccountId);
         $unlinkedCount = 0;
         $externalIds = [];

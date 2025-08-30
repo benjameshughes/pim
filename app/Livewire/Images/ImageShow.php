@@ -20,6 +20,9 @@ class ImageShow extends Component
 
     public function mount(Image $image)
     {
+        // Authorize viewing images
+        $this->authorize('view-images');
+        
         $this->image = $image->load([
             'products',
             'variants.product',
@@ -32,6 +35,9 @@ class ImageShow extends Component
      */
     public function deleteImage(DeleteImageAction $deleteImageAction)
     {
+        // Authorize deleting images
+        $this->authorize('delete-images');
+        
         $imageName = $this->image->display_title;
         $deleteImageAction->execute($this->image);
 

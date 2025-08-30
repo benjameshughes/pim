@@ -36,6 +36,9 @@ class DeleteProductAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize deleting products
+        $this->authorizeWithRole('delete-products', 'admin');
+        
         $product = $params[0];
         $forceDelete = $params[1] ?? false;
 

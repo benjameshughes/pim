@@ -25,6 +25,9 @@ class CreateProductAction extends BaseAction
      */
     protected function performAction(...$params): array
     {
+        // Authorize creating products
+        $this->authorizeWithRole('create-products', 'admin');
+        
         $data = $params[0] ?? [];
 
         $this->validateProductData($data);

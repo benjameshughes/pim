@@ -16,6 +16,9 @@ class ProductImages extends Component
 
     public function mount(Product $product)
     {
+        // Authorize viewing images
+        $this->authorize('view-images');
+        
         $this->product = $product->load(['images']);
     }
 

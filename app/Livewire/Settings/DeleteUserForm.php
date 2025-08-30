@@ -10,6 +10,15 @@ class DeleteUserForm extends Component
 {
     public string $password = '';
 
+    public function mount(): void
+    {
+        // Users can only delete their own account
+        // Admin users should use the user management interface
+        if (auth()->user()->isAdmin()) {
+            abort(403, 'Admin users cannot delete their own account via this form. Use user management.');
+        }
+    }
+
     /**
      * Delete the currently authenticated user.
      */
