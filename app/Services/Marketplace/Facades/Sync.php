@@ -2,54 +2,61 @@
 
 namespace App\Services\Marketplace\Facades;
 
-use App\Services\Marketplace\MarketplaceSync;
+use App\Services\Marketplace\MarketplaceManager;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * Sync facade for beautiful marketplace integration
+ * 🚀 SYNC FACADE - Clean API Wrapper for Marketplace Integrations
  *
- * Usage:
- * - Sync::shopify()->push($products)
- * - Sync::shopify()->pushWithColors($products)
- * - Sync::shopify()->pull(['limit' => 10])
- * - Sync::shopify()->testConnection()
+ * Your vision:
+ * - Sync::marketplace('shopify')->create($productId)->push()
+ * - Sync::marketplace('ebay')->create($productId)->push()
+ * - Sync::marketplace('freemans')->create($productId)->push()
  *
- * Future:
- * - Sync::ebay()->push($products)
- * - Sync::amazon()->push($products)
+ * Each marketplace handles its own transformation and transport logic
+ * through dedicated adapters and actions.
  */
 class Sync extends Facade
 {
     /**
-     * Get Shopify sync instance
+     * Get marketplace adapter instance
+     *
+     * @param string $marketplace The marketplace name (shopify, ebay, freemans, etc.)
+     * @param string|null $account Optional account name for multi-account setups
      */
-    public static function shopify(): MarketplaceSync
+    public static function marketplace(string $marketplace, string $account = null)
     {
-        return MarketplaceSync::shopify();
+        return app(MarketplaceManager::class)->make($marketplace, $account);
     }
 
     /**
-     * Get eBay sync instance (when implemented)
+     * Convenience methods for common marketplaces
      */
-    public static function ebay(): MarketplaceSync
+    public static function shopify(string $account = null)
     {
-        return MarketplaceSync::ebay();
+        return static::marketplace('shopify', $account);
+    }
+
+    public static function ebay(string $account = null)
+    {
+        return static::marketplace('ebay', $account);
+    }
+
+    public static function amazon(string $account = null)
+    {
+        return static::marketplace('amazon', $account);
+    }
+
+    public static function freemans(string $account = null)
+    {
+        return static::marketplace('freemans', $account);
     }
 
     /**
-     * Get Amazon sync instance (when implemented)
-     */
-    public static function amazon(): MarketplaceSync
-    {
-        return MarketplaceSync::amazon();
-    }
-
-    /**
-     * This facade doesn't need a typical getFacadeAccessor
-     * since we're using static factory methods
+     * Get the registered name of the component
      */
     protected static function getFacadeAccessor(): string
     {
-        return 'marketplace.sync';
+        return MarketplaceManager::class;
     }
 }

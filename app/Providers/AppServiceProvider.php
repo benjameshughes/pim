@@ -13,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register MarketplaceManager as singleton
+        $this->app->singleton(\App\Services\Marketplace\MarketplaceManager::class);
     }
 
     /**

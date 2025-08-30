@@ -134,6 +134,29 @@
                     <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->filter(fn($v) => $v->barcode)->count() }}</span>
                 </div>
             </div>
+
+            {{-- 🛍️ MARKETPLACE ACTIONS --}}
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Marketplace Actions</h4>
+                
+                <div class="space-y-2">
+                    <flux:button 
+                        wire:click="pushToShopify" 
+                        variant="filled" 
+                        size="sm"
+                        class="w-full"
+                    >
+                        <flux:icon name="shopping-bag" class="w-4 h-4 mr-2" />
+                        Push to Shopify
+                    </flux:button>
+                    
+                    @if($shopifyPushResult)
+                        <div class="text-xs {{ $shopifyPushResult['success'] ? 'text-green-600' : 'text-red-600' }}">
+                            {{ $shopifyPushResult['message'] }}
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 </div>
