@@ -72,7 +72,7 @@ class TransformToShopifyAction
             $shopifyVariants[] = [
                 'title' => $variant->title,
                 'sku' => $variant->sku,
-                'price' => (string) $variant->price,
+                'price' => (string) $variant->getChannelPrice('shopify'),
                 'inventoryQuantity' => $variant->stock_level ?? 0,
                 'inventoryPolicy' => 'DENY',
                 'inventoryManagement' => 'SHOPIFY',
@@ -90,20 +90,42 @@ class TransformToShopifyAction
     }
 
     /**
-     * Get images for specific color
+     * Get images for specific color using decoupled images system
      */
     protected function getColorImages(Product $product, string $color): array
     {
-        if ($product->image_url) {
-            return [
-                [
-                    'src' => $product->image_url,
-                    'altText' => $product->name . ' - ' . $color,
-                ]
+        // Use decoupled images() relationship with proper ordering
+        $images = $product->images()
+            ->orderBy('is_primary', 'desc')  // Primary images first
+            ->orderBy('sort_order')          // Then by sort order
+            ->orderBy('created_at')          // Finally by creation time
+            ->get();
+        
+        if ($images->isEmpty()) {
+            // Fallback to legacy image_url if no decoupled images exist
+            if ($product->image_url) {
+                return [
+                    [
+                        'src' => $product->image_url,
+                        'altText' => $product->name . ' - ' . $color,
+                    ]
+                ];
+            }
+            return [];
+        }
+        
+        // Transform decoupled images to Shopify format
+        $shopifyImages = [];
+        foreach ($images as $image) {
+            $shopifyImages[] = [
+                'src' => $image->url,
+                'altText' => $image->alt_text ?: $product->name . ' - ' . $color,
+                // Optional: Add position based on sort order
+                'position' => $image->sort_order,
             ];
         }
         
-        return [];
+        return $shopifyImages;
     }
 
     /**

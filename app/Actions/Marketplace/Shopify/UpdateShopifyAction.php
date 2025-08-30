@@ -150,7 +150,7 @@ class UpdateShopifyAction
         foreach ($variants as $variant) {
             $variantUpdates[] = [
                 'sku' => $variant->sku,
-                'price' => (string) $variant->price,
+                'price' => (string) $variant->getChannelPrice('shopify'),
                 'inventoryQuantity' => $variant->stock_level ?? 0,
             ];
         }
