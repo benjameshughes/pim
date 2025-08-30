@@ -59,7 +59,8 @@ class UserRoleManagement extends Component
 
     public function mount()
     {
-        // Initialize component
+        // Only admins can access user role management
+        $this->authorize('manage-system-settings');
     }
 
     public function updatedSearch()
@@ -142,7 +143,7 @@ class UserRoleManagement extends Component
 
     public function createUser()
     {
-        $this->authorize('manage-system');
+        $this->authorize('manage-users');
 
         $this->validate([
             'createName' => 'required|string|max:255',

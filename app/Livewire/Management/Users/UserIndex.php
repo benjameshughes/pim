@@ -49,7 +49,7 @@ class UserIndex extends Component
     public function mount()
     {
         // Only admins can access user management
-        $this->authorize('manage-system');
+        $this->authorize('manage-system-settings');
     }
 
     public function render()
@@ -63,13 +63,14 @@ class UserIndex extends Component
     public function getUsers()
     {
         return User::query()
+            ->with('roles')
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', "%{$this->search}%")
                       ->orWhere('email', 'like', "%{$this->search}%");
                 });
             })
-            ->when($this->roleFilter, fn ($q) => $q->where('role', $this->roleFilter))
+            ->when($this->roleFilter, fn ($q) => $q->whereHas('roles', fn($r) => $r->where('name', $this->roleFilter)))
             ->when($this->statusFilter === 'verified', fn ($q) => $q->whereNotNull('email_verified_at'))
             ->when($this->statusFilter === 'unverified', fn ($q) => $q->whereNull('email_verified_at'))
             ->orderBy($this->sortField, $this->sortDirection)
@@ -78,21 +79,21 @@ class UserIndex extends Component
 
     public function getUserStatistics(): array
     {
-        $stats = User::selectRaw('
-            COUNT(*) as total,
-            SUM(CASE WHEN role = "admin" THEN 1 ELSE 0 END) as admin_count,
-            SUM(CASE WHEN role = "manager" THEN 1 ELSE 0 END) as manager_count,
-            SUM(CASE WHEN role = "user" THEN 1 ELSE 0 END) as user_count,
-            SUM(CASE WHEN email_verified_at IS NOT NULL THEN 1 ELSE 0 END) as verified_count
-        ')->first();
+        $totalUsers = User::count();
+        $verifiedUsers = User::whereNotNull('email_verified_at')->count();
+        
+        // Count users by role using Spatie Laravel Permission
+        $adminCount = User::role('admin')->count();
+        $managerCount = User::role('manager')->count(); 
+        $userCount = User::role('user')->count();
 
         return [
-            'total' => $stats->total ?? 0,
-            'admin' => $stats->admin_count ?? 0,
-            'manager' => $stats->manager_count ?? 0,
-            'user' => $stats->user_count ?? 0,
-            'verified' => $stats->verified_count ?? 0,
-            'unverified' => ($stats->total ?? 0) - ($stats->verified_count ?? 0),
+            'total' => $totalUsers,
+            'admin' => $adminCount,
+            'manager' => $managerCount,
+            'user' => $userCount,
+            'verified' => $verifiedUsers,
+            'unverified' => $totalUsers - $verifiedUsers,
         ];
     }
 
@@ -180,7 +181,7 @@ class UserIndex extends Component
 
     public function createUser()
     {
-        $this->authorize('manage-system');
+        $this->authorize('manage-system-settings');
 
         $this->validate([
             'name' => 'required|string|max:255',
@@ -210,7 +211,7 @@ class UserIndex extends Component
 
     public function updateUser()
     {
-        $this->authorize('manage-system');
+        $this->authorize('manage-system-settings');
 
         $this->validate([
             'name' => 'required|string|max:255',
@@ -240,7 +241,7 @@ class UserIndex extends Component
 
     public function deleteUser()
     {
-        $this->authorize('manage-system');
+        $this->authorize('manage-system-settings');
 
         if (!$this->deletingUser) {
             $this->dispatch('notify', message: 'No user selected for deletion', type: 'error');

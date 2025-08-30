@@ -14,91 +14,117 @@
             {{-- ✨ PHOENIX NAVIGATION - ORGANIZED & INTUITIVE ✨ --}}
             <flux:navlist variant="outline">
                 {{-- Dashboard --}}
-                <flux:navlist.item 
-                    icon="squares-2x2" 
-                    href="{{ route('dashboard') }}"
-                    wire:navigate
-                >
-                    Dashboard
-                </flux:navlist.item>
+                @can('view-dashboard')
+                    <flux:navlist.item 
+                        icon="squares-2x2" 
+                        href="{{ route('dashboard') }}"
+                        wire:navigate
+                    >
+                        Dashboard
+                    </flux:navlist.item>
+                @endcan
 
                 {{-- 📦 PRODUCT MANAGEMENT --}}
-                <flux:navlist.group expandable heading="Products">
-                    <flux:navlist.item 
-                        icon="cube" 
-                        href="{{ route('products.index') }}"
-                    >
-                        Products & Variants
-                    </flux:navlist.item>
+                @if(auth()->user()->can('view-products') || auth()->user()->can('view-barcodes') || auth()->user()->can('view-pricing') || auth()->user()->can('import-products'))
+                    <flux:navlist.group expandable heading="Products">
+                        @can('view-products')
+                            <flux:navlist.item 
+                                icon="cube" 
+                                href="{{ route('products.index') }}"
+                            >
+                                Products & Variants
+                            </flux:navlist.item>
+                        @endcan
 
-                    <flux:navlist.item 
-                        icon="bars-2" 
-                        href="{{ route('barcodes.index') }}"
-                    >
-                        Barcodes
-                    </flux:navlist.item>
+                        @can('view-barcodes')
+                            <flux:navlist.item 
+                                icon="bars-2" 
+                                href="{{ route('barcodes.index') }}"
+                            >
+                                Barcodes
+                            </flux:navlist.item>
+                        @endcan
 
-                    <flux:navlist.item 
-                        icon="currency-dollar" 
-                        href="{{ route('pricing.dashboard') }}" 
-                    >
-                        Pricing
-                    </flux:navlist.item>
+                        @can('view-pricing')
+                            <flux:navlist.item 
+                                icon="currency-dollar" 
+                                href="{{ route('pricing.dashboard') }}" 
+                            >
+                                Pricing
+                            </flux:navlist.item>
+                        @endcan
 
-                    <flux:navlist.item 
-                        icon="arrow-up-tray" 
-                        href="{{ route('import.products') }}"
-                    >
-                        Import
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                        @can('import-products')
+                            <flux:navlist.item 
+                                icon="arrow-up-tray" 
+                                href="{{ route('import.products') }}"
+                            >
+                                Import
+                            </flux:navlist.item>
+                        @endcan
+                    </flux:navlist.group>
+                @endif
 
                 {{-- 🖼️ MEDIA MANAGEMENT --}}
-                <flux:navlist.group expandable heading="Media">
-                    <flux:navlist.item 
-                        icon="image" 
-                        href="{{ route('images.index') }}"
-                    >
-                        Images
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                @can('view-images')
+                    <flux:navlist.group expandable heading="Media">
+                        <flux:navlist.item 
+                            icon="image" 
+                            href="{{ route('images.index') }}"
+                        >
+                            Images
+                        </flux:navlist.item>
+                    </flux:navlist.group>
+                @endcan
 
                 {{-- 🛍️ SALES CHANNELS --}}
-                <flux:navlist.group expandable heading="Sales Channels">
-                    <flux:navlist.item 
-                        icon="cloud-arrow-up" 
-                        href="{{ route('shopify.sync') }}" 
-                    >
-                        Shopify
-                    </flux:navlist.item>
+                @if(auth()->user()->can('sync-to-marketplace') || auth()->user()->can('manage-marketplace-connections'))
+                    <flux:navlist.group expandable heading="Sales Channels">
+                        @can('sync-to-marketplace')
+                            <flux:navlist.item 
+                                icon="cloud-arrow-up" 
+                                href="{{ route('shopify.sync') }}" 
+                            >
+                                Shopify
+                            </flux:navlist.item>
+                        @endcan
 
-                    <flux:navlist.item 
-                        icon="tag" 
-                        href="{{ route('marketplace.identifiers') }}" 
-                    >
-                        Marketplace
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                        @can('manage-marketplace-connections')
+                            <flux:navlist.item 
+                                icon="tag" 
+                                href="{{ route('marketplace.identifiers') }}" 
+                            >
+                                Marketplace
+                            </flux:navlist.item>
+                        @endcan
+                    </flux:navlist.group>
+                @endif
 
                 {{-- ⚡ OPERATIONS --}}
-                <flux:navlist.group expandable heading="Operations">
-                    <flux:navlist.item 
-                        icon="bolt" 
-                        href="{{ route('bulk.operations') }}" 
-                    >
-                        Bulk Operations
-                    </flux:navlist.item>
+                @if(auth()->user()->can('bulk-operations') || auth()->user()->can('view-system-logs'))
+                    <flux:navlist.group expandable heading="Operations">
+                        @can('bulk-operations')
+                            <flux:navlist.item 
+                                icon="bolt" 
+                                href="{{ route('bulk.operations') }}" 
+                            >
+                                Bulk Operations
+                            </flux:navlist.item>
+                        @endcan
 
-                    <flux:navlist.item 
-                        icon="chart-bar" 
-                        href="{{ route('logs.dashboard') }}" 
-                    >
-                        Logs
-                    </flux:navlist.item>
-                </flux:navlist.group>
+                        @can('view-system-logs')
+                            <flux:navlist.item 
+                                icon="chart-bar" 
+                                href="{{ route('logs.dashboard') }}" 
+                            >
+                                Logs
+                            </flux:navlist.item>
+                        @endcan
+                    </flux:navlist.group>
+                @endif
 
                 {{-- 🏢 MANAGEMENT - Only for admins --}}
-                @can('manage-system')
+                @can('manage-system-settings')
                     <flux:navlist.group expandable heading="Management">
                         <flux:navlist.item 
                             icon="users" 
