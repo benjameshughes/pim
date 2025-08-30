@@ -21,7 +21,7 @@ class PushToShopifyAction
      * @param SyncAccount $syncAccount Shopify account credentials
      * @return SyncResult Push operation result
      */
-    public function execute(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): SyncResult
+    public function execute(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount, bool $forceRecreate = false): SyncResult
     {
         try {
             // Get the transformed Shopify products
@@ -29,6 +29,11 @@ class PushToShopifyAction
             
             if (empty($shopifyProducts)) {
                 return SyncResult::failure('No Shopify products to push');
+            }
+
+            // 🎯 DUPLICATE PREVENTION - Check if products already exist (unless forcing recreate)
+            if (!$forceRecreate && $this->productsAlreadyExist($marketplaceProduct, $syncAccount)) {
+                return SyncResult::failure('Products already exist on Shopify for this account. Use update() instead of create().');
             }
 
             // Initialize Shopify GraphQL client
@@ -93,31 +98,24 @@ class PushToShopifyAction
         // Extract only the ProductInput data - this is what Shopify expects
         $productInput = $shopifyProduct['productInput'] ?? [];
         
-        // Use the official SDK to create the product with correct ProductInput structure
+        // Step 1: Create product with options (Shopify auto-generates variants)
         $result = $client->createProduct($productInput);
         
-        // Check for user errors in the GraphQL response
         $userErrors = $result['productCreate']['userErrors'] ?? [];
         $product = $result['productCreate']['product'] ?? null;
         
-        if (!empty($userErrors)) {
+        if (!empty($userErrors) || !$product) {
             return [
                 'success' => false,
-                'error' => 'Shopify validation errors: ' . json_encode($userErrors),
+                'error' => !empty($userErrors) ? 'Shopify validation errors: ' . json_encode($userErrors) : 'No product returned from Shopify',
                 'errors' => $userErrors,
                 'color_group' => $internalData['color_group'] ?? 'unknown',
                 'original_product_id' => $internalData['original_product_id'] ?? null,
             ];
         }
 
-        if (!$product) {
-            return [
-                'success' => false,
-                'error' => 'No product returned from Shopify',
-                'color_group' => $internalData['color_group'] ?? 'unknown', 
-                'original_product_id' => $internalData['original_product_id'] ?? null,
-            ];
-        }
+        // Step 2: KISS - Update the auto-generated variants with correct pricing AND SKUs
+        $this->updateVariantPricing($client, $product, $shopifyProduct['variants'] ?? []);
 
         // 🎯 SAVE TO ATTRIBUTES - This is where the magic happens!
         $this->saveShopifyAttributes($internalData, $product, $syncAccount);
@@ -181,5 +179,71 @@ class PushToShopifyAction
             'last_push_timestamp' => now()->timestamp,
         ];
         $localProduct->setAttributeValue('shopify_metadata', json_encode($metadata));
+    }
+
+    /**
+     * 🎯 KISS - Update auto-generated variants with correct pricing
+     */
+    protected function updateVariantPricing($client, array $product, array $localVariants): void
+    {
+        if (empty($localVariants)) {
+            return;
+        }
+
+        // Get auto-generated variants from Shopify
+        $shopifyVariants = $product['variants']['edges'] ?? [];
+        if (empty($shopifyVariants)) {
+            return;
+        }
+
+        // Match local variants to Shopify variants (SKU might be empty initially)
+        foreach ($shopifyVariants as $edge) {
+            $shopifyVariant = $edge['node'] ?? [];
+            $shopifyVariantId = $shopifyVariant['id'] ?? null;
+
+            if (!$shopifyVariantId) {
+                continue;
+            }
+
+            // Since SKUs might be empty initially, match by position/order
+            // The first shopify variant matches the first local variant, etc.
+            $matchingLocalVariant = array_shift($localVariants);
+
+            if ($matchingLocalVariant) {
+                // KISS: Update this specific variant ID with correct price AND SKU
+                $client->updateSingleVariant($shopifyVariantId, [
+                    'sku' => $matchingLocalVariant['sku'],
+                    'price' => $matchingLocalVariant['price']
+                ]);
+            }
+        }
+    }
+
+    /**
+     * 🎯 KISS - Check if products already exist to prevent duplicates
+     */
+    protected function productsAlreadyExist(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): bool
+    {
+        $metadata = $marketplaceProduct->getMetadata();
+        $originalProductId = $metadata['original_product_id'] ?? null;
+
+        if (!$originalProductId) {
+            return false; // Can't check without product ID
+        }
+
+        $localProduct = \App\Models\Product::find($originalProductId);
+        if (!$localProduct) {
+            return false;
+        }
+
+        // Check if this product has been synced to Shopify for this account
+        $shopifyProductIds = $localProduct->getSmartAttributeValue('shopify_product_ids');
+        $syncAccountId = $localProduct->getSmartAttributeValue('shopify_sync_account_id');
+        $status = $localProduct->getSmartAttributeValue('shopify_status');
+
+        // If we have Shopify product IDs, correct sync account, and status is synced - products exist
+        return !empty($shopifyProductIds) && 
+               $syncAccountId == $syncAccount->id && 
+               $status === 'synced';
     }
 }

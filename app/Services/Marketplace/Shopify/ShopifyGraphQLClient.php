@@ -316,4 +316,131 @@ class ShopifyGraphQLClient
 
         return $this->query($queryString, ['query' => $query]);
     }
+
+    /**
+     * Update variants for a product (for pricing fixes)
+     */
+    public function updateProductVariants(string $productId, array $variants): array
+    {
+        $mutation = '
+            mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                    productVariants {
+                        id
+                        sku
+                        price
+                        inventoryQuantity
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        // Transform variants to Shopify bulk update format with IDs
+        $bulkVariants = [];
+        foreach ($variants as $variant) {
+            $bulkVariants[] = [
+                'id' => $variant['id'], // CRITICAL: Shopify needs the variant ID
+                'price' => $variant['price'], // The price to update
+            ];
+        }
+
+        return $this->mutate($mutation, [
+            'productId' => $productId,
+            'variants' => $bulkVariants
+        ]);
+    }
+
+    /**
+     * 🎯 KISS - Update a single variant using bulk mutation
+     */
+    public function updateSingleVariant(string $variantId, array $updates): array
+    {
+        // Extract product ID from variant ID (gid://shopify/ProductVariant/123 -> we need product ID)
+        // We'll need to get this from the calling code or make a separate query
+        
+        // For now, let's use the bulk update with the variant ID and updates
+        $variantData = array_merge(['id' => $variantId], $updates);
+        
+        // We need the product ID for productVariantsBulkUpdate
+        // Let's get it by querying the variant first
+        $variantQuery = '
+            query getVariant($id: ID!) {
+                productVariant(id: $id) {
+                    id
+                    product {
+                        id
+                    }
+                }
+            }
+        ';
+        
+        $variantResult = $this->query($variantQuery, ['id' => $variantId]);
+        $productId = $variantResult['productVariant']['product']['id'] ?? null;
+        
+        if (!$productId) {
+            return ['error' => 'Could not find product ID for variant'];
+        }
+        
+        // Now use bulk update with one variant
+        return $this->updateProductVariants($productId, [$variantData]);
+    }
+
+    /**
+     * 🎯 KISS - Get a single product with variants (for updates)
+     */
+    public function getProduct(string $productId): array
+    {
+        $query = '
+            query getProduct($id: ID!) {
+                product(id: $id) {
+                    id
+                    title
+                    handle
+                    status
+                    variants(first: 100) {
+                        edges {
+                            node {
+                                id
+                                sku
+                                price
+                                inventoryQuantity
+                                updatedAt
+                            }
+                        }
+                    }
+                }
+            }
+        ';
+
+        return $this->query($query, ['id' => $productId]);
+    }
+
+    /**
+     * 🗑️ Delete a product from Shopify
+     */
+    public function deleteProduct(string $productId): array
+    {
+        $mutation = '
+            mutation productDelete($input: ProductDeleteInput!) {
+                productDelete(input: $input) {
+                    deletedProductId
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        return $this->mutate($mutation, [
+            'input' => [
+                'id' => $productId
+            ]
+        ]);
+    }
 }

@@ -197,8 +197,8 @@
                         variant="filled" 
                         size="sm"
                         class="w-full"
+                        icon="shopping-bag"
                     >
-                        <flux:icon name="shopping-bag" class="w-4 h-4 mr-2" />
                         {{ $shopifyStatus ? 'Recreate in Shopify' : 'Push to Shopify' }}
                     </flux:button>
 
@@ -208,8 +208,8 @@
                             variant="outline" 
                             size="sm"
                             class="w-full"
+                            icon="pencil"
                         >
-                            <flux:icon name="pencil" class="w-4 h-4 mr-2" />
                             Update Title
                         </flux:button>
 
@@ -218,9 +218,19 @@
                             variant="outline" 
                             size="sm"
                             class="w-full"
+                            icon="currency-dollar"
                         >
-                            <flux:icon name="currency-dollar" class="w-4 h-4 mr-2" />
                             Update Pricing
+                        </flux:button>
+
+                        <flux:button 
+                            wire:click="deleteFromShopify" 
+                            variant="outline" 
+                            size="sm"
+                            class="w-full text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
+                            icon="trash"
+                        >
+                            Delete from Shopify
                         </flux:button>
                     @endif
                     

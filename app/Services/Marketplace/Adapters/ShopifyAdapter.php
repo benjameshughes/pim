@@ -2,21 +2,27 @@
 
 namespace App\Services\Marketplace\Adapters;
 
+use App\Actions\Marketplace\Shopify\CreateShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\UpdateShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\RecreateShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\DeleteShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\SplitProductByColourAction;
 use App\Actions\Marketplace\Shopify\TransformToShopifyAction;
-use App\Actions\Marketplace\Shopify\PushToShopifyAction;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
 use App\Models\SyncAccount;
 
 /**
- * 🛍️ SHOPIFY MARKETPLACE ADAPTER
+ * 🛍️ SHOPIFY MARKETPLACE ADAPTER - REFACTORED
  *
- * Handles Shopify-specific product transformations and API operations.
- * Implements the unique Shopify requirement of splitting products by color.
+ * Simple orchestrator for Shopify operations using clean, single-responsibility actions.
+ * Each method has one clear purpose - no complex mode checking or fallback logic.
  */
 class ShopifyAdapter extends AbstractAdapter
 {
+    protected string $operationType = 'none';
+    protected array $fieldsToUpdate = [];
+
     /**
      * Get the marketplace name
      */
@@ -26,24 +32,176 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
-     * Create Shopify-specific product data
-     *
-     * Shopify's unique behavior: Split single product into multiple
-     * Shopify products, one for each color variant.
+     * 🆕 SET UP CREATE OPERATION
+     * Creates NEW products on Shopify (fails if they already exist)
      */
     public function create(int $productId): self
     {
+        $this->operationType = 'create';
+        $this->currentProductId = $productId;
+        
+        // Prepare marketplace product data
+        $this->prepareMarketplaceProduct($productId);
+        
+        return $this;
+    }
+
+    /**
+     * ✏️ SET UP UPDATE OPERATION  
+     * Updates EXISTING products on Shopify using stored IDs
+     */
+    public function update(int $productId): self
+    {
+        $this->operationType = 'update';
+        $this->currentProductId = $productId;
+        $this->fieldsToUpdate = [];
+        
+        return $this;
+    }
+
+    /**
+     * 🔄 SET UP RECREATE OPERATION
+     * Deletes existing products and creates fresh ones
+     */
+    public function recreate(int $productId): self
+    {
+        $this->operationType = 'recreate';
+        $this->currentProductId = $productId;
+        
+        // Prepare marketplace product data for recreation
+        $this->prepareMarketplaceProduct($productId);
+        
+        return $this;
+    }
+
+    /**
+     * 🗑️ SET UP DELETE OPERATION
+     * Deletes existing products from Shopify
+     */
+    public function delete(int $productId): self
+    {
+        $this->operationType = 'delete';
+        $this->currentProductId = $productId;
+        
+        return $this;
+    }
+
+    /**
+     * 💰 ADD PRICING TO UPDATE FIELDS
+     */
+    public function pricing(array $pricingData = []): self
+    {
+        if ($this->operationType !== 'update') {
+            throw new \RuntimeException('pricing() can only be used with update() operations');
+        }
+        
+        $this->fieldsToUpdate['pricing'] = empty($pricingData) ? true : $pricingData;
+        return $this;
+    }
+
+    /**
+     * 📝 ADD TITLE TO UPDATE FIELDS
+     */
+    public function title(string $newTitle): self
+    {
+        if ($this->operationType !== 'update') {
+            throw new \RuntimeException('title() can only be used with update() operations');
+        }
+        
+        $this->fieldsToUpdate['title'] = $newTitle;
+        return $this;
+    }
+
+    /**
+     * 🖼️ ADD IMAGES TO UPDATE FIELDS
+     */
+    public function images(array $imageData): self
+    {
+        if ($this->operationType !== 'update') {
+            throw new \RuntimeException('images() can only be used with update() operations');
+        }
+        
+        $this->fieldsToUpdate['images'] = $imageData;
+        return $this;
+    }
+
+    /**
+     * 🚀 EXECUTE THE OPERATION
+     * Calls the appropriate action based on operation type
+     */
+    public function push(): SyncResult
+    {
+        $syncAccount = $this->requireSyncAccount();
+
+        return match ($this->operationType) {
+            'create' => $this->executeCreate($syncAccount),
+            'update' => $this->executeUpdate($syncAccount),
+            'recreate' => $this->executeRecreate($syncAccount),
+            'delete' => $this->executeDelete($syncAccount),
+            default => SyncResult::failure('No operation type set. Use create(), update(), recreate(), or delete() first.')
+        };
+    }
+
+    /**
+     * Execute create operation
+     */
+    protected function executeCreate(SyncAccount $syncAccount): SyncResult
+    {
+        $marketplaceProduct = $this->getMarketplaceProduct();
+        
+        $createAction = new CreateShopifyProductsAction();
+        return $createAction->execute($marketplaceProduct, $syncAccount);
+    }
+
+    /**
+     * Execute update operation
+     */
+    protected function executeUpdate(SyncAccount $syncAccount): SyncResult
+    {
+        if (empty($this->fieldsToUpdate)) {
+            return SyncResult::failure('No fields specified for update. Use pricing(), title(), or images() to specify what to update.');
+        }
+
+        $updateAction = new UpdateShopifyProductsAction();
+        return $updateAction->execute($this->currentProductId, $this->fieldsToUpdate, $syncAccount);
+    }
+
+    /**
+     * Execute recreate operation
+     */
+    protected function executeRecreate(SyncAccount $syncAccount): SyncResult
+    {
+        $marketplaceProduct = $this->getMarketplaceProduct();
+        
+        $recreateAction = new RecreateShopifyProductsAction();
+        return $recreateAction->execute($marketplaceProduct, $syncAccount);
+    }
+
+    /**
+     * Execute delete operation
+     */
+    protected function executeDelete(SyncAccount $syncAccount): SyncResult
+    {
+        $deleteAction = new DeleteShopifyProductsAction();
+        return $deleteAction->execute($this->currentProductId, $syncAccount);
+    }
+
+    /**
+     * Prepare marketplace product data (for create and recreate)
+     */
+    protected function prepareMarketplaceProduct(int $productId): void
+    {
         $product = $this->loadProduct($productId);
         
-        // Step 1: Split product by colors using Action
+        // Step 1: Split product by colors
         $colorGroups = app(SplitProductByColourAction::class)
             ->execute($product);
 
-        // Step 2: Transform each color group to Shopify format using Action  
+        // Step 2: Transform each color group to Shopify format
         $shopifyProducts = app(TransformToShopifyAction::class)
-            ->execute($colorGroups, $product);
+            ->execute($colorGroups, $product, $this->syncAccount);
 
-        // Create the marketplace product with metadata
+        // Create marketplace product with metadata
         $marketplaceProduct = new MarketplaceProduct(
             data: $shopifyProducts,
             metadata: [
@@ -56,92 +214,10 @@ class ShopifyAdapter extends AbstractAdapter
         );
 
         $this->setMarketplaceProduct($marketplaceProduct);
-
-        return $this; // Return self for fluent chaining
     }
 
     /**
-     * Push the prepared Shopify products via GraphQL
-     */
-    public function push(): SyncResult
-    {
-        $syncAccount = $this->requireSyncAccount();
-
-        if ($this->isUpdateMode()) {
-            // Handle update mode with auto-recreate fallback
-            return $this->pushUpdates($syncAccount);
-        }
-
-        if ($this->isRecreateMode()) {
-            // Handle recreate mode - create fresh products
-            $marketplaceProduct = $this->create($this->currentProductId)->getCreatedProduct();
-            return app(PushToShopifyAction::class)
-                ->execute($marketplaceProduct, $syncAccount);
-        }
-
-        // Handle create mode (existing logic)
-        $marketplaceProduct = $this->getMarketplaceProduct();
-        return app(PushToShopifyAction::class)
-            ->execute($marketplaceProduct, $syncAccount);
-    }
-
-    /**
-     * Handle update operations with auto-recreate fallback
-     */
-    protected function pushUpdates(SyncAccount $syncAccount): SyncResult
-    {
-        $fieldsToUpdate = $this->getFieldsToUpdate();
-        
-        if (empty($fieldsToUpdate)) {
-            // Full update - recreate and push
-            $marketplaceProduct = $this->create($this->currentProductId)->getCreatedProduct();
-            return app(PushToShopifyAction::class)
-                ->execute($marketplaceProduct, $syncAccount);
-        }
-
-        // Partial update - use UpdateShopifyAction
-        $updateResult = app(\App\Actions\Marketplace\Shopify\UpdateShopifyAction::class)
-            ->execute($this->currentProductId, $fieldsToUpdate, $syncAccount);
-
-        // If update failed because products don't exist, auto-recreate
-        if (!$updateResult->isSuccess() && $this->shouldAutoRecreate($updateResult)) {
-            // Switch to recreate mode and try again
-            $marketplaceProduct = $this->recreate($this->currentProductId)->create($this->currentProductId)->getCreatedProduct();
-            $recreateResult = app(PushToShopifyAction::class)
-                ->execute($marketplaceProduct, $syncAccount);
-            
-            // Enhance the result message to indicate auto-recreate happened
-            if ($recreateResult->isSuccess()) {
-                return new \App\Services\Marketplace\ValueObjects\SyncResult(
-                    success: true,
-                    message: 'Original products missing - auto-recreated successfully! ' . $recreateResult->getMessage(),
-                    data: $recreateResult->getData(),
-                    errors: $recreateResult->getErrors(),
-                    metadata: array_merge($recreateResult->getMetadata() ?? [], ['auto_recreated' => true])
-                );
-            }
-        }
-
-        return $updateResult;
-    }
-
-    /**
-     * Determine if we should auto-recreate based on the failure reason
-     */
-    protected function shouldAutoRecreate(\App\Services\Marketplace\ValueObjects\SyncResult $result): bool
-    {
-        $message = strtolower($result->getMessage());
-        $errors = array_map('strtolower', $result->getErrors());
-        $allText = $message . ' ' . implode(' ', $errors);
-        
-        return str_contains($allText, 'no existing shopify products found') ||
-               str_contains($allText, 'product not found') ||
-               str_contains($allText, 'does not exist') ||
-               str_contains($allText, 'product does not exist');
-    }
-
-    /**
-     * Test Shopify connection using GraphQL
+     * Test Shopify connection
      */
     public function testConnection(): SyncResult
     {
@@ -150,7 +226,6 @@ class ShopifyAdapter extends AbstractAdapter
         }
 
         try {
-            // Use Action to test connection
             return app(\App\Actions\Marketplace\Shopify\TestShopifyConnectionAction::class)
                 ->execute($this->syncAccount);
         } catch (\Exception $e) {
@@ -159,7 +234,7 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
-     * Pull products from Shopify (if needed)
+     * Pull products from Shopify
      */
     public function pull(array $filters = []): SyncResult
     {
@@ -168,7 +243,6 @@ class ShopifyAdapter extends AbstractAdapter
         }
 
         try {
-            // Use Action to pull from Shopify
             return app(\App\Actions\Marketplace\Shopify\PullFromShopifyAction::class)
                 ->execute($this->syncAccount, $filters);
         } catch (\Exception $e) {

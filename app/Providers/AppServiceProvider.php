@@ -28,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // $this->configureUrlGeneration();
         
         $this->registerRoleGates();
+        $this->registerObservers();
     }
 
     private function registerRoleGates(): void
@@ -44,5 +45,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('super-admin', function (User $user) {
             return $user->hasRole('admin') && $user->email === 'admin@example.com';
         });
+    }
+
+    private function registerObservers(): void
+    {
+        // Register SyncAccount observer for auto-creating SalesChannels
+        \App\Models\SyncAccount::observe(\App\Observers\SyncAccountObserver::class);
     }
 }

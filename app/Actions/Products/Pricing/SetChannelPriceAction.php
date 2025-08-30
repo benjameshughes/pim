@@ -143,8 +143,11 @@ class SetChannelPriceAction extends BaseAction
      */
     protected function removeChannelPriceOverride(ProductVariant $variant, string $attributeKey): void
     {
-        // Remove the attribute entirely so variant falls back to default price
-        $variant->attributes()->where('key', $attributeKey)->delete();
+        // Use the same method as setting null to properly remove the attribute
+        $variant->setAttributeValue($attributeKey, null, [
+            'source' => 'channel_pricing_action',
+            'updated_by' => 'system',
+        ]);
     }
 
     /**

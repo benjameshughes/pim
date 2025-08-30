@@ -14,6 +14,7 @@ use App\Services\Marketplace\ValueObjects\SyncResult;
  */
 class UpdateShopifyAction
 {
+    protected ?SyncAccount $syncAccount = null;
     /**
      * Execute partial update to Shopify product
      *
@@ -24,6 +25,8 @@ class UpdateShopifyAction
      */
     public function execute(int $productId, array $fieldsToUpdate, SyncAccount $syncAccount): SyncResult
     {
+        $this->syncAccount = $syncAccount;
+        
         try {
             $product = Product::with(['variants'])->find($productId);
             
@@ -141,6 +144,16 @@ class UpdateShopifyAction
     }
 
     /**
+     * Get variant price for specific sync account (account-specific pricing)
+     */
+    protected function getVariantPriceForAccount(\App\Models\ProductVariant $variant, \App\Models\SyncAccount $syncAccount): float
+    {
+        // Use account-specific channel code: shopify_main, ebay_blindsoutlet, etc.
+        $channelCode = $syncAccount->getChannelCode();
+        return $variant->getChannelPrice($channelCode);
+    }
+
+    /**
      * Transform variants for update operations
      */
     protected function transformVariantsForUpdate($variants): array
@@ -150,7 +163,7 @@ class UpdateShopifyAction
         foreach ($variants as $variant) {
             $variantUpdates[] = [
                 'sku' => $variant->sku,
-                'price' => (string) $variant->getChannelPrice('shopify'),
+                'price' => (string) $this->getVariantPriceForAccount($variant, $this->syncAccount),
                 'inventoryQuantity' => $variant->stock_level ?? 0,
             ];
         }
@@ -178,11 +191,12 @@ class UpdateShopifyAction
                 }
             }
             
-            // Handle variant/pricing updates
+            // Handle variant/pricing updates - KISS approach
             if (isset($updateData['variants'])) {
-                // TODO: Implement variant price updates via GraphQL
-                // For now, note that we would update variants
-                $updatedFields[] = 'pricing';
+                $pricingUpdated = $this->updateVariantPricing($client, $shopifyProductId, $updateData['variants']);
+                if ($pricingUpdated) {
+                    $updatedFields[] = 'pricing';
+                }
             }
             
             // Handle image updates
@@ -204,6 +218,60 @@ class UpdateShopifyAction
                 'shopify_product_id' => $shopifyProductId,
                 'error' => 'Update failed: ' . $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * 🎯 KISS - Update variant pricing using specific variant IDs
+     */
+    protected function updateVariantPricing($client, string $shopifyProductId, array $localVariants): bool
+    {
+        try {
+            // Step 1: Get current Shopify product with variants
+            $productData = $client->getProduct($shopifyProductId);
+            $product = $productData['product'] ?? null;
+            
+            if (!$product) {
+                return false;
+            }
+
+            // Step 2: Get variant IDs from Shopify
+            $shopifyVariants = $product['variants']['edges'] ?? [];
+            
+            // Step 3: Match and update each variant by SKU
+            $updatedCount = 0;
+            foreach ($shopifyVariants as $edge) {
+                $shopifyVariant = $edge['node'] ?? [];
+                $shopifyVariantId = $shopifyVariant['id'] ?? null;
+                $shopifyVariantSku = $shopifyVariant['sku'] ?? null;
+
+                if (!$shopifyVariantId || !$shopifyVariantSku) {
+                    continue;
+                }
+
+                // Find matching local variant by SKU
+                foreach ($localVariants as $localVariant) {
+                    if ($localVariant['sku'] === $shopifyVariantSku) {
+                        // KISS: Update this specific variant ID with new price
+                        $result = $client->updateSingleVariant($shopifyVariantId, [
+                            'price' => $localVariant['price']
+                        ]);
+                        
+                        // Fixed: Use correct response path for bulk update
+                        $userErrors = $result['productVariantsBulkUpdate']['userErrors'] ?? [];
+                        if (empty($userErrors)) {
+                            $updatedCount++;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return $updatedCount > 0;
+
+        } catch (\Exception $e) {
+            error_log('Variant pricing update failed: ' . $e->getMessage());
+            return false;
         }
     }
 }

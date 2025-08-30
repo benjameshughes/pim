@@ -3,6 +3,7 @@
 namespace App\Actions\Marketplace\Shopify;
 
 use App\Models\Product;
+use App\Models\SyncAccount;
 
 /**
  * 🔄 TRANSFORM TO SHOPIFY ACTION
@@ -12,15 +13,19 @@ use App\Models\Product;
  */
 class TransformToShopifyAction
 {
+    protected ?SyncAccount $syncAccount = null;
+
     /**
      * Transform color groups to Shopify products
      *
      * @param array $colorGroups Color-grouped variants from SplitProductByColourAction
      * @param Product $originalProduct The original product for metadata
+     * @param SyncAccount|null $syncAccount For account-specific pricing
      * @return array Array of Shopify product data structures
      */
-    public function execute(array $colorGroups, Product $originalProduct): array
+    public function execute(array $colorGroups, Product $originalProduct, ?SyncAccount $syncAccount = null): array
     {
+        $this->syncAccount = $syncAccount;
         $shopifyProducts = [];
 
         foreach ($colorGroups as $color => $variants) {
@@ -72,7 +77,7 @@ class TransformToShopifyAction
             $shopifyVariants[] = [
                 'title' => $variant->title,
                 'sku' => $variant->sku,
-                'price' => (string) $variant->getChannelPrice('shopify'),
+                'price' => (string) $this->getVariantPriceForAccount($variant),
                 'inventoryQuantity' => $variant->stock_level ?? 0,
                 'inventoryPolicy' => 'DENY',
                 'inventoryManagement' => 'SHOPIFY',
@@ -126,6 +131,21 @@ class TransformToShopifyAction
         }
         
         return $shopifyImages;
+    }
+
+    /**
+     * Get variant price for specific sync account (account-specific pricing)
+     */
+    protected function getVariantPriceForAccount(\App\Models\ProductVariant $variant): float
+    {
+        if (!$this->syncAccount) {
+            // Fallback to default channel pricing
+            return $variant->getChannelPrice('shopify');
+        }
+
+        // Use account-specific channel code: shopify_main, ebay_blindsoutlet, etc.
+        $channelCode = $this->syncAccount->getChannelCode();
+        return $variant->getChannelPrice($channelCode);
     }
 
     /**
