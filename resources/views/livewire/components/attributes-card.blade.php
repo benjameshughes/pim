@@ -207,7 +207,7 @@
                                     <div class="flex items-center justify-between">
                                         <div class="flex-1">
                                             <div class="font-mono text-sm text-gray-900">
-                                                {{ $currentValue['display_value'] ?: $currentValue['value'] ?: 'No value' }}
+                                                {{ format_attribute_value($currentValue['display_value'] ?: $currentValue['value']) }}
                                             </div>
                                             
                                             {{-- Value Metadata --}}
@@ -228,7 +228,7 @@
                                         @if($modelType === 'variant' && $inheritanceInfo)
                                             <div class="ml-4 text-right text-xs text-gray-500">
                                                 @if($inheritanceInfo['has_parent_value'])
-                                                    <div>Parent: <span class="font-mono">{{ $inheritanceInfo['parent_display_value'] }}</span></div>
+                                                    <div>Parent: <span class="font-mono">{{ format_attribute_value($inheritanceInfo['parent_display_value']) }}</span></div>
                                                     <div class="text-blue-600">{{ ucfirst($inheritanceInfo['inheritance_strategy']) }}</div>
                                                 @else
                                                     <div class="text-gray-400">No parent value</div>
@@ -245,7 +245,7 @@
                                         @if($modelType === 'variant' && $inheritanceInfo && $inheritanceInfo['has_parent_value'])
                                             <div class="text-right text-xs">
                                                 <div>Available from parent:</div>
-                                                <div class="font-mono text-blue-600">{{ $inheritanceInfo['parent_display_value'] }}</div>
+                                                <div class="font-mono text-blue-600">{{ format_attribute_value($inheritanceInfo['parent_display_value']) }}</div>
                                             </div>
                                         @endif
                                     </div>

@@ -59,6 +59,88 @@ class ProductOverview extends Component
         }
     }
 
+    public function updateShopifyTitle()
+    {
+        $this->authorize('manage-products');
+        
+        try {
+            // KISS fluent API for partial update
+            $result = Sync::marketplace('shopify')
+                ->update($this->product->id)
+                ->title($this->product->name . ' - UPDATED')
+                ->push();
+            
+            $this->shopifyPushResult = [
+                'success' => $result->isSuccess(),
+                'message' => $result->getMessage(),
+            ];
+            
+            if ($result->isSuccess()) {
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Title updated in Shopify! ' . $result->getMessage(),
+                ]);
+            } else {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Title update failed: ' . $result->getMessage(),
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            $this->shopifyPushResult = [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ];
+            
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Title update failed: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function updateShopifyPricing()
+    {
+        $this->authorize('manage-products');
+        
+        try {
+            // KISS fluent API for pricing update
+            $result = Sync::marketplace('shopify')
+                ->update($this->product->id)
+                ->pricing()
+                ->push();
+            
+            $this->shopifyPushResult = [
+                'success' => $result->isSuccess(),
+                'message' => $result->getMessage(),
+            ];
+            
+            if ($result->isSuccess()) {
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Pricing updated in Shopify! ' . $result->getMessage(),
+                ]);
+            } else {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Pricing update failed: ' . $result->getMessage(),
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            $this->shopifyPushResult = [
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ];
+            
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Pricing update failed: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
     public function render()
     {
         return view('livewire.products.product-overview');

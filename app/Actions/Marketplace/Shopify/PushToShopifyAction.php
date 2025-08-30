@@ -39,7 +39,7 @@ class PushToShopifyAction
 
             // Process each Shopify product (one per color)
             foreach ($shopifyProducts as $shopifyProduct) {
-                $result = $this->pushSingleProduct($graphqlClient, $shopifyProduct);
+                $result = $this->pushSingleProduct($graphqlClient, $shopifyProduct, $syncAccount);
                 
                 if ($result['success']) {
                     $results[] = $result;
@@ -85,7 +85,7 @@ class PushToShopifyAction
     /**
      * Push a single product to Shopify using official SDK
      */
-    protected function pushSingleProduct(\App\Services\Marketplace\Shopify\ShopifyGraphQLClient $client, array $shopifyProduct): array
+    protected function pushSingleProduct(\App\Services\Marketplace\Shopify\ShopifyGraphQLClient $client, array $shopifyProduct, SyncAccount $syncAccount): array
     {
         // Extract internal tracking data
         $internalData = $shopifyProduct['_internal'] ?? [];
@@ -119,6 +119,9 @@ class PushToShopifyAction
             ];
         }
 
+        // 🎯 SAVE TO ATTRIBUTES - This is where the magic happens!
+        $this->saveShopifyAttributes($internalData, $product, $syncAccount);
+
         return [
             'success' => true,
             'shopify_product_id' => $product['id'],
@@ -129,5 +132,54 @@ class PushToShopifyAction
             'variant_count' => count($product['variants']['edges'] ?? []),
             'note' => 'Product created with productOptions. Shopify automatically creates variants from the options.',
         ];
+    }
+
+    /**
+     * 🎯 Save Shopify sync data to product attributes
+     * This is where we embrace the attribute system for tracking!
+     */
+    protected function saveShopifyAttributes(array $internalData, array $shopifyProduct, SyncAccount $syncAccount): void
+    {
+        $originalProductId = $internalData['original_product_id'] ?? null;
+        $colorGroup = $internalData['color_group'] ?? 'unknown';
+
+        if (!$originalProductId) {
+            return; // Can't save without product ID
+        }
+
+        $localProduct = \App\Models\Product::find($originalProductId);
+        if (!$localProduct) {
+            return;
+        }
+
+        // Get existing Shopify product IDs from attributes
+        $existingIds = $localProduct->getSmartAttributeValue('shopify_product_ids');
+        $productIds = [];
+        
+        if ($existingIds) {
+            if (is_string($existingIds)) {
+                $productIds = json_decode($existingIds, true) ?: [];
+            } elseif (is_array($existingIds)) {
+                $productIds = $existingIds;
+            }
+        }
+
+        // Add this color group's Shopify product ID
+        $productIds[$colorGroup] = $shopifyProduct['id'];
+
+        // Save all the beautiful attribute data
+        $localProduct->setAttributeValue('shopify_product_ids', json_encode($productIds));
+        $localProduct->setAttributeValue('shopify_sync_account_id', $syncAccount->id);
+        $localProduct->setAttributeValue('shopify_synced_at', now()->toISOString());
+        $localProduct->setAttributeValue('shopify_status', 'synced');
+        
+        // Save metadata for future reference
+        $metadata = [
+            'handle' => $shopifyProduct['handle'] ?? null,
+            'title' => $shopifyProduct['title'] ?? null,
+            'color_groups' => array_keys($productIds),
+            'last_push_timestamp' => now()->timestamp,
+        ];
+        $localProduct->setAttributeValue('shopify_metadata', json_encode($metadata));
     }
 }

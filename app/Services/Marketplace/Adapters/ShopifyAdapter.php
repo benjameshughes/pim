@@ -7,6 +7,7 @@ use App\Actions\Marketplace\Shopify\TransformToShopifyAction;
 use App\Actions\Marketplace\Shopify\PushToShopifyAction;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
+use App\Models\SyncAccount;
 
 /**
  * 🛍️ SHOPIFY MARKETPLACE ADAPTER
@@ -65,11 +66,78 @@ class ShopifyAdapter extends AbstractAdapter
     public function push(): SyncResult
     {
         $syncAccount = $this->requireSyncAccount();
-        $marketplaceProduct = $this->getMarketplaceProduct();
 
-        // Use Action to push to Shopify
+        if ($this->isUpdateMode()) {
+            // Handle update mode with auto-recreate fallback
+            return $this->pushUpdates($syncAccount);
+        }
+
+        if ($this->isRecreateMode()) {
+            // Handle recreate mode - create fresh products
+            $marketplaceProduct = $this->create($this->currentProductId)->getCreatedProduct();
+            return app(PushToShopifyAction::class)
+                ->execute($marketplaceProduct, $syncAccount);
+        }
+
+        // Handle create mode (existing logic)
+        $marketplaceProduct = $this->getMarketplaceProduct();
         return app(PushToShopifyAction::class)
             ->execute($marketplaceProduct, $syncAccount);
+    }
+
+    /**
+     * Handle update operations with auto-recreate fallback
+     */
+    protected function pushUpdates(SyncAccount $syncAccount): SyncResult
+    {
+        $fieldsToUpdate = $this->getFieldsToUpdate();
+        
+        if (empty($fieldsToUpdate)) {
+            // Full update - recreate and push
+            $marketplaceProduct = $this->create($this->currentProductId)->getCreatedProduct();
+            return app(PushToShopifyAction::class)
+                ->execute($marketplaceProduct, $syncAccount);
+        }
+
+        // Partial update - use UpdateShopifyAction
+        $updateResult = app(\App\Actions\Marketplace\Shopify\UpdateShopifyAction::class)
+            ->execute($this->currentProductId, $fieldsToUpdate, $syncAccount);
+
+        // If update failed because products don't exist, auto-recreate
+        if (!$updateResult->isSuccess() && $this->shouldAutoRecreate($updateResult)) {
+            // Switch to recreate mode and try again
+            $marketplaceProduct = $this->recreate($this->currentProductId)->create($this->currentProductId)->getCreatedProduct();
+            $recreateResult = app(PushToShopifyAction::class)
+                ->execute($marketplaceProduct, $syncAccount);
+            
+            // Enhance the result message to indicate auto-recreate happened
+            if ($recreateResult->isSuccess()) {
+                return new \App\Services\Marketplace\ValueObjects\SyncResult(
+                    success: true,
+                    message: 'Original products missing - auto-recreated successfully! ' . $recreateResult->getMessage(),
+                    data: $recreateResult->getData(),
+                    errors: $recreateResult->getErrors(),
+                    metadata: array_merge($recreateResult->getMetadata() ?? [], ['auto_recreated' => true])
+                );
+            }
+        }
+
+        return $updateResult;
+    }
+
+    /**
+     * Determine if we should auto-recreate based on the failure reason
+     */
+    protected function shouldAutoRecreate(\App\Services\Marketplace\ValueObjects\SyncResult $result): bool
+    {
+        $message = strtolower($result->getMessage());
+        $errors = array_map('strtolower', $result->getErrors());
+        $allText = $message . ' ' . implode(' ', $errors);
+        
+        return str_contains($allText, 'no existing shopify products found') ||
+               str_contains($allText, 'product not found') ||
+               str_contains($allText, 'does not exist') ||
+               str_contains($allText, 'product does not exist');
     }
 
     /**

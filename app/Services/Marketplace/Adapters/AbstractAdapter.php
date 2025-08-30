@@ -17,6 +17,9 @@ use App\Services\Marketplace\ValueObjects\SyncResult;
 abstract class AbstractAdapter implements MarketplaceAdapter
 {
     protected ?MarketplaceProduct $marketplaceProduct = null;
+    protected string $mode = 'create'; // 'create', 'update', or 'recreate'
+    protected array $fieldsToUpdate = [];
+    protected ?int $currentProductId = null;
     
     public function __construct(
         protected ?SyncAccount $syncAccount = null
@@ -121,5 +124,97 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     protected function setMarketplaceProduct(MarketplaceProduct $marketplaceProduct): void
     {
         $this->marketplaceProduct = $marketplaceProduct;
+    }
+
+    /**
+     * Default update implementation - prepare for update mode
+     */
+    public function update(int $productId): self
+    {
+        $this->mode = 'update';
+        $this->currentProductId = $productId;
+        $this->fieldsToUpdate = [];
+        return $this;
+    }
+
+    /**
+     * Set title for update
+     */
+    public function title(string $title): self
+    {
+        $this->fieldsToUpdate['title'] = $title;
+        return $this;
+    }
+
+    /**
+     * Set images for update
+     */
+    public function images(array $images): self
+    {
+        $this->fieldsToUpdate['images'] = $images;
+        return $this;
+    }
+
+    /**
+     * Mark pricing for update
+     */
+    public function pricing(): self
+    {
+        $this->fieldsToUpdate['pricing'] = true;
+        return $this;
+    }
+
+    /**
+     * Recreate mode - clear stale marketplace data and create fresh
+     */
+    public function recreate(int $productId): self
+    {
+        $this->mode = 'recreate';
+        $this->currentProductId = $productId;
+        $this->fieldsToUpdate = [];
+        $this->clearStaleMarketplaceAttributes($productId);
+        return $this;
+    }
+
+    /**
+     * Clear stale marketplace attributes when products no longer exist
+     */
+    protected function clearStaleMarketplaceAttributes(int $productId): void
+    {
+        $product = Product::find($productId);
+        if (!$product) return;
+
+        $marketplace = $this->getMarketplaceName();
+        
+        // Clear all marketplace-specific attributes
+        $product->setAttributeValue("{$marketplace}_product_ids", null);
+        $product->setAttributeValue("{$marketplace}_sync_account_id", null);
+        $product->setAttributeValue("{$marketplace}_synced_at", null);
+        $product->setAttributeValue("{$marketplace}_status", null);
+        $product->setAttributeValue("{$marketplace}_metadata", null);
+    }
+
+    /**
+     * Check if we're in update mode
+     */
+    protected function isUpdateMode(): bool
+    {
+        return $this->mode === 'update';
+    }
+
+    /**
+     * Check if we're in recreate mode
+     */
+    protected function isRecreateMode(): bool
+    {
+        return $this->mode === 'recreate';
+    }
+
+    /**
+     * Get fields marked for update
+     */
+    protected function getFieldsToUpdate(): array
+    {
+        return $this->fieldsToUpdate;
     }
 }

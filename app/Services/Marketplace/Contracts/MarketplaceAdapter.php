@@ -28,6 +28,37 @@ interface MarketplaceAdapter
     public function create(int $productId): self;
 
     /**
+     * Prepare product data for update operations
+     *
+     * @param int $productId Local product ID
+     * @return self Returns the adapter to allow fluent chaining
+     */
+    public function update(int $productId): self;
+
+    /**
+     * Set title for update
+     */
+    public function title(string $title): self;
+
+    /**
+     * Set images for update
+     */
+    public function images(array $images): self;
+
+    /**
+     * Mark pricing for update
+     */
+    public function pricing(): self;
+
+    /**
+     * Recreate product - clear stale marketplace data and create fresh
+     *
+     * @param int $productId Local product ID
+     * @return self Returns the adapter to allow fluent chaining
+     */
+    public function recreate(int $productId): self;
+
+    /**
      * Push the prepared product data to the marketplace
      *
      * Transport mechanism varies by marketplace:

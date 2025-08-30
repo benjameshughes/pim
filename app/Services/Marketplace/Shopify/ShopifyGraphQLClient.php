@@ -213,4 +213,107 @@ class ShopifyGraphQLClient
         
         return $results;
     }
+
+    /**
+     * Update product title using GraphQL
+     */
+    public function updateProductTitle(string $productId, string $title): array
+    {
+        $mutation = '
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        title
+                        handle
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        $input = [
+            'id' => $productId,
+            'title' => $title,
+        ];
+
+        return $this->mutate($mutation, ['input' => $input]);
+    }
+
+    /**
+     * Update product images using GraphQL
+     */
+    public function updateProductImages(string $productId, array $images): array
+    {
+        // Note: Images in Shopify need to be handled via separate productImageUpdate mutations
+        // This is a placeholder for the concept
+        $mutation = '
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        title
+                        updatedAt
+                        images(first: 10) {
+                            edges {
+                                node {
+                                    id
+                                    src
+                                    altText
+                                }
+                            }
+                        }
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        $input = [
+            'id' => $productId,
+            // Images need to be handled differently in Shopify GraphQL
+        ];
+
+        return $this->mutate($mutation, ['input' => $input]);
+    }
+
+    /**
+     * Search for products by title/handle to find existing products
+     */
+    public function searchProducts(string $query): array
+    {
+        $queryString = '
+            query searchProducts($query: String!) {
+                products(first: 50, query: $query) {
+                    edges {
+                        node {
+                            id
+                            title
+                            handle
+                            status
+                            createdAt
+                            updatedAt
+                            metafields(namespace: "custom") {
+                                edges {
+                                    node {
+                                        key
+                                        value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ';
+
+        return $this->query($queryString, ['query' => $query]);
+    }
 }

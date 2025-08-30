@@ -135,6 +135,58 @@
                 </div>
             </div>
 
+            {{-- 🛍️ MARKETPLACE SYNC STATUS --}}
+            @php
+                $shopifyStatus = $product->getSmartAttributeValue('shopify_status');
+                $shopifyIds = $product->getSmartAttributeValue('shopify_product_ids');
+                $shopifyMeta = $product->getSmartAttributeValue('shopify_metadata');
+                
+                // Parse JSON data
+                $productIds = [];
+                if ($shopifyIds) {
+                    $productIds = is_string($shopifyIds) ? json_decode($shopifyIds, true) : $shopifyIds;
+                }
+                
+                $metadata = [];
+                if ($shopifyMeta) {
+                    $metadata = is_string($shopifyMeta) ? json_decode($shopifyMeta, true) : $shopifyMeta;
+                }
+            @endphp
+            
+            @if($shopifyStatus)
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Shopify Sync</h4>
+                    
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <flux:badge color="green" size="sm">
+                                @if($shopifyStatus === 'synced' && is_array($productIds))
+                                    {{ count($productIds) }} products synced
+                                @else
+                                    {{ ucfirst($shopifyStatus) }}
+                                @endif
+                            </flux:badge>
+                        </div>
+                        
+                        @if(is_array($productIds) && !empty($productIds))
+                            <div class="mt-2 space-y-1">
+                                @foreach($productIds as $color => $shopifyId)
+                                    @php
+                                        $numericId = str_replace('gid://shopify/Product/', '', $shopifyId);
+                                    @endphp
+                                    <div class="flex items-center justify-between text-xs">
+                                        <span class="text-gray-600 dark:text-gray-400">{{ $color }}: {{ $numericId }}</span>
+                                        <a href="https://admin.shopify.com/store/your-store/products/{{ $numericId }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                            View →
+                                        </a>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- 🛍️ MARKETPLACE ACTIONS --}}
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Marketplace Actions</h4>
@@ -147,8 +199,30 @@
                         class="w-full"
                     >
                         <flux:icon name="shopping-bag" class="w-4 h-4 mr-2" />
-                        Push to Shopify
+                        {{ $shopifyStatus ? 'Recreate in Shopify' : 'Push to Shopify' }}
                     </flux:button>
+
+                    @if($shopifyStatus)
+                        <flux:button 
+                            wire:click="updateShopifyTitle" 
+                            variant="outline" 
+                            size="sm"
+                            class="w-full"
+                        >
+                            <flux:icon name="pencil" class="w-4 h-4 mr-2" />
+                            Update Title
+                        </flux:button>
+
+                        <flux:button 
+                            wire:click="updateShopifyPricing" 
+                            variant="outline" 
+                            size="sm"
+                            class="w-full"
+                        >
+                            <flux:icon name="currency-dollar" class="w-4 h-4 mr-2" />
+                            Update Pricing
+                        </flux:button>
+                    @endif
                     
                     @if($shopifyPushResult)
                         <div class="text-xs {{ $shopifyPushResult['success'] ? 'text-green-600' : 'text-red-600' }}">
