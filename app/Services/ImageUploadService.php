@@ -84,7 +84,7 @@ class ImageUploadService
      *
      * Remove from R2 and database
      */
-    public function delete(Image $image): bool
+    public function deleteImage(Image $image): bool
     {
         // Delete from R2
         if ($image->filename) {
@@ -93,6 +93,16 @@ class ImageUploadService
 
         // Delete from database
         return $image->delete();
+    }
+
+    /**
+     * 🗑️ DELETE IMAGE (Legacy method name for backward compatibility)
+     *
+     * @deprecated Use deleteImage() instead
+     */
+    public function delete(Image $image): bool
+    {
+        return $this->deleteImage($image);
     }
 
     /**

@@ -672,13 +672,12 @@ class ProductWizard extends Component
 
         $imageIds = collect($this->uploaded_images)->pluck('id');
 
-        \App\Models\Image::whereIn('id', $imageIds)
-            ->whereNull('imageable_type') // Only attach unattached images
-            ->update([
-                'imageable_type' => Product::class,
-                'imageable_id' => $this->product->id,
-                'sort_order' => 0, // Default sort order
-            ]);
+        foreach ($imageIds as $imageId) {
+            $image = \App\Models\Image::find($imageId);
+            if ($image && !$image->isAttachedTo($this->product)) {
+                $image->attachTo($this->product);
+            }
+        }
     }
 
     /**
@@ -731,7 +730,8 @@ class ProductWizard extends Component
 
                 // Step 3: Attach Images (ProductWizard.md Step 3)
                 if (! empty($this->uploaded_images)) {
-                    (new AttachImagesAction)->execute($this->product, $this->uploaded_images);
+                    $imageIds = collect($this->uploaded_images)->pluck('id')->toArray();
+                    (new AttachImagesAction)->execute($this->product, $imageIds);
                 }
 
                 // Step 4: Save Pricing & Stock (ProductWizard.md Step 4) - NEW ARCHITECTURE

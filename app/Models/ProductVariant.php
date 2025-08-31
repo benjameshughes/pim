@@ -65,7 +65,7 @@ class ProductVariant extends Model
      */
     public function images(): BelongsToMany
     {
-        return $this->belongsToMany(Image::class, 'image_variant')->orderBy('sort_order')->orderBy('created_at');
+        return $this->belongsToMany(Image::class, 'image_variant')->orderBy('image_variant.sort_order')->orderBy('images.created_at');
     }
 
     /**
@@ -73,7 +73,7 @@ class ProductVariant extends Model
      */
     public function primaryImage(): ?Image
     {
-        return $this->images()->primary()->first();
+        return $this->images()->wherePivot('is_primary', true)->first();
     }
 
     /**

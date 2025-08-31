@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ProductImage;
-use App\Services\ImageProcessingService;
+use App\Models\Image;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 class ImageStatsCommand extends Command
 {
@@ -16,46 +16,46 @@ class ImageStatsCommand extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Display image processing statistics';
+    protected $description = 'Display image storage and usage statistics';
 
     /**
      * Execute the console command.
      */
-    public function handle(ImageProcessingService $processingService): int
+    public function handle(): int
     {
         if ($this->option('refresh')) {
-            $this->watchStats($processingService);
+            $this->watchStats();
         } else {
-            $this->showStats($processingService);
+            $this->showStats();
         }
 
         return self::SUCCESS;
     }
 
-    private function watchStats(ImageProcessingService $processingService): void
+    private function watchStats(): void
     {
-        $this->info('📊 Image Processing Statistics (Press Ctrl+C to exit)');
+        $this->info('📊 Image Storage Statistics (Press Ctrl+C to exit)');
         $this->newLine();
 
         while (true) {
             system('clear'); // Clear screen on Unix-like systems
-            $this->info('📊 Image Processing Statistics (Refreshing every 2 seconds)');
+            $this->info('📊 Image Storage Statistics (Refreshing every 2 seconds)');
             $this->info('Press Ctrl+C to exit');
             $this->newLine();
 
-            $this->showStats($processingService);
+            $this->showStats();
 
             sleep(2);
         }
     }
 
-    private function showStats(ImageProcessingService $processingService): void
+    private function showStats(): void
     {
-        $stats = $processingService->getProcessingStats();
+        $stats = $this->getImageStats();
 
         // Main statistics table
         $this->table(
-            ['Status', 'Count', 'Percentage'],
+            ['Metric', 'Count', 'Percentage'],
             [
                 [
                     'Total Images',
@@ -63,88 +63,104 @@ class ImageStatsCommand extends Command
                     '100%',
                 ],
                 [
-                    '⏳ Pending',
-                    $stats['pending'],
-                    $stats['total'] > 0 ? round(($stats['pending'] / $stats['total']) * 100, 1).'%' : '0%',
+                    '🔗 Attached to Products',
+                    $stats['attached_products'],
+                    $stats['total'] > 0 ? round(($stats['attached_products'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
                 [
-                    '🔄 Processing',
-                    $stats['processing'],
-                    $stats['total'] > 0 ? round(($stats['processing'] / $stats['total']) * 100, 1).'%' : '0%',
+                    '🎯 Attached to Variants',
+                    $stats['attached_variants'],
+                    $stats['total'] > 0 ? round(($stats['attached_variants'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
                 [
-                    '✅ Completed',
-                    $stats['completed'],
-                    $stats['total'] > 0 ? round(($stats['completed'] / $stats['total']) * 100, 1).'%' : '0%',
-                ],
-                [
-                    '❌ Failed',
-                    $stats['failed'],
-                    $stats['total'] > 0 ? round(($stats['failed'] / $stats['total']) * 100, 1).'%' : '0%',
+                    '🆓 Unattached (DAM)',
+                    $stats['unattached'],
+                    $stats['total'] > 0 ? round(($stats['unattached'] / $stats['total']) * 100, 1).'%' : '0%',
                 ],
             ]
         );
 
-        // Storage distribution
-        $storageStats = ProductImage::selectRaw('storage_disk, processing_status, count(*) as count')
-            ->groupBy('storage_disk', 'processing_status')
-            ->get();
+        // Storage information
+        $this->newLine();
+        $this->info('💾 Storage Information:');
+        
+        $this->table(
+            ['Storage Disk', 'Count', 'Total Size'],
+            [
+                ['R2 (images)', $stats['total'], $this->formatBytes($stats['total_size'])]
+            ]
+        );
 
-        if ($storageStats->isNotEmpty()) {
+        // Folder distribution
+        if (!empty($stats['folders'])) {
             $this->newLine();
-            $this->info('💾 Storage Distribution:');
+            $this->info('📁 Folder Distribution:');
 
-            $storageTable = [];
-            foreach ($storageStats as $stat) {
-                $storageTable[] = [
-                    $stat->storage_disk ?: 'public',
-                    $stat->processing_status,
-                    $stat->count,
+            $folderTable = [];
+            foreach ($stats['folders'] as $folder => $count) {
+                $folderTable[] = [
+                    $folder ?: '(No folder)',
+                    $count,
+                    $stats['total'] > 0 ? round(($count / $stats['total']) * 100, 1).'%' : '0%',
                 ];
             }
 
-            $this->table(['Storage Disk', 'Status', 'Count'], $storageTable);
+            $this->table(['Folder', 'Count', 'Percentage'], $folderTable);
         }
 
-        // Recent failures
-        $recentFailures = ProductImage::where('processing_status', ProductImage::PROCESSING_FAILED)
-            ->orderBy('updated_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        if ($recentFailures->isNotEmpty()) {
+        // Recent uploads
+        if (!empty($stats['recent'])) {
             $this->newLine();
-            $this->error('❌ Recent Failures (Latest 5):');
+            $this->info('📸 Recent Uploads (Latest 5):');
 
-            $failureTable = [];
-            foreach ($recentFailures as $failure) {
-                $error = $failure->metadata['processing_error'] ?? 'Unknown error';
-                $failureTable[] = [
-                    $failure->id,
-                    basename($failure->image_path),
-                    $failure->image_type,
-                    substr($error, 0, 50).(strlen($error) > 50 ? '...' : ''),
-                    $failure->updated_at->diffForHumans(),
+            $recentTable = [];
+            foreach ($stats['recent'] as $image) {
+                $recentTable[] = [
+                    $image->id,
+                    substr($image->display_title, 0, 30) . (strlen($image->display_title) > 30 ? '...' : ''),
+                    $this->formatBytes($image->size),
+                    $image->created_at->diffForHumans(),
                 ];
             }
 
-            $this->table(['ID', 'File', 'Type', 'Error', 'When'], $failureTable);
+            $this->table(['ID', 'Title', 'Size', 'Uploaded'], $recentTable);
+        }
+    }
+
+    /**
+     * Get image statistics
+     */
+    private function getImageStats(): array
+    {
+        $total = Image::count();
+        
+        return [
+            'total' => $total,
+            'attached_products' => Image::whereHas('products')->count(),
+            'attached_variants' => Image::whereHas('variants')->count(),
+            'unattached' => Image::unattached()->count(),
+            'total_size' => Image::sum('size') ?: 0,
+            'folders' => Image::selectRaw('folder, count(*) as count')
+                ->groupBy('folder')
+                ->pluck('count', 'folder')
+                ->toArray(),
+            'recent' => Image::orderBy('created_at', 'desc')->limit(5)->get(),
+        ];
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes >= 1024 * 1024 * 1024) {
+            return round($bytes / (1024 * 1024 * 1024), 2) . ' GB';
+        } elseif ($bytes >= 1024 * 1024) {
+            return round($bytes / (1024 * 1024), 2) . ' MB';
+        } elseif ($bytes >= 1024) {
+            return round($bytes / 1024, 2) . ' KB';
         }
 
-        // Progress summary
-        if ($stats['total'] > 0) {
-            $processed = $stats['completed'] + $stats['failed'];
-            $remaining = $stats['pending'] + $stats['processing'];
-            $progressPercent = round(($processed / $stats['total']) * 100, 1);
-
-            $this->newLine();
-            $this->info("🎯 Progress: {$processed}/{$stats['total']} images processed ({$progressPercent}%)");
-
-            if ($remaining > 0) {
-                $this->info("⏱️  Remaining: {$remaining} images");
-            } else {
-                $this->info('🎉 All images processed!');
-            }
-        }
+        return $bytes . ' bytes';
     }
 }

@@ -244,4 +244,119 @@ class Image extends Model
 
         return $bytes.' bytes';
     }
+
+    /**
+     * 🔗 PIVOT HELPER METHODS
+     */
+
+    /**
+     * 🔗 Attach image to a model (Product or ProductVariant)
+     */
+    public function attachTo(Model $model, array $pivotData = []): void
+    {
+        $defaultPivotData = [
+            'is_primary' => false,
+            'sort_order' => $this->getNextSortOrder($model),
+        ];
+
+        $mergedPivotData = array_merge($defaultPivotData, $pivotData);
+
+        if ($model instanceof \App\Models\Product) {
+            // Check if already attached to avoid duplicates
+            if (!$model->images()->where('image_id', $this->id)->exists()) {
+                $model->images()->attach($this->id, $mergedPivotData);
+            }
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            // Check if already attached to avoid duplicates
+            if (!$model->images()->where('image_id', $this->id)->exists()) {
+                $model->images()->attach($this->id, $mergedPivotData);
+            }
+        } else {
+            throw new \InvalidArgumentException('Model must be Product or ProductVariant');
+        }
+    }
+
+    /**
+     * 🔗 Detach image from a model (Product or ProductVariant)
+     */
+    public function detachFrom(Model $model): void
+    {
+        if ($model instanceof \App\Models\Product) {
+            $model->images()->detach($this->id);
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            $model->images()->detach($this->id);
+        } else {
+            throw new \InvalidArgumentException('Model must be Product or ProductVariant');
+        }
+    }
+
+    /**
+     * 📊 Get next sort order for attachment
+     */
+    protected function getNextSortOrder(Model $model): int
+    {
+        if ($model instanceof \App\Models\Product) {
+            $maxOrder = $model->images()->max('image_product.sort_order');
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            $maxOrder = $model->images()->max('image_variant.sort_order');
+        } else {
+            return 0;
+        }
+
+        return ($maxOrder ?? 0) + 1;
+    }
+
+    /**
+     * 🎯 Set image as primary for a model
+     */
+    public function setPrimaryFor(Model $model): void
+    {
+        if ($model instanceof \App\Models\Product) {
+            // Remove primary flag from other images
+            $model->images()->updateExistingPivot(
+                $model->images()->pluck('image_id')->toArray(),
+                ['is_primary' => false]
+            );
+            // Set this image as primary
+            $model->images()->updateExistingPivot($this->id, ['is_primary' => true]);
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            // Remove primary flag from other images
+            $model->images()->updateExistingPivot(
+                $model->images()->pluck('image_id')->toArray(),
+                ['is_primary' => false]
+            );
+            // Set this image as primary
+            $model->images()->updateExistingPivot($this->id, ['is_primary' => true]);
+        } else {
+            throw new \InvalidArgumentException('Model must be Product or ProductVariant');
+        }
+    }
+
+    /**
+     * 📊 Check if image is attached to a specific model
+     */
+    public function isAttachedTo(Model $model): bool
+    {
+        if ($model instanceof \App\Models\Product) {
+            return $model->images()->where('image_id', $this->id)->exists();
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            return $model->images()->where('image_id', $this->id)->exists();
+        }
+
+        return false;
+    }
+
+    /**
+     * 📊 Check if image is primary for a specific model
+     */
+    public function isPrimaryFor(Model $model): bool
+    {
+        if ($model instanceof \App\Models\Product) {
+            return $model->images()->where('image_id', $this->id)->wherePivot('is_primary', true)->exists();
+        } elseif ($model instanceof \App\Models\ProductVariant) {
+            return $model->images()->where('image_id', $this->id)->wherePivot('is_primary', true)->exists();
+        }
+
+        return false;
+    }
 }

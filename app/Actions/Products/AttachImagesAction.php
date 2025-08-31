@@ -51,13 +51,10 @@ class AttachImagesAction
      */
     protected function attachImageToProduct(Product $product, int $imageId): void
     {
-        \DB::table('images')
-            ->where('id', $imageId)
-            ->update([
-                'imageable_type' => Product::class,
-                'imageable_id' => $product->id,
-                'updated_at' => now(),
-            ]);
+        $image = Image::find($imageId);
+        if ($image) {
+            $image->attachTo($product);
+        }
     }
 
     /**
@@ -66,26 +63,16 @@ class AttachImagesAction
      */
     protected function attachImageToVariants(int $imageId, array $variantIds): void
     {
-        // Create additional image relationships for variants
-        // This allows one image to be associated with multiple variants
+        $image = Image::find($imageId);
+        if (!$image) {
+            return;
+        }
+
         foreach ($variantIds as $variantId) {
             // Verify variant exists and belongs to the same product
             $variant = ProductVariant::find($variantId);
             if ($variant) {
-                // Create a duplicate image record for variant relationship
-                // This maintains the polymorphic relationship structure
-                $originalImage = Image::find($imageId);
-                if ($originalImage) {
-                    Image::create([
-                        'filename' => $originalImage->filename,
-                        'filepath' => $originalImage->filepath,
-                        'mimetype' => $originalImage->mimetype,
-                        'filesize' => $originalImage->filesize,
-                        'alt_text' => $originalImage->alt_text,
-                        'imageable_type' => ProductVariant::class,
-                        'imageable_id' => $variantId,
-                    ]);
-                }
+                $image->attachTo($variant);
             }
         }
     }
@@ -96,15 +83,12 @@ class AttachImagesAction
     public function detachImages(Product $product, array $imageIds): array
     {
         try {
-            \DB::table('images')
-                ->whereIn('id', $imageIds)
-                ->where('imageable_type', Product::class)
-                ->where('imageable_id', $product->id)
-                ->update([
-                    'imageable_type' => null,
-                    'imageable_id' => null,
-                    'updated_at' => now(),
-                ]);
+            foreach ($imageIds as $imageId) {
+                $image = Image::find($imageId);
+                if ($image) {
+                    $image->detachFrom($product);
+                }
+            }
 
             return [
                 'success' => true,

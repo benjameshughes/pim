@@ -94,10 +94,27 @@ Route::middleware(['auth'])->group(function () {
     // 🖼️ IMAGES MANAGEMENT
     Route::middleware('can:view-images')->group(function () {
         Route::view('images', 'images.index')->name('images.index');
-        Route::view('images/{image}', 'images.show')->name('images.show');
+        Route::get('images/{image}', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show');
+        
+        // 📑 IMAGE TABS - Clean TabSet Integration
+        Route::get('images/{image}/overview', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show.overview');
+        
+        Route::get('images/{image}/attachments', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show.attachments');
+        
+        Route::get('images/{image}/history', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show.history');
     });
     Route::middleware('can:manage-images')->group(function () {
-        Route::view('images/{image}/edit', 'images.edit')->name('images.edit');
+        Route::get('images/{image}/edit', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show.edit');
     });
 
     // 💎 VARIANTS - UNIFIED WITH PRODUCTS

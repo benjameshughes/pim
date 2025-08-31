@@ -2,6 +2,8 @@
 
 namespace App\Livewire\BulkOperations;
 
+use App\Models\Image;
+use App\Services\ImageUploadService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -103,14 +105,10 @@ class BulkImageOperation extends BaseBulkOperation
             return;
         }
 
+        $imageUploadService = app(ImageUploadService::class);
+        $folder = $this->targetType === 'products' ? 'products' : 'variants';
+
         foreach ($this->imageFiles as $index => $imageFile) {
-            // Generate unique filename
-            $filename = time().'_'.$index.'_'.$imageFile->getClientOriginalName();
-
-            // Store in appropriate directory
-            $directory = $this->targetType === 'products' ? 'products' : 'variants';
-            $path = $imageFile->storeAs("images/{$directory}", $filename, 'public');
-
             // Determine if this should be primary image
             $isPrimary = $this->imageData['assignment_type'] === 'primary' && $index === 0;
 
@@ -119,8 +117,18 @@ class BulkImageOperation extends BaseBulkOperation
                 $this->clearPrimaryImage($item);
             }
 
-            // Create image record based on target type
-            $this->createImageRecord($item, $path, $isPrimary);
+            // Upload image using our service
+            $image = $imageUploadService->upload($imageFile, [
+                'folder' => $folder,
+                'title' => $item->name ?? 'Bulk Upload Image',
+                'tags' => ['bulk-upload']
+            ]);
+
+            // Attach image to item
+            $image->attachTo($item, [
+                'is_primary' => $isPrimary,
+                'sort_order' => $index
+            ]);
         }
     }
 
@@ -131,32 +139,30 @@ class BulkImageOperation extends BaseBulkOperation
      */
     private function clearItemImages(Model $item): void
     {
-        if ($this->targetType === 'products' && method_exists($item, 'productImages')) {
-            // Clear product images via relationship
-            try {
-                $images = $item->productImages()->get();
-                foreach ($images as $image) {
-                    if ($image->image_path) {
-                        Storage::disk('public')->delete($image->image_path);
-                    }
-                    $image->delete();
+        $imageUploadService = app(ImageUploadService::class);
+        
+        if ($this->targetType === 'products') {
+            // Clear all images attached to this product
+            $images = $item->images()->get();
+            foreach ($images as $image) {
+                $image->detachFrom($item);
+                
+                // If image is not attached to anything else, delete it
+                if (!$image->isAttached()) {
+                    $imageUploadService->deleteImage($image);
                 }
-            } catch (\Exception $e) {
-                // Silently continue if relationship doesn't exist
-            }
-
-            // Clear primary image field if property exists
-            if ($item->isFillable('primary_image')) {
-                $item->update(['primary_image' => null]);
             }
         } else {
-            // Clear variant images
-            if ($item->image_url) {
-                $imagePath = str_replace('/storage/', '', $item->image_url);
-                Storage::disk('public')->delete($imagePath);
+            // Clear all images attached to this variant
+            $images = $item->images()->get();
+            foreach ($images as $image) {
+                $image->detachFrom($item);
+                
+                // If image is not attached to anything else, delete it
+                if (!$image->isAttached()) {
+                    $imageUploadService->deleteImage($image);
+                }
             }
-
-            $item->update(['image_url' => null]);
         }
     }
 
@@ -169,6 +175,11 @@ class BulkImageOperation extends BaseBulkOperation
     {
         // Future implementation for image reorganization
         // Could include reordering, setting new primary, etc.
+        // For now, we can shuffle the sort orders
+        $images = $item->images()->orderBy('sort_order')->get();
+        foreach ($images as $index => $image) {
+            $item->images()->updateExistingPivot($image->id, ['sort_order' => $index]);
+        }
     }
 
     /**
@@ -178,50 +189,11 @@ class BulkImageOperation extends BaseBulkOperation
      */
     private function clearPrimaryImage(Model $item): void
     {
-        if ($this->targetType === 'products' && $item->isFillable('primary_image')) {
-            $primaryImage = $item->getAttribute('primary_image');
-            if ($primaryImage) {
-                Storage::disk('public')->delete($primaryImage);
-                $item->update(['primary_image' => null]);
-            }
-        } else {
-            if ($item->image_url) {
-                $imagePath = str_replace('/storage/', '', $item->image_url);
-                Storage::disk('public')->delete($imagePath);
-                $item->update(['image_url' => null]);
-            }
-        }
-    }
-
-    /**
-     * 📝 Create image record for item
-     *
-     * @param  \App\Models\Product|\App\Models\ProductVariant  $item
-     */
-    private function createImageRecord(Model $item, string $path, bool $isPrimary): void
-    {
-        $fullPath = '/storage/'.$path;
-
-        if ($this->targetType === 'products') {
-            // For products, we can have multiple images via ProductImage model
-            // Also set primary_image field if this is primary
-            if ($isPrimary && $item->isFillable('primary_image')) {
-                $item->update(['primary_image' => $fullPath]);
-            }
-
-            // If ProductImage model exists, create record there too
-            if (class_exists('App\\Models\\ProductImage') && method_exists($item, 'productImages')) {
-                $item->productImages()->create([
-                    'image_path' => $fullPath,
-                    'alt_text' => $item->getAttribute('name') ?? 'Product Image',
-                    'sort_order' => $isPrimary ? 0 : 999,
-                    'is_primary' => $isPrimary,
-                ]);
-            }
-        } else {
-            // For variants, use the image_url field
-            $item->update(['image_url' => $fullPath]);
-        }
+        // Remove primary flag from all current images
+        $item->images()->updateExistingPivot(
+            $item->images()->pluck('image_id')->toArray(),
+            ['is_primary' => false]
+        );
     }
 
     /**

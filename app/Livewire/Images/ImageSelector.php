@@ -139,12 +139,17 @@ class ImageSelector extends Component
 
         // Exclude images already attached to this specific model
         if ($this->targetModel) {
-            $query->where(function ($q) {
-                $q->where('imageable_type', '!=', get_class($this->targetModel))
-                    ->orWhere('imageable_id', '!=', $this->targetModel->id)
-                    ->orWhereNull('imageable_type')
-                    ->orWhereNull('imageable_id');
-            });
+            if ($this->targetModel instanceof \App\Models\Product) {
+                $attachedImageIds = $this->targetModel->images()->pluck('image_id')->toArray();
+            } elseif ($this->targetModel instanceof \App\Models\ProductVariant) {
+                $attachedImageIds = $this->targetModel->images()->pluck('image_id')->toArray();
+            } else {
+                $attachedImageIds = [];
+            }
+            
+            if (!empty($attachedImageIds)) {
+                $query->whereNotIn('id', $attachedImageIds);
+            }
         }
 
         // Apply sorting
@@ -227,9 +232,9 @@ class ImageSelector extends Component
 
             // Set first image as primary if requested and no primary exists
             if ($this->setPrimaryOnSingle && $index === 0 && method_exists($this->targetModel, 'images')) {
-                $existingPrimary = $this->targetModel->images()->primary()->first();
+                $existingPrimary = $this->targetModel->images()->wherePivot('is_primary', true)->first();
                 if (! $existingPrimary) {
-                    $image->update(['is_primary' => true]);
+                    $image->setPrimaryFor($this->targetModel);
                 }
             }
 

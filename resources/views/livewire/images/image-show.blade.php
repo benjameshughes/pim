@@ -13,7 +13,7 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <flux:button wire:navigate href="{{ route('images.edit', $image) }}" variant="primary" icon="pencil">
+            <flux:button wire:navigate href="{{ route('images.show.edit', $image) }}" variant="primary" icon="pencil">
                 Edit
             </flux:button>
             
@@ -81,23 +81,23 @@
 
     @if($isEdit)
         {{-- ✏️ EDIT TAB CONTENT --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
+        <div class="space-y-6">
             <livewire:images.image-edit-form :image="$image" />
         </div>
     @elseif($isAttachments)
         {{-- 🔗 ATTACHMENTS TAB CONTENT --}}
         <div class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
-                <livewire:images.image-product-attachment :image="$image" />
-            </div>
+            <livewire:images.image-product-attachment :image="$image" />
         </div>
     @elseif($isHistory)
         {{-- 📜 HISTORY TAB CONTENT --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
-            <div class="text-center py-8">
-                <flux:icon name="clock" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">History Coming Soon</h3>
-                <p class="text-gray-600 dark:text-gray-400">Image change history will be available here.</p>
+        <div class="space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
+                <div class="text-center py-8">
+                    <flux:icon name="clock" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">History Coming Soon</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Image change history will be available here.</p>
+                </div>
             </div>
         </div>
     @else

@@ -20,14 +20,8 @@ class ImageShow extends Component
 
     public function mount(Image $image)
     {
-        // Authorize viewing images
         $this->authorize('view-images');
-        
-        $this->image = $image->load([
-            'products',
-            'variants.product',
-            'createdBy',
-        ]);
+        $this->image = $image;
     }
 
     /**

@@ -100,8 +100,18 @@
                     {{-- Overlay with attachment status --}}
                     <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
                     
-                    {{-- Simple Delete Button --}}
-                    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {{-- Edit and Delete Buttons --}}
+                    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
+                        <flux:button
+                                wire:navigate
+                                href="{{ route('images.show', $image) }}"
+                                variant="primary"
+                                size="sm"
+                                class="bg-blue-500/90 hover:bg-blue-600 text-white border-blue-500/20 shadow-sm"
+                        >
+                            <flux:icon.eye class="w-3 h-3"/>
+                        </flux:button>
+                        
                         <flux:button
                                 variant="danger"
                                 size="sm"
