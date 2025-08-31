@@ -116,7 +116,7 @@
                         @can('view-system-logs')
                             <flux:navlist.item 
                                 icon="chart-bar" 
-                                href="{{ route('logs.dashboard') }}" 
+                                href="{{ route('log-dashboard') }}" 
                             >
                                 Logs
                             </flux:navlist.item>

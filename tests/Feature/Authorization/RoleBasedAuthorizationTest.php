@@ -97,7 +97,7 @@ describe('Admin User Authorization', function () {
         $response->assertStatus(200);
         
         // Admin should access system logs
-        $response = $this->get(route('logs.dashboard'));
+        $response = $this->get(route('log-dashboard'));
         $response->assertStatus(200);
     });
     
@@ -181,7 +181,7 @@ describe('Manager User Authorization', function () {
         $response->assertStatus(403);
         
         // Manager should NOT access system logs
-        $response = $this->get(route('logs.dashboard'));
+        $response = $this->get(route('log-dashboard'));
         $response->assertStatus(403);
     });
     
@@ -272,7 +272,7 @@ describe('Regular User Authorization', function () {
         $response->assertStatus(403);
         
         // Regular user should NOT access system logs
-        $response = $this->get(route('logs.dashboard'));
+        $response = $this->get(route('log-dashboard'));
         $response->assertStatus(403);
     });
     

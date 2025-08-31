@@ -4,6 +4,7 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
+use App\Traits\WithActivityLogs;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -15,6 +16,7 @@ use InvalidArgumentException;
  */
 class CreateProductAction extends BaseAction
 {
+    use WithActivityLogs;
     /**
      * Perform the actual product creation action
      *
@@ -42,6 +44,13 @@ class CreateProductAction extends BaseAction
 
         // Create the product
         $product = Product::create($data);
+
+        // Log the product creation
+        $this->logCreated($product, [
+            'initial_data' => $data,
+            'categories_count' => count($data['categories'] ?? []),
+            'attributes_count' => count($data['attributes'] ?? []),
+        ]);
 
         // Handle any additional post-creation logic
         $this->handlePostCreation($product, $data);

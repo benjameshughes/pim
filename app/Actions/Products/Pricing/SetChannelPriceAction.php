@@ -3,8 +3,10 @@
 namespace App\Actions\Products\Pricing;
 
 use App\Actions\Base\BaseAction;
+use App\Facades\Activity;
 use App\Models\ProductVariant;
 use App\Models\SalesChannel;
+use App\Traits\WithActivityLogs;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\Log;
  */
 class SetChannelPriceAction extends BaseAction
 {
+    use WithActivityLogs;
     /**
      * Execute the set channel price action
      * 
@@ -92,6 +95,45 @@ class SetChannelPriceAction extends BaseAction
                 'duration_ms' => $duration,
             ]);
 
+            // 📝 Log activity with gorgeous descriptive messages
+            $userName = auth()->user()?->name ?? 'System';
+            $productName = $variant->product->name ?? 'Unknown Product';
+            
+            if ($price === null) {
+                $description = "{$productName} variant {$variant->sku} {$channel->name} price override removed by {$userName} (now uses default £{$variant->price})";
+            } elseif ($previousPrice === null) {
+                $description = "{$productName} variant {$variant->sku} {$channel->name} price set to £{$price} by {$userName} (was using default £{$variant->price})";
+            } else {
+                $priceChange = $price - $previousPrice;
+                $changeDirection = $priceChange > 0 ? 'increased' : 'decreased';
+                $changeAmount = abs($priceChange);
+                $changePercent = $previousPrice > 0 ? round((abs($priceChange) / $previousPrice) * 100, 1) : 0;
+                
+                $description = "{$productName} variant {$variant->sku} {$channel->name} price {$changeDirection} from £{$previousPrice} to £{$price} by {$userName} (+£{$changeAmount}, {$changePercent}% change)";
+            }
+
+            Activity::log()
+                ->by(auth()->id())
+                ->customEvent('pricing.channel_price_updated', $variant)
+                ->description($description)
+                ->with([
+                    'channel_code' => $channel->code,
+                    'channel_name' => $channel->name,
+                    'action' => $action,
+                    'previous_price' => $previousPrice,
+                    'new_price' => $price,
+                    'default_price' => $variant->price,
+                    'effective_price' => $price ?? $variant->price,
+                    'price_change' => $price && $previousPrice ? ($price - $previousPrice) : null,
+                    'price_change_percentage' => $price && $previousPrice && $previousPrice > 0 
+                        ? round((($price - $previousPrice) / $previousPrice) * 100, 2) 
+                        : null,
+                    'variant_sku' => $variant->sku,
+                    'product_name' => $productName,
+                    'user_name' => $userName,
+                ])
+                ->save();
+
             return $this->success($message, [
                 'action' => $action,
                 'variant_id' => $variant->id,
@@ -130,7 +172,7 @@ class SetChannelPriceAction extends BaseAction
     {
         $result = $variant->setAttributeValue($attributeKey, $price, [
             'source' => 'channel_pricing_action',
-            'updated_by' => 'system', // Could be auth()->id() if called from UI
+            'updated_by' => auth()->id() ?? 'system',
         ]);
 
         if (!$result) {
@@ -146,7 +188,7 @@ class SetChannelPriceAction extends BaseAction
         // Use the same method as setting null to properly remove the attribute
         $variant->setAttributeValue($attributeKey, null, [
             'source' => 'channel_pricing_action',
-            'updated_by' => 'system',
+            'updated_by' => auth()->id() ?? 'system',
         ]);
     }
 
@@ -183,4 +225,5 @@ class SetChannelPriceAction extends BaseAction
     {
         return SalesChannel::where('code', $channelCode)->active()->exists();
     }
+
 }

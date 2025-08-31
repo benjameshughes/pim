@@ -3,8 +3,10 @@
 namespace App\Actions\Products\Pricing;
 
 use App\Actions\Base\BaseAction;
+use App\Facades\Activity;
 use App\Models\ProductVariant;
 use App\Models\SalesChannel;
+use App\Traits\WithActivityLogs;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Log;
  */
 class BulkUpdateChannelPricingAction extends BaseAction
 {
+    use WithActivityLogs;
     /**
      * Execute bulk channel pricing update
      * 
@@ -119,6 +122,38 @@ class BulkUpdateChannelPricingAction extends BaseAction
             ];
 
             Log::info('✅ Bulk channel pricing update completed', $summary);
+
+            // 📝 Log bulk pricing activity with gorgeous verbose detail
+            $channels = collect($pricingData)->pluck('channel_code')->unique();
+            $pricingTypes = collect($pricingData)->pluck('type')->unique();
+            $userName = auth()->user()?->name ?? 'System';
+            $variantSkus = $variants->pluck('sku')->take(5)->implode(', ');
+            $moreVariants = $variants->count() > 5 ? ' and ' . ($variants->count() - 5) . ' more' : '';
+
+            $description = "{$userName} bulk updated {$pricingTypes->implode(', ')} pricing for {$variants->count()} variants ({$variantSkus}{$moreVariants}) across {$channels->count()} channels ({$channels->implode(', ')}) - {$summary['updates_successful']} successful, {$summary['updates_failed']} failed";
+
+            Activity::log()
+                ->by(auth()->id())
+                ->customEvent('pricing.bulk_update')
+                ->description($description)
+                ->with([
+                    'variants_count' => $variants->count(),
+                    'variant_skus' => $variants->pluck('sku')->toArray(),
+                    'product_names' => $variants->pluck('product.name')->unique()->values()->toArray(),
+                    'channels_affected' => $channels->toArray(),
+                    'pricing_strategies' => $pricingTypes->toArray(),
+                    'pricing_data' => $pricingData,
+                    'updates_successful' => $summary['updates_successful'],
+                    'updates_failed' => $summary['updates_failed'],
+                    'updates_skipped' => $summary['updates_skipped'],
+                    'duration_ms' => $summary['duration_ms'],
+                    'success_rate' => $summary['variants_processed'] > 0 
+                        ? round(($summary['updates_successful'] / $summary['variants_processed']) * 100, 1)
+                        : 0,
+                    'user_name' => $userName,
+                    'detailed_results' => $results,
+                ])
+                ->save();
 
             $message = "Bulk pricing update completed: {$summary['updates_successful']} updates successful, {$summary['updates_failed']} failed, {$summary['updates_skipped']} skipped";
 
@@ -309,4 +344,5 @@ class BulkUpdateChannelPricingAction extends BaseAction
         $action = new static();
         return $action->handle($variants, $pricingData);
     }
+
 }

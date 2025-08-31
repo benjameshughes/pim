@@ -173,7 +173,13 @@ Route::middleware(['auth'])->group(function () {
 
     // 📊 LOG DASHBOARD
     Route::middleware('can:view-system-logs')->group(function () {
-        Route::get('logs', \App\Livewire\LogDashboard::class)->name('logs.dashboard');
+        Route::get('logs', \App\Livewire\LogDashboard::class)->name('log-dashboard');
+        
+        // 📑 LOG DASHBOARD TABS - Clean TabSet Integration
+        Route::get('logs/overview', \App\Livewire\LogDashboard\Tabs\Overview::class)->name('log-dashboard.overview');
+        Route::get('logs/activity', \App\Livewire\LogDashboard\Tabs\ActivityTab::class)->name('log-dashboard.activity');
+        Route::get('logs/performance', \App\Livewire\LogDashboard\Tabs\Performance::class)->name('log-dashboard.performance');
+        Route::get('logs/errors', \App\Livewire\LogDashboard\Tabs\Errors::class)->name('log-dashboard.errors');
     });
 
     // 🏢 MANAGEMENT - USER ADMINISTRATION (Admin only)
@@ -181,6 +187,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('users', \App\Livewire\Management\Users\UserIndex::class)->name('users.index');
         Route::get('user-roles', \App\Livewire\Management\UserRoleManagement::class)->name('user-roles.index');
     });
+
+    // 🎯 ACTIVITY TRACKING API - For gorgeous verbose logging
+    Route::post('api/activity-tracking', [App\Http\Controllers\Api\ActivityTrackingController::class, 'track'])
+        ->name('api.activity.track');
+    
+    Route::get('api/activity-summary', [App\Http\Controllers\Api\ActivityTrackingController::class, 'summary'])
+        ->name('api.activity.summary');
 
 });
 

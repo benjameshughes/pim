@@ -4,6 +4,7 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
+use App\Traits\WithActivityLogs;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
@@ -15,6 +16,7 @@ use InvalidArgumentException;
  */
 class DeleteProductAction extends BaseAction
 {
+    use WithActivityLogs;
     /**
      * Validate parameters before execution
      */
@@ -41,6 +43,13 @@ class DeleteProductAction extends BaseAction
         
         $product = $params[0];
         $forceDelete = $params[1] ?? false;
+
+        // Log the deletion before it happens (capture product data)
+        $this->logDeleted($product, sprintf(
+            'Product deleted with %d variants and %d images',
+            $product->variants()->count(),
+            count($product->images ?? [])
+        ));
 
         // Handle pre-deletion cleanup
         $this->handlePreDeletion($product);

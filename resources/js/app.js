@@ -1,4 +1,5 @@
 import './bootstrap';
+import './activity-tracker';
 
 // Phoenix Toast System - Simple and Elegant ✨
 window.phoenixToastData = () => ({

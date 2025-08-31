@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Pricing;
 
+use App\Facades\Activity;
+use App\Livewire\Traits\TracksUserInteractions;
 use App\Models\Pricing;
 use App\Models\SalesChannel;
 use App\Services\Pricing\PriceCalculatorService;
@@ -16,7 +18,7 @@ use Livewire\WithPagination;
  */
 class PricingDashboard extends Component
 {
-    use WithPagination;
+    use WithPagination, TracksUserInteractions;
 
     // 🎯 Filter Properties
     public $activeTab = 'overview';
@@ -229,10 +231,13 @@ class PricingDashboard extends Component
     }
 
     /**
-     * 🎭 SWITCH TAB - Change active tab
+     * 🎭 SWITCH TAB - Change active tab with gorgeous tracking
      */
     public function switchTab($tab)
     {
+        $previousTab = $this->activeTab;
+        $this->trackTabChange($previousTab, $tab);
+        
         $this->activeTab = $tab;
         $this->resetPage();
 
@@ -282,6 +287,12 @@ class PricingDashboard extends Component
      */
     public function applyBulkDiscount()
     {
+        // Track this gorgeous button click
+        $this->trackButtonClick('Apply Bulk Discount', [
+            'discount_percentage' => $this->bulkDiscountPercentage,
+            'selected_items_count' => count($this->selectedPricing),
+        ]);
+
         // Authorize bulk pricing updates
         $this->authorize('bulk-update-pricing');
         
@@ -302,6 +313,25 @@ class PricingDashboard extends Component
                 'sale_starts_at' => now(),
                 'sale_ends_at' => now()->addDays(7), // 7-day sale
             ]);
+
+            // 📝 Log bulk discount activity with gorgeous detail
+            $userName = auth()->user()?->name ?? 'System';
+            $description = "{$affected} pricing items bulk discount of {$this->bulkDiscountPercentage}% applied by {$userName} with 7-day sale period";
+
+            Activity::log()
+                ->by(auth()->id())
+                ->customEvent('pricing.bulk_discount_applied')
+                ->description($description)
+                ->with([
+                    'discount_percentage' => $this->bulkDiscountPercentage,
+                    'items_affected' => $affected,
+                    'sale_duration_days' => 7,
+                    'pricing_ids' => $this->selectedPricing,
+                    'user_name' => $userName,
+                    'sale_starts_at' => now()->toDateTimeString(),
+                    'sale_ends_at' => now()->addDays(7)->toDateTimeString(),
+                ])
+                ->save();
 
             $this->dispatch('toast', [
                 'type' => 'success',
@@ -327,6 +357,12 @@ class PricingDashboard extends Component
      */
     public function applyBulkMarkup()
     {
+        // Track this gorgeous button click
+        $this->trackButtonClick('Apply Bulk Markup', [
+            'markup_percentage' => $this->bulkMarkupPercentage,
+            'selected_items_count' => count($this->selectedPricing),
+        ]);
+
         // Authorize bulk pricing updates
         $this->authorize('bulk-update-pricing');
         
@@ -351,6 +387,23 @@ class PricingDashboard extends Component
                     $affected++;
                 }
             }
+
+            // 📝 Log bulk markup activity with gorgeous detail
+            $userName = auth()->user()?->name ?? 'System';
+            $description = "{$affected} pricing items bulk markup of {$this->bulkMarkupPercentage}% applied by {$userName} (base price increases)";
+
+            Activity::log()
+                ->by(auth()->id())
+                ->customEvent('pricing.bulk_markup_applied')
+                ->description($description)
+                ->with([
+                    'markup_percentage' => $this->bulkMarkupPercentage,
+                    'items_affected' => $affected,
+                    'pricing_ids' => $this->selectedPricing,
+                    'operation_type' => 'base_price_increase',
+                    'user_name' => $userName,
+                ])
+                ->save();
 
             $this->dispatch('toast', [
                 'type' => 'success',

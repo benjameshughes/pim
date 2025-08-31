@@ -2,62 +2,51 @@
 
 namespace App\Livewire;
 
-use App\Services\LogParserService;
+use App\UI\Components\Tab;
+use App\UI\Components\TabSet;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
  * 📊 LOG DASHBOARD COMPONENT
  *
- * Simple dashboard for viewing application logs and performance metrics
+ * Organized dashboard with routable tabs for logs, activity, and performance
  */
 #[Title('Log Dashboard')]
 class LogDashboard extends Component
 {
-    public string $activeTab = 'overview';
-
-    public int $refreshInterval = 30; // seconds
-
-    public bool $autoRefresh = false;
-
-    protected LogParserService $logParser;
-
     public function mount(): void
     {
         // Authorize access to system logs
         $this->authorize('view-system-logs');
     }
 
-    public function boot(LogParserService $logParser): void
+    public function getLogDashboardTabsProperty()
     {
-        $this->logParser = $logParser;
-    }
+        return TabSet::make()
+            ->baseRoute('log-dashboard')
+            ->wireNavigate(true)
+            ->tabs([
+                Tab::make('overview')
+                    ->label('Overview')
+                    ->icon('home'),
 
-    public function setActiveTab(string $tab): void
-    {
-        $this->activeTab = $tab;
-    }
+                Tab::make('activity')
+                    ->label('Activity')
+                    ->icon('document-text'),
 
-    public function toggleAutoRefresh(): void
-    {
-        $this->autoRefresh = ! $this->autoRefresh;
-    }
+                Tab::make('performance')
+                    ->label('Performance')
+                    ->icon('chart-bar'),
 
-    public function refreshData(): void
-    {
-        $this->dispatch('$refresh');
+                Tab::make('errors')
+                    ->label('Errors')
+                    ->icon('exclamation-triangle'),
+            ]);
     }
 
     public function render()
     {
-        $data = [
-            'metrics' => $this->logParser->getPerformanceMetrics(),
-            'recentRequests' => $this->logParser->getRecentRequests(30),
-            'slowestEndpoints' => $this->logParser->getSlowestEndpoints(10),
-            'recentErrors' => $this->logParser->getRecentErrors(15),
-            'logSizes' => $this->logParser->getLogFileSizes(),
-        ];
-
-        return view('livewire.log-dashboard', $data);
+        return view('livewire.log-dashboard');
     }
 }

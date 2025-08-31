@@ -4,6 +4,7 @@ namespace App\Actions\Products;
 
 use App\Actions\Base\BaseAction;
 use App\Models\Product;
+use App\Traits\WithActivityLogs;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -15,6 +16,7 @@ use InvalidArgumentException;
  */
 class UpdateProductAction extends BaseAction
 {
+    use WithActivityLogs;
     /**
      * Validate parameters before execution
      */
@@ -60,6 +62,9 @@ class UpdateProductAction extends BaseAction
      */
     protected function updateProductData(Product $product, array $data): Product
     {
+        // Capture original data for change tracking
+        $originalData = $product->toArray();
+
         // Handle slug update if name changed
         if (isset($data['name']) && $data['name'] !== $product->name) {
             if (empty($data['slug'])) {
@@ -69,6 +74,13 @@ class UpdateProductAction extends BaseAction
 
         // Update the product
         $product->update($data);
+
+        // Log the update with changes
+        $this->logUpdated($product, [
+            'old' => collect($originalData)->only(array_keys($data))->toArray(),
+            'new' => collect($product->fresh()->toArray())->only(array_keys($data))->toArray(),
+            'updated_fields' => array_keys($data),
+        ]);
 
         // Handle relationship updates
         $this->handleRelationshipUpdates($product, $data);

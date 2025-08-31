@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Products;
 
+use App\Facades\Activity;
+use App\Livewire\Traits\TracksUserInteractions;
 use App\Models\Product;
 use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
@@ -9,6 +11,8 @@ use Livewire\Component;
 
 class ProductShow extends Component
 {
+    use TracksUserInteractions;
+    
     public Product $product;
 
     public function mount(Product $product)
@@ -27,10 +31,34 @@ class ProductShow extends Component
 
     public function deleteProduct()
     {
+        // Track this critical button click
+        $this->trackButtonClick('Delete Product', [
+            'product_name' => $this->product->name,
+            'product_sku' => $this->product->parent_sku,
+            'variant_count' => $this->product->variants()->count(),
+        ]);
+
         // Authorize product deletion
         $this->authorize('delete-products');
 
         $productName = $this->product->name;
+        $productSku = $this->product->parent_sku;
+        $variantCount = $this->product->variants()->count();
+        $userName = auth()->user()?->name ?? 'System';
+
+        // Log before deletion
+        Activity::log()
+            ->by(auth()->id())
+            ->customEvent('product.deleted', $this->product)
+            ->description("{$productName} (SKU: {$productSku}) deleted by {$userName} including {$variantCount} variants")
+            ->with([
+                'product_name' => $productName,
+                'product_sku' => $productSku,
+                'variants_deleted' => $variantCount,
+                'user_name' => $userName,
+            ])
+            ->save();
+
         $this->product->delete();
 
         $this->dispatch('success', "Product '{$productName}' deleted successfully! 🗑️");
@@ -40,10 +68,35 @@ class ProductShow extends Component
 
     public function duplicateProduct()
     {
+        // Track this button click
+        $this->trackButtonClick('Duplicate Product', [
+            'product_name' => $this->product->name,
+            'product_sku' => $this->product->parent_sku,
+        ]);
+
+        $originalName = $this->product->name;
+        $originalSku = $this->product->parent_sku;
+        $userName = auth()->user()?->name ?? 'System';
+        
         $newProduct = $this->product->replicate();
         $newProduct->name = $this->product->name.' (Copy)';
         $newProduct->parent_sku = $this->product->parent_sku.'-COPY';
         $newProduct->save();
+
+        // Log the duplication with gorgeous detail
+        Activity::log()
+            ->by(auth()->id())
+            ->customEvent('product.duplicated', $newProduct)
+            ->description("{$originalName} duplicated to {$newProduct->name} by {$userName} (SKU: {$originalSku} → {$newProduct->parent_sku})")
+            ->with([
+                'original_product_id' => $this->product->id,
+                'original_product_name' => $originalName,
+                'original_product_sku' => $originalSku,
+                'new_product_name' => $newProduct->name,
+                'new_product_sku' => $newProduct->parent_sku,
+                'user_name' => $userName,
+            ])
+            ->save();
 
         $this->dispatch('success', 'Product duplicated successfully! ✨');
 
@@ -52,8 +105,17 @@ class ProductShow extends Component
 
     public function updateShopifyPricing(int $syncAccountId, array $options = [])
     {
-        // Get Shopify sync account
+        // Track this sync button click
         $syncAccount = \App\Models\SyncAccount::find($syncAccountId);
+        $this->trackButtonClick('Update Shopify Pricing', [
+            'product_name' => $this->product->name,
+            'product_sku' => $this->product->parent_sku,
+            'sync_account_id' => $syncAccountId,
+            'sync_account_name' => $syncAccount?->name,
+            'options' => $options,
+        ]);
+
+        // Get Shopify sync account
 
         if (! $syncAccount || $syncAccount->channel !== 'shopify') {
             $this->dispatch('error', 'Invalid Shopify account selected');
@@ -76,6 +138,26 @@ class ProductShow extends Component
 
         // Dispatch the pricing update job
         \App\Jobs\UpdateShopifyPricingJob::dispatch($this->product, $syncAccount, $options);
+
+        // 📝 Log Shopify pricing sync activity with gorgeous detail
+        $userName = auth()->user()?->name ?? 'System';
+        $description = "{$this->product->name} Shopify pricing sync initiated by {$userName} for {$linkedColorsCount} linked colors on {$syncAccount->name}";
+
+        Activity::log()
+            ->by(auth()->id())
+            ->customEvent('sync.shopify_pricing_update_initiated', $this->product)
+            ->description($description)
+            ->with([
+                'sync_account_id' => $syncAccount->id,
+                'sync_account_name' => $syncAccount->name,
+                'channel' => 'shopify',
+                'linked_colors_count' => $linkedColorsCount,
+                'options' => $options,
+                'product_sku' => $this->product->parent_sku,
+                'product_name' => $this->product->name,
+                'user_name' => $userName,
+            ])
+            ->save();
 
         $this->dispatch('success', "Shopify pricing update initiated! 💰 Updating pricing for {$linkedColorsCount} linked colors.");
 
