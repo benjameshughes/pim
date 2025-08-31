@@ -60,9 +60,13 @@ class ActivityTab extends Component
         return [
             'total' => $recent->count(),
             'product_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'product'))->count(),
-            'user_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'user'))->count(),
             'variant_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'variant'))->count(),
+            'pricing_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'pricing'))->count(),
+            'tracking_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'ui.'))->count(),
             'sync_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'sync'))->count(),
+            'user_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'user'))->count(),
+            'import_activities' => $recent->filter(fn($log) => str_starts_with($log->event, 'import'))->count(),
+            'system_activities' => $recent->filter(fn($log) => is_null($log->user_id))->count(),
             'unique_users' => $recent->pluck('user_id')->filter()->unique()->count(),
         ];
     }
@@ -90,15 +94,22 @@ class ActivityTab extends Component
         
         return Activity::recent($hours)
             ->groupBy(function ($log) {
-                return \Illuminate\Support\Str::before($log->event, '.');
+                $eventType = \Illuminate\Support\Str::before($log->event, '.');
+                // Beautify event type names
+                return match($eventType) {
+                    'ui' => 'tracking',
+                    default => $eventType
+                };
             })
             ->map(fn($group) => [
-                'type' => $group->first() ? \Illuminate\Support\Str::before($group->first()->event, '.') : 'unknown',
+                'type' => ucfirst($group->first() ? 
+                    (\Illuminate\Support\Str::before($group->first()->event, '.') === 'ui' ? 'tracking' : \Illuminate\Support\Str::before($group->first()->event, '.')) 
+                    : 'unknown'),
                 'count' => $group->count(),
                 'latest' => $group->first()?->occurred_at,
             ])
             ->sortByDesc('count')
-            ->take(6)
+            ->take(8) // Show more event types now that we have more
             ->values();
     }
 
@@ -116,6 +127,9 @@ class ActivityTab extends Component
         if ($this->eventFilter !== 'all') {
             if ($this->eventFilter === 'system') {
                 $query->whereNull('user_id');
+            } elseif ($this->eventFilter === 'ui') {
+                // Special handling for UI/tracking events
+                $query->where('event', 'like', 'ui.%');
             } else {
                 $query->where('event', 'like', $this->eventFilter . '%');
             }
@@ -142,8 +156,10 @@ class ActivityTab extends Component
             'all' => 'All Events',
             'product' => 'Product Events', 
             'variant' => 'Variant Events',
-            'user' => 'User Events',
+            'pricing' => 'Pricing Events',
+            'ui' => 'Tracking Events', // Button clicks, form submissions, etc.
             'sync' => 'Sync Events',
+            'user' => 'User Events',
             'import' => 'Import Events',
             'system' => 'System Events',
         ];

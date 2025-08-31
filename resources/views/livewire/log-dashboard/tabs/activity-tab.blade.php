@@ -43,7 +43,7 @@
     </div>
 
     {{-- Activity Statistics --}}
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
             <div class="text-center">
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($activityStats['total']) }}</p>
@@ -60,13 +60,6 @@
         
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
             <div class="text-center">
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ number_format($activityStats['user_activities']) }}</p>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Users</p>
-            </div>
-        </div>
-        
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
-            <div class="text-center">
                 <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($activityStats['variant_activities']) }}</p>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Variants</p>
             </div>
@@ -74,8 +67,29 @@
         
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
             <div class="text-center">
+                <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($activityStats['pricing_activities']) }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Pricing</p>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
+            <div class="text-center">
+                <p class="text-2xl font-bold text-pink-600 dark:text-pink-400">{{ number_format($activityStats['tracking_activities']) }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Tracking</p>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
+            <div class="text-center">
                 <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ number_format($activityStats['sync_activities']) }}</p>
                 <p class="text-sm text-gray-600 dark:text-gray-400">Syncs</p>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700">
+            <div class="text-center">
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ number_format($activityStats['user_activities']) }}</p>
+                <p class="text-sm text-gray-600 dark:text-gray-400">Users</p>
             </div>
         </div>
         
