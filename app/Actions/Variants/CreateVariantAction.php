@@ -3,6 +3,7 @@
 namespace App\Actions\Variants;
 
 use App\Actions\Base\BaseAction;
+use App\Facades\Activity;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,24 @@ class CreateVariantAction extends BaseAction
 
             return $variant->fresh();
         });
+
+        // 📝 Log variant creation with gorgeous detail
+        $userName = auth()->user()?->name ?? 'System';
+        $productName = $variant->product?->name ?? 'Unknown Product';
+        
+        Activity::log()
+            ->by(auth()->id())
+            ->created($variant)
+            ->description("{$productName} variant {$variant->sku} created by {$userName} ({$variant->title})")
+            ->with([
+                'variant_sku' => $variant->sku,
+                'variant_title' => $variant->title,
+                'product_id' => $variant->product_id,
+                'product_name' => $productName,
+                'user_name' => $userName,
+                'variant_data' => $data,
+            ])
+            ->save();
 
         // Return standardized array format while maintaining access to the variant
         return [

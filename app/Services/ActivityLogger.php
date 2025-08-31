@@ -121,7 +121,7 @@ class ActivityLogger
     {
         return match(true) {
             $model instanceof \App\Models\Product => "product.{$action}",
-            $model instanceof \App\Models\Variant => "variant.{$action}", 
+            $model instanceof \App\Models\ProductVariant => "variant.{$action}", 
             $model instanceof \App\Models\User => "user.{$action}",
             default => strtolower(class_basename($model)) . ".{$action}"
         };
