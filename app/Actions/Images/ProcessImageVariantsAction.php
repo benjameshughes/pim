@@ -2,14 +2,14 @@
 
 namespace App\Actions\Images;
 
+use App\Actions\Base\BaseAction;
 use App\Models\Image;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
-class ProcessImageVariantsAction
+class ProcessImageVariantsAction extends BaseAction
 {
     protected array $defaultSizes = [
         'thumb' => 150,
@@ -20,16 +20,23 @@ class ProcessImageVariantsAction
 
     protected int $quality = 85;
 
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     /**
-     * Generate image variants for the given image
+     * 🎨 GENERATE IMAGE VARIANTS
+     *
+     * Create thumbnail and resized versions using DAM system
      *
      * @param Image $originalImage
      * @param array $variantTypes
-     * @return Image[]
+     * @return array
      */
     public function execute(Image $originalImage, array $variantTypes = ['thumb', 'small', 'medium']): array
     {
-        return DB::transaction(function () use ($originalImage, $variantTypes) {
+        return $this->executeWithBaseHandling(function () use ($originalImage, $variantTypes) {
             $generatedVariants = [];
 
             foreach ($variantTypes as $variantType) {
@@ -39,8 +46,14 @@ class ProcessImageVariantsAction
                 }
             }
 
-            return $generatedVariants;
-        });
+            return $this->success('Image variants generated successfully', [
+                'original_image_id' => $originalImage->id,
+                'variants_generated' => count($generatedVariants),
+                'variant_types' => $variantTypes,
+                'variants' => $generatedVariants
+            ]);
+
+        }, ['image_id' => $originalImage->id, 'variant_types' => $variantTypes]);
     }
 
     protected function generateVariant(Image $originalImage, string $variantType): ?Image

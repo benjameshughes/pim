@@ -39,15 +39,16 @@ class GenerateImageVariantsJob implements ShouldQueue
         $tracker->setStatus($this->image, ImageProcessingStatus::PROCESSING);
 
         // Generate variants using the action
-        $generatedVariants = $action->execute($this->image, $this->variants);
+        $result = $action->execute($this->image, $this->variants);
         
         // Mark as completed
         $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
 
         Log::info('✅ Image variant generation completed', [
             'image_id' => $this->image->id,
-            'variants_generated' => count($generatedVariants),
-            'variant_ids' => array_map(fn($img) => $img->id, $generatedVariants)
+            'action_result' => $result['success'] ? 'success' : 'failed',
+            'variants_generated' => $result['data']['variants_generated'] ?? 0,
+            'message' => $result['message'] ?? 'Unknown result'
         ]);
     }
 
