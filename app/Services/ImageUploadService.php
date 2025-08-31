@@ -2,8 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\ImageProcessingStatus;
+use App\Jobs\GenerateImageVariantsJob;
+use App\Jobs\ProcessImageJob;
 use App\Models\Image;
 use App\Exceptions\ImageReprocessException;
+use App\Services\ImageProcessingTracker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -32,9 +36,9 @@ class ImageUploadService
     /**
      * 📤 UPLOAD SINGLE IMAGE
      *
-     * Simple upload with metadata support
+     * Upload with optional background processing
      */
-    public function upload(UploadedFile $file, array $metadata = []): Image
+    public function upload(UploadedFile $file, array $metadata = [], bool $async = false, bool $generateVariants = false): Image
     {
         $this->validateFile($file);
 
@@ -46,26 +50,57 @@ class ImageUploadService
         $path = Storage::disk($this->disk)->putFileAs('', $file, $filename);
         $url = Storage::disk($this->disk)->url($path);
 
-        // Extract image dimensions
-        $dimensions = $this->getImageDimensions($file);
+        if ($async) {
+            // Create minimal image record for async processing
+            $image = Image::create([
+                'filename' => $filename,
+                'url' => $url,
+                'size' => $file->getSize(),
+                'width' => 0, // Will be filled by job
+                'height' => 0, // Will be filled by job
+                'mime_type' => $file->getMimeType(),
+                'is_primary' => false,
+                'sort_order' => 0,
+                // Apply metadata
+                'title' => $metadata['title'] ?? null,
+                'alt_text' => $metadata['alt_text'] ?? null,
+                'description' => $metadata['description'] ?? null,
+                'folder' => $metadata['folder'] ?? null,
+                'tags' => $metadata['tags'] ?? [],
+            ]);
 
-        // Create image record
-        return Image::create([
-            'filename' => $filename,
-            'url' => $url,
-            'size' => $file->getSize(),
-            'width' => $dimensions['width'],
-            'height' => $dimensions['height'],
-            'mime_type' => $file->getMimeType(),
-            'is_primary' => false,
-            'sort_order' => 0,
-            // Apply metadata
-            'title' => $metadata['title'] ?? null,
-            'alt_text' => $metadata['alt_text'] ?? null,
-            'description' => $metadata['description'] ?? null,
-            'folder' => $metadata['folder'] ?? null,
-            'tags' => $metadata['tags'] ?? [],
-        ]);
+            // Mark as pending and dispatch processing job
+            app(ImageProcessingTracker::class)->setStatus($image, ImageProcessingStatus::PENDING);
+            ProcessImageJob::dispatch($image);
+
+            // Optionally generate variants
+            if ($generateVariants) {
+                GenerateImageVariantsJob::dispatch($image)->delay(now()->addSeconds(30));
+            }
+
+        } else {
+            // Synchronous processing (existing behavior)
+            $dimensions = $this->getImageDimensions($file);
+
+            $image = Image::create([
+                'filename' => $filename,
+                'url' => $url,
+                'size' => $file->getSize(),
+                'width' => $dimensions['width'],
+                'height' => $dimensions['height'],
+                'mime_type' => $file->getMimeType(),
+                'is_primary' => false,
+                'sort_order' => 0,
+                // Apply metadata
+                'title' => $metadata['title'] ?? null,
+                'alt_text' => $metadata['alt_text'] ?? null,
+                'description' => $metadata['description'] ?? null,
+                'folder' => $metadata['folder'] ?? null,
+                'tags' => $metadata['tags'] ?? [],
+            ]);
+        }
+
+        return $image;
     }
 
     /**

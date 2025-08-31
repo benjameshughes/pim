@@ -88,10 +88,10 @@
                 type="button"
                 wire:click="reprocessImage" 
                 variant="outline"
-                icon="refresh-cw"
+                icon="sparkles"
                 :disabled="$isSaving"
             >
-                Refresh Metadata
+                Reprocess & Generate Variants
             </flux:button>
         </div>
         

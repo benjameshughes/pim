@@ -363,4 +363,81 @@ class Image extends Model
 
         return false;
     }
+
+    /**
+     * 🎨 VARIANT HELPERS USING DAM SYSTEM
+     */
+
+    /**
+     * Check if this image is a variant (has 'variant' tag)
+     */
+    public function isVariant(): bool
+    {
+        return in_array('variant', $this->tags ?? []);
+    }
+
+    /**
+     * Check if this is an original image (not a variant)
+     */
+    public function isOriginal(): bool
+    {
+        return !$this->isVariant();
+    }
+
+    /**
+     * Get the variant type from tags
+     */
+    public function getVariantType(): ?string
+    {
+        $variantTags = ['thumb', 'small', 'medium', 'large'];
+        
+        foreach ($this->tags ?? [] as $tag) {
+            if (in_array($tag, $variantTags)) {
+                return $tag;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get the original image ID from tags
+     */
+    public function getOriginalImageId(): ?int
+    {
+        foreach ($this->tags ?? [] as $tag) {
+            if (str_starts_with($tag, 'original-')) {
+                return (int) str_replace('original-', '', $tag);
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Scope for original images only (not variants)
+     */
+    public function scopeOriginals(Builder $query): Builder
+    {
+        return $query->where(function ($q) {
+            $q->whereJsonDoesntContain('tags', 'variant')
+              ->orWhereNull('tags');
+        });
+    }
+
+    /**
+     * Scope for variant images only
+     */
+    public function scopeVariants(Builder $query): Builder
+    {
+        return $query->whereJsonContains('tags', 'variant');
+    }
+
+    /**
+     * Scope for images in variants folder
+     */
+    public function scopeInVariantsFolder(Builder $query): Builder
+    {
+        return $query->where('folder', 'variants');
+    }
 }

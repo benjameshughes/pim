@@ -4,6 +4,7 @@ namespace App\Livewire\Images;
 
 use App\Actions\Images\UpdateImageAction;
 use App\Actions\Images\ReprocessImageAction;
+use App\Jobs\GenerateImageVariantsJob;
 use App\Models\Image;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
@@ -124,21 +125,32 @@ class ImageEditForm extends Component
     }
 
     /**
-     * 🔄 REPROCESS IMAGE METADATA
+     * 🔄 REPROCESS IMAGE METADATA & GENERATE VARIANTS
      *
-     * Refresh image dimensions and metadata from storage
+     * Refresh metadata and optionally generate variants
      */
-    public function reprocessImage(ReprocessImageAction $reprocessImageAction): void
+    public function reprocessImage(ReprocessImageAction $reprocessImageAction, bool $generateVariants = true): void
     {
         $this->isSaving = true;
 
+        // Refresh metadata synchronously
         $this->image = $reprocessImageAction->execute($this->image);
         $this->loadImageData();
 
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => 'Image metadata refreshed successfully! 🔄',
-        ]);
+        // Generate variants in background if requested and image is large enough
+        if ($generateVariants && $this->image->isOriginal() && ($this->image->width > 150 || $this->image->height > 150)) {
+            GenerateImageVariantsJob::dispatch($this->image);
+            
+            $this->dispatch('notify', [
+                'type' => 'success', 
+                'message' => 'Metadata refreshed! Generating variants in background... 🎨',
+            ]);
+        } else {
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Image metadata refreshed successfully! 🔄',
+            ]);
+        }
 
         $this->isSaving = false;
     }
