@@ -23,6 +23,8 @@ class Image extends Model
         'filename',
         'url',
         'size',
+        'width',
+        'height',
         'mime_type',
         'is_primary',
         'sort_order',
@@ -36,6 +38,8 @@ class Image extends Model
 
     protected $casts = [
         'size' => 'integer',
+        'width' => 'integer',
+        'height' => 'integer',
         'is_primary' => 'boolean',
         'sort_order' => 'integer',
         'tags' => 'array',

@@ -3,6 +3,7 @@
 namespace App\Livewire\Images;
 
 use App\Actions\Images\UpdateImageAction;
+use App\Actions\Images\ReprocessImageAction;
 use App\Models\Image;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
@@ -120,6 +121,26 @@ class ImageEditForm extends Component
             'type' => 'info',
             'message' => 'Form reset to original values',
         ]);
+    }
+
+    /**
+     * 🔄 REPROCESS IMAGE METADATA
+     *
+     * Refresh image dimensions and metadata from storage
+     */
+    public function reprocessImage(ReprocessImageAction $reprocessImageAction): void
+    {
+        $this->isSaving = true;
+
+        $this->image = $reprocessImageAction->execute($this->image);
+        $this->loadImageData();
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'Image metadata refreshed successfully! 🔄',
+        ]);
+
+        $this->isSaving = false;
     }
 
     /**

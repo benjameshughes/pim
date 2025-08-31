@@ -74,14 +74,26 @@
 
     {{-- Actions --}}
     <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-        <flux:button 
-            type="button"
-            wire:click="resetForm" 
-            variant="ghost"
-            :disabled="$isSaving"
-        >
-            Reset Form
-        </flux:button>
+        <div class="flex items-center gap-3">
+            <flux:button 
+                type="button"
+                wire:click="resetForm" 
+                variant="ghost"
+                :disabled="$isSaving"
+            >
+                Reset Form
+            </flux:button>
+            
+            <flux:button 
+                type="button"
+                wire:click="reprocessImage" 
+                variant="outline"
+                icon="refresh-cw"
+                :disabled="$isSaving"
+            >
+                Refresh Metadata
+            </flux:button>
+        </div>
         
         <div class="flex items-center gap-3">
             <flux:button 

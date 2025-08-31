@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Image;
+use App\Exceptions\ImageReprocessException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -45,11 +46,16 @@ class ImageUploadService
         $path = Storage::disk($this->disk)->putFileAs('', $file, $filename);
         $url = Storage::disk($this->disk)->url($path);
 
+        // Extract image dimensions
+        $dimensions = $this->getImageDimensions($file);
+
         // Create image record
         return Image::create([
             'filename' => $filename,
             'url' => $url,
             'size' => $file->getSize(),
+            'width' => $dimensions['width'],
+            'height' => $dimensions['height'],
             'mime_type' => $file->getMimeType(),
             'is_primary' => false,
             'sort_order' => 0,
@@ -103,6 +109,80 @@ class ImageUploadService
     public function delete(Image $image): bool
     {
         return $this->deleteImage($image);
+    }
+
+    /**
+     * 🔄 REPROCESS IMAGE METADATA
+     *
+     * Fetch and update image dimensions and metadata from R2 storage
+     */
+    public function reprocessImage(Image $image): Image
+    {
+        if (!$image->filename || !$image->url) {
+            throw ImageReprocessException::invalidImage();
+        }
+
+        // Download image content temporarily
+        $imageContent = Storage::disk($this->disk)->get($image->filename);
+        
+        if (!$imageContent) {
+            throw ImageReprocessException::storageRetrievalFailed();
+        }
+
+        // Create temporary file for processing
+        $tempFile = tmpfile();
+        fwrite($tempFile, $imageContent);
+        $tempPath = stream_get_meta_data($tempFile)['uri'];
+
+        // Extract image dimensions and info
+        $imageInfo = getimagesize($tempPath);
+        
+        if (!$imageInfo) {
+            fclose($tempFile);
+            throw ImageReprocessException::dimensionExtractionFailed();
+        }
+
+        $updates = [
+            'width' => $imageInfo[0],
+            'height' => $imageInfo[1],
+            'mime_type' => $imageInfo['mime'],
+        ];
+        
+        // Get file size from storage
+        $size = Storage::disk($this->disk)->size($image->filename);
+        if ($size) {
+            $updates['size'] = $size;
+        }
+
+        // Clean up temp file
+        fclose($tempFile);
+
+        // Update image record
+        $image->update($updates);
+        $image->refresh();
+
+        return $image;
+    }
+
+    /**
+     * 📏 GET IMAGE DIMENSIONS
+     */
+    protected function getImageDimensions(UploadedFile $file): array
+    {
+        try {
+            $imageInfo = getimagesize($file->getPathname());
+            
+            return [
+                'width' => $imageInfo[0] ?? 0,
+                'height' => $imageInfo[1] ?? 0,
+            ];
+        } catch (\Exception $e) {
+            // Fallback if dimensions can't be read
+            return [
+                'width' => 0,
+                'height' => 0,
+            ];
+        }
     }
 
     /**

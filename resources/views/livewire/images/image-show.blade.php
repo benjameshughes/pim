@@ -121,7 +121,7 @@
                     <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                         <div class="flex justify-between">
                             <span>Size:</span>
-                            <span class="font-medium">{{ $image->file_size_human }}</span>
+                            <span class="font-medium">{{ $image->formatted_size }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Dimensions:</span>
