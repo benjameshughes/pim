@@ -206,11 +206,15 @@ class ImageLibrary extends Component
     }
 
     /**
-     * 📊 GET IMAGES
+     * 📊 GET IMAGES - Only show original images, exclude variants
      */
     public function getImagesProperty()
     {
         $query = Image::query();
+
+        // Only show original images (exclude variants)
+        $query->where('folder', '!=', 'variants')
+            ->orWhereNull('folder');
 
         // Search
         if ($this->search) {
@@ -238,6 +242,27 @@ class ImageLibrary extends Component
         $query->orderBy($this->sortBy, $this->sortDirection);
 
         return $query->paginate($this->perPage);
+    }
+
+    /**
+     * 🎨 GET VARIANT COUNT for an image
+     */
+    public function getVariantCount(int $imageId): int
+    {
+        return Image::where('folder', 'variants')
+            ->whereJsonContains('tags', "original-{$imageId}")
+            ->count();
+    }
+
+    /**
+     * 🖼️ GET VARIANTS for an image
+     */
+    public function getImageVariants(int $imageId): \Illuminate\Database\Eloquent\Collection
+    {
+        return Image::where('folder', 'variants')
+            ->whereJsonContains('tags', "original-{$imageId}")
+            ->orderBy('created_at', 'asc')
+            ->get();
     }
 
     /**

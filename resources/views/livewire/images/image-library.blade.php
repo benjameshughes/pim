@@ -83,104 +83,10 @@
     @endif
 
     {{-- Images Grid --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         @forelse($this->images as $image)
-            <div
-                    class="group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                    wire:key="image-{{ $image->id }}"
-            >
-                {{-- Image --}}
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
-                        <img
-                                src="{{ $image->url }}"
-                                alt="{{ $image->alt_text ?? $image->display_title }}"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
-                    
-                    {{-- Overlay with attachment status --}}
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-                    
-                    {{-- Edit and Delete Buttons --}}
-                    <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-2">
-                        <flux:button
-                                wire:navigate
-                                href="{{ route('images.show', $image) }}"
-                                variant="primary"
-                                size="sm"
-                                class="bg-blue-500/90 hover:bg-blue-600 text-white border-blue-500/20 shadow-sm"
-                        >
-                            <flux:icon.eye class="w-3 h-3"/>
-                        </flux:button>
-                        
-                        <flux:button
-                                variant="danger"
-                                size="sm"
-                                wire:click="deleteImage({{ $image->id }})"
-                                wire:confirm="Are you sure you want to delete this image? This cannot be undone."
-                                class="bg-red-500/90 hover:bg-red-600 text-white border-red-500/20 shadow-sm"
-                        >
-                            <flux:icon.trash class="w-3 h-3"/>
-                        </flux:button>
-                    </div>
-
-                    {{-- Attachment Status Badge --}}
-                    <div class="absolute bottom-3 left-3">
-                        @if($image->isAttached())
-                            <flux:badge variant="success" size="sm" class="bg-emerald-500/90 text-white border-0">
-                                <flux:icon.link class="w-3 h-3 mr-1"/>
-                                Linked
-                            </flux:badge>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Image Info --}}
-                <div class="p-4">
-                    <div class="space-y-2">
-                        {{-- Title --}}
-                        <h4 class="font-medium text-sm text-gray-900 dark:text-white truncate">
-                            {{ $image->display_title }}
-                        </h4>
-
-                        {{-- Metadata --}}
-                        <div class="flex items-center justify-end text-xs text-gray-500 dark:text-gray-400">
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">{{ $image->folder }}</span>
-                        </div>
-
-                        {{-- Tags --}}
-                        @if(!empty($image->tags))
-                            <div class="flex flex-wrap gap-1">
-                                @foreach(array_slice($image->tags, 0, 2) as $tag)
-                                    <flux:badge variant="outline" size="xs" class="text-xs">{{ $tag }}</flux:badge>
-                                @endforeach
-                                @if(count($image->tags) > 2)
-                                    <span class="text-xs text-gray-400 self-center">+{{ count($image->tags) - 2 }} more</span>
-                                @endif
-                            </div>
-                        @endif
-                        
-                        {{-- Quick Actions --}}
-                        <div class="flex items-center gap-2 pt-1">
-                            <flux:button
-                                    type="button"
-                                    size="xs"
-                                    variant="ghost"
-                                    x-on:click="
-                                        navigator.clipboard.writeText('{{ $image->url }}').then(() => {
-                                            $dispatch('notify', { 
-                                                message: 'Image URL copied to clipboard! 📋', 
-                                                type: 'success' 
-                                            })
-                                        })
-                                    "
-                                    class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                                <flux:icon.clipboard class="w-3 h-3 mr-1"/>
-                                Copy URL
-                            </flux:button>
-                        </div>
-                    </div>
-                </div>
+            <div wire:key="image-{{ $image->id }}">
+                <livewire:images.image-card :image="$image" :key="'image-card-'.$image->id" />
             </div>
         @empty
             <div class="col-span-full">
