@@ -211,7 +211,7 @@
                         class="w-full"
                         icon="shopping-bag"
                     >
-                        {{ $shopifyStatus ? 'Recreate in Shopify' : 'Push to Shopify' }}
+                        {{ $shopifyStatus ? 'Full Update' : 'Push to Shopify' }}
                     </flux:button>
 
                     @if($shopifyStatus)

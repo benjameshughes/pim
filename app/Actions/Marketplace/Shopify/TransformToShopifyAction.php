@@ -4,6 +4,7 @@ namespace App\Actions\Marketplace\Shopify;
 
 use App\Models\Product;
 use App\Models\SyncAccount;
+use App\Services\Marketplace\Shopify\ShopifyTaxonomyHelper;
 
 /**
  * 🔄 TRANSFORM TO SHOPIFY ACTION
@@ -40,7 +41,7 @@ class TransformToShopifyAction
      */
     protected function createShopifyProduct(string $color, array $variants, Product $originalProduct): array
     {
-        // Valid ProductInput fields only
+        // Build ProductInput with optional category
         $productInput = [
             'title' => $originalProduct->name . ' - ' . $color,
             'descriptionHtml' => $originalProduct->description ?? '',
@@ -50,6 +51,12 @@ class TransformToShopifyAction
             'metafields' => $this->createMetafields($originalProduct, $color),
             'productOptions' => $this->createProductOptions($variants),
         ];
+
+        // Add category only if we have a valid taxonomy ID
+        $detectedCategory = $this->detectProductCategory($originalProduct, $color);
+        if ($detectedCategory && $this->isValidTaxonomyId($detectedCategory)) {
+            $productInput['category'] = $detectedCategory;
+        }
 
         return [
             // Main product data for ProductInput
@@ -77,13 +84,16 @@ class TransformToShopifyAction
             $shopifyVariants[] = [
                 'title' => $variant->title,
                 'sku' => $variant->sku,
+                'barcode' => $this->getVariantBarcode($variant),
                 'price' => (string) $this->getVariantPriceForAccount($variant),
-                'inventoryQuantity' => $variant->stock_level ?? 0,
-                'inventoryPolicy' => 'DENY',
+                'compareAtPrice' => $this->getCompareAtPrice($variant),
+                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
+                'inventoryPolicy' => $this->getInventoryPolicy($variant),
                 'inventoryManagement' => 'SHOPIFY',
                 'requiresShipping' => true,
-                'weight' => $variant->parcel_weight ?? 0.5,
+                'weight' => $this->calculateVariantWeight($variant),
                 'weightUnit' => 'KILOGRAMS',
+                'metafields' => $this->createVariantMetafields($variant),
                 'options' => [
                     $variant->width . 'cm',
                     $variant->drop . 'cm'
@@ -129,6 +139,10 @@ class TransformToShopifyAction
                 'position' => $image->sort_order,
             ];
         }
+        
+        // Add variant-specific images for this color
+        $variantImages = $this->getVariantSpecificImages($variants, $color);
+        $shopifyImages = array_merge($shopifyImages, $variantImages);
         
         return $shopifyImages;
     }
@@ -207,5 +221,227 @@ class TransformToShopifyAction
                 'type' => 'single_line_text_field',
             ],
         ];
+    }
+
+    /**
+     * Get variant barcode from barcodes table
+     */
+    protected function getVariantBarcode(\App\Models\ProductVariant $variant): ?string
+    {
+        $barcode = $variant->barcode; // HasOne relationship
+        return ($barcode && $barcode->is_assigned) ? $barcode->barcode : null;
+    }
+
+    /**
+     * Determine inventory policy based on stock level
+     */
+    protected function getInventoryPolicy(\App\Models\ProductVariant $variant): string
+    {
+        $stockLevel = $variant->stock_level ?? 0;
+        
+        // CONTINUE = allow orders when out of stock
+        // DENY = prevent orders when out of stock
+        return $stockLevel > 0 ? 'DENY' : 'DENY'; // Always deny out-of-stock for now
+    }
+
+    /**
+     * Calculate variant weight with fallback logic
+     */
+    protected function calculateVariantWeight(\App\Models\ProductVariant $variant): float
+    {
+        // Use parcel_weight if available
+        if ($variant->parcel_weight && $variant->parcel_weight > 0) {
+            return (float) $variant->parcel_weight;
+        }
+        
+        // Calculate estimated weight based on dimensions (for blinds)
+        $width = $variant->width ?? 60; // cm
+        $drop = $variant->drop ?? 100; // cm
+        
+        // Rough estimate: 0.5kg base + (width * drop * 0.0001) for fabric weight
+        $estimatedWeight = 0.5 + (($width * $drop) * 0.0001);
+        
+        return round($estimatedWeight, 2);
+    }
+
+    /**
+     * Get variant-specific images for the color group
+     */
+    protected function getVariantSpecificImages(array $variants, string $color): array
+    {
+        $variantImages = [];
+        $nextPosition = 100; // Start after product images
+        
+        foreach ($variants as $variant) {
+            if ($variant->color !== $color) {
+                continue; // Only include variants for this color group
+            }
+            
+            // Get images specific to this variant
+            $images = $variant->images()
+                ->orderBy('is_primary', 'desc')
+                ->orderBy('sort_order')
+                ->orderBy('created_at')
+                ->get();
+            
+            foreach ($images as $image) {
+                $variantImages[] = [
+                    'src' => $image->url,
+                    'altText' => $image->alt_text ?: "{$variant->title} - {$variant->color}",
+                    'position' => $image->sort_order ?: $nextPosition++,
+                ];
+            }
+        }
+        
+        return $variantImages;
+    }
+
+    /**
+     * Get compare at price for sales/discount display
+     */
+    protected function getCompareAtPrice(\App\Models\ProductVariant $variant): ?string
+    {
+        // Check if variant has a compare_at_price attribute
+        $compareAtPrice = $variant->getSmartAttributeValue('compare_at_price');
+        
+        if ($compareAtPrice && is_numeric($compareAtPrice) && $compareAtPrice > 0) {
+            return (string) $compareAtPrice;
+        }
+        
+        // Alternative: Use original price if current price is lower (sale scenario)
+        $currentPrice = $this->getVariantPriceForAccount($variant);
+        
+        // Check for a "original_price" or "msrp" attribute
+        $originalPrice = $variant->getSmartAttributeValue('original_price') 
+                      ?: $variant->getSmartAttributeValue('msrp')
+                      ?: $variant->getSmartAttributeValue('rrp');
+        
+        if ($originalPrice && is_numeric($originalPrice) && $originalPrice > $currentPrice) {
+            return (string) $originalPrice;
+        }
+        
+        return null; // No compare at price
+    }
+
+    /**
+     * Create variant-specific metafields for custom data
+     */
+    protected function createVariantMetafields(\App\Models\ProductVariant $variant): array
+    {
+        $metafields = [];
+        
+        // Dimensions metafields
+        $metafields[] = [
+            'namespace' => 'custom',
+            'key' => 'width_cm',
+            'value' => (string) ($variant->width ?? 0),
+            'type' => 'number_integer',
+        ];
+        
+        $metafields[] = [
+            'namespace' => 'custom',
+            'key' => 'drop_cm',
+            'value' => (string) ($variant->drop ?? 0),
+            'type' => 'number_integer',
+        ];
+        
+        if ($variant->max_drop) {
+            $metafields[] = [
+                'namespace' => 'custom',
+                'key' => 'max_drop_cm',
+                'value' => (string) $variant->max_drop,
+                'type' => 'number_integer',
+            ];
+        }
+        
+        // Physical dimensions if available
+        if ($variant->parcel_length || $variant->parcel_width || $variant->parcel_depth) {
+            $metafields[] = [
+                'namespace' => 'shipping',
+                'key' => 'dimensions_cm',
+                'value' => json_encode([
+                    'length' => $variant->parcel_length ?? 0,
+                    'width' => $variant->parcel_width ?? 0,
+                    'depth' => $variant->parcel_depth ?? 0,
+                ]),
+                'type' => 'json',
+            ];
+        }
+        
+        // External SKU if different from main SKU
+        if ($variant->external_sku && $variant->external_sku !== $variant->sku) {
+            $metafields[] = [
+                'namespace' => 'custom',
+                'key' => 'external_sku',
+                'value' => $variant->external_sku,
+                'type' => 'single_line_text_field',
+            ];
+        }
+        
+        // Status information
+        $metafields[] = [
+            'namespace' => 'custom',
+            'key' => 'status',
+            'value' => $variant->status ?? 'active',
+            'type' => 'single_line_text_field',
+        ];
+        
+        return $metafields;
+    }
+
+    /**
+     * Detect appropriate Shopify taxonomy category for the product
+     */
+    protected function detectProductCategory(Product $product, string $color): ?string
+    {
+        // Prepare product data for category detection
+        $productData = [
+            'title' => $product->name . ' - ' . $color,
+            'productType' => 'Window Blinds', // Your product type
+            'descriptionHtml' => $product->description ?? '',
+            'vendor' => 'Blinds Outlet',
+        ];
+
+        // Use the taxonomy helper for smart detection
+        $detectedCategory = ShopifyTaxonomyHelper::detectCategory($productData);
+        
+        // Try blinds-specific detection if general detection fails
+        if (!$detectedCategory) {
+            $detectedCategory = ShopifyTaxonomyHelper::detectBlindsCategory($productData);
+        }
+        
+        // Log the detection for debugging
+        if ($detectedCategory) {
+            $categoryName = ShopifyTaxonomyHelper::getCategoryName($detectedCategory);
+            \Illuminate\Support\Facades\Log::info('🏷️ Detected Shopify category', [
+                'product_name' => $product->name,
+                'color' => $color,
+                'detected_category_id' => $detectedCategory,
+                'category_name' => $categoryName,
+                'will_be_used' => $this->isValidTaxonomyId($detectedCategory),
+            ]);
+        }
+        
+        return $detectedCategory;
+    }
+
+    /**
+     * Validate if taxonomy ID is from real Shopify taxonomy
+     * 
+     * For now, we disable category detection since we're using placeholder IDs.
+     * TODO: Replace with real Shopify taxonomy IDs when available.
+     */
+    protected function isValidTaxonomyId(?string $taxonomyId): bool
+    {
+        if (!$taxonomyId) {
+            return false;
+        }
+        
+        // For now, disable category detection to prevent invalid ID errors
+        // TODO: Enable when we have real Shopify taxonomy IDs
+        return false;
+        
+        // Future implementation when we have real IDs:
+        // return ShopifyTaxonomyHelper::isValidCategoryId($taxonomyId);
     }
 }

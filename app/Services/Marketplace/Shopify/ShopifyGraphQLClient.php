@@ -131,7 +131,25 @@ class ShopifyGraphQLClient
                         id
                         title
                         handle
+                        descriptionHtml
+                        vendor
+                        productType
+                        status
                         updatedAt
+                        category {
+                            id
+                            name
+                        }
+                        metafields(first: 10) {
+                            edges {
+                                node {
+                                    id
+                                    namespace
+                                    key
+                                    value
+                                }
+                            }
+                        }
                     }
                     userErrors {
                         field
@@ -328,9 +346,12 @@ class ShopifyGraphQLClient
                     productVariants {
                         id
                         sku
+                        barcode
                         price
+                        compareAtPrice
                         inventoryQuantity
                         updatedAt
+                        title
                     }
                     userErrors {
                         field
@@ -343,16 +364,104 @@ class ShopifyGraphQLClient
         // Transform variants to Shopify bulk update format with IDs
         $bulkVariants = [];
         foreach ($variants as $variant) {
-            $bulkVariants[] = [
+            $bulkVariant = [
                 'id' => $variant['id'], // CRITICAL: Shopify needs the variant ID
                 'price' => $variant['price'], // The price to update
             ];
+            
+            // Add compareAtPrice if provided (supported field)
+            if (isset($variant['compareAtPrice'])) {
+                $bulkVariant['compareAtPrice'] = $variant['compareAtPrice'];
+            }
+            
+            // Add metafields if provided (supported field)
+            if (isset($variant['metafields'])) {
+                $bulkVariant['metafields'] = $variant['metafields'];
+            }
+            
+            // NOTE: SKU, barcode, and inventoryQuantity are NOT supported in ProductVariantsBulkInput
+            // These need to be handled via separate API calls or different mutations
+            
+            $bulkVariants[] = $bulkVariant;
         }
 
-        return $this->mutate($mutation, [
+        $result = $this->mutate($mutation, [
             'productId' => $productId,
             'variants' => $bulkVariants
         ]);
+        
+        // Handle unsupported fields (SKU, barcode, inventoryQuantity) via separate calls
+        $this->updateUnsupportedVariantFields($productId, $variants, $result);
+        
+        return $result;
+    }
+    
+    /**
+     * Update fields not supported by ProductVariantsBulkInput
+     * Uses REST API for SKU updates since GraphQL doesn't support it
+     */
+    protected function updateUnsupportedVariantFields(string $productId, array $variants, array $bulkResult): void
+    {
+        $updatedVariants = $bulkResult['productVariantsBulkUpdate']['productVariants'] ?? [];
+        
+        foreach ($variants as $index => $requestedVariant) {
+            $updatedVariant = $updatedVariants[$index] ?? null;
+            if (!$updatedVariant) {
+                continue;
+            }
+            
+            $variantId = $updatedVariant['id'];
+            $needsUpdate = false;
+            $updateData = [];
+            
+            // Check if SKU needs updating
+            if (isset($requestedVariant['sku']) && $requestedVariant['sku'] !== ($updatedVariant['sku'] ?? '')) {
+                $updateData['sku'] = $requestedVariant['sku'];
+                $needsUpdate = true;
+            }
+            
+            // Check if barcode needs updating  
+            if (isset($requestedVariant['barcode']) && $requestedVariant['barcode'] !== ($updatedVariant['barcode'] ?? '')) {
+                $updateData['barcode'] = $requestedVariant['barcode'];
+                $needsUpdate = true;
+            }
+            
+            // Update via REST API if needed
+            if ($needsUpdate) {
+                $this->updateVariantViaRest($variantId, $updateData);
+            }
+        }
+    }
+    
+    /**
+     * Update variant via REST API (for SKU, barcode, etc.)
+     */
+    protected function updateVariantViaRest(string $variantId, array $updateData): void
+    {
+        try {
+            // Extract numeric ID from GraphQL ID (gid://shopify/ProductVariant/123 -> 123)
+            $numericId = basename($variantId);
+            
+            $url = "https://{$this->syncAccount->shop_domain}/admin/api/2024-10/variants/{$numericId}.json";
+            
+            $data = [
+                'variant' => $updateData
+            ];
+            
+            $response = Http::withHeaders([
+                'X-Shopify-Access-Token' => $this->syncAccount->access_token,
+                'Content-Type' => 'application/json',
+            ])->put($url, $data);
+            
+            if (!$response->successful()) {
+                error_log("REST API variant update failed for {$variantId}: " . $response->body());
+            } else {
+                error_log("✅ Updated variant {$variantId} via REST API: " . json_encode($updateData));
+            }
+            
+        } catch (\Exception $e) {
+            error_log("Exception updating variant {$variantId} via REST: " . $e->getMessage());
+        }
     }
 
     /**

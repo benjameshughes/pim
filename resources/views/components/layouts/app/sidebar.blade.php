@@ -28,7 +28,8 @@
                 @if(auth()->user()->can('view-products') || auth()->user()->can('view-barcodes') || auth()->user()->can('view-pricing') || auth()->user()->can('import-products'))
                     <flux:navlist.group expandable heading="Products">
                         @can('view-products')
-                            <flux:navlist.item 
+                            <flux:navlist.item
+                                :current="request()->is('products')"
                                 icon="cube" 
                                 href="{{ route('products.index') }}"
                             >
@@ -102,7 +103,7 @@
 
                 {{-- ⚡ OPERATIONS --}}
                 @if(auth()->user()->can('bulk-operations') || auth()->user()->can('view-system-logs'))
-                    <flux:navlist.group expandable heading="Operations">
+                    <flux:navlist.group expandable heading="Operations"  :expanded="false">
                         @can('bulk-operations')
                             <flux:navlist.item 
                                 icon="bolt" 
@@ -125,7 +126,7 @@
 
                 {{-- 🏢 MANAGEMENT - Only for admins --}}
                 @can('manage-system-settings')
-                    <flux:navlist.group expandable heading="Management">
+                    <flux:navlist.group expandable heading="Management"  :expanded="false">
                         <flux:navlist.item 
                             icon="users" 
                             href="{{ route('management.users.index') }}"

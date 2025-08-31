@@ -152,11 +152,28 @@ class CreateShopifyProductsAction
 
             $localVariant = $localVariants[$index];
 
-            // Update with SKU and pricing
-            $client->updateSingleVariant($shopifyVariantId, [
+            // Update with comprehensive variant data (SKU, pricing, barcode, etc.)
+            $updateData = [
                 'sku' => $localVariant['sku'],
                 'price' => $localVariant['price']
-            ]);
+            ];
+            
+            // Add barcode if available
+            if (!empty($localVariant['barcode'])) {
+                $updateData['barcode'] = $localVariant['barcode'];
+            }
+            
+            // Add compareAtPrice if available
+            if (!empty($localVariant['compareAtPrice'])) {
+                $updateData['compareAtPrice'] = $localVariant['compareAtPrice'];
+            }
+            
+            // Add inventory quantity if available
+            if (isset($localVariant['inventoryQuantity'])) {
+                $updateData['inventoryQuantity'] = (int) $localVariant['inventoryQuantity'];
+            }
+            
+            $client->updateSingleVariant($shopifyVariantId, $updateData);
         }
     }
 

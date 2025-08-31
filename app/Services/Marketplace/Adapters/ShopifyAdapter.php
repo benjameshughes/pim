@@ -4,7 +4,7 @@ namespace App\Services\Marketplace\Adapters;
 
 use App\Actions\Marketplace\Shopify\CreateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\UpdateShopifyProductsAction;
-use App\Actions\Marketplace\Shopify\RecreateShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\FullUpdateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\DeleteShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\LinkShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\SplitProductByColourAction;
@@ -61,18 +61,28 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
-     * 🔄 SET UP RECREATE OPERATION
-     * Deletes existing products and creates fresh ones
+     * 🔄 SET UP FULL UPDATE OPERATION
+     * Comprehensively updates all existing product data (preserves Shopify IDs)
      */
-    public function recreate(int $productId): self
+    public function fullUpdate(int $productId): self
     {
-        $this->operationType = 'recreate';
+        $this->operationType = 'fullUpdate';
         $this->currentProductId = $productId;
         
-        // Prepare marketplace product data for recreation
+        // Prepare marketplace product data for full update
         $this->prepareMarketplaceProduct($productId);
         
         return $this;
+    }
+
+    /**
+     * 🔄 DEPRECATED: Use fullUpdate() instead
+     * @deprecated Use fullUpdate() for non-destructive comprehensive updates
+     */
+    public function recreate(int $productId): self
+    {
+        // Redirect to fullUpdate for backwards compatibility
+        return $this->fullUpdate($productId);
     }
 
     /**
@@ -149,10 +159,11 @@ class ShopifyAdapter extends AbstractAdapter
         return match ($this->operationType) {
             'create' => $this->executeCreate($syncAccount),
             'update' => $this->executeUpdate($syncAccount),
-            'recreate' => $this->executeRecreate($syncAccount),
+            'fullUpdate' => $this->executeFullUpdate($syncAccount),
+            'recreate' => $this->executeFullUpdate($syncAccount), // Backwards compatibility
             'delete' => $this->executeDelete($syncAccount),
             'link' => $this->executeLink($syncAccount),
-            default => SyncResult::failure('No operation type set. Use create(), update(), recreate(), delete(), or link() first.')
+            default => SyncResult::failure('No operation type set. Use create(), update(), fullUpdate(), delete(), or link() first.')
         };
     }
 
@@ -181,14 +192,14 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
-     * Execute recreate operation
+     * Execute full update operation
      */
-    protected function executeRecreate(SyncAccount $syncAccount): SyncResult
+    protected function executeFullUpdate(SyncAccount $syncAccount): SyncResult
     {
         $marketplaceProduct = $this->getMarketplaceProduct();
         
-        $recreateAction = new RecreateShopifyProductsAction();
-        return $recreateAction->execute($marketplaceProduct, $syncAccount);
+        $fullUpdateAction = new FullUpdateShopifyProductsAction();
+        return $fullUpdateAction->execute($marketplaceProduct, $syncAccount);
     }
 
     /**
@@ -210,7 +221,7 @@ class ShopifyAdapter extends AbstractAdapter
     }
 
     /**
-     * Prepare marketplace product data (for create and recreate)
+     * Prepare marketplace product data (for create and fullUpdate)
      */
     protected function prepareMarketplaceProduct(int $productId): void
     {

@@ -23,16 +23,16 @@ class ProductOverview extends Component
         $this->authorize('manage-products');
         
         try {
-            // 🎯 KISS API - Use create() or recreate() based on current status
+            // 🎯 KISS API - Use create() or fullUpdate() based on current status
             $shopifyStatus = $this->product->getSmartAttributeValue('shopify_status');
             
             if ($shopifyStatus === 'synced') {
-                // Products already exist - recreate them
+                // Products already exist - perform full update (preserves Shopify IDs)
                 $result = Sync::marketplace('shopify')
-                    ->recreate($this->product->id)
+                    ->fullUpdate($this->product->id)
                     ->push();
                     
-                $actionMessage = 'recreated';
+                $actionMessage = 'fully updated';
             } else {
                 // No existing products - create new ones
                 $result = Sync::marketplace('shopify')
