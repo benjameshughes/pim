@@ -3,15 +3,15 @@
 namespace App\Livewire\Management\Users;
 
 use App\Actions\Users\CreateUserAction;
-use App\Actions\Users\UpdateUserAction;
 use App\Actions\Users\DeleteUserAction;
+use App\Actions\Users\UpdateUserAction;
 use App\Models\User;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 /**
  * 👥 USER INDEX COMPONENT
- * 
+ *
  * Complete user management interface with role-based CRUD operations.
  * Features user creation, editing, deletion, search, and filtering.
  * Admin-only access with comprehensive validation and audit logging.
@@ -22,23 +22,35 @@ class UserIndex extends Component
 
     // Search and filtering
     public string $search = '';
+
     public string $roleFilter = '';
+
     public string $statusFilter = '';
+
     public int $perPage = 15;
+
     public string $sortField = 'created_at';
+
     public string $sortDirection = 'desc';
-    
+
     // Modal states
     public bool $showCreateModal = false;
+
     public bool $showEditModal = false;
+
     public bool $showDeleteModal = false;
+
     public ?User $editingUser = null;
+
     public ?User $deletingUser = null;
-    
+
     // Form fields
     public string $name = '';
+
     public string $email = '';
+
     public string $role = 'user';
+
     public bool $sendWelcomeEmail = true;
 
     protected $listeners = [
@@ -67,10 +79,10 @@ class UserIndex extends Component
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', "%{$this->search}%")
-                      ->orWhere('email', 'like', "%{$this->search}%");
+                        ->orWhere('email', 'like', "%{$this->search}%");
                 });
             })
-            ->when($this->roleFilter, fn ($q) => $q->whereHas('roles', fn($r) => $r->where('name', $this->roleFilter)))
+            ->when($this->roleFilter, fn ($q) => $q->whereHas('roles', fn ($r) => $r->where('name', $this->roleFilter)))
             ->when($this->statusFilter === 'verified', fn ($q) => $q->whereNotNull('email_verified_at'))
             ->when($this->statusFilter === 'unverified', fn ($q) => $q->whereNull('email_verified_at'))
             ->orderBy($this->sortField, $this->sortDirection)
@@ -81,10 +93,10 @@ class UserIndex extends Component
     {
         $totalUsers = User::count();
         $verifiedUsers = User::whereNotNull('email_verified_at')->count();
-        
+
         // Count users by role using Spatie Laravel Permission
         $adminCount = User::role('admin')->count();
-        $managerCount = User::role('manager')->count(); 
+        $managerCount = User::role('manager')->count();
         $userCount = User::role('user')->count();
 
         return [
@@ -198,8 +210,8 @@ class UserIndex extends Component
 
         if ($result['success']) {
             $magicLinkStatus = $result['data']['magic_link_sent'] ? ' Magic login link sent!' : '';
-            $this->dispatch('notify', 
-                message: "User {$this->name} created successfully with {$this->role} role.{$magicLinkStatus} 🎉", 
+            $this->dispatch('notify',
+                message: "User {$this->name} created successfully with {$this->role} role.{$magicLinkStatus} 🎉",
                 type: 'success'
             );
             $this->closeCreateModal();
@@ -215,7 +227,7 @@ class UserIndex extends Component
 
         $this->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $this->editingUser->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$this->editingUser->id,
             'role' => 'required|in:admin,manager,user',
         ]);
 
@@ -228,8 +240,8 @@ class UserIndex extends Component
 
         if ($result['success']) {
             $changesSummary = $result['data']['changes_made'] ? ' Changes applied.' : ' No changes made.';
-            $this->dispatch('notify', 
-                message: "User {$this->name} updated successfully.{$changesSummary} ✨", 
+            $this->dispatch('notify',
+                message: "User {$this->name} updated successfully.{$changesSummary} ✨",
                 type: 'success'
             );
             $this->closeEditModal();
@@ -243,16 +255,17 @@ class UserIndex extends Component
     {
         $this->authorize('manage-system-settings');
 
-        if (!$this->deletingUser) {
+        if (! $this->deletingUser) {
             $this->dispatch('notify', message: 'No user selected for deletion', type: 'error');
+
             return;
         }
 
         $result = DeleteUserAction::run($this->deletingUser);
 
         if ($result['success']) {
-            $this->dispatch('notify', 
-                message: "User {$this->deletingUser->name} deleted successfully 🗑️", 
+            $this->dispatch('notify',
+                message: "User {$this->deletingUser->name} deleted successfully 🗑️",
                 type: 'success'
             );
             $this->closeDeleteModal();

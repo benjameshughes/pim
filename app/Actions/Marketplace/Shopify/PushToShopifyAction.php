@@ -17,8 +17,8 @@ class PushToShopifyAction
     /**
      * Push marketplace product to Shopify
      *
-     * @param MarketplaceProduct $marketplaceProduct Prepared Shopify products
-     * @param SyncAccount $syncAccount Shopify account credentials
+     * @param  MarketplaceProduct  $marketplaceProduct  Prepared Shopify products
+     * @param  SyncAccount  $syncAccount  Shopify account credentials
      * @return SyncResult Push operation result
      */
     public function execute(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount, bool $forceRecreate = false): SyncResult
@@ -26,26 +26,26 @@ class PushToShopifyAction
         try {
             // Get the transformed Shopify products
             $shopifyProducts = $marketplaceProduct->getData();
-            
+
             if (empty($shopifyProducts)) {
                 return SyncResult::failure('No Shopify products to push');
             }
 
             // 🎯 DUPLICATE PREVENTION - Check if products already exist (unless forcing recreate)
-            if (!$forceRecreate && $this->productsAlreadyExist($marketplaceProduct, $syncAccount)) {
+            if (! $forceRecreate && $this->productsAlreadyExist($marketplaceProduct, $syncAccount)) {
                 return SyncResult::failure('Products already exist on Shopify for this account. Use update() instead of create().');
             }
 
             // Initialize Shopify GraphQL client
             $graphqlClient = $this->initializeGraphQLClient($syncAccount);
-            
+
             $results = [];
             $errors = [];
 
             // Process each Shopify product (one per color)
             foreach ($shopifyProducts as $shopifyProduct) {
                 $result = $this->pushSingleProduct($graphqlClient, $shopifyProduct, $syncAccount);
-                
+
                 if ($result['success']) {
                     $results[] = $result;
                 } else {
@@ -55,7 +55,7 @@ class PushToShopifyAction
 
             // Determine overall success
             $success = empty($errors);
-            $message = $success 
+            $message = $success
                 ? sprintf('Successfully pushed %d products to Shopify', count($results))
                 : sprintf('Pushed %d products, %d failed', count($results), count($errors));
 
@@ -73,7 +73,7 @@ class PushToShopifyAction
 
         } catch (\Exception $e) {
             return SyncResult::failure(
-                message: 'Push to Shopify failed: ' . $e->getMessage(),
+                message: 'Push to Shopify failed: '.$e->getMessage(),
                 errors: [$e->getMessage()]
             );
         }
@@ -94,20 +94,20 @@ class PushToShopifyAction
     {
         // Extract internal tracking data
         $internalData = $shopifyProduct['_internal'] ?? [];
-        
+
         // Extract only the ProductInput data - this is what Shopify expects
         $productInput = $shopifyProduct['productInput'] ?? [];
-        
+
         // Step 1: Create product with options (Shopify auto-generates variants)
         $result = $client->createProduct($productInput);
-        
+
         $userErrors = $result['productCreate']['userErrors'] ?? [];
         $product = $result['productCreate']['product'] ?? null;
-        
-        if (!empty($userErrors) || !$product) {
+
+        if (! empty($userErrors) || ! $product) {
             return [
                 'success' => false,
-                'error' => !empty($userErrors) ? 'Shopify validation errors: ' . json_encode($userErrors) : 'No product returned from Shopify',
+                'error' => ! empty($userErrors) ? 'Shopify validation errors: '.json_encode($userErrors) : 'No product returned from Shopify',
                 'errors' => $userErrors,
                 'color_group' => $internalData['color_group'] ?? 'unknown',
                 'original_product_id' => $internalData['original_product_id'] ?? null,
@@ -141,19 +141,19 @@ class PushToShopifyAction
         $originalProductId = $internalData['original_product_id'] ?? null;
         $colorGroup = $internalData['color_group'] ?? 'unknown';
 
-        if (!$originalProductId) {
+        if (! $originalProductId) {
             return; // Can't save without product ID
         }
 
         $localProduct = \App\Models\Product::find($originalProductId);
-        if (!$localProduct) {
+        if (! $localProduct) {
             return;
         }
 
         // Get existing Shopify product IDs from attributes
         $existingIds = $localProduct->getSmartAttributeValue('shopify_product_ids');
         $productIds = [];
-        
+
         if ($existingIds) {
             if (is_string($existingIds)) {
                 $productIds = json_decode($existingIds, true) ?: [];
@@ -170,7 +170,7 @@ class PushToShopifyAction
         $localProduct->setAttributeValue('shopify_sync_account_id', $syncAccount->id);
         $localProduct->setAttributeValue('shopify_synced_at', now()->toISOString());
         $localProduct->setAttributeValue('shopify_status', 'synced');
-        
+
         // Save metadata for future reference
         $metadata = [
             'handle' => $shopifyProduct['handle'] ?? null,
@@ -201,7 +201,7 @@ class PushToShopifyAction
             $shopifyVariant = $edge['node'] ?? [];
             $shopifyVariantId = $shopifyVariant['id'] ?? null;
 
-            if (!$shopifyVariantId) {
+            if (! $shopifyVariantId) {
                 continue;
             }
 
@@ -213,7 +213,7 @@ class PushToShopifyAction
                 // KISS: Update this specific variant ID with correct price AND SKU
                 $client->updateSingleVariant($shopifyVariantId, [
                     'sku' => $matchingLocalVariant['sku'],
-                    'price' => $matchingLocalVariant['price']
+                    'price' => $matchingLocalVariant['price'],
                 ]);
             }
         }
@@ -227,12 +227,12 @@ class PushToShopifyAction
         $metadata = $marketplaceProduct->getMetadata();
         $originalProductId = $metadata['original_product_id'] ?? null;
 
-        if (!$originalProductId) {
+        if (! $originalProductId) {
             return false; // Can't check without product ID
         }
 
         $localProduct = \App\Models\Product::find($originalProductId);
-        if (!$localProduct) {
+        if (! $localProduct) {
             return false;
         }
 
@@ -242,8 +242,8 @@ class PushToShopifyAction
         $status = $localProduct->getSmartAttributeValue('shopify_status');
 
         // If we have Shopify product IDs, correct sync account, and status is synced - products exist
-        return !empty($shopifyProductIds) && 
-               $syncAccountId == $syncAccount->id && 
+        return ! empty($shopifyProductIds) &&
+               $syncAccountId == $syncAccount->id &&
                $status === 'synced';
     }
 }

@@ -5,12 +5,11 @@ use App\Models\Barcode;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 describe('Enhanced SimpleImportAction', function () {
     beforeEach(function () {
-        $this->action = new SimpleImportAction();
-        
+        $this->action = new SimpleImportAction;
+
         // Create some available barcodes for auto-assignment
         Barcode::create(['barcode' => '1111111111111', 'is_assigned' => false]);
         Barcode::create(['barcode' => '2222222222222', 'is_assigned' => false]);
@@ -25,7 +24,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1, 'price' => 2],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -36,7 +35,7 @@ describe('Enhanced SimpleImportAction', function () {
 
         // Check variants have auto-assigned barcodes
         $variants = ProductVariant::all();
-        expect($variants->filter(fn($v) => $v->barcode)->count())->toBe(2);
+        expect($variants->filter(fn ($v) => $v->barcode)->count())->toBe(2);
 
         unlink($filePath);
     });
@@ -45,7 +44,7 @@ describe('Enhanced SimpleImportAction', function () {
         // Create the specific barcodes that will be referenced in CSV
         Barcode::create(['barcode' => '9999999999999', 'is_assigned' => false]);
         Barcode::create(['barcode' => '8888888888888', 'is_assigned' => false]);
-        
+
         $csvContent = "sku,title,barcode\nTEST123-RED,Test Product Red,9999999999999\nTEST123-BLUE,Test Product Blue,8888888888888";
         $filePath = storage_path('temp_test.csv');
         file_put_contents($filePath, $csvContent);
@@ -53,7 +52,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1, 'barcode' => 2],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -80,8 +79,8 @@ describe('Enhanced SimpleImportAction', function () {
             'mappings' => ['sku' => 0, 'title' => 1],
             'ad_hoc_attributes' => [
                 'brand' => 'Test Brand',
-                'supplier' => 'Test Supplier'
-            ]
+                'supplier' => 'Test Supplier',
+            ],
         ];
 
         $result = $this->action->execute($config);
@@ -105,7 +104,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1], // brand and category unmapped
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -123,13 +122,13 @@ describe('Enhanced SimpleImportAction', function () {
         // Pre-assign a barcode
         $variant = ProductVariant::factory()->create([
             'sku' => 'EXISTING-RED',
-            'title' => 'Existing Product Red'
+            'title' => 'Existing Product Red',
         ]);
-        
+
         $existingBarcode = Barcode::create([
             'barcode' => '5555555555555',
             'product_variant_id' => $variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         $csvContent = "sku,title\nEXISTING-RED,Existing Product Red";
@@ -139,7 +138,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -164,7 +163,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -187,7 +186,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1, 'barcode' => 2],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         // Ensure barcode doesn't exist
@@ -210,7 +209,7 @@ describe('Enhanced SimpleImportAction', function () {
         // Create an unassigned barcode that matches CSV
         $existingBarcode = Barcode::create([
             'barcode' => '6666666666666',
-            'is_assigned' => false
+            'is_assigned' => false,
         ]);
 
         $csvContent = "sku,title,barcode\nTEST123-RED,Test Product Red,6666666666666";
@@ -220,7 +219,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1, 'barcode' => 2],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $result = $this->action->execute($config);
@@ -245,7 +244,7 @@ describe('Enhanced SimpleImportAction', function () {
         $config = [
             'file' => $filePath,
             'mappings' => ['sku' => 0, 'title' => 1, 'barcode' => 2],
-            'ad_hoc_attributes' => []
+            'ad_hoc_attributes' => [],
         ];
 
         $this->action->execute($config);
@@ -257,9 +256,9 @@ describe('Enhanced SimpleImportAction', function () {
     });
 
     test('processes complex CSV with all features', function () {
-        $csvContent = "sku,title,price,brand,category,barcode\n" .
-                     "COMPLEX-RED,Complex Product Red,29.99,CSV Brand,Electronics,4444444444444\n" .
-                     "COMPLEX-BLUE,Complex Product Blue,31.99,CSV Brand,Electronics,"; // No barcode for blue
+        $csvContent = "sku,title,price,brand,category,barcode\n".
+                     "COMPLEX-RED,Complex Product Red,29.99,CSV Brand,Electronics,4444444444444\n".
+                     'COMPLEX-BLUE,Complex Product Blue,31.99,CSV Brand,Electronics,'; // No barcode for blue
 
         $filePath = storage_path('temp_test.csv');
         file_put_contents($filePath, $csvContent);
@@ -269,8 +268,8 @@ describe('Enhanced SimpleImportAction', function () {
             'mappings' => ['sku' => 0, 'title' => 1, 'price' => 2, 'barcode' => 5], // brand, category unmapped
             'ad_hoc_attributes' => [
                 'supplier' => 'Test Supplier',
-                'warranty' => '1 year'
-            ]
+                'warranty' => '1 year',
+            ],
         ];
 
         $result = $this->action->execute($config);

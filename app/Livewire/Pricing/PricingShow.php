@@ -11,7 +11,7 @@ class PricingShow extends Component
         // Authorize viewing pricing
         $this->authorize('view-pricing');
     }
-    
+
     public function render()
     {
         return view('livewire.pricing.pricing-show');

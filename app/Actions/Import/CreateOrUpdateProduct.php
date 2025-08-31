@@ -15,8 +15,7 @@ class CreateOrUpdateProduct
     /**
      * Create or update parent product using updateOrCreate
      *
-     * @param array $parentInfo Extracted parent product information
-     * @return Product
+     * @param  array  $parentInfo  Extracted parent product information
      */
     public function execute(array $parentInfo): Product
     {

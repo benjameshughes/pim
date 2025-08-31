@@ -18,7 +18,7 @@ use Livewire\WithPagination;
  */
 class PricingDashboard extends Component
 {
-    use WithPagination, TracksUserInteractions;
+    use TracksUserInteractions, WithPagination;
 
     // 🎯 Filter Properties
     public $activeTab = 'overview';
@@ -71,7 +71,7 @@ class PricingDashboard extends Component
     {
         // Authorize viewing pricing
         $this->authorize('view-pricing');
-        
+
         $this->priceCalculator = app(PriceCalculatorService::class);
         $this->refreshAnalysis();
     }
@@ -237,7 +237,7 @@ class PricingDashboard extends Component
     {
         $previousTab = $this->activeTab;
         $this->trackTabChange($previousTab, $tab);
-        
+
         $this->activeTab = $tab;
         $this->resetPage();
 
@@ -295,7 +295,7 @@ class PricingDashboard extends Component
 
         // Authorize bulk pricing updates
         $this->authorize('bulk-update-pricing');
-        
+
         if (empty($this->selectedPricing) || $this->bulkDiscountPercentage <= 0) {
             $this->dispatch('toast', [
                 'type' => 'warning',
@@ -365,7 +365,7 @@ class PricingDashboard extends Component
 
         // Authorize bulk pricing updates
         $this->authorize('bulk-update-pricing');
-        
+
         if (empty($this->selectedPricing) || $this->bulkMarkupPercentage <= 0) {
             $this->dispatch('toast', [
                 'type' => 'warning',

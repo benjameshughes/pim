@@ -267,12 +267,12 @@ class Image extends Model
 
         if ($model instanceof \App\Models\Product) {
             // Check if already attached to avoid duplicates
-            if (!$model->images()->where('image_id', $this->id)->exists()) {
+            if (! $model->images()->where('image_id', $this->id)->exists()) {
                 $model->images()->attach($this->id, $mergedPivotData);
             }
         } elseif ($model instanceof \App\Models\ProductVariant) {
             // Check if already attached to avoid duplicates
-            if (!$model->images()->where('image_id', $this->id)->exists()) {
+            if (! $model->images()->where('image_id', $this->id)->exists()) {
                 $model->images()->attach($this->id, $mergedPivotData);
             }
         } else {
@@ -381,7 +381,7 @@ class Image extends Model
      */
     public function isOriginal(): bool
     {
-        return !$this->isVariant();
+        return ! $this->isVariant();
     }
 
     /**
@@ -390,13 +390,13 @@ class Image extends Model
     public function getVariantType(): ?string
     {
         $variantTags = ['thumb', 'small', 'medium', 'large'];
-        
+
         foreach ($this->tags ?? [] as $tag) {
             if (in_array($tag, $variantTags)) {
                 return $tag;
             }
         }
-        
+
         return null;
     }
 
@@ -410,7 +410,7 @@ class Image extends Model
                 return (int) str_replace('original-', '', $tag);
             }
         }
-        
+
         return null;
     }
 
@@ -421,7 +421,7 @@ class Image extends Model
     {
         return $query->where(function ($q) {
             $q->whereJsonDoesntContain('tags', 'variant')
-              ->orWhereNull('tags');
+                ->orWhereNull('tags');
         });
     }
 

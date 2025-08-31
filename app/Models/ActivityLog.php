@@ -35,19 +35,19 @@ class ActivityLog extends Model
     public function getSubjectNameAttribute(): ?string
     {
         return collect($this->data)
-            ->get('subject.name') ?? 
-            collect($this->data)->get('subject.title') ?? 
+            ->get('subject.name') ??
+            collect($this->data)->get('subject.title') ??
             "#{$this->getSubjectId()}";
     }
 
     public function getSubjectId(): mixed
     {
-        return collect($this->data)->get('subject.id');
+        return $this->data['subject']['id'] ?? null;
     }
 
     public function getSubjectType(): ?string
     {
-        return collect($this->data)->get('subject.type');
+        return $this->data['subject']['type'] ?? null;
     }
 
     public function getContextData(): Collection
@@ -62,7 +62,7 @@ class ActivityLog extends Model
 
     public function getDescriptionAttribute(): ?string
     {
-        return collect($this->data)->get('description') ?? 
+        return collect($this->data)->get('description') ??
             $this->generateDescription();
     }
 
@@ -91,7 +91,7 @@ class ActivityLog extends Model
     {
         $action = str_replace('.', ' ', $this->event);
         $subject = $this->subject_name ?: $this->subject_type;
-        
+
         return ucwords("{$action} {$subject}");
     }
 
@@ -99,39 +99,39 @@ class ActivityLog extends Model
     {
         $query = static::with('user')->latest('occurred_at');
 
-        if (!empty($filters['event'])) {
+        if (! empty($filters['event'])) {
             $query->byEvent($filters['event']);
         }
 
-        if (!empty($filters['user_id'])) {
+        if (! empty($filters['user_id'])) {
             $query->byUser($filters['user_id']);
         }
 
-        if (!empty($filters['hours'])) {
+        if (! empty($filters['hours'])) {
             $query->recent($filters['hours']);
         }
 
-        if (!empty($filters['subject_type']) && !empty($filters['subject_id'])) {
+        if (! empty($filters['subject_type']) && ! empty($filters['subject_id'])) {
             $query->forSubject($filters['subject_type'], $filters['subject_id']);
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
                 $q->where('event', 'like', "%{$filters['search']}%")
-                  ->orWhereJsonContains('data->description', $filters['search'])
-                  ->orWhereJsonContains('data->subject->name', $filters['search']);
+                    ->orWhereJsonContains('data->description', $filters['search'])
+                    ->orWhereJsonContains('data->subject->name', $filters['search']);
             });
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('occurred_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('occurred_at', '<=', $filters['date_to']);
         }
 
-        if (!empty($filters['limit'])) {
+        if (! empty($filters['limit'])) {
             $query->limit($filters['limit']);
         }
 
@@ -141,18 +141,18 @@ class ActivityLog extends Model
     public static function getActivityStats(int $hours = 24): array
     {
         $logs = static::recent($hours)->get();
-        
+
         return [
             'total_activities' => $logs->count(),
             'unique_users' => $logs->pluck('user_id')->filter()->unique()->count(),
             'top_events' => $logs->groupBy('event')
-                ->map(fn($group) => $group->count())
+                ->map(fn ($group) => $group->count())
                 ->sortDesc()
                 ->take(5)
                 ->toArray(),
             'activity_by_hour' => $logs->groupBy(function ($log) {
                 return $log->occurred_at->format('H');
-            })->map(fn($group) => $group->count())->toArray(),
+            })->map(fn ($group) => $group->count())->toArray(),
         ];
     }
 

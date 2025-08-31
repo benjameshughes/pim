@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Images;
 
-use App\Actions\Images\UpdateImageAction;
 use App\Actions\Images\ReprocessImageAction;
+use App\Actions\Images\UpdateImageAction;
 use App\Jobs\GenerateImageVariantsJob;
 use App\Models\Image;
 use Illuminate\Contracts\View\View;
@@ -140,9 +140,9 @@ class ImageEditForm extends Component
         // Generate variants in background if requested and image is large enough
         if ($generateVariants && $this->image->isOriginal() && ($this->image->width > 150 || $this->image->height > 150)) {
             GenerateImageVariantsJob::dispatch($this->image);
-            
+
             $this->dispatch('notify', [
-                'type' => 'success', 
+                'type' => 'success',
                 'message' => 'Metadata refreshed! Generating variants in background... 🎨',
             ]);
         } else {

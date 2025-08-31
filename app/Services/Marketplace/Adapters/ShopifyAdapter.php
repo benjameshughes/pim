@@ -3,15 +3,15 @@
 namespace App\Services\Marketplace\Adapters;
 
 use App\Actions\Marketplace\Shopify\CreateShopifyProductsAction;
-use App\Actions\Marketplace\Shopify\UpdateShopifyProductsAction;
-use App\Actions\Marketplace\Shopify\FullUpdateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\DeleteShopifyProductsAction;
+use App\Actions\Marketplace\Shopify\FullUpdateShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\LinkShopifyProductsAction;
 use App\Actions\Marketplace\Shopify\SplitProductByColourAction;
 use App\Actions\Marketplace\Shopify\TransformToShopifyAction;
+use App\Actions\Marketplace\Shopify\UpdateShopifyProductsAction;
+use App\Models\SyncAccount;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
-use App\Models\SyncAccount;
 
 /**
  * 🛍️ SHOPIFY MARKETPLACE ADAPTER - REFACTORED
@@ -22,6 +22,7 @@ use App\Models\SyncAccount;
 class ShopifyAdapter extends AbstractAdapter
 {
     protected string $operationType = 'none';
+
     protected array $fieldsToUpdate = [];
 
     /**
@@ -40,15 +41,15 @@ class ShopifyAdapter extends AbstractAdapter
     {
         $this->operationType = 'create';
         $this->currentProductId = $productId;
-        
+
         // Prepare marketplace product data
         $this->prepareMarketplaceProduct($productId);
-        
+
         return $this;
     }
 
     /**
-     * ✏️ SET UP UPDATE OPERATION  
+     * ✏️ SET UP UPDATE OPERATION
      * Updates EXISTING products on Shopify using stored IDs
      */
     public function update(int $productId): self
@@ -56,7 +57,7 @@ class ShopifyAdapter extends AbstractAdapter
         $this->operationType = 'update';
         $this->currentProductId = $productId;
         $this->fieldsToUpdate = [];
-        
+
         return $this;
     }
 
@@ -68,15 +69,16 @@ class ShopifyAdapter extends AbstractAdapter
     {
         $this->operationType = 'fullUpdate';
         $this->currentProductId = $productId;
-        
+
         // Prepare marketplace product data for full update
         $this->prepareMarketplaceProduct($productId);
-        
+
         return $this;
     }
 
     /**
      * 🔄 DEPRECATED: Use fullUpdate() instead
+     *
      * @deprecated Use fullUpdate() for non-destructive comprehensive updates
      */
     public function recreate(int $productId): self
@@ -93,7 +95,7 @@ class ShopifyAdapter extends AbstractAdapter
     {
         $this->operationType = 'delete';
         $this->currentProductId = $productId;
-        
+
         return $this;
     }
 
@@ -105,7 +107,7 @@ class ShopifyAdapter extends AbstractAdapter
     {
         $this->operationType = 'link';
         $this->currentProductId = $productId;
-        
+
         return $this;
     }
 
@@ -117,8 +119,9 @@ class ShopifyAdapter extends AbstractAdapter
         if ($this->operationType !== 'update') {
             throw new \RuntimeException('pricing() can only be used with update() operations');
         }
-        
+
         $this->fieldsToUpdate['pricing'] = empty($pricingData) ? true : $pricingData;
+
         return $this;
     }
 
@@ -130,8 +133,9 @@ class ShopifyAdapter extends AbstractAdapter
         if ($this->operationType !== 'update') {
             throw new \RuntimeException('title() can only be used with update() operations');
         }
-        
+
         $this->fieldsToUpdate['title'] = $newTitle;
+
         return $this;
     }
 
@@ -143,8 +147,9 @@ class ShopifyAdapter extends AbstractAdapter
         if ($this->operationType !== 'update') {
             throw new \RuntimeException('images() can only be used with update() operations');
         }
-        
+
         $this->fieldsToUpdate['images'] = $imageData;
+
         return $this;
     }
 
@@ -173,8 +178,9 @@ class ShopifyAdapter extends AbstractAdapter
     protected function executeCreate(SyncAccount $syncAccount): SyncResult
     {
         $marketplaceProduct = $this->getMarketplaceProduct();
-        
-        $createAction = new CreateShopifyProductsAction();
+
+        $createAction = new CreateShopifyProductsAction;
+
         return $createAction->execute($marketplaceProduct, $syncAccount);
     }
 
@@ -187,7 +193,8 @@ class ShopifyAdapter extends AbstractAdapter
             return SyncResult::failure('No fields specified for update. Use pricing(), title(), or images() to specify what to update.');
         }
 
-        $updateAction = new UpdateShopifyProductsAction();
+        $updateAction = new UpdateShopifyProductsAction;
+
         return $updateAction->execute($this->currentProductId, $this->fieldsToUpdate, $syncAccount);
     }
 
@@ -197,8 +204,9 @@ class ShopifyAdapter extends AbstractAdapter
     protected function executeFullUpdate(SyncAccount $syncAccount): SyncResult
     {
         $marketplaceProduct = $this->getMarketplaceProduct();
-        
-        $fullUpdateAction = new FullUpdateShopifyProductsAction();
+
+        $fullUpdateAction = new FullUpdateShopifyProductsAction;
+
         return $fullUpdateAction->execute($marketplaceProduct, $syncAccount);
     }
 
@@ -207,7 +215,8 @@ class ShopifyAdapter extends AbstractAdapter
      */
     protected function executeDelete(SyncAccount $syncAccount): SyncResult
     {
-        $deleteAction = new DeleteShopifyProductsAction();
+        $deleteAction = new DeleteShopifyProductsAction;
+
         return $deleteAction->execute($this->currentProductId, $syncAccount);
     }
 
@@ -216,7 +225,8 @@ class ShopifyAdapter extends AbstractAdapter
      */
     protected function executeLink(SyncAccount $syncAccount): SyncResult
     {
-        $linkAction = new LinkShopifyProductsAction();
+        $linkAction = new LinkShopifyProductsAction;
+
         return $linkAction->execute($this->currentProductId, $syncAccount);
     }
 
@@ -226,7 +236,7 @@ class ShopifyAdapter extends AbstractAdapter
     protected function prepareMarketplaceProduct(int $productId): void
     {
         $product = $this->loadProduct($productId);
-        
+
         // Step 1: Split product by colors
         $colorGroups = app(SplitProductByColourAction::class)
             ->execute($product);
@@ -255,7 +265,7 @@ class ShopifyAdapter extends AbstractAdapter
      */
     public function testConnection(): SyncResult
     {
-        if (!$this->hasSyncAccount()) {
+        if (! $this->hasSyncAccount()) {
             return SyncResult::failure('No Shopify sync account configured');
         }
 
@@ -263,7 +273,7 @@ class ShopifyAdapter extends AbstractAdapter
             return app(\App\Actions\Marketplace\Shopify\TestShopifyConnectionAction::class)
                 ->execute($this->syncAccount);
         } catch (\Exception $e) {
-            return SyncResult::failure('Connection test failed: ' . $e->getMessage());
+            return SyncResult::failure('Connection test failed: '.$e->getMessage());
         }
     }
 
@@ -272,7 +282,7 @@ class ShopifyAdapter extends AbstractAdapter
      */
     public function pull(array $filters = []): SyncResult
     {
-        if (!$this->hasSyncAccount()) {
+        if (! $this->hasSyncAccount()) {
             return SyncResult::failure('No Shopify sync account configured');
         }
 
@@ -280,7 +290,7 @@ class ShopifyAdapter extends AbstractAdapter
             return app(\App\Actions\Marketplace\Shopify\PullFromShopifyAction::class)
                 ->execute($this->syncAccount, $filters);
         } catch (\Exception $e) {
-            return SyncResult::failure('Pull operation failed: ' . $e->getMessage());
+            return SyncResult::failure('Pull operation failed: '.$e->getMessage());
         }
     }
 }

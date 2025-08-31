@@ -16,17 +16,17 @@ class TestShopifyConnectionAction
     /**
      * Test Shopify connection using official SDK
      *
-     * @param SyncAccount $syncAccount Shopify account to test
+     * @param  SyncAccount  $syncAccount  Shopify account to test
      * @return SyncResult Connection test result
      */
     public function execute(SyncAccount $syncAccount): SyncResult
     {
         $client = new \App\Services\Marketplace\Shopify\ShopifyGraphQLClient($syncAccount);
-        
+
         $shopData = $client->testConnection();
         $shop = $shopData['shop'] ?? null;
-        
-        if (!$shop) {
+
+        if (! $shop) {
             return SyncResult::failure('No shop data returned from Shopify');
         }
 

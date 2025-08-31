@@ -3,9 +3,12 @@
 namespace App\Livewire\Images;
 
 use App\Actions\Images\DeleteImageAction;
+use App\Actions\Images\GetImageFamilyAction;
+use App\Jobs\GenerateImageVariantsJob;
 use App\Models\Image;
 use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -18,10 +21,46 @@ class ImageShow extends Component
 {
     public Image $image;
 
+    public Image $originalImage;
+
+    public $variants = [];
+
+    public $imageFamily = [];
+
+    public string $context = 'original';
+
     public function mount(Image $image)
     {
         $this->authorize('view-images');
         $this->image = $image;
+        $this->loadImageFamily();
+    }
+
+    protected function loadImageFamily(): void
+    {
+        $action = new GetImageFamilyAction;
+        $result = $action->execute($this->image);
+
+        if ($result['success']) {
+            $this->originalImage = $result['data']['original'];
+            $this->variants = $result['data']['variants']->toArray();
+            $this->imageFamily = $result['data']['family']->toArray();
+            $this->context = $result['data']['context'];
+        }
+    }
+
+    #[On('generate-variants')]
+    public function handleGenerateVariants(int $imageId): void
+    {
+        $targetImage = Image::find($imageId);
+        if ($targetImage) {
+            GenerateImageVariantsJob::dispatch($targetImage);
+
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Generating variants in background... 🎨',
+            ]);
+        }
     }
 
     /**
@@ -31,7 +70,7 @@ class ImageShow extends Component
     {
         // Authorize deleting images
         $this->authorize('delete-images');
-        
+
         $imageName = $this->image->display_title;
         $deleteImageAction->execute($this->image);
 

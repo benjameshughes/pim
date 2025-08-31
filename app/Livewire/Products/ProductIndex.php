@@ -91,6 +91,7 @@ class ProductIndex extends Component
                         $variantArray = $variant->toArray();
                         // Add retail price from default channel
                         $variantArray['display_price'] = $variant->getRetailPrice();
+
                         return $variantArray;
                     })
                     ->toArray();

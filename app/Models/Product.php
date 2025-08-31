@@ -48,7 +48,6 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
-
     /**
      * 🖼️ IMAGES - Many-to-many relationship with Image model via pivot
      *

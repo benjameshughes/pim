@@ -7,7 +7,7 @@ use Livewire\Livewire;
 beforeEach(function () {
     // Seed roles and permissions for tests
     $this->artisan('db:seed', ['--class' => 'RoleAndPermissionSeeder']);
-    
+
     // Create an admin user for authorization
     $this->admin = User::factory()->create([
         'name' => 'Admin User',
@@ -24,25 +24,25 @@ beforeEach(function () {
         'email' => 'manager1@example.com',
     ]);
     $manager->syncRoles(['manager']); // Use syncRoles to replace all roles, not add to them
-    
+
     $user = User::factory()->create([
         'name' => 'User One',
         'email' => 'user1@example.com',
     ]);
     $user->assignRole('user');
-    
+
     $user2 = User::factory()->create([
         'name' => 'User Two',
         'email' => 'user2@example.com',
     ]);
     $user2->syncRoles(['user']); // Observer already assigned 'user', this just ensures it
-    
+
     $admin2 = User::factory()->create([
         'name' => 'Admin Two',
         'email' => 'admin2@example.com',
     ]);
     $admin2->syncRoles(['admin']);
-    
+
     $this->users = collect([
         $manager,
         $user,
@@ -120,7 +120,7 @@ describe('UserRoleManagement Role Assignment', function () {
     });
 
     it('can assign new role to user', function () {
-        $user = $this->users->filter(fn($u) => $u->hasRole('user'))->first();
+        $user = $this->users->filter(fn ($u) => $u->hasRole('user'))->first();
 
         Livewire::test(UserRoleManagement::class)
             ->call('openRoleModal', $user->id)
@@ -248,12 +248,12 @@ describe('UserRoleManagement Bulk Operations', function () {
 
         $component = Livewire::test(UserRoleManagement::class)
             ->set('selectedUsers', [$user->id]);
-            
+
         expect($component->get('selectedUsers'))->toContain($user->id);
     });
 
     it('can perform bulk role assignment', function () {
-        $userIds = $this->users->filter(fn($u) => $u->hasRole('user'))->pluck('id')->toArray();
+        $userIds = $this->users->filter(fn ($u) => $u->hasRole('user'))->pluck('id')->toArray();
 
         Livewire::test(UserRoleManagement::class)
             ->set('selectedUsers', $userIds)
@@ -309,15 +309,15 @@ describe('UserRoleManagement Permissions and Security', function () {
         // The actual authorization is tested manually and works correctly
         $regularUser = User::factory()->create();
         $regularUser->syncRoles(['user']); // Ensure only user role, no admin
-        
+
         // Verify user permissions
         expect($regularUser->hasRole('admin'))->toBeFalse();
         expect($regularUser->isAdmin())->toBeFalse();
-        
+
         // Verify gate works correctly
         expect(\Illuminate\Support\Facades\Gate::forUser($regularUser)->denies('manage-system'))->toBeTrue();
         expect(\Illuminate\Support\Facades\Gate::forUser($regularUser)->allows('manage-system'))->toBeFalse();
-        
+
         // Authorization is working correctly - the Livewire test environment
         // may not properly simulate the full authorization context
         expect(true)->toBeTrue();
@@ -328,7 +328,7 @@ describe('UserRoleManagement UI and Data Handling', function () {
     it('resets page when search is updated', function () {
         $component = Livewire::test(UserRoleManagement::class)
             ->set('search', 'test');
-        
+
         // This is testing that the updatedSearch method exists and works
         // The resetPage call is internal to the component
         expect($component->get('search'))->toBe('test');
@@ -337,7 +337,7 @@ describe('UserRoleManagement UI and Data Handling', function () {
     it('resets page when role filter is updated', function () {
         $component = Livewire::test(UserRoleManagement::class)
             ->set('roleFilter', 'admin');
-        
+
         // This is testing that the updatedRoleFilter method exists and works
         // The resetPage call is internal to the component
         expect($component->get('roleFilter'))->toBe('admin');

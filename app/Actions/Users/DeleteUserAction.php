@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Log;
 class DeleteUserAction extends BaseAction
 {
     use HasAuthorization;
-    
+
     protected bool $useTransactions = true;
 
     /**

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 class ProcessProductImport implements ShouldQueue
 {
     use Queueable;
-    
+
     public $timeout = 0; // No timeout for long-running imports
 
     public function __construct(
@@ -25,12 +25,12 @@ class ProcessProductImport implements ShouldQueue
         Log::info('🚀 Starting queued product import', [
             'importId' => $this->importId,
             'filePath' => $this->filePath,
-            'mappings' => $this->mappings
+            'mappings' => $this->mappings,
         ]);
 
         try {
-            $action = new SimpleImportAction();
-            
+            $action = new SimpleImportAction;
+
             $result = $action->execute([
                 'file' => $this->filePath,
                 'mappings' => $this->mappings,
@@ -39,7 +39,7 @@ class ProcessProductImport implements ShouldQueue
 
             Log::info('✅ Queued product import completed successfully', [
                 'importId' => $this->importId,
-                'result' => $result
+                'result' => $result,
             ]);
 
             // Clean up the temporary file
@@ -51,7 +51,7 @@ class ProcessProductImport implements ShouldQueue
             Log::error('💥 Queued product import failed', [
                 'importId' => $this->importId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Broadcast error

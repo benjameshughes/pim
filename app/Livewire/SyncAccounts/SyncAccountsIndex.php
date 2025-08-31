@@ -13,7 +13,7 @@ class SyncAccountsIndex extends Component
     use WithPagination;
 
     public string $search = '';
-    
+
     public function mount()
     {
         // Authorize managing marketplace connections
@@ -36,7 +36,7 @@ class SyncAccountsIndex extends Component
     {
         // Authorize managing marketplace connections
         $this->authorize('manage-marketplace-connections');
-        
+
         $syncAccount->update(['is_active' => ! $syncAccount->is_active]);
 
         $status = $syncAccount->is_active ? 'activated' : 'deactivated';
@@ -47,7 +47,7 @@ class SyncAccountsIndex extends Component
     {
         // Authorize managing marketplace connections
         $this->authorize('manage-marketplace-connections');
-        
+
         $syncAccount->delete();
         $this->dispatch('success', 'Sync account deleted successfully.');
     }

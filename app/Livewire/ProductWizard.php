@@ -674,7 +674,7 @@ class ProductWizard extends Component
 
         foreach ($imageIds as $imageId) {
             $image = \App\Models\Image::find($imageId);
-            if ($image && !$image->isAttachedTo($this->product)) {
+            if ($image && ! $image->isAttachedTo($this->product)) {
                 $image->attachTo($this->product);
             }
         }

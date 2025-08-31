@@ -9,15 +9,15 @@ describe('ProductVariant Barcode Relationship', function () {
         $this->product = Product::factory()->create([
             'name' => 'Test Product',
             'parent_sku' => 'TEST123',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->variant = ProductVariant::factory()->create([
             'product_id' => $this->product->id,
             'sku' => 'TEST123-RED',
             'title' => 'Test Product - Red',
             'color' => 'Red',
-            'status' => 'active'
+            'status' => 'active',
         ]);
     });
 
@@ -27,7 +27,7 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         expect($this->variant->fresh()->barcode)
@@ -46,7 +46,7 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         expect($barcode->variant)
@@ -61,11 +61,11 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         $variantWithBarcode = ProductVariant::with('barcode')->find($this->variant->id);
-        
+
         expect($variantWithBarcode->barcode)
             ->toBeInstanceOf(Barcode::class)
             ->and($variantWithBarcode->barcode->barcode)
@@ -82,7 +82,7 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         expect((bool) $this->variant->fresh()->barcode)->toBeTrue();
@@ -95,7 +95,7 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => 'TEST123-BLUE',
             'title' => 'Test Product - Blue',
             'color' => 'Blue',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         Barcode::create([
@@ -103,7 +103,7 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         Barcode::create([
@@ -111,14 +111,14 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $variant2->sku,
             'title' => $variant2->title,
             'product_variant_id' => $variant2->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         $productWithVariants = Product::with('variants.barcode')->find($this->product->id);
-        
+
         expect($productWithVariants->variants)
             ->toHaveCount(2)
-            ->and($productWithVariants->variants->filter(fn($v) => $v->barcode))
+            ->and($productWithVariants->variants->filter(fn ($v) => $v->barcode))
             ->toHaveCount(2);
     });
 
@@ -128,12 +128,12 @@ describe('ProductVariant Barcode Relationship', function () {
             'sku' => $this->variant->sku,
             'title' => $this->variant->title,
             'product_variant_id' => $this->variant->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         // Test the relationship constraint
         $relationshipQuery = $this->variant->barcode();
-        
+
         expect($relationshipQuery->getForeignKeyName())
             ->toBe('product_variant_id')
             ->and($relationshipQuery->getLocalKeyName())

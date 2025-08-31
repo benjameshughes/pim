@@ -1,13 +1,13 @@
 <?php
 
-use App\Livewire\Products\ProductOverview;
-use App\Livewire\Products\ProductMarketplace;
 use App\Livewire\Products\ProductHistory;
 use App\Livewire\Products\ProductImages;
+use App\Livewire\Products\ProductMarketplace;
+use App\Livewire\Products\ProductOverview;
 use App\Models\Product;
 use App\Models\ProductVariant;
-use App\Models\SyncLog;
 use App\Models\SyncAccount;
+use App\Models\SyncLog;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -15,16 +15,16 @@ describe('Product Tab Components', function () {
     beforeEach(function () {
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
-        
+
         $this->product = Product::factory()->create([
             'name' => 'Test Product',
             'parent_sku' => 'TEST123',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->variants = ProductVariant::factory(3)->create([
             'product_id' => $this->product->id,
-            'status' => 'active'
+            'status' => 'active',
         ]);
     });
 
@@ -42,7 +42,7 @@ describe('Product Tab Components', function () {
             \App\Models\Barcode::create([
                 'barcode' => '1111111111111',
                 'product_variant_id' => $this->variants[0]->id,
-                'is_assigned' => true
+                'is_assigned' => true,
             ]);
 
             Livewire::test(ProductOverview::class, ['product' => $this->product->load('variants')])
@@ -81,7 +81,7 @@ describe('Product Tab Components', function () {
         beforeEach(function () {
             $this->syncAccount = SyncAccount::factory()->create([
                 'channel' => 'shopify',
-                'name' => 'Test Shopify'
+                'name' => 'Test Shopify',
             ]);
         });
 
@@ -97,7 +97,7 @@ describe('Product Tab Components', function () {
                 'product_id' => $this->product->id,
                 'sync_account_id' => $this->syncAccount->id,
                 'sync_status' => 'synced',
-                'external_product_id' => 'shopify-123'
+                'external_product_id' => 'shopify-123',
             ]);
 
             Livewire::test(ProductMarketplace::class, ['product' => $this->product->load(['syncStatuses.syncAccount'])])
@@ -106,7 +106,7 @@ describe('Product Tab Components', function () {
 
         test('sync product functionality works', function () {
             $component = Livewire::test(ProductMarketplace::class, ['product' => $this->product]);
-            
+
             if (method_exists($component->instance(), 'syncToMarketplace')) {
                 $component->call('syncToMarketplace', $this->syncAccount->id)
                     ->assertDispatched('success');
@@ -118,7 +118,7 @@ describe('Product Tab Components', function () {
             $this->product->marketplaceLinks()->create([
                 'sync_account_id' => $this->syncAccount->id,
                 'link_level' => 'product',
-                'marketplace_data' => ['external_id' => 'shopify-123']
+                'marketplace_data' => ['external_id' => 'shopify-123'],
             ]);
 
             Livewire::test(ProductMarketplace::class, ['product' => $this->product->load('marketplaceLinks')])
@@ -129,20 +129,20 @@ describe('Product Tab Components', function () {
     describe('ProductHistory Component', function () {
         beforeEach(function () {
             $this->syncAccount = SyncAccount::factory()->create();
-            
+
             // Create some sync logs
             SyncLog::factory(5)->create([
                 'product_id' => $this->product->id,
                 'sync_account_id' => $this->syncAccount->id,
                 'status' => 'success',
-                'created_at' => now()->subDays(1)
+                'created_at' => now()->subDays(1),
             ]);
-            
+
             SyncLog::factory(2)->create([
                 'product_id' => $this->product->id,
                 'sync_account_id' => $this->syncAccount->id,
                 'status' => 'failed',
-                'created_at' => now()->subHours(2)
+                'created_at' => now()->subHours(2),
             ]);
         });
 
@@ -155,7 +155,7 @@ describe('Product Tab Components', function () {
 
         test('filters history by status', function () {
             $component = Livewire::test(ProductHistory::class, ['product' => $this->product->load(['syncLogs.syncAccount'])]);
-            
+
             if (method_exists($component->instance(), 'filterByStatus')) {
                 $component->call('filterByStatus', 'failed')
                     ->assertSee('failed')
@@ -166,7 +166,7 @@ describe('Product Tab Components', function () {
         test('paginates history correctly', function () {
             Livewire::test(ProductHistory::class, ['product' => $this->product->load(['syncLogs.syncAccount'])])
                 ->assertStatus(200);
-                // Should handle pagination properly
+            // Should handle pagination properly
         });
 
         test('shows detailed log information', function () {
@@ -175,7 +175,7 @@ describe('Product Tab Components', function () {
                 'sync_account_id' => $this->syncAccount->id,
                 'status' => 'success',
                 'message' => 'Product synced successfully',
-                'response_data' => ['external_id' => '12345']
+                'response_data' => ['external_id' => '12345'],
             ]);
 
             Livewire::test(ProductHistory::class, ['product' => $this->product->load(['syncLogs.syncAccount'])])
@@ -188,9 +188,9 @@ describe('Product Tab Components', function () {
             // Create image relationship
             $image = \App\Models\Image::factory()->create([
                 'filename' => 'test-image.jpg',
-                'is_primary' => true
+                'is_primary' => true,
             ]);
-            
+
             $this->product->images()->attach($image->id);
 
             Livewire::test(ProductImages::class, ['product' => $this->product->load('images')])
@@ -200,7 +200,7 @@ describe('Product Tab Components', function () {
 
         test('upload new image functionality', function () {
             $component = Livewire::test(ProductImages::class, ['product' => $this->product]);
-            
+
             if (method_exists($component->instance(), 'uploadImage')) {
                 // Mock file upload
                 $component->assertStatus(200);
@@ -210,15 +210,15 @@ describe('Product Tab Components', function () {
         test('set primary image functionality', function () {
             $image1 = \App\Models\Image::factory()->create(['is_primary' => true]);
             $image2 = \App\Models\Image::factory()->create(['is_primary' => false]);
-            
+
             $this->product->images()->attach([$image1->id, $image2->id]);
 
             $component = Livewire::test(ProductImages::class, ['product' => $this->product->load('images')]);
-            
+
             if (method_exists($component->instance(), 'setPrimaryImage')) {
                 $component->call('setPrimaryImage', $image2->id)
                     ->assertDispatched('success');
-                    
+
                 expect($image2->fresh()->is_primary)->toBeTrue();
             }
         });
@@ -228,11 +228,11 @@ describe('Product Tab Components', function () {
             $this->product->images()->attach($image->id);
 
             $component = Livewire::test(ProductImages::class, ['product' => $this->product->load('images')]);
-            
+
             if (method_exists($component->instance(), 'deleteImage')) {
                 $component->call('deleteImage', $image->id)
                     ->assertDispatched('success');
-                    
+
                 expect($this->product->images()->where('images.id', $image->id)->exists())->toBeFalse();
             }
         });
@@ -240,14 +240,14 @@ describe('Product Tab Components', function () {
         test('reorder images functionality', function () {
             $image1 = \App\Models\Image::factory()->create(['sort_order' => 1]);
             $image2 = \App\Models\Image::factory()->create(['sort_order' => 2]);
-            
+
             $this->product->images()->attach([
                 $image1->id => ['sort_order' => 1],
-                $image2->id => ['sort_order' => 2]
+                $image2->id => ['sort_order' => 2],
             ]);
 
             $component = Livewire::test(ProductImages::class, ['product' => $this->product->load('images')]);
-            
+
             if (method_exists($component->instance(), 'reorderImages')) {
                 $component->call('reorderImages', [$image2->id, $image1->id])
                     ->assertDispatched('success');
@@ -258,23 +258,23 @@ describe('Product Tab Components', function () {
     describe('Tab Integration', function () {
         test('all tab components load without errors', function () {
             $product = $this->product->load(['variants', 'syncStatuses', 'syncLogs', 'images']);
-            
+
             Livewire::test(ProductOverview::class, ['product' => $product])
                 ->assertStatus(200);
-                
+
             Livewire::test(ProductMarketplace::class, ['product' => $product])
                 ->assertStatus(200);
-                
+
             Livewire::test(ProductHistory::class, ['product' => $product])
                 ->assertStatus(200);
-                
+
             Livewire::test(ProductImages::class, ['product' => $product])
                 ->assertStatus(200);
         });
 
         test('tab components handle empty states', function () {
             $emptyProduct = Product::factory()->create();
-            
+
             Livewire::test(ProductOverview::class, ['product' => $emptyProduct])
                 ->assertStatus(200)
                 ->assertSee('No variants'); // Assuming empty state message

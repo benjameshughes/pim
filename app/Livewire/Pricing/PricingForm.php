@@ -11,7 +11,7 @@ class PricingForm extends Component
         // Authorize editing pricing
         $this->authorize('edit-pricing');
     }
-    
+
     public function render()
     {
         return view('livewire.pricing.pricing-form');

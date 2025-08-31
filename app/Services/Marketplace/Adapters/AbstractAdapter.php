@@ -17,10 +17,13 @@ use App\Services\Marketplace\ValueObjects\SyncResult;
 abstract class AbstractAdapter implements MarketplaceAdapter
 {
     protected ?MarketplaceProduct $marketplaceProduct = null;
+
     protected string $mode = 'create'; // 'create', 'update', or 'recreate'
+
     protected array $fieldsToUpdate = [];
+
     protected ?int $currentProductId = null;
-    
+
     public function __construct(
         protected ?SyncAccount $syncAccount = null
     ) {}
@@ -31,8 +34,8 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     protected function loadProduct(int $productId): Product
     {
         $product = Product::with(['variants', 'variants.pricingRecords', 'images'])->find($productId);
-        
-        if (!$product) {
+
+        if (! $product) {
             throw new \InvalidArgumentException("Product with ID {$productId} not found");
         }
 
@@ -52,8 +55,8 @@ abstract class AbstractAdapter implements MarketplaceAdapter
      */
     protected function requireSyncAccount(): SyncAccount
     {
-        if (!$this->hasSyncAccount()) {
-            throw new \RuntimeException("No valid sync account configured for marketplace");
+        if (! $this->hasSyncAccount()) {
+            throw new \RuntimeException('No valid sync account configured for marketplace');
         }
 
         return $this->syncAccount;
@@ -80,7 +83,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
      */
     public function testConnection(): SyncResult
     {
-        if (!$this->hasSyncAccount()) {
+        if (! $this->hasSyncAccount()) {
             return SyncResult::failure('No sync account configured');
         }
 
@@ -103,7 +106,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
      */
     protected function getMarketplaceProduct(): MarketplaceProduct
     {
-        if (!$this->marketplaceProduct) {
+        if (! $this->marketplaceProduct) {
             throw new \RuntimeException('No product has been created. Call create() method first.');
         }
 
@@ -134,6 +137,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
         $this->mode = 'update';
         $this->currentProductId = $productId;
         $this->fieldsToUpdate = [];
+
         return $this;
     }
 
@@ -143,6 +147,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     public function title(string $title): self
     {
         $this->fieldsToUpdate['title'] = $title;
+
         return $this;
     }
 
@@ -152,6 +157,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     public function images(array $images): self
     {
         $this->fieldsToUpdate['images'] = $images;
+
         return $this;
     }
 
@@ -161,6 +167,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     public function pricing(): self
     {
         $this->fieldsToUpdate['pricing'] = true;
+
         return $this;
     }
 
@@ -173,6 +180,7 @@ abstract class AbstractAdapter implements MarketplaceAdapter
         $this->currentProductId = $productId;
         $this->fieldsToUpdate = [];
         $this->clearStaleMarketplaceAttributes($productId);
+
         return $this;
     }
 
@@ -182,10 +190,12 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     protected function clearStaleMarketplaceAttributes(int $productId): void
     {
         $product = Product::find($productId);
-        if (!$product) return;
+        if (! $product) {
+            return;
+        }
 
         $marketplace = $this->getMarketplaceName();
-        
+
         // Clear all marketplace-specific attributes
         $product->setAttributeValue("{$marketplace}_product_ids", null);
         $product->setAttributeValue("{$marketplace}_sync_account_id", null);

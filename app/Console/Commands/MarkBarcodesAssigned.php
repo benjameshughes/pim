@@ -17,32 +17,32 @@ class MarkBarcodesAssigned extends Command
     {
         $count = $this->option('count');
         $upTo = $this->option('up-to');
-        
+
         if ($upTo) {
             // Mark all barcodes up to the specified barcode number
             $this->info("Marking all barcodes up to '{$upTo}' as assigned...");
-            
+
             $updated = Barcode::where('barcode', '<=', $upTo)
                 ->update([
                     'is_assigned' => true,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
-                
+
             $this->info("✅ Successfully marked {$updated} barcodes up to '{$upTo}' as assigned");
         } else {
             // Mark first N barcodes by count
             $this->info("Marking first {$count} barcodes as assigned...");
-            
+
             $updated = Barcode::orderBy('barcode')
                 ->limit($count)
                 ->update([
                     'is_assigned' => true,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
-            
+
             $this->info("✅ Successfully marked {$updated} barcodes as assigned");
         }
-        
+
         return Command::SUCCESS;
     }
 }

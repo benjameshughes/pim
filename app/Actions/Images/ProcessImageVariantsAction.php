@@ -3,9 +3,9 @@
 namespace App\Actions\Images;
 
 use App\Actions\Base\BaseAction;
+use App\Facades\Activity;
 use App\Models\Image;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 
@@ -29,36 +29,47 @@ class ProcessImageVariantsAction extends BaseAction
      * 🎨 GENERATE IMAGE VARIANTS
      *
      * Create thumbnail and resized versions using DAM system
-     *
-     * @param Image $originalImage
-     * @param array $variantTypes
-     * @return array
      */
-    public function execute(Image $originalImage, array $variantTypes = ['thumb', 'small', 'medium']): array
+    protected function performAction(...$params): array
     {
-        return $this->executeWithBaseHandling(function () use ($originalImage, $variantTypes) {
-            $generatedVariants = [];
+        $originalImage = $params[0] ?? null;
+        $variantTypes = $params[1] ?? ['thumb', 'small', 'medium'];
 
-            foreach ($variantTypes as $variantType) {
-                $variant = $this->generateVariant($originalImage, $variantType);
-                if ($variant) {
-                    $generatedVariants[] = $variant;
-                }
+        if (! $originalImage instanceof Image) {
+            throw new \InvalidArgumentException('First parameter must be an Image instance');
+        }
+
+        if (! is_array($variantTypes)) {
+            throw new \InvalidArgumentException('Second parameter must be an array of variant types');
+        }
+
+        $generatedVariants = [];
+
+        foreach ($variantTypes as $variantType) {
+            $variant = $this->generateVariant($originalImage, $variantType);
+            if ($variant) {
+                $generatedVariants[] = $variant;
             }
+        }
 
-            return $this->success('Image variants generated successfully', [
-                'original_image_id' => $originalImage->id,
-                'variants_generated' => count($generatedVariants),
-                'variant_types' => $variantTypes,
-                'variants' => $generatedVariants
-            ]);
+        // Log variant generation activity
+        if (! empty($generatedVariants)) {
+            Activity::log()
+                ->by(auth()->id())
+                ->variantsGenerated($originalImage, $generatedVariants);
+        }
 
-        }, ['image_id' => $originalImage->id, 'variant_types' => $variantTypes]);
+        return $this->success('Image variants generated successfully', [
+            'original_image_id' => $originalImage->id,
+            'variants_generated' => count($generatedVariants),
+            'variant_types' => $variantTypes,
+            'variants' => $generatedVariants,
+        ]);
     }
 
     protected function generateVariant(Image $originalImage, string $variantType): ?Image
     {
-        if (!isset($this->defaultSizes[$variantType])) {
+        if (! isset($this->defaultSizes[$variantType])) {
             throw new \InvalidArgumentException("Unknown variant type: {$variantType}");
         }
 
@@ -76,12 +87,12 @@ class ProcessImageVariantsAction extends BaseAction
 
         // Download original image
         $originalContent = Storage::disk('images')->get($originalImage->filename);
-        if (!$originalContent) {
-            throw new \Exception("Could not retrieve original image from storage");
+        if (! $originalContent) {
+            throw new \Exception('Could not retrieve original image from storage');
         }
 
         // Process with Intervention Image
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $image = $manager->read($originalContent);
 
         // Resize maintaining aspect ratio
@@ -89,7 +100,7 @@ class ProcessImageVariantsAction extends BaseAction
 
         // Generate variant filename
         $pathinfo = pathinfo($originalImage->filename);
-        $variantFilename = $pathinfo['filename'] . "-{$variantType}." . $pathinfo['extension'];
+        $variantFilename = $pathinfo['filename']."-{$variantType}.".$pathinfo['extension'];
 
         // Save to storage
         $encodedImage = $image->toJpeg($this->quality);
@@ -120,7 +131,6 @@ class ProcessImageVariantsAction extends BaseAction
     /**
      * Get all variants for an image using DAM system
      *
-     * @param Image $image
      * @return \Illuminate\Database\Eloquent\Collection<Image>
      */
     public function getVariants(Image $image): \Illuminate\Database\Eloquent\Collection
@@ -154,7 +164,7 @@ class ProcessImageVariantsAction extends BaseAction
             if ($variant->filename) {
                 Storage::disk('images')->delete($variant->filename);
             }
-            
+
             // Delete record
             $variant->delete();
         }

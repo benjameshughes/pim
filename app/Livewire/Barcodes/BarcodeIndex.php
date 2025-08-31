@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Barcodes;
 
-use App\Models\Barcode;
 use App\Actions\Barcodes\MarkBarcodesAssigned;
+use App\Models\Barcode;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -17,21 +17,29 @@ class BarcodeIndex extends Component
     use WithPagination;
 
     public string $search = '';
-    
+
     public function mount()
     {
         // Authorize viewing barcodes
         $this->authorize('view-barcodes');
     }
+
     public string $assignedFilter = 'all'; // all, assigned, unassigned
+
     public int $perPage = 20;
+
     public string $sortField = 'created_at';
+
     public string $sortDirection = 'desc';
-    
+
     public bool $showMarkAssignedModal = false;
+
     public string $upToBarcode = '';
+
     public int $markCount = 40000;
+
     public bool $setEmptyTitles = false;
+
     public string $defaultTitle = 'Assigned Barcode';
 
     public function render()
@@ -69,7 +77,6 @@ class BarcodeIndex extends Component
         }
     }
 
-
     public function getStatsProperty()
     {
         return [
@@ -78,7 +85,7 @@ class BarcodeIndex extends Component
             'unassigned' => Barcode::where('is_assigned', false)->count(),
         ];
     }
-    
+
     public function openMarkAssignedModal()
     {
         $this->showMarkAssignedModal = true;
@@ -87,29 +94,29 @@ class BarcodeIndex extends Component
         $this->setEmptyTitles = false;
         $this->defaultTitle = 'Assigned Barcode';
     }
-    
+
     public function closeMarkAssignedModal()
     {
         $this->showMarkAssignedModal = false;
         $this->upToBarcode = '';
         $this->markCount = 40000;
     }
-    
+
     public function markBarcodesAssigned()
     {
         // Authorize editing barcodes
         $this->authorize('edit-barcodes');
-        
-        $action = new MarkBarcodesAssigned();
-        
-        if (!empty($this->upToBarcode)) {
+
+        $action = new MarkBarcodesAssigned;
+
+        if (! empty($this->upToBarcode)) {
             $updated = $action->execute($this->upToBarcode, null, $this->setEmptyTitles ? $this->defaultTitle : null);
             $this->dispatch('success', "Marked {$updated} barcodes up to '{$this->upToBarcode}' as assigned");
         } else {
             $updated = $action->execute(null, $this->markCount, $this->setEmptyTitles ? $this->defaultTitle : null);
             $this->dispatch('success', "Marked {$updated} barcodes as assigned");
         }
-        
+
         $this->closeMarkAssignedModal();
         $this->resetPage();
     }

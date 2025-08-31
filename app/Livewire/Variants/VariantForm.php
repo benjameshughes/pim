@@ -42,7 +42,7 @@ class VariantForm extends Component
         } else {
             $this->authorize('create-variants');
         }
-        
+
         if ($variant && $variant->exists) {
             $this->variant = $variant;
             $this->isEditing = true;
@@ -84,7 +84,7 @@ class VariantForm extends Component
         } else {
             $this->authorize('create-variants');
         }
-        
+
         $this->validate();
 
         try {

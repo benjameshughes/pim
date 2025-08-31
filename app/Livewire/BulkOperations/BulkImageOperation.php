@@ -121,13 +121,13 @@ class BulkImageOperation extends BaseBulkOperation
             $image = $imageUploadService->upload($imageFile, [
                 'folder' => $folder,
                 'title' => $item->name ?? 'Bulk Upload Image',
-                'tags' => ['bulk-upload']
+                'tags' => ['bulk-upload'],
             ]);
 
             // Attach image to item
             $image->attachTo($item, [
                 'is_primary' => $isPrimary,
-                'sort_order' => $index
+                'sort_order' => $index,
             ]);
         }
     }
@@ -140,15 +140,15 @@ class BulkImageOperation extends BaseBulkOperation
     private function clearItemImages(Model $item): void
     {
         $imageUploadService = app(ImageUploadService::class);
-        
+
         if ($this->targetType === 'products') {
             // Clear all images attached to this product
             $images = $item->images()->get();
             foreach ($images as $image) {
                 $image->detachFrom($item);
-                
+
                 // If image is not attached to anything else, delete it
-                if (!$image->isAttached()) {
+                if (! $image->isAttached()) {
                     $imageUploadService->deleteImage($image);
                 }
             }
@@ -157,9 +157,9 @@ class BulkImageOperation extends BaseBulkOperation
             $images = $item->images()->get();
             foreach ($images as $image) {
                 $image->detachFrom($item);
-                
+
                 // If image is not attached to anything else, delete it
-                if (!$image->isAttached()) {
+                if (! $image->isAttached()) {
                     $imageUploadService->deleteImage($image);
                 }
             }

@@ -12,25 +12,24 @@ class AssignBarcode
     {
         try {
             // If CSV barcode provided, try to match existing barcode in database
-            if (!empty($csvBarcode)) {
+            if (! empty($csvBarcode)) {
                 $barcode = Barcode::where('barcode', $csvBarcode)->first();
-                
+
                 if ($barcode) {
-                    
+
                     // Check if already assigned to another variant (ignore is_assigned flag, only check actual variant relationship)
                     if ($barcode->product_variant_id !== null && $barcode->product_variant_id !== $variant->id) {
                         throw new Exception("Barcode '{$csvBarcode}' is already assigned to variant ID {$barcode->product_variant_id}.");
                     }
-                    
+
                     // Found matching barcode - assign it to this variant
                     $barcode->update([
                         'product_variant_id' => $variant->id,
                         'is_assigned' => true,
                         'sku' => $variant->sku,
                         'title' => $variant->title,
-                        'updated_at' => now()
+                        'updated_at' => now(),
                     ]);
-                    
 
                     return $barcode;
                 } else {
@@ -44,7 +43,7 @@ class AssignBarcode
                 ->orderBy('id')
                 ->first();
 
-            if (!$barcode) {
+            if (! $barcode) {
                 throw new Exception('No available barcodes found. Please import more barcodes.');
             }
 
@@ -54,13 +53,13 @@ class AssignBarcode
                 'is_assigned' => true,
                 'sku' => $variant->sku,
                 'title' => $variant->title,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return $barcode;
 
         } catch (Exception $e) {
-            throw new Exception('Failed to assign barcode: ' . $e->getMessage());
+            throw new Exception('Failed to assign barcode: '.$e->getMessage());
         }
     }
 }

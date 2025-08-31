@@ -158,7 +158,7 @@ class ProductVariant extends Model
     public function getRetailPrice(): float
     {
         $defaultChannel = \App\Models\SalesChannel::getDefault();
-        if (!$defaultChannel) {
+        if (! $defaultChannel) {
             return 0.0;
         }
 
@@ -194,7 +194,7 @@ class ProductVariant extends Model
     }
 
     /**
-     * 💰 SET CHANNEL PRICE - New attribute-based channel pricing  
+     * 💰 SET CHANNEL PRICE - New attribute-based channel pricing
      * Set price for specific channel (null removes override)
      */
     public function setChannelPrice(string $channelCode, ?float $price): array
@@ -235,7 +235,7 @@ class ProductVariant extends Model
     public function getChannelPricingSummary(): array
     {
         $allPrices = $this->getAllChannelPrices();
-        
+
         $summary = [
             'variant_id' => $this->id,
             'variant_sku' => $this->sku,
@@ -251,7 +251,7 @@ class ProductVariant extends Model
                 $summary['channels_with_overrides'][$channelCode] = [
                     'name' => $channelData['name'],
                     'price' => $channelData['price'],
-                    'markup_percentage' => $this->price > 0 
+                    'markup_percentage' => $this->price > 0
                         ? round((($channelData['price'] - $this->price) / $this->price) * 100, 2)
                         : 0,
                 ];
@@ -370,7 +370,6 @@ class ProductVariant extends Model
         // Fallback to product brand (either direct field or attributes)
         return $this->product?->brand;
     }
-
 
     /**
      * 🎨 GET BARCODE VALUE

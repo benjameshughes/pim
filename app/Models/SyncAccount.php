@@ -489,7 +489,7 @@ class SyncAccount extends Model
 
     /**
      * 🏷️ GET CHANNEL CODE - For pricing integration
-     * 
+     *
      * Format: {channel}_{account_name} → ebay_blindsoutlet, shopify_main
      * This code is used for channel-specific pricing attributes
      */
@@ -497,13 +497,13 @@ class SyncAccount extends Model
     {
         $channel = \Illuminate\Support\Str::slug($this->channel);
         $name = \Illuminate\Support\Str::slug($this->name);
-        
+
         return "{$channel}_{$name}";
     }
 
     /**
      * 🔗 GET CORRESPONDING SALES CHANNEL
-     * 
+     *
      * Get the auto-created SalesChannel for this SyncAccount
      */
     public function getSalesChannel(): ?\App\Models\SalesChannel
@@ -521,11 +521,11 @@ class SyncAccount extends Model
 
     /**
      * 🎯 GET PRICING ATTRIBUTE KEY - For channel-specific pricing
-     * 
+     *
      * Returns: ebay_blindsoutlet_price, shopify_main_price, etc.
      */
     public function getPricingAttributeKey(): string
     {
-        return $this->getChannelCode() . '_price';
+        return $this->getChannelCode().'_price';
     }
 }

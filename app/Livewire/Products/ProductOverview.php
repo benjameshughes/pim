@@ -9,69 +9,70 @@ use Livewire\Component;
 class ProductOverview extends Component
 {
     public Product $product;
+
     public ?array $shopifyPushResult = null;
 
     public function mount(Product $product)
     {
         $this->authorize('view-product-details');
-        
+
         $this->product = $product->load(['variants']);
     }
 
     public function pushToShopify()
     {
         $this->authorize('manage-products');
-        
+
         try {
             // 🎯 KISS API - Use create() or fullUpdate() based on current status
             $shopifyStatus = $this->product->getSmartAttributeValue('shopify_status');
-            
+
             if ($shopifyStatus === 'synced') {
                 // Products already exist - perform full update (preserves Shopify IDs)
                 $result = Sync::marketplace('shopify')
                     ->fullUpdate($this->product->id)
                     ->push();
-                    
+
                 $actionMessage = 'fully updated';
             } else {
                 // No existing products - create new ones
                 $result = Sync::marketplace('shopify')
                     ->create($this->product->id)
                     ->push();
-                    
+
                 $actionMessage = 'created';
             }
-            
+
             $this->shopifyPushResult = [
                 'success' => $result->isSuccess(),
                 'message' => $result->getMessage(),
                 'data' => $result->getData(),
             ];
-            
+
             if ($result->isSuccess()) {
                 $this->dispatch('toast', [
                     'type' => 'success',
-                    'message' => "Successfully {$actionMessage} in Shopify! " . $result->getMessage(),
+                    'message' => "Successfully {$actionMessage} in Shopify! ".$result->getMessage(),
                 ]);
-                
+
                 // Refresh the product to show updated attributes
                 $this->product->refresh();
             } else {
                 $this->dispatch('toast', [
-                    'type' => 'error', 
-                    'message' => "Failed to {$actionMessage} in Shopify: " . $result->getMessage(),
+                    'type' => 'error',
+                    'message' => "Failed to {$actionMessage} in Shopify: ".$result->getMessage(),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             $this->shopifyPushResult = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ];
-            
+
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Push failed: ' . $e->getMessage(),
+                'message' => 'Push failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -79,43 +80,43 @@ class ProductOverview extends Component
     public function updateShopifyTitle()
     {
         $this->authorize('manage-products');
-        
+
         try {
             // KISS fluent API for partial update
             $result = Sync::marketplace('shopify')
                 ->update($this->product->id)
-                ->title($this->product->name . ' - UPDATED')
+                ->title($this->product->name.' - UPDATED')
                 ->push();
-            
+
             $this->shopifyPushResult = [
                 'success' => $result->isSuccess(),
                 'message' => $result->getMessage(),
             ];
-            
+
             if ($result->isSuccess()) {
                 $this->dispatch('toast', [
                     'type' => 'success',
-                    'message' => 'Title updated in Shopify! ' . $result->getMessage(),
+                    'message' => 'Title updated in Shopify! '.$result->getMessage(),
                 ]);
-                
+
                 // Refresh to show any status changes
                 $this->product->refresh();
             } else {
                 $this->dispatch('toast', [
                     'type' => 'error',
-                    'message' => 'Title update failed: ' . $result->getMessage(),
+                    'message' => 'Title update failed: '.$result->getMessage(),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             $this->shopifyPushResult = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ];
-            
+
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Title update failed: ' . $e->getMessage(),
+                'message' => 'Title update failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -123,43 +124,43 @@ class ProductOverview extends Component
     public function updateShopifyPricing()
     {
         $this->authorize('manage-products');
-        
+
         try {
             // KISS fluent API for pricing update
             $result = Sync::marketplace('shopify')
                 ->update($this->product->id)
                 ->pricing()
                 ->push();
-            
+
             $this->shopifyPushResult = [
                 'success' => $result->isSuccess(),
                 'message' => $result->getMessage(),
             ];
-            
+
             if ($result->isSuccess()) {
                 $this->dispatch('toast', [
                     'type' => 'success',
-                    'message' => 'Pricing updated in Shopify! ' . $result->getMessage(),
+                    'message' => 'Pricing updated in Shopify! '.$result->getMessage(),
                 ]);
-                
+
                 // Refresh to show any status changes
                 $this->product->refresh();
             } else {
                 $this->dispatch('toast', [
                     'type' => 'error',
-                    'message' => 'Pricing update failed: ' . $result->getMessage(),
+                    'message' => 'Pricing update failed: '.$result->getMessage(),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             $this->shopifyPushResult = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ];
-            
+
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Pricing update failed: ' . $e->getMessage(),
+                'message' => 'Pricing update failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -167,43 +168,43 @@ class ProductOverview extends Component
     public function deleteFromShopify()
     {
         $this->authorize('manage-products');
-        
+
         try {
             // KISS fluent API for delete operation
             $result = Sync::marketplace('shopify')
                 ->delete($this->product->id)
                 ->push();
-            
+
             $this->shopifyPushResult = [
                 'success' => $result->isSuccess(),
                 'message' => $result->getMessage(),
                 'data' => $result->getData(),
             ];
-            
+
             if ($result->isSuccess()) {
                 $this->dispatch('toast', [
                     'type' => 'success',
-                    'message' => 'Successfully deleted from Shopify! ' . $result->getMessage(),
+                    'message' => 'Successfully deleted from Shopify! '.$result->getMessage(),
                 ]);
-                
+
                 // Refresh to show cleared attributes
                 $this->product->refresh();
             } else {
                 $this->dispatch('toast', [
                     'type' => 'error',
-                    'message' => 'Delete failed: ' . $result->getMessage(),
+                    'message' => 'Delete failed: '.$result->getMessage(),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             $this->shopifyPushResult = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ];
-            
+
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Delete failed: ' . $e->getMessage(),
+                'message' => 'Delete failed: '.$e->getMessage(),
             ]);
         }
     }
@@ -211,47 +212,47 @@ class ProductOverview extends Component
     public function linkToShopify()
     {
         $this->authorize('manage-products');
-        
+
         try {
             // KISS fluent API for link operation
             $result = Sync::marketplace('shopify')
                 ->link($this->product->id)
                 ->push();
-            
+
             $this->shopifyPushResult = [
                 'success' => $result->isSuccess(),
                 'message' => $result->getMessage(),
                 'data' => $result->getData(),
             ];
-            
+
             if ($result->isSuccess()) {
                 $data = $result->getData();
                 $colorGroups = $data['color_groups_count'] ?? 0;
                 $coverage = $data['coverage_percent'] ?? 0;
-                
+
                 $this->dispatch('toast', [
                     'type' => 'success',
                     'message' => "Successfully linked to Shopify! Found {$colorGroups} color groups ({$coverage}% coverage)",
                 ]);
-                
+
                 // Refresh to show new sync status
                 $this->product->refresh();
             } else {
                 $this->dispatch('toast', [
                     'type' => 'error',
-                    'message' => 'Link failed: ' . $result->getMessage(),
+                    'message' => 'Link failed: '.$result->getMessage(),
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             $this->shopifyPushResult = [
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
+                'message' => 'Error: '.$e->getMessage(),
             ];
-            
+
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Link failed: ' . $e->getMessage(),
+                'message' => 'Link failed: '.$e->getMessage(),
             ]);
         }
     }

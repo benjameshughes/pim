@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Log;
 class AssignUserRoleAction extends BaseAction
 {
     use HasAuthorization;
-    
+
     protected bool $useTransactions = true;
 
     /**

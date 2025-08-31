@@ -4,8 +4,8 @@ namespace App\Actions\Marketplace\Shopify;
 
 use App\Models\Product;
 use App\Models\SyncAccount;
-use App\Services\Marketplace\ValueObjects\SyncResult;
 use App\Services\Marketplace\Shopify\ShopifyGraphQLClient;
+use App\Services\Marketplace\ValueObjects\SyncResult;
 use Carbon\Carbon;
 
 /**
@@ -20,16 +20,16 @@ class LinkShopifyProductsAction
     /**
      * Link existing Shopify products to local product
      *
-     * @param int $productId Local product ID
-     * @param SyncAccount $syncAccount Shopify account
+     * @param  int  $productId  Local product ID
+     * @param  SyncAccount  $syncAccount  Shopify account
      * @return SyncResult Link operation result
      */
     public function execute(int $productId, SyncAccount $syncAccount): SyncResult
     {
         try {
             $product = Product::find($productId);
-            
-            if (!$product) {
+
+            if (! $product) {
                 return SyncResult::failure("Product with ID {$productId} not found");
             }
 
@@ -42,12 +42,12 @@ class LinkShopifyProductsAction
             // Get all variant SKUs to search for
             $localVariants = $product->variants;
             if ($localVariants->isEmpty()) {
-                return SyncResult::failure("Product has no variants to link");
+                return SyncResult::failure('Product has no variants to link');
             }
 
             $localSkus = $localVariants->pluck('sku')->filter()->toArray();
             if (empty($localSkus)) {
-                return SyncResult::failure("Product variants have no SKUs to search with");
+                return SyncResult::failure('Product variants have no SKUs to search with');
             }
 
             // Search Shopify for products containing these SKUs
@@ -56,15 +56,15 @@ class LinkShopifyProductsAction
 
             if (empty($shopifyProducts)) {
                 return SyncResult::failure(
-                    "No matching products found in Shopify",
+                    'No matching products found in Shopify',
                     ['searched_skus' => $localSkus]
                 );
             }
 
             // Build SKU mapping and analyze matches
             $linkResult = $this->analyzeLinkPossibilities($product, $shopifyProducts, $localSkus);
-            
-            if (!$linkResult['success']) {
+
+            if (! $linkResult['success']) {
                 return SyncResult::failure(
                     $linkResult['message'],
                     $linkResult['data']
@@ -81,7 +81,7 @@ class LinkShopifyProductsAction
 
         } catch (\Exception $e) {
             return SyncResult::failure(
-                'Link operation failed: ' . $e->getMessage(),
+                'Link operation failed: '.$e->getMessage(),
                 [],
                 [$e->getMessage()]
             );
@@ -102,8 +102,8 @@ class LinkShopifyProductsAction
         foreach ($shopifyProducts as $shopifyProduct) {
             foreach ($shopifyProduct['variants'] as $shopifyVariant) {
                 $sku = $shopifyVariant['sku'];
-                
-                if (!in_array($sku, $localSkus)) {
+
+                if (! in_array($sku, $localSkus)) {
                     continue; // Skip variants that don't match our local SKUs
                 }
 
@@ -116,13 +116,13 @@ class LinkShopifyProductsAction
 
                 // Extract color from Shopify product title (e.g., "Product Name - Red")
                 $color = $this->extractColorFromTitle($shopifyProduct['title'], $localProduct->name);
-                
-                if (!isset($colorGroups[$color])) {
+
+                if (! isset($colorGroups[$color])) {
                     $colorGroups[$color] = [
                         'shopify_product_id' => $shopifyProduct['id'],
                         'shopify_title' => $shopifyProduct['title'],
                         'variant_count' => 0,
-                        'variants' => []
+                        'variants' => [],
                     ];
                 }
 
@@ -146,7 +146,7 @@ class LinkShopifyProductsAction
         $totalLocalSkus = count($localSkus);
         $foundSkuCount = count($foundSkus);
         $coveragePercent = round(($foundSkuCount / $totalLocalSkus) * 100, 1);
-        
+
         // Validation rules
         if ($foundSkuCount === 0) {
             return [
@@ -155,7 +155,7 @@ class LinkShopifyProductsAction
                 'data' => [
                     'searched_skus' => $localSkus,
                     'shopify_products_found' => count($shopifyProducts),
-                ]
+                ],
             ];
         }
 
@@ -169,24 +169,24 @@ class LinkShopifyProductsAction
                     'total_skus' => $totalLocalSkus,
                     'missing_skus' => array_diff($localSkus, array_keys($foundSkus)),
                     'color_groups' => $colorGroups,
-                ]
+                ],
             ];
         }
 
-        if (!empty($skuDuplicates)) {
+        if (! empty($skuDuplicates)) {
             return [
                 'success' => false,
                 'message' => 'Duplicate SKUs found across multiple Shopify products',
                 'data' => [
                     'duplicate_skus' => $skuDuplicates,
                     'message' => 'Each SKU should only exist in one Shopify product',
-                ]
+                ],
             ];
         }
 
         // Success case
-        $message = $coveragePercent === 100 
-            ? "Perfect match: All {$foundSkuCount} variants found across " . count($colorGroups) . " color groups"
+        $message = $coveragePercent === 100
+            ? "Perfect match: All {$foundSkuCount} variants found across ".count($colorGroups).' color groups'
             : "Partial match: {$foundSkuCount}/{$totalLocalSkus} variants found ({$coveragePercent}% coverage)";
 
         return [
@@ -199,13 +199,13 @@ class LinkShopifyProductsAction
                 'color_groups_count' => count($colorGroups),
                 'color_groups' => $colorGroups,
                 'variant_mappings' => $variantMappings,
-                'shopify_products' => array_map(fn($p) => [
+                'shopify_products' => array_map(fn ($p) => [
                     'id' => $p['id'],
                     'title' => $p['title'],
                     'handle' => $p['handle'],
                     'status' => $p['status'],
                 ], $shopifyProducts),
-            ]
+            ],
         ];
     }
 
@@ -215,12 +215,12 @@ class LinkShopifyProductsAction
     protected function extractColorFromTitle(string $shopifyTitle, string $baseProductName): string
     {
         // Expected format: "Product Name - Color"
-        $pattern = '/^' . preg_quote($baseProductName, '/') . '\s*-\s*(.+)$/i';
-        
+        $pattern = '/^'.preg_quote($baseProductName, '/').'\s*-\s*(.+)$/i';
+
         if (preg_match($pattern, $shopifyTitle, $matches)) {
             return trim($matches[1]);
         }
-        
+
         // Fallback: use the full title if pattern doesn't match
         return $shopifyTitle;
     }
@@ -231,6 +231,7 @@ class LinkShopifyProductsAction
     protected function findLocalVariantId(Product $product, string $sku): ?int
     {
         $variant = $product->variants->where('sku', $sku)->first();
+
         return $variant ? $variant->id : null;
     }
 
@@ -251,7 +252,7 @@ class LinkShopifyProductsAction
         $product->setAttributeValue('shopify_sync_account_id', $syncAccount->id);
         $product->setAttributeValue('shopify_synced_at', Carbon::now()->toISOString());
         $product->setAttributeValue('shopify_status', 'synced');
-        
+
         // Store additional metadata about the link
         $metadata = [
             'linked_at' => Carbon::now()->toISOString(),
@@ -262,7 +263,7 @@ class LinkShopifyProductsAction
             'total_variants' => $linkData['total_skus'],
             'sync_account_name' => $syncAccount->name,
         ];
-        
+
         $product->setAttributeValue('shopify_metadata', json_encode($metadata));
     }
 }

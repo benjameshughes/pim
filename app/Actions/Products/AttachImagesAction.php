@@ -64,7 +64,7 @@ class AttachImagesAction
     protected function attachImageToVariants(int $imageId, array $variantIds): void
     {
         $image = Image::find($imageId);
-        if (!$image) {
+        if (! $image) {
             return;
         }
 

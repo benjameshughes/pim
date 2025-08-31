@@ -3,16 +3,16 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 /**
  * 🔐 SUPER GRANULAR ROLE AND PERMISSION SEEDER
- * 
+ *
  * Creates extremely detailed permissions for every aspect of the application.
  * Pattern: {action}-{resource} (e.g., view-products, create-users, etc.)
- * 
- * Actions: view, create, edit, update, delete, manage, bulk-edit, bulk-delete, 
+ *
+ * Actions: view, create, edit, update, delete, manage, bulk-edit, bulk-delete,
  *          import, export, assign, upload, download, sync, process
  */
 class RoleAndPermissionSeeder extends Seeder
@@ -28,7 +28,7 @@ class RoleAndPermissionSeeder extends Seeder
         // === USER MANAGEMENT PERMISSIONS ===
         $userPermissions = [
             'view-users',
-            'create-users', 
+            'create-users',
             'edit-users',
             'update-users',
             'delete-users',
@@ -45,7 +45,7 @@ class RoleAndPermissionSeeder extends Seeder
         $rolePermissions = [
             'view-roles',
             'create-roles',
-            'edit-roles', 
+            'edit-roles',
             'update-roles',
             'delete-roles',
             'assign-roles',
@@ -65,7 +65,7 @@ class RoleAndPermissionSeeder extends Seeder
             'view-products',
             'create-products',
             'edit-products',
-            'update-products', 
+            'update-products',
             'delete-products',
             'bulk-edit-products',
             'bulk-delete-products',
@@ -86,7 +86,7 @@ class RoleAndPermissionSeeder extends Seeder
             'create-variants',
             'edit-variants',
             'update-variants',
-            'delete-variants', 
+            'delete-variants',
             'bulk-edit-variants',
             'bulk-delete-variants',
             'manage-variants',
@@ -123,7 +123,7 @@ class RoleAndPermissionSeeder extends Seeder
             'update-images',
             'delete-images',
             'bulk-upload-images',
-            'bulk-edit-images', 
+            'bulk-edit-images',
             'bulk-delete-images',
             'manage-images',
             'assign-images',
@@ -139,7 +139,7 @@ class RoleAndPermissionSeeder extends Seeder
         $barcodePermissions = [
             'view-barcodes',
             'create-barcodes',
-            'edit-barcodes', 
+            'edit-barcodes',
             'update-barcodes',
             'delete-barcodes',
             'bulk-edit-barcodes',
@@ -162,7 +162,7 @@ class RoleAndPermissionSeeder extends Seeder
             'update-categories',
             'delete-categories',
             'bulk-edit-categories',
-            'bulk-delete-categories', 
+            'bulk-delete-categories',
             'manage-categories',
             'assign-categories',
             'remove-categories',
@@ -196,19 +196,19 @@ class RoleAndPermissionSeeder extends Seeder
             'delete-imports',
             'manage-imports',
             'import-products',
-            'import-variants', 
+            'import-variants',
             'import-images',
             'import-barcodes',
             'import-stock',
             'view-exports',
-            'create-exports', 
+            'create-exports',
             'edit-exports',
             'delete-exports',
             'manage-exports',
             'export-products',
             'export-variants',
             'export-pricing',
-            'export-images', 
+            'export-images',
             'export-barcodes',
             'export-stock',
             'view-import-history',
@@ -278,7 +278,7 @@ class RoleAndPermissionSeeder extends Seeder
             'view-tags',
             'create-tags',
             'edit-tags',
-            'update-tags', 
+            'update-tags',
             'delete-tags',
             'bulk-edit-tags',
             'bulk-delete-tags',
@@ -377,7 +377,7 @@ class RoleAndPermissionSeeder extends Seeder
             $userPermissions,
             ['view-roles', 'assign-roles', 'remove-roles'], // Limited role management
             $productPermissions,
-            $variantPermissions, 
+            $variantPermissions,
             $pricingPermissions,
             $imagePermissions,
             $barcodePermissions,
@@ -398,49 +398,49 @@ class RoleAndPermissionSeeder extends Seeder
         $userPermissions = [
             // Basic user operations
             'view-users', 'view-user-profiles',
-            
+
             // Product operations (no delete)
             'view-products', 'create-products', 'edit-products', 'update-products', 'view-product-details',
-            
+
             // Variant operations (no delete)
             'view-variants', 'create-variants', 'edit-variants', 'update-variants', 'view-variant-details',
-            
+
             // Basic pricing (view only)
             'view-pricing', 'view-channel-pricing',
-            
+
             // Image operations (limited)
             'view-images', 'upload-images', 'view-image-details',
-            
+
             // Barcode operations (view + assign)
             'view-barcodes', 'assign-barcodes', 'scan-barcodes',
-            
+
             // Category operations (view + assign)
             'view-categories', 'assign-categories', 'view-category-tree',
-            
+
             // Stock operations (view + basic updates)
             'view-stock', 'update-stock', 'view-stock-history',
-            
+
             // Import operations (basic)
             'import-products', 'import-variants', 'view-import-history',
-            
+
             // Marketplace operations (view only)
             'view-marketplaces', 'view-marketplace-listings', 'view-sync-logs',
-            
+
             // Attributes (view + assign)
             'view-attributes', 'assign-attributes', 'view-attribute-definitions',
-            
-            // Tags (view + assign)  
+
+            // Tags (view + assign)
             'view-tags', 'assign-tags',
-            
+
             // Basic dashboard
             'view-dashboard', 'view-analytics',
-            
+
             // Notifications
-            'view-notifications'
+            'view-notifications',
         ];
         $userRole->givePermissionTo($userPermissions);
 
-        $this->command->info('✅ Created ' . Permission::count() . ' super granular permissions');
+        $this->command->info('✅ Created '.Permission::count().' super granular permissions');
         $this->command->info('✅ Created 3 roles: admin (all permissions), manager (comprehensive), user (basic)');
         $this->command->info('🔐 Super granular permission system ready!');
     }

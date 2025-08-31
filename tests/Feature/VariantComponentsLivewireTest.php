@@ -1,9 +1,9 @@
 <?php
 
-use App\Livewire\Variants\VariantShow;
-use App\Livewire\Variants\VariantIndex;
-use App\Livewire\Variants\VariantForm;
 use App\Livewire\Products\VariantCreate;
+use App\Livewire\Variants\VariantForm;
+use App\Livewire\Variants\VariantIndex;
+use App\Livewire\Variants\VariantShow;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
@@ -13,19 +13,19 @@ describe('Variant Livewire Components', function () {
     beforeEach(function () {
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
-        
+
         $this->product = Product::factory()->create([
             'name' => 'Test Product',
             'parent_sku' => 'TEST123',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->variant = ProductVariant::factory()->create([
             'product_id' => $this->product->id,
             'sku' => 'TEST123-RED',
             'title' => 'Test Product - Red',
             'color' => 'Red',
-            'status' => 'active'
+            'status' => 'active',
         ]);
     });
 
@@ -34,7 +34,7 @@ describe('Variant Livewire Components', function () {
             $variant2 = ProductVariant::factory()->create([
                 'product_id' => $this->product->id,
                 'sku' => 'TEST123-BLUE',
-                'color' => 'Blue'
+                'color' => 'Blue',
             ]);
 
             Livewire::test(VariantIndex::class)
@@ -56,7 +56,7 @@ describe('Variant Livewire Components', function () {
             $otherProduct = Product::factory()->create(['parent_sku' => 'OTHER123']);
             ProductVariant::factory()->create([
                 'product_id' => $otherProduct->id,
-                'sku' => 'OTHER123-GREEN'
+                'sku' => 'OTHER123-GREEN',
             ]);
 
             Livewire::test(VariantIndex::class)
@@ -70,7 +70,7 @@ describe('Variant Livewire Components', function () {
             \App\Models\Barcode::create([
                 'barcode' => '1234567890123',
                 'product_variant_id' => $this->variant->id,
-                'is_assigned' => true
+                'is_assigned' => true,
             ]);
 
             Livewire::test(VariantIndex::class)
@@ -97,7 +97,7 @@ describe('Variant Livewire Components', function () {
             \App\Models\Barcode::create([
                 'barcode' => '9999999999999',
                 'product_variant_id' => $this->variant->id,
-                'is_assigned' => true
+                'is_assigned' => true,
             ]);
 
             Livewire::test(VariantShow::class, ['variant' => $this->variant->load('barcode')])
@@ -106,12 +106,12 @@ describe('Variant Livewire Components', function () {
 
         test('delete variant functionality', function () {
             $component = Livewire::test(VariantShow::class, ['variant' => $this->variant]);
-            
+
             if (method_exists($component->instance(), 'deleteVariant')) {
                 $component->call('deleteVariant')
                     ->assertDispatched('success')
                     ->assertRedirect(route('variants.index'));
-                    
+
                 expect(ProductVariant::find($this->variant->id))->toBeNull();
             }
         });
@@ -230,7 +230,7 @@ describe('Variant Livewire Components', function () {
         test('bulk delete variants works', function () {
             $variant2 = ProductVariant::factory()->create([
                 'product_id' => $this->product->id,
-                'sku' => 'TEST123-BULK'
+                'sku' => 'TEST123-BULK',
             ]);
 
             $component = Livewire::test(VariantIndex::class)
@@ -248,7 +248,7 @@ describe('Variant Livewire Components', function () {
         test('bulk update variants works', function () {
             $variant2 = ProductVariant::factory()->create([
                 'product_id' => $this->product->id,
-                'status' => 'active'
+                'status' => 'active',
             ]);
 
             $component = Livewire::test(VariantIndex::class)

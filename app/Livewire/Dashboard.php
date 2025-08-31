@@ -10,8 +10,9 @@ use Livewire\Component;
 class Dashboard extends Component
 {
     public $showTest = false;
+
     public $user = null;
-    
+
     public function mount()
     {
         // Authorize viewing dashboard
@@ -29,6 +30,7 @@ class Dashboard extends Component
     {
         broadcast(new \App\Events\TestEvent(auth()->user()));
     }
+
     public function render()
     {
         return view('livewire.dashboard');

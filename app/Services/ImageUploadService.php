@@ -3,11 +3,10 @@
 namespace App\Services;
 
 use App\Enums\ImageProcessingStatus;
+use App\Exceptions\ImageReprocessException;
 use App\Jobs\GenerateImageVariantsJob;
 use App\Jobs\ProcessImageJob;
 use App\Models\Image;
-use App\Exceptions\ImageReprocessException;
-use App\Services\ImageProcessingTracker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -153,14 +152,14 @@ class ImageUploadService
      */
     public function reprocessImage(Image $image): Image
     {
-        if (!$image->filename || !$image->url) {
+        if (! $image->filename || ! $image->url) {
             throw ImageReprocessException::invalidImage();
         }
 
         // Download image content temporarily
         $imageContent = Storage::disk($this->disk)->get($image->filename);
-        
-        if (!$imageContent) {
+
+        if (! $imageContent) {
             throw ImageReprocessException::storageRetrievalFailed();
         }
 
@@ -171,8 +170,8 @@ class ImageUploadService
 
         // Extract image dimensions and info
         $imageInfo = getimagesize($tempPath);
-        
-        if (!$imageInfo) {
+
+        if (! $imageInfo) {
             fclose($tempFile);
             throw ImageReprocessException::dimensionExtractionFailed();
         }
@@ -182,7 +181,7 @@ class ImageUploadService
             'height' => $imageInfo[1],
             'mime_type' => $imageInfo['mime'],
         ];
-        
+
         // Get file size from storage
         $size = Storage::disk($this->disk)->size($image->filename);
         if ($size) {
@@ -206,7 +205,7 @@ class ImageUploadService
     {
         try {
             $imageInfo = getimagesize($file->getPathname());
-            
+
             return [
                 'width' => $imageInfo[0] ?? 0,
                 'height' => $imageInfo[1] ?? 0,

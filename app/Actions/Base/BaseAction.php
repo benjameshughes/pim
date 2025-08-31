@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 abstract class BaseAction
 {
     use HasAuthorization;
-    
+
     protected bool $useTransactions = true;
 
     protected string $actionName;

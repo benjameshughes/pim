@@ -15,9 +15,9 @@ trait TracksUserInteractions
         $route = request()->route()?->getName() ?? 'unknown';
         $component = static::class;
         $componentName = class_basename($component);
-        
+
         $description = "{$userName} clicked '{$buttonName}' button in {$componentName}";
-        
+
         Activity::log()
             ->by(auth()->id())
             ->customEvent('ui.button_clicked')
@@ -43,9 +43,9 @@ trait TracksUserInteractions
     {
         $userName = auth()->user()?->name ?? 'Guest';
         $componentName = class_basename(static::class);
-        
+
         $description = "{$userName} submitted '{$formName}' form in {$componentName}";
-        
+
         Activity::log()
             ->by(auth()->id())
             ->customEvent('ui.form_submitted')
@@ -70,9 +70,9 @@ trait TracksUserInteractions
     {
         $userName = auth()->user()?->name ?? 'Guest';
         $componentName = class_basename(static::class);
-        
+
         $description = "{$userName} switched from '{$fromTab}' tab to '{$toTab}' tab in {$componentName}";
-        
+
         Activity::log()
             ->by(auth()->id())
             ->customEvent('ui.tab_changed')
@@ -95,9 +95,9 @@ trait TracksUserInteractions
     {
         $userName = auth()->user()?->name ?? 'Guest';
         $componentName = class_basename(static::class);
-        
+
         $description = "{$userName} searched for '{$query}' ({$searchType}) in {$componentName}";
-        
+
         Activity::log()
             ->by(auth()->id())
             ->customEvent('ui.search_performed')

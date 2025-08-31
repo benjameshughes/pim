@@ -29,7 +29,7 @@ class CreateVariantAction extends BaseAction
     {
         // Authorize creating variants
         $this->authorizeWithRole('create-variants', 'admin');
-        
+
         $data = $params[0] ?? [];
 
         $this->validateVariantData($data);
@@ -47,7 +47,7 @@ class CreateVariantAction extends BaseAction
         // 📝 Log variant creation with gorgeous detail
         $userName = auth()->user()?->name ?? 'System';
         $productName = $variant->product?->name ?? 'Unknown Product';
-        
+
         Activity::log()
             ->by(auth()->id())
             ->created($variant)

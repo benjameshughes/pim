@@ -2,12 +2,9 @@
 
 namespace App\Actions\Import;
 
-use App\Actions\Import\AttributeAssignmentAction;
-use App\Actions\Import\ExtractDimensions;
 use App\Actions\Barcodes\AssignBarcode;
 use App\Actions\Pricing\AssignPricing;
 use App\Models\Product;
-use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -19,48 +16,53 @@ use Illuminate\Support\Facades\Log;
 class ProcessCSVRow
 {
     private CreateOrUpdateProduct $createProduct;
+
     private CreateOrUpdateVariant $createVariant;
+
     private AttributeAssignmentAction $assignAttributes;
+
     private AssignBarcode $assignBarcode;
+
     private AssignPricing $assignPricing;
+
     private ExtractParentInfo $extractParentInfo;
 
     public function __construct()
     {
-        $this->createProduct = new CreateOrUpdateProduct();
-        $this->createVariant = new CreateOrUpdateVariant();
-        $this->assignAttributes = new AttributeAssignmentAction();
-        $this->assignBarcode = new AssignBarcode();
-        $this->assignPricing = new AssignPricing();
-        $this->extractParentInfo = new ExtractParentInfo(new ExtractDimensions());
+        $this->createProduct = new CreateOrUpdateProduct;
+        $this->createVariant = new CreateOrUpdateVariant;
+        $this->assignAttributes = new AttributeAssignmentAction;
+        $this->assignBarcode = new AssignBarcode;
+        $this->assignPricing = new AssignPricing;
+        $this->extractParentInfo = new ExtractParentInfo(new ExtractDimensions);
     }
 
     /**
      * Process a single CSV row
      *
-     * @param array $row Raw CSV row data
-     * @param array $mappings Column mappings
-     * @param array $adHocAttributes Ad-hoc attribute mappings
-     * @param array $headers CSV headers
-     * @param callable|null $statusCallback Status update callback
+     * @param  array  $row  Raw CSV row data
+     * @param  array  $mappings  Column mappings
+     * @param  array  $adHocAttributes  Ad-hoc attribute mappings
+     * @param  array  $headers  CSV headers
+     * @param  callable|null  $statusCallback  Status update callback
      * @return array Processing results
      */
     public function execute(
-        array $row, 
-        array $mappings, 
-        array $adHocAttributes, 
-        array $headers, 
+        array $row,
+        array $mappings,
+        array $adHocAttributes,
+        array $headers,
         ?callable $statusCallback = null
     ): array {
         try {
             // Extract data from row using mappings
             $data = $this->extractRowData($row, $mappings);
 
-            if (!$data['sku'] || !$data['title']) {
+            if (! $data['sku'] || ! $data['title']) {
                 return [
                     'success' => false,
                     'action' => 'skipped',
-                    'reason' => 'Missing required SKU or title'
+                    'reason' => 'Missing required SKU or title',
                 ];
             }
 
@@ -93,7 +95,7 @@ class ProcessCSVRow
             $statusCallback && $statusCallback('assigning_pricing', "Setting price for {$data['sku']}");
 
             // Assign pricing to variant
-            if (!empty($data['price'])) {
+            if (! empty($data['price'])) {
                 $price = $this->parsePrice($data['price']);
                 if ($price && $price > 0) {
                     $this->assignPricing->execute($variant, $price);
@@ -106,20 +108,20 @@ class ProcessCSVRow
                 'product_created' => $product->wasRecentlyCreated,
                 'variant_created' => $variant->wasRecentlyCreated,
                 'sku' => $data['sku'],
-                'product_name' => $parentInfo['product_name']
+                'product_name' => $parentInfo['product_name'],
             ];
 
         } catch (\Exception $e) {
             Log::error('Row processing failed', [
                 'sku' => $data['sku'] ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return [
                 'success' => false,
                 'action' => 'error',
                 'error' => $e->getMessage(),
-                'sku' => $data['sku'] ?? 'unknown'
+                'sku' => $data['sku'] ?? 'unknown',
             ];
         }
     }

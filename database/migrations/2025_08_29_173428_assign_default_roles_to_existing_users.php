@@ -1,14 +1,13 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
-     * 
+     *
      * Assign default roles to existing users:
      * - First user (likely the owner) gets admin role
      * - Other users get 'user' role by default
@@ -36,19 +35,19 @@ return new class extends Migration
         \Log::info('Role assignment migration completed', [
             'total_users' => $users->count(),
             'admin_assigned' => $firstUser->email,
-            'users_assigned' => $users->count() - 1
+            'users_assigned' => $users->count() - 1,
         ]);
     }
 
     /**
      * Reverse the migrations.
-     * 
+     *
      * Remove all role assignments (set back to null)
      */
     public function down(): void
     {
         User::whereNotNull('role')->update(['role' => null]);
-        
+
         \Log::info('Role assignment migration reversed - all roles set to null');
     }
 };

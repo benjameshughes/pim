@@ -19,7 +19,7 @@ class ExtractDimensions
      * - "60cm 210cm" (space separated)
      * - "60cm" (width only)
      *
-     * @param string $title Product title
+     * @param  string  $title  Product title
      * @return array ['width' => int|null, 'drop' => int|null]
      */
     public function execute(string $title): array

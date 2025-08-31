@@ -8,7 +8,14 @@
                     <span>Back to Library</span>
                 </a>
             </div>
-            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $image->display_title }}</h1>
+            <div class="flex items-center gap-2 mb-1">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ $originalImage->display_title }}</h1>
+                @if($context === 'variant')
+                    <flux:badge size="sm" color="blue">
+                        {{ ucfirst($image->getVariantType() ?: 'Variant') }}
+                    </flux:badge>
+                @endif
+            </div>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 font-mono">{{ $image->filename }}</p>
         </div>
         
@@ -91,20 +98,16 @@
         </div>
     @elseif($isHistory)
         {{-- 📜 HISTORY TAB CONTENT --}}
-        <div class="space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-8">
-                <div class="text-center py-8">
-                    <flux:icon name="clock" class="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">History Coming Soon</h3>
-                    <p class="text-gray-600 dark:text-gray-400">Image change history will be available here.</p>
-                </div>
-            </div>
-        </div>
+        <livewire:images.image-history :image="$image" />
     @else
         {{-- 👁️ OVERVIEW TAB CONTENT (DEFAULT) --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {{-- Image Preview Column --}}
-            <div class="lg:col-span-1">
+        <div class="space-y-6">
+            {{-- 🎨 VARIANT SELECTOR --}}
+            <livewire:images.image-variant-selector :image="$image" />
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {{-- Image Preview Column --}}
+                <div class="lg:col-span-1">
                 <div class="bg-white dark:bg-gray-800 rounded-lg p-6 sticky top-6">
                     <div class="mb-4">
                         <h3 class="text-lg font-medium text-gray-900 dark:text-white">Image Preview</h3>
@@ -238,6 +241,7 @@
                 </div>
                 @endif
             </div>
+        </div>
         </div>
     @endif
 </div>

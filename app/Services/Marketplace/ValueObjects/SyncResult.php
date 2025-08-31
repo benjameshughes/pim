@@ -57,7 +57,7 @@ class SyncResult
      */
     public function isFailure(): bool
     {
-        return !$this->success;
+        return ! $this->success;
     }
 
     /**

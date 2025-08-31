@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Gate;
 
 /**
  * 🔐 AUTHORIZATION TRAIT FOR ACTIONS
- * 
+ *
  * Provides consistent authorization methods for Action classes
  * Following Laravel best practices for permission checking
  */
@@ -17,11 +17,11 @@ trait HasAuthorization
      */
     protected function authorize(string $ability, mixed $arguments = []): void
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             abort(401, 'Authentication required');
         }
 
-        if (!Gate::allows($ability, $arguments)) {
+        if (! Gate::allows($ability, $arguments)) {
             abort(403, "Insufficient permissions: {$ability}");
         }
     }
@@ -31,7 +31,7 @@ trait HasAuthorization
      */
     protected function can(string $ability, mixed $arguments = []): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
 
@@ -43,7 +43,7 @@ trait HasAuthorization
      */
     protected function canAny(array $abilities, mixed $arguments = []): bool
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             return false;
         }
 
@@ -61,13 +61,13 @@ trait HasAuthorization
      */
     protected function authorizeWithRole(string $permission, string $role): void
     {
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             abort(401, 'Authentication required');
         }
 
         $user = auth()->user();
-        
-        if (!($user->can($permission) || $user->hasRole($role))) {
+
+        if (! ($user->can($permission) || $user->hasRole($role))) {
             abort(403, "Insufficient permissions: requires {$permission} or {$role} role");
         }
     }

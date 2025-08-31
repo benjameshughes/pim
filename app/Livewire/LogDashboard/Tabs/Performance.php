@@ -9,8 +9,11 @@ use Livewire\Component;
 class Performance extends Component
 {
     public int $requestLimit = 50;
+
     public int $endpointLimit = 15;
+
     public bool $autoRefresh = false;
+
     public int $refreshInterval = 30;
 
     protected LogParserService $logParser;
@@ -22,7 +25,7 @@ class Performance extends Component
 
     public function toggleAutoRefresh(): void
     {
-        $this->autoRefresh = !$this->autoRefresh;
+        $this->autoRefresh = ! $this->autoRefresh;
     }
 
     public function refreshData(): void
@@ -63,14 +66,14 @@ class Performance extends Component
     public function getRequestsByHourProperty(): array
     {
         $requests = $this->logParser->getRecentRequests(200);
-        
+
         return $requests
             ->groupBy(function ($request) {
-                return $request['timestamp'] ? 
-                    \Carbon\Carbon::parse($request['timestamp'])->format('H:00') : 
+                return $request['timestamp'] ?
+                    \Carbon\Carbon::parse($request['timestamp'])->format('H:00') :
                     now()->format('H:00');
             })
-            ->map(fn($group) => $group->count())
+            ->map(fn ($group) => $group->count())
             ->sortKeys()
             ->toArray();
     }
@@ -78,18 +81,18 @@ class Performance extends Component
     public function getResponseTimeDistributionProperty(): array
     {
         $requests = $this->logParser->getRecentRequests(200);
-        
+
         $distribution = [
             '0-100ms' => 0,
-            '100-500ms' => 0, 
+            '100-500ms' => 0,
             '500ms-1s' => 0,
             '1s-2s' => 0,
-            '2s+' => 0
+            '2s+' => 0,
         ];
 
         foreach ($requests as $request) {
             $duration = $request['duration_ms'] ?? 0;
-            
+
             if ($duration < 100) {
                 $distribution['0-100ms']++;
             } elseif ($duration < 500) {
@@ -109,19 +112,27 @@ class Performance extends Component
     public function getStatusCodeDistributionProperty(): array
     {
         $requests = $this->logParser->getRecentRequests(200);
-        
+
         return $requests
             ->groupBy(function ($request) {
                 $status = $request['status'] ?? 200;
-                
-                if ($status >= 200 && $status < 300) return '2xx Success';
-                if ($status >= 300 && $status < 400) return '3xx Redirect';
-                if ($status >= 400 && $status < 500) return '4xx Client Error';
-                if ($status >= 500) return '5xx Server Error';
-                
+
+                if ($status >= 200 && $status < 300) {
+                    return '2xx Success';
+                }
+                if ($status >= 300 && $status < 400) {
+                    return '3xx Redirect';
+                }
+                if ($status >= 400 && $status < 500) {
+                    return '4xx Client Error';
+                }
+                if ($status >= 500) {
+                    return '5xx Server Error';
+                }
+
                 return 'Unknown';
             })
-            ->map(fn($group) => $group->count())
+            ->map(fn ($group) => $group->count())
             ->toArray();
     }
 
@@ -137,7 +148,7 @@ class Performance extends Component
                 'type' => 'warning',
                 'title' => 'Slow Average Response Time',
                 'message' => "Average response time is {$metrics['avg_response_time']}ms. Consider optimizing slow endpoints.",
-                'action' => 'Review slowest endpoints below'
+                'action' => 'Review slowest endpoints below',
             ];
         }
 
@@ -147,7 +158,7 @@ class Performance extends Component
                 'type' => 'error',
                 'title' => 'High Error Rate',
                 'message' => "Error rate is {$metrics['error_rate']}%. This indicates potential issues.",
-                'action' => 'Check the Errors tab for details'
+                'action' => 'Check the Errors tab for details',
             ];
         }
 
@@ -157,7 +168,7 @@ class Performance extends Component
                 'type' => 'info',
                 'title' => 'High Traffic Volume',
                 'message' => "{$metrics['total_requests']} requests processed recently. Monitor performance closely.",
-                'action' => 'Consider scaling if needed'
+                'action' => 'Consider scaling if needed',
             ];
         }
 
@@ -167,7 +178,7 @@ class Performance extends Component
                 'type' => 'success',
                 'title' => 'Excellent Performance',
                 'message' => 'Low response times and minimal errors. System is performing well!',
-                'action' => 'Keep monitoring to maintain this level'
+                'action' => 'Keep monitoring to maintain this level',
             ];
         }
 

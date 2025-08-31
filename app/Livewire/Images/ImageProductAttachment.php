@@ -20,8 +20,11 @@ class ImageProductAttachment extends Component
 
     // Search and selection state
     public string $searchType = 'both'; // 'products', 'variants', 'both'
+
     public string $searchTerm = '';
+
     public array $selectedItems = []; // Array of ['type' => 'product'|'variant', 'id' => int]
+
     public bool $showResults = false;
 
     /**
@@ -37,7 +40,7 @@ class ImageProductAttachment extends Component
      */
     public function updatedSearchTerm(): void
     {
-        $this->showResults = !empty($this->searchTerm);
+        $this->showResults = ! empty($this->searchTerm);
     }
 
     /**
@@ -46,7 +49,7 @@ class ImageProductAttachment extends Component
     public function setSearchType(string $type): void
     {
         $this->searchType = $type;
-        $this->showResults = !empty($this->searchTerm);
+        $this->showResults = ! empty($this->searchTerm);
     }
 
     /**
@@ -55,14 +58,14 @@ class ImageProductAttachment extends Component
     public function addToSelection(string $type, int $id): void
     {
         $item = ['type' => $type, 'id' => $id];
-        
+
         // Prevent duplicates
         foreach ($this->selectedItems as $selected) {
             if ($selected['type'] === $type && $selected['id'] === $id) {
                 return;
             }
         }
-        
+
         $this->selectedItems[] = $item;
         // Keep search term and results visible for continued searching
         $this->showResults = true;
@@ -93,14 +96,14 @@ class ImageProductAttachment extends Component
             foreach ($this->selectedItems as $item) {
                 if ($item['type'] === 'product') {
                     $product = Product::find($item['id']);
-                    if ($product && !$this->image->isAttachedTo($product)) {
+                    if ($product && ! $this->image->isAttachedTo($product)) {
                         $this->image->attachTo($product);
                         $attachedNames[] = "📦 {$product->name}";
                         $attachedCount++;
                     }
                 } else {
                     $variant = ProductVariant::with('product')->find($item['id']);
-                    if ($variant && !$this->image->isAttachedTo($variant)) {
+                    if ($variant && ! $this->image->isAttachedTo($variant)) {
                         $this->image->attachTo($variant);
                         $attachedNames[] = "💎 {$variant->product->name} - {$variant->title}";
                         $attachedCount++;
@@ -111,9 +114,9 @@ class ImageProductAttachment extends Component
             if ($attachedCount > 0) {
                 $this->dispatch('notify', [
                     'type' => 'success',
-                    'message' => "Image attached to {$attachedCount} item(s): " . implode(', ', $attachedNames),
+                    'message' => "Image attached to {$attachedCount} item(s): ".implode(', ', $attachedNames),
                 ]);
-                
+
                 $this->selectedItems = []; // Clear selection
             } else {
                 $this->dispatch('notify', [
@@ -125,7 +128,7 @@ class ImageProductAttachment extends Component
         } catch (\Exception $e) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to attach image: ' . $e->getMessage(),
+                'message' => 'Failed to attach image: '.$e->getMessage(),
             ]);
         }
     }
@@ -158,7 +161,7 @@ class ImageProductAttachment extends Component
         } catch (\Exception $e) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to detach image: ' . $e->getMessage(),
+                'message' => 'Failed to detach image: '.$e->getMessage(),
             ]);
         }
     }
@@ -180,7 +183,7 @@ class ImageProductAttachment extends Component
         } catch (\Exception $e) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'message' => 'Failed to detach image: ' . $e->getMessage(),
+                'message' => 'Failed to detach image: '.$e->getMessage(),
             ]);
         }
     }
@@ -198,8 +201,8 @@ class ImageProductAttachment extends Component
 
         // Search products
         if ($this->searchType === 'products' || $this->searchType === 'both') {
-            $products = Product::where('name', 'like', '%' . $this->searchTerm . '%')
-                ->orWhere('parent_sku', 'like', '%' . $this->searchTerm . '%')
+            $products = Product::where('name', 'like', '%'.$this->searchTerm.'%')
+                ->orWhere('parent_sku', 'like', '%'.$this->searchTerm.'%')
                 ->limit(10)
                 ->get();
 
@@ -218,11 +221,11 @@ class ImageProductAttachment extends Component
         // Search variants
         if ($this->searchType === 'variants' || $this->searchType === 'both') {
             $variants = ProductVariant::with('product')
-                ->where('sku', 'like', '%' . $this->searchTerm . '%')
-                ->orWhere('title', 'like', '%' . $this->searchTerm . '%')
-                ->orWhere('color', 'like', '%' . $this->searchTerm . '%')
+                ->where('sku', 'like', '%'.$this->searchTerm.'%')
+                ->orWhere('title', 'like', '%'.$this->searchTerm.'%')
+                ->orWhere('color', 'like', '%'.$this->searchTerm.'%')
                 ->orWhereHas('product', function ($query) {
-                    $query->where('name', 'like', '%' . $this->searchTerm . '%');
+                    $query->where('name', 'like', '%'.$this->searchTerm.'%');
                 })
                 ->limit(10)
                 ->get();
@@ -231,9 +234,9 @@ class ImageProductAttachment extends Component
                 $results[] = [
                     'type' => 'variant',
                     'id' => $variant->id,
-                    'name' => $variant->product->name . ' - ' . $variant->title,
+                    'name' => $variant->product->name.' - '.$variant->title,
                     'sku' => $variant->sku,
-                    'display_name' => $variant->product->name . ' - ' . $variant->color . ' ' . $variant->width . 'cm',
+                    'display_name' => $variant->product->name.' - '.$variant->color.' '.$variant->width.'cm',
                     'is_attached' => $this->image->isAttachedTo($variant),
                 ];
             }
@@ -266,7 +269,7 @@ class ImageProductAttachment extends Component
             $attachments[] = [
                 'type' => 'variant',
                 'id' => $variant->id,
-                'name' => $variant->product->name . ' - ' . $variant->title,
+                'name' => $variant->product->name.' - '.$variant->title,
                 'sku' => $variant->sku,
             ];
         }
@@ -301,9 +304,9 @@ class ImageProductAttachment extends Component
                         'index' => $index,
                         'type' => 'variant',
                         'id' => $variant->id,
-                        'name' => $variant->product->name . ' - ' . $variant->title,
+                        'name' => $variant->product->name.' - '.$variant->title,
                         'sku' => $variant->sku,
-                        'display_name' => $variant->product->name . ' - ' . $variant->color . ' ' . $variant->width . 'cm',
+                        'display_name' => $variant->product->name.' - '.$variant->color.' '.$variant->width.'cm',
                     ];
                 }
             }

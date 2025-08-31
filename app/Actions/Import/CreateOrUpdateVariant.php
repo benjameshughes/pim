@@ -16,10 +16,9 @@ class CreateOrUpdateVariant
     /**
      * Create or update variant using updateOrCreate
      *
-     * @param Product $product Parent product
-     * @param array $data Row data
-     * @param array $parentInfo Extracted parent information
-     * @return ProductVariant
+     * @param  Product  $product  Parent product
+     * @param  array  $data  Row data
+     * @param  array  $parentInfo  Extracted parent information
      */
     public function execute(Product $product, array $data, array $parentInfo): ProductVariant
     {
@@ -45,14 +44,14 @@ class CreateOrUpdateVariant
                 'sku' => $data['sku'],
                 'product_id' => $product->id,
                 'color' => $parentInfo['color'],
-                'dimensions' => $parentInfo['width'] . 'cm x ' . ($parentInfo['drop'] ?: 160) . 'cm'
+                'dimensions' => $parentInfo['width'].'cm x '.($parentInfo['drop'] ?: 160).'cm',
             ]);
         } else {
             Log::debug('Updated variant', [
                 'sku' => $data['sku'],
                 'product_id' => $product->id,
                 'color' => $parentInfo['color'],
-                'dimensions' => $parentInfo['width'] . 'cm x ' . ($parentInfo['drop'] ?: 160) . 'cm'
+                'dimensions' => $parentInfo['width'].'cm x '.($parentInfo['drop'] ?: 160).'cm',
             ]);
         }
 

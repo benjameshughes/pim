@@ -12,9 +12,13 @@ class Errors extends Component
     use WithPagination;
 
     public string $search = '';
+
     public string $levelFilter = 'all'; // error, warning, all
+
     public string $timeFilter = '24'; // hours
+
     public int $perPage = 20;
+
     public bool $showContext = false;
 
     protected LogParserService $logParser;
@@ -61,13 +65,13 @@ class Errors extends Component
 
     public function toggleContext(): void
     {
-        $this->showContext = !$this->showContext;
+        $this->showContext = ! $this->showContext;
     }
 
     public function getErrorStatsProperty(): array
     {
         $errors = $this->logParser->getRecentErrors(500);
-        
+
         $stats = [
             'total_errors' => $errors->count(),
             'critical_errors' => $errors->where('level', 'ERROR')->count(),
@@ -79,11 +83,11 @@ class Errors extends Component
         $last24h = $errors->where('timestamp', '>=', now()->subHours(24)->toISOString())->count();
         $previous24h = $errors->whereBetween('timestamp', [
             now()->subHours(48)->toISOString(),
-            now()->subHours(24)->toISOString()
+            now()->subHours(24)->toISOString(),
         ])->count();
 
-        $stats['trend'] = $previous24h > 0 ? 
-            round((($last24h - $previous24h) / $previous24h) * 100, 1) : 
+        $stats['trend'] = $previous24h > 0 ?
+            round((($last24h - $previous24h) / $previous24h) * 100, 1) :
             ($last24h > 0 ? 100 : 0);
 
         return $stats;
@@ -92,11 +96,12 @@ class Errors extends Component
     public function getTopErrorsProperty(): Collection
     {
         $errors = $this->logParser->getRecentErrors(200);
-        
+
         return $errors
             ->groupBy('message')
             ->map(function ($group) {
                 $first = $group->first();
+
                 return [
                     'message' => $first['message'],
                     'count' => $group->count(),
@@ -113,14 +118,14 @@ class Errors extends Component
     public function getErrorsByHourProperty(): array
     {
         $errors = $this->logParser->getRecentErrors(200);
-        
+
         return $errors
             ->groupBy(function ($error) {
-                return $error['timestamp'] ? 
-                    \Carbon\Carbon::parse($error['timestamp'])->format('H:00') : 
+                return $error['timestamp'] ?
+                    \Carbon\Carbon::parse($error['timestamp'])->format('H:00') :
                     now()->format('H:00');
             })
-            ->map(fn($group) => $group->count())
+            ->map(fn ($group) => $group->count())
             ->sortKeys()
             ->toArray();
     }
@@ -142,7 +147,7 @@ class Errors extends Component
         }
 
         // Apply search filter
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $errors = $errors->filter(function ($error) {
                 return str_contains(strtolower($error['message'] ?? ''), strtolower($this->search)) ||
                        str_contains(strtolower($error['path'] ?? ''), strtolower($this->search));
@@ -166,12 +171,12 @@ class Errors extends Component
     public function getErrorPatternsProperty(): Collection
     {
         $errors = $this->logParser->getRecentErrors(200);
-        
+
         return $errors
             ->groupBy(function ($error) {
                 // Extract error type/pattern from message
                 $message = $error['message'] ?? '';
-                
+
                 if (str_contains($message, 'undefined')) {
                     return 'Undefined Variables/Methods';
                 } elseif (str_contains($message, 'Class') && str_contains($message, 'not found')) {
@@ -188,7 +193,7 @@ class Errors extends Component
                     return 'Other Errors';
                 }
             })
-            ->map(fn($group) => [
+            ->map(fn ($group) => [
                 'pattern' => $group->first() ? $this->extractErrorPattern($group) : 'Unknown',
                 'count' => $group->count(),
                 'latest' => $group->first()['timestamp'] ?? null,
@@ -201,6 +206,7 @@ class Errors extends Component
     protected function extractErrorPattern(Collection $errors): string
     {
         $messages = $errors->pluck('message')->take(3);
+
         return $messages->first() ?? 'Unknown Error Pattern';
     }
 

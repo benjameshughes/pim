@@ -32,7 +32,7 @@ Route::middleware(['auth'])->group(function () {
     // 📦 PRODUCTS - with authorization
     Route::middleware('can:view-products')->group(function () {
         Route::view('products', 'products.index')->name('products.index');
-        
+
         Route::get('products/{product}', function (App\Models\Product $product) {
             return view('products.show', compact('product'));
         })->name('products.show');
@@ -97,16 +97,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('images/{image}', function (App\Models\Image $image) {
             return view('images.show', compact('image'));
         })->name('images.show');
-        
+
         // 📑 IMAGE TABS - Clean TabSet Integration
         Route::get('images/{image}/overview', function (App\Models\Image $image) {
             return view('images.show', compact('image'));
         })->name('images.show.overview');
-        
+
         Route::get('images/{image}/attachments', function (App\Models\Image $image) {
             return view('images.show', compact('image'));
         })->name('images.show.attachments');
-        
+
         Route::get('images/{image}/history', function (App\Models\Image $image) {
             return view('images.show', compact('image'));
         })->name('images.show.history');
@@ -191,7 +191,7 @@ Route::middleware(['auth'])->group(function () {
     // 📊 LOG DASHBOARD
     Route::middleware('can:view-system-logs')->group(function () {
         Route::get('logs', \App\Livewire\LogDashboard::class)->name('log-dashboard');
-        
+
         // 📑 LOG DASHBOARD TABS - Clean TabSet Integration
         Route::get('logs/overview', \App\Livewire\LogDashboard\Tabs\Overview::class)->name('log-dashboard.overview');
         Route::get('logs/activity', \App\Livewire\LogDashboard\Tabs\ActivityTab::class)->name('log-dashboard.activity');
@@ -208,7 +208,7 @@ Route::middleware(['auth'])->group(function () {
     // 🎯 ACTIVITY TRACKING API - For gorgeous verbose logging
     Route::post('api/activity-tracking', [App\Http\Controllers\Api\ActivityTrackingController::class, 'track'])
         ->name('api.activity.track');
-    
+
     Route::get('api/activity-summary', [App\Http\Controllers\Api\ActivityTrackingController::class, 'summary'])
         ->name('api.activity.summary');
 

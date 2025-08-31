@@ -106,6 +106,51 @@ class ActivityLogger
             ->save();
     }
 
+    public function processed($model, array $details = []): ActivityLog
+    {
+        return $this->event($model, 'processed')
+            ->with($details)
+            ->save();
+    }
+
+    public function variantsGenerated($model, array $variants = []): ActivityLog
+    {
+        return $this->event($model, 'variants_generated')
+            ->with([
+                'variants_count' => count($variants),
+                'variant_types' => collect($variants)->pluck('variant_type')->filter()->unique()->values()->toArray(),
+                'generated_ids' => collect($variants)->pluck('id')->toArray()
+            ])
+            ->description('Generated ' . count($variants) . ' image variants')
+            ->save();
+    }
+
+    public function attached($model, $target, string $context = 'attached'): ActivityLog
+    {
+        return $this->event($model, 'attached')
+            ->with([
+                'attached_to_type' => class_basename($target),
+                'attached_to_id' => $target->id ?? null,
+                'attached_to_name' => $target->name ?? $target->title ?? "#{$target->id}",
+                'context' => $context
+            ])
+            ->description("Attached to " . ($target->name ?? (class_basename($target) . ' #' . ($target->id ?? 'unknown'))))
+            ->save();
+    }
+
+    public function detached($model, $target, string $context = 'detached'): ActivityLog
+    {
+        return $this->event($model, 'detached')
+            ->with([
+                'detached_from_type' => class_basename($target),
+                'detached_from_id' => $target->id ?? null,
+                'detached_from_name' => $target->name ?? $target->title ?? "#{$target->id}",
+                'context' => $context
+            ])
+            ->description("Detached from " . ($target->name ?? (class_basename($target) . ' #' . ($target->id ?? 'unknown'))))
+            ->save();
+    }
+
     public function save(): ActivityLog
     {
         $this->addContext();
@@ -122,6 +167,7 @@ class ActivityLogger
         return match(true) {
             $model instanceof \App\Models\Product => "product.{$action}",
             $model instanceof \App\Models\ProductVariant => "variant.{$action}", 
+            $model instanceof \App\Models\Image => "image.{$action}",
             $model instanceof \App\Models\User => "user.{$action}",
             default => strtolower(class_basename($model)) . ".{$action}"
         };
@@ -154,6 +200,6 @@ class ActivityLogger
         return ActivityLog::forSubject(
             class_basename($model),
             $model->id
-        )->get();
+        )->latest('occurred_at')->get();
     }
 }

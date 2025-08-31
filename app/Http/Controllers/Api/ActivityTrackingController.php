@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🎯 ACTIVITY TRACKING API CONTROLLER
- * 
+ *
  * Handles all the gorgeous verbose activity tracking from the frontend.
  * Because Ben LOVES knowing what buttons get clicked! 🎉
  */
@@ -24,11 +24,11 @@ class ActivityTrackingController extends Controller
             $eventType = $request->input('event_type', 'unknown');
             $data = $request->input('data', []);
             $timestamp = $request->input('timestamp');
-            
+
             $userName = auth()->user()?->name ?? 'Guest';
             $userAgent = $request->userAgent();
             $ipAddress = $request->ip();
-            
+
             // Create gorgeous descriptive messages based on event type
             $description = match ($eventType) {
                 'button_clicked' => $this->createButtonClickDescription($data, $userName),
@@ -84,13 +84,13 @@ class ActivityTrackingController extends Controller
         $buttonText = $data['button_text'] ?? 'Unknown Button';
         $pageUrl = $data['page_url'] ?? 'Unknown Page';
         $pageSection = $data['page_section'] ?? null;
-        
+
         $description = "{$userName} clicked '{$buttonText}' button on {$this->getPageName($pageUrl)}";
-        
+
         if ($pageSection) {
             $description .= " in {$pageSection} section";
         }
-        
+
         return $description;
     }
 
@@ -102,7 +102,7 @@ class ActivityTrackingController extends Controller
         $formName = $data['form_name'] ?? 'Unknown Form';
         $fieldCount = $data['field_count'] ?? 0;
         $method = $data['form_method'] ?? 'GET';
-        
+
         return "{$userName} submitted '{$formName}' form with {$fieldCount} fields using {$method} method";
     }
 
@@ -114,13 +114,13 @@ class ActivityTrackingController extends Controller
         $pageUrl = $data['page_url'] ?? 'Unknown Page';
         $referrer = $data['referrer'] ?? null;
         $resolution = $data['screen_resolution'] ?? 'unknown resolution';
-        
+
         $description = "{$userName} viewed {$this->getPageName($pageUrl)} at {$resolution}";
-        
+
         if ($referrer) {
             $description .= " (referred from {$this->getPageName($referrer)})";
         }
-        
+
         return $description;
     }
 
@@ -131,7 +131,7 @@ class ActivityTrackingController extends Controller
     {
         $pageUrl = $data['page_url'] ?? 'Unknown Page';
         $navigationType = $data['navigation_type'] ?? 'unknown';
-        
+
         return "{$userName} navigated to {$this->getPageName($pageUrl)} via {$navigationType}";
     }
 
@@ -143,7 +143,7 @@ class ActivityTrackingController extends Controller
         $query = $data['search_query'] ?? 'empty query';
         $queryLength = $data['query_length'] ?? 0;
         $searchField = $data['search_field'] ?? 'unknown field';
-        
+
         return "{$userName} searched for '{$query}' ({$queryLength} characters) in {$searchField}";
     }
 
@@ -153,7 +153,7 @@ class ActivityTrackingController extends Controller
     protected function getPageName(string $url): string
     {
         $path = parse_url($url, PHP_URL_PATH) ?? '/';
-        
+
         // Convert common paths to friendly names
         $friendlyNames = [
             '/' => 'Homepage',
@@ -164,22 +164,22 @@ class ActivityTrackingController extends Controller
             '/users' => 'Users Management',
             '/settings' => 'Settings',
         ];
-        
+
         foreach ($friendlyNames as $pattern => $name) {
             if (str_starts_with($path, $pattern)) {
                 return $name;
             }
         }
-        
+
         // Extract product/resource names from URLs
         if (preg_match('/\/products\/(\d+)/', $path, $matches)) {
             return "Product #{$matches[1]} Details";
         }
-        
+
         if (preg_match('/\/users\/(\d+)/', $path, $matches)) {
             return "User #{$matches[1]} Profile";
         }
-        
+
         // Fallback to cleaning up the path
         return ucwords(str_replace(['/', '-', '_'], [' ', ' ', ' '], trim($path, '/'))) ?: 'Unknown Page';
     }
@@ -190,11 +190,11 @@ class ActivityTrackingController extends Controller
     public function summary(Request $request)
     {
         $hours = $request->input('hours', 24);
-        
+
         $activities = Activity::recent($hours)
             ->where('user_id', auth()->id())
             ->get();
-            
+
         $summary = [
             'total_activities' => $activities->count(),
             'button_clicks' => $activities->where('event', 'ui.button_clicked')->count(),
@@ -214,7 +214,7 @@ class ActivityTrackingController extends Controller
                 ->sortDesc()
                 ->take(5),
         ];
-        
+
         return response()->json($summary);
     }
 }

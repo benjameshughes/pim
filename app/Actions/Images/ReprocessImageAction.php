@@ -3,6 +3,7 @@
 namespace App\Actions\Images;
 
 use App\Actions\Base\BaseAction;
+use App\Facades\Activity;
 use App\Models\Image;
 use App\Services\ImageUploadService;
 
@@ -19,12 +20,40 @@ class ReprocessImageAction extends BaseAction
      *
      * Refresh image dimensions and metadata from R2 storage
      */
-    public function execute(Image $image): Image
+    protected function performAction(...$params): Image
     {
-        return $this->executeWithBaseHandling(function () use ($image) {
-            $refreshedImage = $this->imageUploadService->reprocessImage($image);
-            
-            return $refreshedImage;
-        }, ['image_id' => $image->id, 'filename' => $image->filename]);
+        $image = $params[0] ?? null;
+
+        if (! $image instanceof Image) {
+            throw new \InvalidArgumentException('First parameter must be an Image instance');
+        }
+
+        // Store original dimensions for comparison
+        $originalDimensions = [
+            'width' => $image->width,
+            'height' => $image->height,
+            'size' => $image->size,
+        ];
+
+        // Reprocess the image
+        $refreshedImage = $this->imageUploadService->reprocessImage($image);
+
+        // Log the activity
+        Activity::log()
+            ->by(auth()->id())
+            ->processed($refreshedImage, [
+                'original_dimensions' => $originalDimensions,
+                'new_dimensions' => [
+                    'width' => $refreshedImage->width,
+                    'height' => $refreshedImage->height,
+                    'size' => $refreshedImage->size,
+                ],
+                'dimensions_changed' => $originalDimensions['width'] !== $refreshedImage->width
+                    || $originalDimensions['height'] !== $refreshedImage->height,
+                'action_type' => 'metadata_refresh',
+            ])
+            ->description('Refreshed image metadata and dimensions');
+
+        return $refreshedImage;
     }
 }

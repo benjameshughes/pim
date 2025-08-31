@@ -1,11 +1,11 @@
 <?php
+
 /**
  * 🧹 PRODUCTION MIGRATION VERIFICATION SCRIPT
- * 
+ *
  * This script shows exactly what will happen when you run migrations on production.
  * Run this script to understand the cleanup process before deploying.
  */
-
 echo "🚀 Production Migration Analysis\n";
 echo "================================\n\n";
 
@@ -14,10 +14,10 @@ echo "---------------------------------\n";
 
 $migrationFiles = [
     '2025_08_29_172601_add_role_to_users_table.php' => 'Adds temporary role column to users table',
-    '2025_08_29_173428_assign_default_roles_to_existing_users.php' => 'Assigns default roles to existing users', 
+    '2025_08_29_173428_assign_default_roles_to_existing_users.php' => 'Assigns default roles to existing users',
     '2025_08_29_174327_drop_teams_and_pivot_tables.php' => '🧹 CLEANS UP: Drops teams and team_user tables',
     '2025_08_29_194856_create_permission_tables.php' => 'Creates Spatie permission system tables',
-    '2025_08_29_195732_remove_role_column_from_users_table.php' => 'Removes temporary role column'
+    '2025_08_29_195732_remove_role_column_from_users_table.php' => 'Removes temporary role column',
 ];
 
 foreach ($migrationFiles as $file => $description) {
@@ -28,7 +28,7 @@ echo "🧹 CLEANUP ACTIONS:\n";
 echo "-------------------\n";
 echo "  ❌ DROP TABLE: teams\n";
 echo "  ❌ DROP TABLE: team_user\n";
-echo "  ✅ CREATE: roles table (admin, manager, user)\n"; 
+echo "  ✅ CREATE: roles table (admin, manager, user)\n";
 echo "  ✅ CREATE: permissions table (241 permissions)\n";
 echo "  ✅ CREATE: model_has_roles, model_has_permissions, role_has_permissions\n\n";
 
@@ -63,7 +63,7 @@ echo "  4. After migration, manually assign admin/manager roles to specific user
 echo "⚡ SUGGESTED POST-MIGRATION STEPS:\n";
 echo "----------------------------------\n";
 echo "  1. php artisan migrate --force\n";
-echo "  2. php artisan db:seed --class=RoleAndPermissionSeeder --force\n";  
+echo "  2. php artisan db:seed --class=RoleAndPermissionSeeder --force\n";
 echo "  3. Assign roles to specific users:\n";
 echo "     php artisan tinker\n";
 echo "     User::find(2)->assignRole('admin');  // Make user 2 an admin\n";

@@ -12,14 +12,14 @@ class ShopifyTaxonomyHelper
 {
     /**
      * Common category mappings based on keywords and product types
-     * 
-     * Note: These are common Shopify taxonomy IDs - should be updated 
+     *
+     * Note: These are common Shopify taxonomy IDs - should be updated
      * based on actual taxonomy data when available
      */
     protected static array $categoryMappings = [
         // Window Treatments & Blinds (most specific first)
         'roller blind' => 'gid://shopify/TaxonomyCategory/ho-1-1-6-1',
-        'vertical blind' => 'gid://shopify/TaxonomyCategory/ho-1-1-6-2', 
+        'vertical blind' => 'gid://shopify/TaxonomyCategory/ho-1-1-6-2',
         'venetian blind' => 'gid://shopify/TaxonomyCategory/ho-1-1-6-3',
         'window blind' => 'gid://shopify/TaxonomyCategory/ho-1-1-6',
         'blinds' => 'gid://shopify/TaxonomyCategory/ho-1-1-6',
@@ -28,7 +28,7 @@ class ShopifyTaxonomyHelper
         'drapes' => 'gid://shopify/TaxonomyCategory/ho-1-1-5',
         'window treatments' => 'gid://shopify/TaxonomyCategory/ho-1-1',
         'window coverings' => 'gid://shopify/TaxonomyCategory/ho-1-1',
-        
+
         // Home & Garden fallbacks (least specific)
         'home decor' => 'gid://shopify/TaxonomyCategory/ho-1',
         'home furnishings' => 'gid://shopify/TaxonomyCategory/ho-1-2',
@@ -53,16 +53,16 @@ class ShopifyTaxonomyHelper
         $title = strtolower($productData['title'] ?? '');
         $productType = strtolower($productData['productType'] ?? '');
         $description = strtolower($productData['descriptionHtml'] ?? '');
-        
-        $searchText = $title . ' ' . $productType . ' ' . $description;
-        
+
+        $searchText = $title.' '.$productType.' '.$description;
+
         // Direct category mappings (most specific first)
         foreach (self::$categoryMappings as $keyword => $categoryId) {
             if (str_contains($searchText, $keyword)) {
                 return $categoryId;
             }
         }
-        
+
         // Pattern-based detection
         foreach (self::$keywordPatterns as $category => $patterns) {
             foreach ($patterns as $pattern) {
@@ -71,7 +71,7 @@ class ShopifyTaxonomyHelper
                 }
             }
         }
-        
+
         // Default fallback
         return null;
     }
@@ -83,7 +83,7 @@ class ShopifyTaxonomyHelper
     {
         return match ($pattern) {
             'blinds' => self::$categoryMappings['blinds'],
-            'curtains' => self::$categoryMappings['curtains'], 
+            'curtains' => self::$categoryMappings['curtains'],
             'window_treatments' => self::$categoryMappings['window treatments'],
             'home_decor' => self::$categoryMappings['home decor'],
             default => null,
@@ -96,6 +96,7 @@ class ShopifyTaxonomyHelper
     public static function getCategoryName(string $categoryId): string
     {
         $reverseMappings = array_flip(self::$categoryMappings);
+
         return $reverseMappings[$categoryId] ?? 'Unknown Category';
     }
 
@@ -121,25 +122,25 @@ class ShopifyTaxonomyHelper
     public static function detectBlindsCategory(array $productData): ?string
     {
         $title = strtolower($productData['title'] ?? '');
-        
+
         // Specific blind types
         if (str_contains($title, 'roller')) {
             return self::$categoryMappings['roller blind'];
         }
-        
+
         if (str_contains($title, 'vertical')) {
             return self::$categoryMappings['vertical blind'];
         }
-        
+
         if (str_contains($title, 'venetian')) {
             return self::$categoryMappings['venetian blind'];
         }
-        
+
         // Generic blinds
         if (str_contains($title, 'blind')) {
             return self::$categoryMappings['blinds'];
         }
-        
+
         return null;
     }
 }

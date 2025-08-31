@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class LogActivityAction extends BaseAction
 {
     protected bool $useTransactions = false; // Activity logs don't need transactions
-    
+
     protected function performAction(...$params): array
     {
         $event = $params[0] ?? throw new \InvalidArgumentException('Event is required');
@@ -37,6 +37,7 @@ class LogActivityAction extends BaseAction
         ?Carbon $occurredAt = null
     ): ActivityLog {
         $result = $this->execute($event, $data, $userId, $occurredAt);
+
         return $result['data']['activity_log'];
     }
 }

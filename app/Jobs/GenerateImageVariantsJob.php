@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 
 class GenerateImageVariantsJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300; // 5 minutes for variant generation
 
@@ -32,7 +32,7 @@ class GenerateImageVariantsJob implements ShouldQueue
         Log::info('🎨 Starting image variant generation', [
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
-            'variants' => $this->variants
+            'variants' => $this->variants,
         ]);
 
         // Update status to processing variants
@@ -40,7 +40,7 @@ class GenerateImageVariantsJob implements ShouldQueue
 
         // Generate variants using the action
         $result = $action->execute($this->image, $this->variants);
-        
+
         // Mark as completed
         $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
 
@@ -48,7 +48,7 @@ class GenerateImageVariantsJob implements ShouldQueue
             'image_id' => $this->image->id,
             'action_result' => $result['success'] ? 'success' : 'failed',
             'variants_generated' => $result['data']['variants_generated'] ?? 0,
-            'message' => $result['message'] ?? 'Unknown result'
+            'message' => $result['message'] ?? 'Unknown result',
         ]);
     }
 
@@ -57,7 +57,7 @@ class GenerateImageVariantsJob implements ShouldQueue
         Log::error('❌ Image variant generation failed', [
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
 
         // Mark as failed in cache

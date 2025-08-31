@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 class GetUsersWithRolesAction extends BaseAction
 {
     use HasAuthorization;
-    
+
     protected bool $useTransactions = false;
 
     /**

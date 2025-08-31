@@ -11,10 +11,10 @@ class ExtractModelDataAction extends BaseAction
     protected function performAction(...$params): array
     {
         $model = $params[0] ?? throw new \InvalidArgumentException('Model is required');
-        
+
         $extractorClass = $this->getExtractorClass($model);
-        
-        $extracted = class_exists($extractorClass) 
+
+        $extracted = class_exists($extractorClass)
             ? $extractorClass::extract($model)
             : $this->defaultExtraction($model);
 
@@ -27,18 +27,19 @@ class ExtractModelDataAction extends BaseAction
     public function extractData(object $model): array
     {
         $result = $this->execute($model);
+
         return $result['data']['extracted_data'];
     }
 
     protected function getExtractorClass(object $model): string
     {
-        return "App\\Extractors\\" . class_basename($model) . "Extractor";
+        return 'App\\Extractors\\'.class_basename($model).'Extractor';
     }
 
     protected function defaultExtraction(object $model): array
     {
         $data = method_exists($model, 'toArray') ? $model->toArray() : [];
-        
+
         return collect($data)
             ->only(['id', 'name', 'title', 'sku', 'status', 'type'])
             ->filter()

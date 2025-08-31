@@ -10,31 +10,31 @@ describe('ProductIndex Livewire Component', function () {
     beforeEach(function () {
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
-        
+
         // Create test products with variants
         $this->products = collect([
             Product::factory()->create([
                 'name' => 'Alpha Product',
                 'parent_sku' => 'ALPHA123',
-                'status' => 'active'
+                'status' => 'active',
             ]),
             Product::factory()->create([
-                'name' => 'Beta Product', 
+                'name' => 'Beta Product',
                 'parent_sku' => 'BETA456',
-                'status' => 'active'
+                'status' => 'active',
             ]),
             Product::factory()->create([
                 'name' => 'Gamma Product',
                 'parent_sku' => 'GAMMA789',
-                'status' => 'inactive'
-            ])
+                'status' => 'inactive',
+            ]),
         ]);
 
         // Add variants to products
         $this->products->each(function ($product) {
             ProductVariant::factory(2)->create([
                 'product_id' => $product->id,
-                'status' => 'active'
+                'status' => 'active',
             ]);
         });
     });
@@ -78,7 +78,7 @@ describe('ProductIndex Livewire Component', function () {
             ->assertSee('Alpha Product')
             ->assertSee('Beta Product')
             ->assertDontSee('Gamma Product');
-            
+
         Livewire::test(ProductIndex::class)
             ->set('status', 'inactive')
             ->assertSee('Gamma Product')
@@ -90,13 +90,13 @@ describe('ProductIndex Livewire Component', function () {
         Livewire::test(ProductIndex::class)
             ->set('status', 'all')
             ->assertSee('Alpha Product')
-            ->assertSee('Beta Product') 
+            ->assertSee('Beta Product')
             ->assertSee('Gamma Product');
     });
 
     test('displays product statistics', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         // Should display counts
         $component->assertSee('3'); // Total products count somewhere in UI
     });
@@ -109,7 +109,7 @@ describe('ProductIndex Livewire Component', function () {
 
     test('select all functionality works', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         if (method_exists($component->instance(), 'selectAll')) {
             $component->call('selectAll')
                 ->assertSet('selectedProducts', $this->products->pluck('id')->toArray());
@@ -119,7 +119,7 @@ describe('ProductIndex Livewire Component', function () {
     test('clear selection functionality works', function () {
         $component = Livewire::test(ProductIndex::class)
             ->set('selectedProducts', [$this->products[0]->id]);
-            
+
         if (method_exists($component->instance(), 'clearSelection')) {
             $component->call('clearSelection')
                 ->assertSet('selectedProducts', []);
@@ -136,7 +136,7 @@ describe('ProductIndex Livewire Component', function () {
 
     test('sorting functionality works', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         if (method_exists($component->instance(), 'sortBy')) {
             $component->call('sortBy', 'name')
                 ->assertStatus(200);
@@ -145,13 +145,13 @@ describe('ProductIndex Livewire Component', function () {
 
     test('delete product functionality works', function () {
         $productToDelete = $this->products[0];
-        
+
         $component = Livewire::test(ProductIndex::class);
-        
+
         if (method_exists($component->instance(), 'deleteProduct')) {
             $component->call('deleteProduct', $productToDelete->id)
                 ->assertDispatched('success');
-                
+
             expect(Product::find($productToDelete->id))->toBeNull();
         }
     });
@@ -159,11 +159,11 @@ describe('ProductIndex Livewire Component', function () {
     test('bulk delete functionality works', function () {
         $component = Livewire::test(ProductIndex::class)
             ->set('selectedProducts', [$this->products[0]->id, $this->products[1]->id]);
-            
+
         if (method_exists($component->instance(), 'bulkDelete')) {
             $component->call('bulkDelete')
                 ->assertDispatched('success');
-                
+
             expect(Product::find($this->products[0]->id))->toBeNull();
             expect(Product::find($this->products[1]->id))->toBeNull();
         }
@@ -172,14 +172,14 @@ describe('ProductIndex Livewire Component', function () {
     test('displays variant counts correctly', function () {
         Livewire::test(ProductIndex::class)
             ->assertStatus(200);
-            
+
         // Each product should show 2 variants
         // This would depend on how the UI displays variant counts
     });
 
     test('handles empty state correctly', function () {
         Product::query()->delete();
-        
+
         Livewire::test(ProductIndex::class)
             ->assertStatus(200)
             ->assertSee('No products found'); // Assuming empty state message
@@ -193,18 +193,18 @@ describe('ProductIndex Livewire Component', function () {
 
     test('component handles large datasets efficiently', function () {
         Product::factory(100)->create(['status' => 'active']);
-        
+
         $component = Livewire::test(ProductIndex::class);
-        
+
         expect($component->payload['serverMemo']['errors'])->toBeEmpty();
     });
 
     test('navigation to product show works', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         // Test navigation (depends on implementation)
         $component->assertSee($this->products[0]->name);
-        
+
         // If there's a view method or navigation
         if (method_exists($component->instance(), 'viewProduct')) {
             $component->call('viewProduct', $this->products[0]->id);
@@ -224,7 +224,7 @@ describe('ProductIndex Livewire Component', function () {
 
     test('export functionality works if available', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         if (method_exists($component->instance(), 'export')) {
             $component->call('export')
                 ->assertStatus(200);
@@ -235,9 +235,9 @@ describe('ProductIndex Livewire Component', function () {
         // Create new product after component loads
         $newProduct = Product::factory()->create([
             'name' => 'New Product',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         // Component should pick up the new product on refresh
         Livewire::test(ProductIndex::class)
             ->assertStatus(200);
@@ -245,7 +245,7 @@ describe('ProductIndex Livewire Component', function () {
 
     test('keyboard shortcuts work if implemented', function () {
         $component = Livewire::test(ProductIndex::class);
-        
+
         // Test common keyboard shortcuts if they exist
         if (method_exists($component->instance(), 'handleKeyboard')) {
             // This would test keyboard navigation

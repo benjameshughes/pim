@@ -175,7 +175,7 @@ class VariantCreate extends Component
     {
         // Authorize creating variants
         $this->authorize('create-variants');
-        
+
         $this->product = $product;
         $this->variant = $variant;
 

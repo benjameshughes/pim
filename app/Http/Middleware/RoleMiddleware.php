@@ -9,9 +9,9 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * 👑 ROLE MIDDLEWARE
- * 
+ *
  * Protects routes based on user roles (admin, manager, user).
- * 
+ *
  * Usage:
  * Route::middleware(['auth', 'role:admin'])->group(function () {});
  * Route::middleware(['auth', 'role:admin,manager'])->group(function () {});
@@ -22,12 +22,12 @@ class RoleMiddleware
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string $roles - Comma-separated list of allowed roles
+     * @param  string  $roles  - Comma-separated list of allowed roles
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         // Check if user is authenticated
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
 
@@ -35,9 +35,10 @@ class RoleMiddleware
 
         // If no roles specified, just require any role
         if (empty($roles)) {
-            if (!$user->hasRole()) {
+            if (! $user->hasRole()) {
                 return $this->handleUnauthorized($request);
             }
+
             return $next($request);
         }
 
@@ -69,7 +70,7 @@ class RoleMiddleware
             return response()->json([
                 'message' => 'Insufficient permissions. Required role not found.',
                 'required_roles' => func_get_args()[1] ?? [],
-                'user_role' => Auth::user()->role ?? 'none'
+                'user_role' => Auth::user()->role ?? 'none',
             ], 403);
         }
 

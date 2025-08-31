@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Import;
 
-use App\Actions\Import\SimpleImportAction;
 use App\Jobs\ProcessProductImport;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -64,10 +63,10 @@ class SimpleProductImport extends Component
     {
         // Authorize importing products
         $this->authorize('import-products');
-        
+
         // Get importId from URL parameters (when redirected back from import start)
         $this->importId = request('id');
-        
+
         // If we have an importId, we're on step 3 (importing)
         if ($this->importId) {
             $this->step = 'importing';
@@ -188,8 +187,8 @@ class SimpleProductImport extends Component
 
         try {
             // Generate unique import ID
-            $this->importId = uniqid('import_' . time() . '_');
-            
+            $this->importId = uniqid('import_'.time().'_');
+
             // Get the correct file path for Livewire uploaded files
             $filePath = $this->file->getRealPath();
 
@@ -206,26 +205,26 @@ class SimpleProductImport extends Component
             ]);
 
             // Copy file to permanent location for processing
-            $fileName = 'import_' . $this->importId . '.csv';
-            $permanentPath = storage_path('app/imports/' . $fileName);
-            
+            $fileName = 'import_'.$this->importId.'.csv';
+            $permanentPath = storage_path('app/imports/'.$fileName);
+
             // Make sure imports directory exists
-            if (!is_dir(dirname($permanentPath))) {
+            if (! is_dir(dirname($permanentPath))) {
                 mkdir(dirname($permanentPath), 0755, true);
             }
-            
-            if (!copy($filePath, $permanentPath)) {
+
+            if (! copy($filePath, $permanentPath)) {
                 throw new \Exception('Failed to copy file to permanent location');
             }
 
             // Dispatch the queue job for background processing
             ProcessProductImport::dispatch($permanentPath, $this->importId, $this->mappings);
-            
+
             $this->step = 'importing';
             $this->importing = true;
-            
+
             $this->dispatch('success', 'Import started! Processing in background...');
-            
+
             // Redirect with importId so component can listen to real-time updates
             $this->redirectRoute('import.products', ['id' => $this->importId], navigate: true);
 
@@ -245,10 +244,10 @@ class SimpleProductImport extends Component
      */
     public function getListeners()
     {
-        if (!$this->importId) {
+        if (! $this->importId) {
             return [];
         }
-        
+
         return [
             "echo:product-import.{$this->importId},.ProductImportProgress" => 'updateImportProgress',
         ];
@@ -260,21 +259,21 @@ class SimpleProductImport extends Component
     public function updateImportProgress($event)
     {
         \Log::info('📡 Received import progress update', $event);
-        
+
         $this->progress = $event['percentage'] ?? 0;
         $this->currentAction = $event['currentAction'] ?? '';
         $this->currentItem = $event['currentItem'] ?? '';
-        
+
         if (isset($event['stats'])) {
             $this->importStats = array_merge($this->importStats, $event['stats']);
         }
-        
+
         // Handle completion - create results from the final stats
         if ($event['status'] === 'completed') {
             $this->importing = false;
             $this->step = 'complete';
             $this->progress = 100;
-            
+
             // Build results from final stats
             $stats = $event['stats'] ?? [];
             $this->results = [
@@ -287,10 +286,10 @@ class SimpleProductImport extends Component
                 'skipped_rows' => $stats['skipped_rows'] ?? 0,
                 'total_processed' => ($stats['products_created'] ?? 0) + ($stats['products_updated'] ?? 0) + ($stats['variants_created'] ?? 0) + ($stats['variants_updated'] ?? 0),
                 'errors' => [],
-                'duration' => 'N/A'
+                'duration' => 'N/A',
             ];
         }
-        
+
         // Handle errors
         if ($event['status'] === 'error') {
             $this->importing = false;
@@ -305,7 +304,7 @@ class SimpleProductImport extends Component
                 'skipped_rows' => 0,
                 'total_processed' => 0,
                 'errors' => [$event['currentItem'] ?? 'Import failed'],
-                'duration' => 'N/A'
+                'duration' => 'N/A',
             ];
         }
     }

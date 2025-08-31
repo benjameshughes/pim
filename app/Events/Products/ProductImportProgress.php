@@ -25,7 +25,7 @@ class ProductImportProgress implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('product-import.' . $this->importId),
+            new Channel('product-import.'.$this->importId),
         ];
     }
 
@@ -49,8 +49,8 @@ class ProductImportProgress implements ShouldBroadcastNow
                 'products_updated' => 0,
                 'variants_created' => 0,
                 'variants_updated' => 0,
-                'errors' => 0
-            ]
+                'errors' => 0,
+            ],
         ];
     }
 }

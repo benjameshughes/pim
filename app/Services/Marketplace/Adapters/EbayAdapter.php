@@ -29,11 +29,11 @@ class EbayAdapter extends AbstractAdapter
     public function create(int $productId): MarketplaceProduct
     {
         $product = $this->loadProduct($productId);
-        
+
         // TODO: Implement eBay transformation actions
         // - TransformToEbayListingAction
         // - eBay keeps color, width/drop as variations in same listing
-        
+
         $marketplaceProduct = new MarketplaceProduct(
             data: [], // TODO: eBay listing data
             metadata: [

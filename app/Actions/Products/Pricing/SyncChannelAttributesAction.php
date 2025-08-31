@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🔄 SYNC CHANNEL ATTRIBUTES ACTION
- * 
+ *
  * Auto-creates attribute definitions for channel pricing based on active sales channels.
  * Creates attributes like 'shopify_price', 'ebay_price', etc. for each active channel.
  */
@@ -31,7 +31,7 @@ class SyncChannelAttributesAction extends BaseAction
         try {
             // Get all active sales channels
             $activeChannels = SalesChannel::active()->get();
-            
+
             if ($activeChannels->isEmpty()) {
                 return $this->failure('No active sales channels found');
             }
@@ -44,9 +44,9 @@ class SyncChannelAttributesAction extends BaseAction
 
             // Create/update attribute definitions for each channel
             foreach ($activeChannels as $channel) {
-                $attributeKey = $channel->code . '_price';
+                $attributeKey = $channel->code.'_price';
                 $result = $this->createOrUpdateChannelPriceAttribute($channel, $attributeKey, $forceUpdate);
-                
+
                 $results[$result['action']][] = [
                     'channel' => $channel->code,
                     'attribute_key' => $attributeKey,
@@ -81,7 +81,7 @@ class SyncChannelAttributesAction extends BaseAction
                 'duration_ms' => $duration,
             ]);
 
-            return $this->failure('Failed to sync channel attributes: ' . $e->getMessage(), [
+            return $this->failure('Failed to sync channel attributes: '.$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -97,7 +97,7 @@ class SyncChannelAttributesAction extends BaseAction
 
         $attributeData = [
             'key' => $attributeKey,
-            'name' => ucfirst($channel->name) . ' Price',
+            'name' => ucfirst($channel->name).' Price',
             'description' => "Channel-specific pricing override for {$channel->name}. If set, this price will be used instead of the default retail price for {$channel->name} sales channel.",
             'data_type' => 'decimal',
             'is_inheritable' => false, // Channel pricing is variant-specific
@@ -127,6 +127,7 @@ class SyncChannelAttributesAction extends BaseAction
         if ($existingAttribute) {
             if ($forceUpdate) {
                 $existingAttribute->update($attributeData);
+
                 return [
                     'action' => 'updated',
                     'attribute_id' => $existingAttribute->id,
@@ -141,6 +142,7 @@ class SyncChannelAttributesAction extends BaseAction
             }
         } else {
             $newAttribute = AttributeDefinition::create($attributeData);
+
             return [
                 'action' => 'created',
                 'attribute_id' => $newAttribute->id,
@@ -154,9 +156,9 @@ class SyncChannelAttributesAction extends BaseAction
      */
     protected function getChannelIcon(string $channelCode): string
     {
-        return match($channelCode) {
+        return match ($channelCode) {
             'shopify' => 'shopping-bag',
-            'ebay' => 'building-storefront', 
+            'ebay' => 'building-storefront',
             'amazon' => 'shopping-cart',
             'direct' => 'home',
             'retail' => 'store',
@@ -170,10 +172,10 @@ class SyncChannelAttributesAction extends BaseAction
      */
     protected function getChannelColor(string $channelCode): string
     {
-        return match($channelCode) {
+        return match ($channelCode) {
             'shopify' => '#96bf48',
             'ebay' => '#e53238',
-            'amazon' => '#ff9900', 
+            'amazon' => '#ff9900',
             'direct' => '#3b82f6',
             'retail' => '#059669',
             'wholesale' => '#7c3aed',
@@ -188,7 +190,7 @@ class SyncChannelAttributesAction extends BaseAction
     {
         return SalesChannel::active()
             ->pluck('code')
-            ->map(fn($code) => $code . '_price')
+            ->map(fn ($code) => $code.'_price')
             ->toArray();
     }
 

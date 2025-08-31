@@ -17,6 +17,7 @@ use InvalidArgumentException;
 class DeleteProductAction extends BaseAction
 {
     use WithActivityLogs;
+
     /**
      * Validate parameters before execution
      */
@@ -40,7 +41,7 @@ class DeleteProductAction extends BaseAction
     {
         // Authorize deleting products
         $this->authorizeWithRole('delete-products', 'admin');
-        
+
         $product = $params[0];
         $forceDelete = $params[1] ?? false;
 

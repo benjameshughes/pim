@@ -1,11 +1,11 @@
 <?php
+
 /**
  * 🎯 POST-DEPLOYMENT SETUP SCRIPT
- * 
+ *
  * Run this script after successful deployment to assign proper roles to users.
  * Usage: php artisan tinker < post_deployment_setup.php
  */
-
 echo "🎯 Post-Deployment Role Assignment\n";
 echo "==================================\n\n";
 

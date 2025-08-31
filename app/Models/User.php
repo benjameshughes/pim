@@ -6,7 +6,6 @@ namespace App\Models;
 use App\Observers\UserObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -16,7 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -89,10 +88,10 @@ class User extends Authenticatable
     public function getRoleDisplayName(): string
     {
         $primaryRole = $this->roles->first();
-        
-        return match($primaryRole?->name) {
+
+        return match ($primaryRole?->name) {
             'admin' => 'Administrator',
-            'manager' => 'Manager', 
+            'manager' => 'Manager',
             'user' => 'User',
             default => 'No Role Assigned'
         };
@@ -104,10 +103,16 @@ class User extends Authenticatable
     public function getPrimaryRole(): ?string
     {
         // Return roles in priority order: admin > manager > user
-        if ($this->hasRole('admin')) return 'admin';
-        if ($this->hasRole('manager')) return 'manager';
-        if ($this->hasRole('user')) return 'user';
-        
+        if ($this->hasRole('admin')) {
+            return 'admin';
+        }
+        if ($this->hasRole('manager')) {
+            return 'manager';
+        }
+        if ($this->hasRole('user')) {
+            return 'user';
+        }
+
         // Fallback to first role if none of the standard ones
         return $this->roles->first()?->name;
     }

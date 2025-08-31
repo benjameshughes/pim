@@ -83,16 +83,16 @@ class ImageStatsCommand extends Command
         // Storage information
         $this->newLine();
         $this->info('💾 Storage Information:');
-        
+
         $this->table(
             ['Storage Disk', 'Count', 'Total Size'],
             [
-                ['R2 (images)', $stats['total'], $this->formatBytes($stats['total_size'])]
+                ['R2 (images)', $stats['total'], $this->formatBytes($stats['total_size'])],
             ]
         );
 
         // Folder distribution
-        if (!empty($stats['folders'])) {
+        if (! empty($stats['folders'])) {
             $this->newLine();
             $this->info('📁 Folder Distribution:');
 
@@ -109,7 +109,7 @@ class ImageStatsCommand extends Command
         }
 
         // Recent uploads
-        if (!empty($stats['recent'])) {
+        if (! empty($stats['recent'])) {
             $this->newLine();
             $this->info('📸 Recent Uploads (Latest 5):');
 
@@ -117,7 +117,7 @@ class ImageStatsCommand extends Command
             foreach ($stats['recent'] as $image) {
                 $recentTable[] = [
                     $image->id,
-                    substr($image->display_title, 0, 30) . (strlen($image->display_title) > 30 ? '...' : ''),
+                    substr($image->display_title, 0, 30).(strlen($image->display_title) > 30 ? '...' : ''),
                     $this->formatBytes($image->size),
                     $image->created_at->diffForHumans(),
                 ];
@@ -133,7 +133,7 @@ class ImageStatsCommand extends Command
     private function getImageStats(): array
     {
         $total = Image::count();
-        
+
         return [
             'total' => $total,
             'attached_products' => Image::whereHas('products')->count(),
@@ -154,13 +154,13 @@ class ImageStatsCommand extends Command
     private function formatBytes(int $bytes): string
     {
         if ($bytes >= 1024 * 1024 * 1024) {
-            return round($bytes / (1024 * 1024 * 1024), 2) . ' GB';
+            return round($bytes / (1024 * 1024 * 1024), 2).' GB';
         } elseif ($bytes >= 1024 * 1024) {
-            return round($bytes / (1024 * 1024), 2) . ' MB';
+            return round($bytes / (1024 * 1024), 2).' MB';
         } elseif ($bytes >= 1024) {
-            return round($bytes / 1024, 2) . ' KB';
+            return round($bytes / 1024, 2).' KB';
         }
 
-        return $bytes . ' bytes';
+        return $bytes.' bytes';
     }
 }

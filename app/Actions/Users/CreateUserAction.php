@@ -21,7 +21,7 @@ use Maize\MagicLogin\Facades\MagicLink;
 class CreateUserAction extends BaseAction
 {
     use HasAuthorization;
-    
+
     protected bool $useTransactions = true;
 
     /**
@@ -105,7 +105,7 @@ class CreateUserAction extends BaseAction
 
             // Create user - observer will handle role assignment
             $user = User::create($userData);
-            
+
             // Assign explicit role if provided (after user creation so we have an ID)
             if ($role !== null) {
                 $user->assignRole($role);

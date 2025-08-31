@@ -9,20 +9,20 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🔍 GET CHANNEL PRICE ACTION
- * 
+ *
  * Retrieves channel-specific pricing for a product variant using the attribute system.
  * Falls back to default variant price if no channel-specific override is set.
- * 
- * Usage: $action->handle($variant, 'shopify') 
+ *
+ * Usage: $action->handle($variant, 'shopify')
  * Returns: ['success' => true, 'data' => ['price' => 89.99, 'source' => 'channel_override']]
  */
 class GetChannelPriceAction extends BaseAction
 {
     /**
      * Execute the get channel price action
-     * 
-     * @param ProductVariant $variant - The variant to get pricing for
-     * @param string|null $channelCode - The sales channel code (null for default price)
+     *
+     * @param  ProductVariant  $variant  - The variant to get pricing for
+     * @param  string|null  $channelCode  - The sales channel code (null for default price)
      */
     protected function performAction(...$params): array
     {
@@ -31,12 +31,12 @@ class GetChannelPriceAction extends BaseAction
         $options = $params[2] ?? [];
 
         // Validation
-        if (!$variant instanceof ProductVariant) {
+        if (! $variant instanceof ProductVariant) {
             return $this->failure('Invalid variant provided - must be ProductVariant instance');
         }
 
         // If no channel specified, return default price
-        if (!$channelCode) {
+        if (! $channelCode) {
             return $this->success('Default price retrieved', [
                 'price' => $variant->price,
                 'source' => 'default',
@@ -49,11 +49,11 @@ class GetChannelPriceAction extends BaseAction
 
         // Validate channel exists and is active
         $channel = SalesChannel::where('code', $channelCode)->active()->first();
-        if (!$channel) {
+        if (! $channel) {
             return $this->failure("Invalid or inactive sales channel: {$channelCode}");
         }
 
-        $attributeKey = $channelCode . '_price';
+        $attributeKey = $channelCode.'_price';
 
         Log::info('🔍 Getting channel price', [
             'variant_id' => $variant->id,
@@ -117,7 +117,7 @@ class GetChannelPriceAction extends BaseAction
                 'duration_ms' => $duration,
             ]);
 
-            return $this->failure("Failed to get {$channel->name} price: " . $e->getMessage(), [
+            return $this->failure("Failed to get {$channel->name} price: ".$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -130,13 +130,13 @@ class GetChannelPriceAction extends BaseAction
     protected function getAllChannelPrices(ProductVariant $variant): array
     {
         $channelPrices = [];
-        
+
         $activeChannels = SalesChannel::active()->get();
-        
+
         foreach ($activeChannels as $channel) {
-            $attributeKey = $channel->code . '_price';
+            $attributeKey = $channel->code.'_price';
             $channelPrice = $variant->getSmartAttributeValue($attributeKey);
-            
+
             $channelPrices[$channel->code] = [
                 'name' => $channel->name,
                 'price' => $channelPrice,
@@ -154,7 +154,8 @@ class GetChannelPriceAction extends BaseAction
      */
     public static function run(ProductVariant $variant, ?string $channelCode = null): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->handle($variant, $channelCode);
     }
 
@@ -164,6 +165,7 @@ class GetChannelPriceAction extends BaseAction
     public static function getPrice(ProductVariant $variant, ?string $channelCode = null): float
     {
         $result = static::run($variant, $channelCode);
+
         return $result['success'] ? $result['data']['price'] : $variant->price;
     }
 
@@ -173,6 +175,7 @@ class GetChannelPriceAction extends BaseAction
     public static function hasChannelOverride(ProductVariant $variant, string $channelCode): bool
     {
         $result = static::run($variant, $channelCode);
+
         return $result['success'] && $result['data']['has_override'];
     }
 
@@ -181,7 +184,8 @@ class GetChannelPriceAction extends BaseAction
      */
     public static function getAllChannelPricesFor(ProductVariant $variant): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->getAllChannelPrices($variant);
     }
 }

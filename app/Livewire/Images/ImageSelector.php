@@ -146,8 +146,8 @@ class ImageSelector extends Component
             } else {
                 $attachedImageIds = [];
             }
-            
-            if (!empty($attachedImageIds)) {
+
+            if (! empty($attachedImageIds)) {
                 $query->whereNotIn('id', $attachedImageIds);
             }
         }

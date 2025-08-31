@@ -2,6 +2,7 @@
 
 namespace App\Actions\Images;
 
+use App\Facades\Activity;
 use App\Models\Image;
 use App\Services\ImageUploadService;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,12 @@ class DeleteImageAction
         DB::beginTransaction();
 
         try {
+            // Capture relationships before deletion for activity logging
+            $attachedProducts = $image->products()->get();
+            $attachedVariants = $image->variants()->get();
+            $variantCount = $image->variants()->exists() ?
+                $this->getVariantsOfOriginal($image)->count() : 0;
+
             // Log the deletion attempt
             Log::info('Attempting to delete image', [
                 'image_id' => $image->id,
@@ -41,6 +48,23 @@ class DeleteImageAction
 
             // Use the existing ImageUploadService for file and database cleanup
             $this->imageUploadService->deleteImage($image);
+
+            // Log successful deletion activity
+            Activity::log()
+                ->by(auth()->id())
+                ->deleted($image)
+                ->with([
+                    'attached_products_count' => $attachedProducts->count(),
+                    'attached_variants_count' => $attachedVariants->count(),
+                    'had_variants' => $variantCount > 0,
+                    'variants_count' => $variantCount,
+                    'file_size' => $image->size,
+                    'dimensions' => [
+                        'width' => $image->width,
+                        'height' => $image->height,
+                    ],
+                ])
+                ->description("Deleted image '{$image->display_title}' and cleaned up attachments");
 
             DB::commit();
 
@@ -66,6 +90,21 @@ class DeleteImageAction
                 "Failed to delete image '{$image->display_title}': {$e->getMessage()}"
             );
         }
+    }
+
+    /**
+     * Get variants of the original image using DAM system
+     */
+    protected function getVariantsOfOriginal(Image $image): \Illuminate\Database\Eloquent\Collection
+    {
+        // If this is already a variant, get its original first
+        $originalId = $image->isVariant() ?
+            $image->getOriginalImageId() ?? $image->id :
+            $image->id;
+
+        return Image::where('folder', 'variants')
+            ->whereJsonContains('tags', "original-{$originalId}")
+            ->get();
     }
 
     /**

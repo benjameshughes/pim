@@ -11,21 +11,22 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 💰 SET CHANNEL PRICE ACTION
- * 
+ *
  * Sets channel-specific pricing for a product variant using the attribute system.
  * Replaces the complex Pricing table approach with simple attribute-based pricing.
- * 
+ *
  * Usage: $action->handle($variant, 'shopify', 89.99)
  */
 class SetChannelPriceAction extends BaseAction
 {
     use WithActivityLogs;
+
     /**
      * Execute the set channel price action
-     * 
-     * @param ProductVariant $variant - The variant to set pricing for
-     * @param string $channelCode - The sales channel code (e.g. 'shopify', 'ebay')
-     * @param float|null $price - The price to set (null to remove override)
+     *
+     * @param  ProductVariant  $variant  - The variant to set pricing for
+     * @param  string  $channelCode  - The sales channel code (e.g. 'shopify', 'ebay')
+     * @param  float|null  $price  - The price to set (null to remove override)
      */
     protected function performAction(...$params): array
     {
@@ -35,29 +36,29 @@ class SetChannelPriceAction extends BaseAction
         $options = $params[3] ?? [];
 
         // Validation
-        if (!$variant instanceof ProductVariant) {
+        if (! $variant instanceof ProductVariant) {
             return $this->failure('Invalid variant provided - must be ProductVariant instance');
         }
 
-        if (!$channelCode || !is_string($channelCode)) {
+        if (! $channelCode || ! is_string($channelCode)) {
             return $this->failure('Channel code is required and must be a string');
         }
 
         // Validate channel exists and is active
         $channel = SalesChannel::where('code', $channelCode)->active()->first();
-        if (!$channel) {
+        if (! $channel) {
             return $this->failure("Invalid or inactive sales channel: {$channelCode}");
         }
 
         // Validate price if provided
         if ($price !== null) {
-            if (!is_numeric($price) || $price < 0) {
+            if (! is_numeric($price) || $price < 0) {
                 return $this->failure('Price must be a positive number or null');
             }
             $price = round((float) $price, 2);
         }
 
-        $attributeKey = $channelCode . '_price';
+        $attributeKey = $channelCode.'_price';
 
         Log::info('💰 Setting channel price', [
             'variant_id' => $variant->id,
@@ -72,7 +73,7 @@ class SetChannelPriceAction extends BaseAction
 
         try {
             $previousPrice = $variant->getSmartAttributeValue($attributeKey);
-            
+
             if ($price === null) {
                 // Remove the channel price override - variant will use default price
                 $this->removeChannelPriceOverride($variant, $attributeKey);
@@ -82,7 +83,7 @@ class SetChannelPriceAction extends BaseAction
                 // Set the channel price override
                 $this->setChannelPriceOverride($variant, $attributeKey, $price);
                 $action = $previousPrice === null ? 'created' : 'updated';
-                $message = ucfirst($action) . " {$channel->name} price for variant {$variant->sku}: £{$price}";
+                $message = ucfirst($action)." {$channel->name} price for variant {$variant->sku}: £{$price}";
             }
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
@@ -98,7 +99,7 @@ class SetChannelPriceAction extends BaseAction
             // 📝 Log activity with gorgeous descriptive messages
             $userName = auth()->user()?->name ?? 'System';
             $productName = $variant->product->name ?? 'Unknown Product';
-            
+
             if ($price === null) {
                 $description = "{$productName} variant {$variant->sku} {$channel->name} price override removed by {$userName} (now uses default £{$variant->price})";
             } elseif ($previousPrice === null) {
@@ -108,7 +109,7 @@ class SetChannelPriceAction extends BaseAction
                 $changeDirection = $priceChange > 0 ? 'increased' : 'decreased';
                 $changeAmount = abs($priceChange);
                 $changePercent = $previousPrice > 0 ? round((abs($priceChange) / $previousPrice) * 100, 1) : 0;
-                
+
                 $description = "{$productName} variant {$variant->sku} {$channel->name} price {$changeDirection} from £{$previousPrice} to £{$price} by {$userName} (+£{$changeAmount}, {$changePercent}% change)";
             }
 
@@ -125,8 +126,8 @@ class SetChannelPriceAction extends BaseAction
                     'default_price' => $variant->price,
                     'effective_price' => $price ?? $variant->price,
                     'price_change' => $price && $previousPrice ? ($price - $previousPrice) : null,
-                    'price_change_percentage' => $price && $previousPrice && $previousPrice > 0 
-                        ? round((($price - $previousPrice) / $previousPrice) * 100, 2) 
+                    'price_change_percentage' => $price && $previousPrice && $previousPrice > 0
+                        ? round((($price - $previousPrice) / $previousPrice) * 100, 2)
                         : null,
                     'variant_sku' => $variant->sku,
                     'product_name' => $productName,
@@ -158,7 +159,7 @@ class SetChannelPriceAction extends BaseAction
                 'duration_ms' => $duration,
             ]);
 
-            return $this->failure("Failed to set {$channel->name} price: " . $e->getMessage(), [
+            return $this->failure("Failed to set {$channel->name} price: ".$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -175,7 +176,7 @@ class SetChannelPriceAction extends BaseAction
             'updated_by' => auth()->id() ?? 'system',
         ]);
 
-        if (!$result) {
+        if (! $result) {
             throw new \Exception("Failed to set attribute value for {$attributeKey}");
         }
     }
@@ -197,7 +198,8 @@ class SetChannelPriceAction extends BaseAction
      */
     public static function run(ProductVariant $variant, string $channelCode, ?float $price): array
     {
-        $action = new static();
+        $action = new static;
+
         return $action->handle($variant, $channelCode, $price);
     }
 
@@ -212,7 +214,7 @@ class SetChannelPriceAction extends BaseAction
                 return [
                     'code' => $channel->code,
                     'name' => $channel->name,
-                    'attribute_key' => $channel->code . '_price',
+                    'attribute_key' => $channel->code.'_price',
                 ];
             })
             ->toArray();
@@ -225,5 +227,4 @@ class SetChannelPriceAction extends BaseAction
     {
         return SalesChannel::where('code', $channelCode)->active()->exists();
     }
-
 }

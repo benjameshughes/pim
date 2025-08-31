@@ -7,14 +7,14 @@ use App\Actions\Users\CreateUserAction;
 use App\Actions\Users\GetUsersWithRolesAction;
 use App\Models\User;
 use App\Services\PermissionTemplateService;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Illuminate\Support\Collection;
 use Spatie\Permission\Models\Role;
 
 /**
  * 👑 USER ROLE MANAGEMENT COMPONENT
- * 
+ *
  * Livewire component for managing user roles in the simplified permission system.
  * Features user listing, role assignment, filtering, and bulk operations.
  */
@@ -24,31 +24,45 @@ class UserRoleManagement extends Component
 
     // Filters
     public string $search = '';
+
     public string $roleFilter = '';
+
     public string $sortBy = 'name';
+
     public string $sortDirection = 'asc';
 
-    // Modal state  
+    // Modal state
     public bool $showRoleModal = false;
+
     public ?User $selectedUser = null;
+
     public string $selectedRole = '';
-    
+
     // Permission template modal state
     public bool $showPermissionModal = false;
+
     public ?User $selectedUserForPermissions = null;
+
     public string $selectedTemplate = '';
+
     public bool $showCustomPermissions = false;
-    
+
     // Create user modal state
     public bool $showCreateModal = false;
+
     public string $createName = '';
+
     public string $createEmail = '';
+
     public string $createRole = 'user';
+
     public bool $sendWelcomeEmail = true;
 
     // Bulk operations
     public array $selectedUsers = [];
+
     public bool $selectAll = false;
+
     public string $bulkRole = '';
 
     protected $listeners = [
@@ -85,8 +99,9 @@ class UserRoleManagement extends Component
     public function openRoleModal($userId)
     {
         $user = User::find($userId);
-        if (!$user) {
+        if (! $user) {
             $this->dispatch('notify', message: 'User not found', type: 'error');
+
             return;
         }
 
@@ -97,16 +112,17 @@ class UserRoleManagement extends Component
 
     public function saveRoleModal()
     {
-        if (!$this->selectedUser || !$this->selectedRole) {
+        if (! $this->selectedUser || ! $this->selectedRole) {
             $this->dispatch('notify', message: 'Please select a user and role', type: 'error');
+
             return;
         }
 
         $result = AssignUserRoleAction::run($this->selectedUser, $this->selectedRole);
 
         if ($result['success']) {
-            $this->dispatch('notify', 
-                message: "Updated {$this->selectedUser->name}'s role to {$this->selectedRole} 👑", 
+            $this->dispatch('notify',
+                message: "Updated {$this->selectedUser->name}'s role to {$this->selectedRole} 👑",
                 type: 'success'
             );
             $this->closeRoleModal();
@@ -160,8 +176,8 @@ class UserRoleManagement extends Component
 
         if ($result['success']) {
             $magicLinkStatus = $result['data']['magic_link_sent'] ? ' Magic login link sent!' : '';
-            $this->dispatch('notify', 
-                message: "User {$this->createName} created successfully with {$this->createRole} role.{$magicLinkStatus} 🎉", 
+            $this->dispatch('notify',
+                message: "User {$this->createName} created successfully with {$this->createRole} role.{$magicLinkStatus} 🎉",
                 type: 'success'
             );
             $this->closeCreateModal();
@@ -175,6 +191,7 @@ class UserRoleManagement extends Component
     {
         if (empty($this->selectedUsers) || empty($this->bulkRole)) {
             $this->dispatch('notify', message: 'Please select users and a role', type: 'error');
+
             return;
         }
 
@@ -192,13 +209,13 @@ class UserRoleManagement extends Component
         }
 
         if ($successCount > 0) {
-            $this->dispatch('notify', 
-                message: "Updated {$successCount} users to {$this->bulkRole} role 🎉", 
+            $this->dispatch('notify',
+                message: "Updated {$successCount} users to {$this->bulkRole} role 🎉",
                 type: 'success'
             );
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             foreach ($errors as $error) {
                 $this->dispatch('notify', message: $error, type: 'error');
             }
@@ -240,14 +257,14 @@ class UserRoleManagement extends Component
         ];
 
         $result = GetUsersWithRolesAction::run($filters);
-        
+
         return $result['success'] ? collect($result['data']['users']) : collect([]);
     }
 
     public function getRoleStatistics(): array
     {
         $result = GetUsersWithRolesAction::run();
-        
+
         return $result['success'] ? $result['data']['role_statistics'] : [];
     }
 
@@ -272,7 +289,7 @@ class UserRoleManagement extends Component
     public function selectTemplate(string $templateKey)
     {
         $this->selectedTemplate = $templateKey;
-        
+
         if ($templateKey === 'custom') {
             $this->showCustomPermissions = true;
         } else {
@@ -284,26 +301,28 @@ class UserRoleManagement extends Component
     {
         $this->authorize('manage-role-permissions');
 
-        if (!$this->selectedUserForPermissions || !$this->selectedTemplate) {
+        if (! $this->selectedUserForPermissions || ! $this->selectedTemplate) {
             $this->dispatch('notify', message: 'Please select a template', type: 'error');
+
             return;
         }
 
         if ($this->selectedTemplate === 'custom') {
             $this->dispatch('notify', message: 'Custom permissions not implemented yet', type: 'info');
+
             return;
         }
 
         try {
             $success = PermissionTemplateService::applyTemplate(
-                $this->selectedTemplate, 
+                $this->selectedTemplate,
                 $this->selectedUserForPermissions
             );
 
             if ($success) {
                 $template = PermissionTemplateService::getTemplate($this->selectedTemplate);
-                $this->dispatch('notify', 
-                    message: "Applied {$template['name']} template ({$template['permission_count']} permissions) to {$this->selectedUserForPermissions->name} 🎭", 
+                $this->dispatch('notify',
+                    message: "Applied {$template['name']} template ({$template['permission_count']} permissions) to {$this->selectedUserForPermissions->name} 🎭",
                     type: 'success'
                 );
                 $this->closePermissionModal();
@@ -313,7 +332,7 @@ class UserRoleManagement extends Component
             }
 
         } catch (\Exception $e) {
-            $this->dispatch('notify', message: 'Error applying template: ' . $e->getMessage(), type: 'error');
+            $this->dispatch('notify', message: 'Error applying template: '.$e->getMessage(), type: 'error');
         }
     }
 

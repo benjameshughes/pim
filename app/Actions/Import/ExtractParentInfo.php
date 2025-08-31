@@ -2,7 +2,6 @@
 
 namespace App\Actions\Import;
 
-use App\Actions\Import\ExtractDimensions;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -19,13 +18,13 @@ class ExtractParentInfo
 
     /**
      * Extract parent SKU and product information from variant data
-     * 
+     *
      * Supports patterns:
      * - Pattern 1: "45120RWST-White" → parent_sku: "45120RWST", color: "White"
      * - Pattern 2: "001-002-003" → parent_sku: "001-002", variant: "003"
      * - Pattern 3: "010-108" → parent_sku: "010", variant: "108"
      *
-     * @param array $data Row data containing SKU and title
+     * @param  array  $data  Row data containing SKU and title
      * @return array Extracted parent information
      */
     public function execute(array $data): array
@@ -63,12 +62,12 @@ class ExtractParentInfo
 
         // Generate product name by removing dimensions and color
         $baseName = preg_replace('/\d+cm( x \d+cm)?/', '', $title);
-        $baseName = preg_replace('/\b' . preg_quote($color, '/') . '\b/i', '', $baseName);
+        $baseName = preg_replace('/\b'.preg_quote($color, '/').'\b/i', '', $baseName);
         $baseName = trim(preg_replace('/\s+/', ' ', $baseName));
 
         $result = [
             'parent_sku' => $parentSku,
-            'product_name' => $baseName ?: 'Product ' . $parentSku,
+            'product_name' => $baseName ?: 'Product '.$parentSku,
             'color' => $color,
             'width' => $width,
             'drop' => $drop,
@@ -115,7 +114,7 @@ class ExtractParentInfo
 
         foreach ($commonColors as $color) {
             // Use word boundaries to avoid partial matches (e.g., "black" in "blackout")
-            if (preg_match('/\b' . preg_quote($color, '/') . '\b/i', $title)) {
+            if (preg_match('/\b'.preg_quote($color, '/').'\b/i', $title)) {
                 return ucwords($color);  // Use ucwords for multi-word colors
             }
         }

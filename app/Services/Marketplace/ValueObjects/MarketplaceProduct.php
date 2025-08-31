@@ -31,6 +31,7 @@ class MarketplaceProduct
         if ($key === null) {
             return $this->metadata;
         }
+
         return $this->metadata[$key] ?? $default;
     }
 
@@ -39,6 +40,6 @@ class MarketplaceProduct
      */
     public function hasData(): bool
     {
-        return !empty($this->data);
+        return ! empty($this->data);
     }
 }

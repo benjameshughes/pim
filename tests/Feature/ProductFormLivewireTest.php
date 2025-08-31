@@ -68,7 +68,7 @@ describe('ProductForm Livewire Component', function () {
                 ->call('save');
 
             $product = Product::where('parent_sku', 'TEST123')->first();
-            
+
             if (method_exists($component->instance(), 'redirectRoute')) {
                 // Test redirect behavior
                 $component->assertRedirect(route('products.show', $product));
@@ -82,7 +82,7 @@ describe('ProductForm Livewire Component', function () {
                 'name' => 'Original Product',
                 'parent_sku' => 'ORIGINAL123',
                 'description' => 'Original description',
-                'status' => 'active'
+                'status' => 'active',
             ]);
         });
 
@@ -168,7 +168,7 @@ describe('ProductForm Livewire Component', function () {
     describe('Form Interactions', function () {
         test('cancel button works', function () {
             $component = Livewire::test(ProductForm::class);
-            
+
             if (method_exists($component->instance(), 'cancel')) {
                 $component->call('cancel')
                     ->assertRedirect(route('products.index'));
@@ -179,7 +179,7 @@ describe('ProductForm Livewire Component', function () {
             $component = Livewire::test(ProductForm::class)
                 ->set('name', 'Test')
                 ->set('parent_sku', 'TEST');
-                
+
             if (method_exists($component->instance(), 'resetForm')) {
                 $component->call('resetForm')
                     ->assertSet('name', '')
@@ -191,7 +191,7 @@ describe('ProductForm Livewire Component', function () {
             $component = Livewire::test(ProductForm::class)
                 ->set('name', 'Test Product')
                 ->set('parent_sku', 'TEST123');
-                
+
             // Test that loading states work (wire:loading)
             $component->assertStatus(200);
         });
@@ -222,7 +222,7 @@ describe('ProductForm Livewire Component', function () {
     describe('Attribute System Integration', function () {
         test('form supports attribute assignment', function () {
             $component = Livewire::test(ProductForm::class);
-            
+
             // If the form supports attributes
             if (property_exists($component->instance(), 'attributes')) {
                 $component->set('attributes.brand', 'Test Brand')
@@ -230,7 +230,7 @@ describe('ProductForm Livewire Component', function () {
                     ->set('parent_sku', 'TEST123')
                     ->call('save')
                     ->assertHasNoErrors();
-                    
+
                 $product = Product::where('parent_sku', 'TEST123')->first();
                 expect($product->getSmartAttributeValue('brand'))->toBe('Test Brand');
             }
@@ -269,13 +269,13 @@ describe('ProductForm Livewire Component', function () {
     describe('Performance', function () {
         test('component renders without performance issues', function () {
             $startTime = microtime(true);
-            
+
             Livewire::test(ProductForm::class)
                 ->assertStatus(200);
-                
+
             $endTime = microtime(true);
             $renderTime = $endTime - $startTime;
-            
+
             expect($renderTime)->toBeLessThan(1.0); // Should render in less than 1 second
         });
     });

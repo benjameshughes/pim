@@ -2,13 +2,13 @@
 
 namespace App\Actions\Marketplace\Shopify;
 
-use App\Services\Marketplace\ValueObjects\SyncResult;
-use App\Models\SyncAccount;
 use App\Models\Product;
+use App\Models\SyncAccount;
+use App\Services\Marketplace\ValueObjects\SyncResult;
 
 /**
  * 🗑️ DELETE SHOPIFY PRODUCTS ACTION
- * 
+ *
  * Single responsibility: Delete existing products from Shopify
  * - Gets Shopify IDs from stored attributes
  * - Deletes each product individually
@@ -20,24 +20,24 @@ class DeleteShopifyProductsAction
     /**
      * Delete existing products from Shopify
      *
-     * @param int $productId Local product ID
-     * @param SyncAccount $syncAccount Shopify account
+     * @param  int  $productId  Local product ID
+     * @param  SyncAccount  $syncAccount  Shopify account
      * @return SyncResult Delete operation result
      */
     public function execute(int $productId, SyncAccount $syncAccount): SyncResult
     {
         try {
             $product = Product::find($productId);
-            
-            if (!$product) {
+
+            if (! $product) {
                 return SyncResult::failure("Product with ID {$productId} not found");
             }
 
             // Get existing Shopify product IDs from attributes
             $existingProducts = $this->getExistingShopifyProducts($product, $syncAccount);
-            
+
             if (empty($existingProducts)) {
-                return SyncResult::failure("No Shopify products found to delete. Product may not be synced to this account.");
+                return SyncResult::failure('No Shopify products found to delete. Product may not be synced to this account.');
             }
 
             $client = new \App\Services\Marketplace\Shopify\ShopifyGraphQLClient($syncAccount);
@@ -47,7 +47,7 @@ class DeleteShopifyProductsAction
             // Delete each Shopify product
             foreach ($existingProducts as $shopifyProductId => $colorGroup) {
                 $result = $this->deleteSingleShopifyProduct($client, $shopifyProductId, $colorGroup);
-                
+
                 if ($result['success']) {
                     $deletedProducts[] = $result;
                 } else {
@@ -56,12 +56,12 @@ class DeleteShopifyProductsAction
             }
 
             $success = empty($errors);
-            $message = $success 
+            $message = $success
                 ? sprintf('Successfully deleted %d Shopify products', count($deletedProducts))
                 : sprintf('Deleted %d products, %d failed', count($deletedProducts), count($errors));
 
             // Clear attributes after successful deletions
-            if (!empty($deletedProducts)) {
+            if (! empty($deletedProducts)) {
                 $this->clearShopifyAttributes($product);
             }
 
@@ -71,14 +71,14 @@ class DeleteShopifyProductsAction
                 data: [
                     'deleted' => $deletedProducts,
                     'failed' => $errors,
-                    'cleared_attributes' => !empty($deletedProducts),
+                    'cleared_attributes' => ! empty($deletedProducts),
                 ],
                 errors: array_column($errors, 'error')
             );
 
         } catch (\Exception $e) {
             return SyncResult::failure(
-                message: 'Delete operation failed: ' . $e->getMessage(),
+                message: 'Delete operation failed: '.$e->getMessage(),
                 errors: [$e->getMessage()]
             );
         }
@@ -94,7 +94,7 @@ class DeleteShopifyProductsAction
         $status = $product->getSmartAttributeValue('shopify_status');
 
         // Only delete if synced with this account
-        if (!$shopifyProductIds || !$syncAccountId || $syncAccountId != $syncAccount->id) {
+        if (! $shopifyProductIds || ! $syncAccountId || $syncAccountId != $syncAccount->id) {
             return [];
         }
 
@@ -105,8 +105,8 @@ class DeleteShopifyProductsAction
         } elseif (is_array($shopifyProductIds)) {
             $productIds = $shopifyProductIds;
         }
-        
-        if (!is_array($productIds)) {
+
+        if (! is_array($productIds)) {
             return [];
         }
 
@@ -127,12 +127,12 @@ class DeleteShopifyProductsAction
         try {
             // Extract numeric ID for user-friendly display
             $numericId = str_replace('gid://shopify/Product/', '', $shopifyProductId);
-            
+
             $result = $client->deleteProduct($shopifyProductId);
-            
+
             $userErrors = $result['productDelete']['userErrors'] ?? [];
             $deletedProductId = $result['productDelete']['deletedProductId'] ?? null;
-            
+
             if (empty($userErrors) && $deletedProductId) {
                 return [
                     'success' => true,
@@ -148,19 +148,19 @@ class DeleteShopifyProductsAction
                     'shopify_product_id' => $shopifyProductId,
                     'numeric_id' => $numericId,
                     'color_group' => $colorGroup,
-                    'error' => !empty($userErrors) ? 'Shopify errors: ' . json_encode($userErrors) : 'No deletion confirmation received',
+                    'error' => ! empty($userErrors) ? 'Shopify errors: '.json_encode($userErrors) : 'No deletion confirmation received',
                 ];
             }
 
         } catch (\Exception $e) {
             $numericId = str_replace('gid://shopify/Product/', '', $shopifyProductId);
-            
+
             return [
                 'success' => false,
                 'shopify_product_id' => $shopifyProductId,
                 'numeric_id' => $numericId,
                 'color_group' => $colorGroup,
-                'error' => 'Delete failed: ' . $e->getMessage(),
+                'error' => 'Delete failed: '.$e->getMessage(),
             ];
         }
     }

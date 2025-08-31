@@ -38,7 +38,7 @@ class Overview extends Component
             ->groupBy(function ($log) {
                 return str_before($log->event, '.');
             })
-            ->map(fn($group) => [
+            ->map(fn ($group) => [
                 'type' => ucwords(str_replace('_', ' ', $group->first()->event)),
                 'count' => $group->count(),
                 'latest' => $group->first()->occurred_at,
@@ -55,7 +55,7 @@ class Overview extends Component
 
         // Simple health scoring
         $healthScore = 100;
-        
+
         // Deduct points for high error rate
         if ($performanceMetrics['error_rate'] > 5) {
             $healthScore -= 20;
@@ -77,9 +77,9 @@ class Overview extends Component
             $healthScore -= 5;
         }
 
-        $status = match(true) {
+        $status = match (true) {
             $healthScore >= 90 => 'excellent',
-            $healthScore >= 75 => 'good', 
+            $healthScore >= 75 => 'good',
             $healthScore >= 60 => 'warning',
             default => 'critical'
         };
@@ -87,12 +87,12 @@ class Overview extends Component
         return [
             'score' => max(0, $healthScore),
             'status' => $status,
-            'color' => match($status) {
+            'color' => match ($status) {
                 'excellent' => 'green',
                 'good' => 'blue',
-                'warning' => 'yellow', 
+                'warning' => 'yellow',
                 'critical' => 'red',
-            }
+            },
         ];
     }
 

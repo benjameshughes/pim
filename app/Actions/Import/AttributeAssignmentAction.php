@@ -19,12 +19,10 @@ class AttributeAssignmentAction
     /**
      * Assign attributes to product and/or variant
      *
-     * @param Product $product
-     * @param ProductVariant|null $variant
-     * @param array $csvData Raw CSV data with all columns
-     * @param array $mappings Column mappings used for fillable fields
-     * @param array $adHocAttributes User-defined key-value pairs
-     * @param array $csvHeaders Original CSV headers for column names
+     * @param  array  $csvData  Raw CSV data with all columns
+     * @param  array  $mappings  Column mappings used for fillable fields
+     * @param  array  $adHocAttributes  User-defined key-value pairs
+     * @param  array  $csvHeaders  Original CSV headers for column names
      * @return array Results summary
      */
     public function execute(
@@ -42,7 +40,7 @@ class AttributeAssignmentAction
 
         // 1. Process auto-mapped attributes (unmapped CSV columns)
         $autoAttributes = $this->extractAutoAttributes($csvData, $mappings, $csvHeaders);
-        
+
         // 2. Process ad-hoc attributes
         $processedAdHoc = $this->processAdHocAttributes($adHocAttributes);
 
@@ -51,28 +49,28 @@ class AttributeAssignmentAction
 
         // 4. Assign to product (product-level attributes)
         $productAttributes = $this->filterProductAttributes($allAttributes);
-        if (!empty($productAttributes)) {
+        if (! empty($productAttributes)) {
             $productResults = $product->syncAttributes($productAttributes, ['source' => 'import']);
             $results['product_attributes'] = $productResults;
-            
+
             Log::debug('Assigned product attributes', [
                 'product_id' => $product->id,
                 'attributes' => array_keys($productAttributes),
-                'results' => $productResults
+                'results' => $productResults,
             ]);
         }
 
         // 5. Assign to variant (variant-level attributes)
         if ($variant) {
             $variantAttributes = $this->filterVariantAttributes($allAttributes);
-            if (!empty($variantAttributes)) {
+            if (! empty($variantAttributes)) {
                 $variantResults = $variant->syncAttributes($variantAttributes, ['source' => 'import']);
                 $results['variant_attributes'] = $variantResults;
-                
+
                 Log::debug('Assigned variant attributes', [
                     'variant_id' => $variant->id,
                     'attributes' => array_keys($variantAttributes),
-                    'results' => $variantResults
+                    'results' => $variantResults,
                 ]);
             }
         }
@@ -100,7 +98,7 @@ class AttributeAssignmentAction
             }
 
             // Use header name as attribute key, or fallback to column index
-            $attributeKey = isset($csvHeaders[$columnIndex]) 
+            $attributeKey = isset($csvHeaders[$columnIndex])
                 ? $this->sanitizeAttributeKey($csvHeaders[$columnIndex])
                 : "column_{$columnIndex}";
 
@@ -132,7 +130,7 @@ class AttributeAssignmentAction
 
     /**
      * Filter attributes that should be assigned to product
-     * 
+     *
      * Product-level attributes are typically:
      * - Brand, category, manufacturer info
      * - General product metadata
@@ -144,7 +142,7 @@ class AttributeAssignmentAction
             'brand', 'category', 'manufacturer', 'supplier', 'type',
             'material', 'collection', 'series', 'model',
             'meta_title', 'meta_description', 'keywords',
-            'origin_country', 'warranty', 'care_instructions'
+            'origin_country', 'warranty', 'care_instructions',
         ];
 
         return array_intersect_key($attributes, array_flip($productAttributeKeys));
@@ -152,7 +150,7 @@ class AttributeAssignmentAction
 
     /**
      * Filter attributes that should be assigned to variant
-     * 
+     *
      * Variant-level attributes are typically:
      * - Size, color, dimension specifics
      * - SKU-specific data
@@ -162,9 +160,9 @@ class AttributeAssignmentAction
     {
         $variantAttributeKeys = [
             'color_code', 'size_chart', 'pattern', 'finish', 'texture',
-            'weight_kg', 'dimensions', 'fabric_composition', 
+            'weight_kg', 'dimensions', 'fabric_composition',
             'style_code', 'season', 'gender', 'age_group',
-            'barcode_type', 'supplier_sku', 'cost_price'
+            'barcode_type', 'supplier_sku', 'cost_price',
         ];
 
         // Also include any attributes not claimed by product-level
@@ -172,7 +170,7 @@ class AttributeAssignmentAction
         $remainingAttributes = array_diff_key($attributes, $productAttributes);
 
         $explicitVariantAttributes = array_intersect_key($attributes, array_flip($variantAttributeKeys));
-        
+
         return array_merge($explicitVariantAttributes, $remainingAttributes);
     }
 

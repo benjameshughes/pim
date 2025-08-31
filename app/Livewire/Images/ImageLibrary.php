@@ -67,7 +67,7 @@ class ImageLibrary extends Component
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
     ];
-    
+
     public function mount()
     {
         // Authorize managing images
@@ -98,7 +98,7 @@ class ImageLibrary extends Component
     {
         // Authorize uploading images
         $this->authorize('upload-images');
-        
+
         $this->validate([
             'newImages.*' => 'required|image|max:10240', // 10MB
         ]);
@@ -155,7 +155,7 @@ class ImageLibrary extends Component
     {
         // Authorize deleting images
         $this->authorize('delete-images');
-        
+
         $image = Image::find($imageId);
         if (! $image) {
             return;

@@ -21,10 +21,10 @@ class Sync extends Facade
     /**
      * Get marketplace adapter instance
      *
-     * @param string $marketplace The marketplace name (shopify, ebay, freemans, etc.)
-     * @param string|null $account Optional account name for multi-account setups
+     * @param  string  $marketplace  The marketplace name (shopify, ebay, freemans, etc.)
+     * @param  string|null  $account  Optional account name for multi-account setups
      */
-    public static function marketplace(string $marketplace, string $account = null)
+    public static function marketplace(string $marketplace, ?string $account = null)
     {
         return app(MarketplaceManager::class)->make($marketplace, $account);
     }
@@ -32,22 +32,22 @@ class Sync extends Facade
     /**
      * Convenience methods for common marketplaces
      */
-    public static function shopify(string $account = null)
+    public static function shopify(?string $account = null)
     {
         return static::marketplace('shopify', $account);
     }
 
-    public static function ebay(string $account = null)
+    public static function ebay(?string $account = null)
     {
         return static::marketplace('ebay', $account);
     }
 
-    public static function amazon(string $account = null)
+    public static function amazon(?string $account = null)
     {
         return static::marketplace('amazon', $account);
     }
 
-    public static function freemans(string $account = null)
+    public static function freemans(?string $account = null)
     {
         return static::marketplace('freemans', $account);
     }

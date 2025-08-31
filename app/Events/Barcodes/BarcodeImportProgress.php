@@ -21,7 +21,7 @@ class BarcodeImportProgress implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('barcode-import.' . $this->importId),
+            new Channel('barcode-import.'.$this->importId),
         ];
     }
 
@@ -38,5 +38,4 @@ class BarcodeImportProgress implements ShouldBroadcastNow
             'status' => $this->status,
         ];
     }
-
 }

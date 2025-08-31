@@ -12,7 +12,7 @@ use Livewire\Component;
 class ProductShow extends Component
 {
     use TracksUserInteractions;
-    
+
     public Product $product;
 
     public function mount(Product $product)
@@ -77,7 +77,7 @@ class ProductShow extends Component
         $originalName = $this->product->name;
         $originalSku = $this->product->parent_sku;
         $userName = auth()->user()?->name ?? 'System';
-        
+
         $newProduct = $this->product->replicate();
         $newProduct->name = $this->product->name.' (Copy)';
         $newProduct->parent_sku = $this->product->parent_sku.'-COPY';
@@ -171,7 +171,7 @@ class ProductShow extends Component
     public function getChannelPricingOverridesCount(): int
     {
         $overrideCount = 0;
-        
+
         foreach ($this->product->variants as $variant) {
             $channelPrices = $variant->getAllChannelPrices();
             foreach ($channelPrices as $channelData) {
@@ -181,7 +181,7 @@ class ProductShow extends Component
                 }
             }
         }
-        
+
         return $overrideCount;
     }
 

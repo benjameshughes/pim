@@ -39,7 +39,7 @@ class ProductForm extends Component
         if ($product && $product->exists) {
             // Authorize edit access
             $this->authorize('edit-products');
-            
+
             $this->product = $product;
             $this->isEditing = true;
 
@@ -51,7 +51,7 @@ class ProductForm extends Component
         } else {
             // Authorize create access
             $this->authorize('create-products');
-            
+
             // Create empty DTO with defaults
             $this->productDto = ProductDTO::fromArray([
                 'name' => '',

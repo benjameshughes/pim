@@ -13,7 +13,7 @@ class VariantShow extends Component
     {
         // Authorize viewing variant details
         $this->authorize('view-variant-details');
-        
+
         $this->variant = $variant->load([
             'product',
             'barcode',
@@ -29,7 +29,7 @@ class VariantShow extends Component
     {
         // Authorize deleting variants
         $this->authorize('delete-variants');
-        
+
         $variantName = $this->variant->sku.' - '.($this->variant->color ?? 'No Color');
         $productId = $this->variant->product_id;
 
@@ -44,7 +44,7 @@ class VariantShow extends Component
     {
         // Authorize creating variants (for duplication)
         $this->authorize('create-variants');
-        
+
         $newVariant = $this->variant->replicate();
         $newVariant->sku = $this->variant->sku.'-COPY';
         $newVariant->save();

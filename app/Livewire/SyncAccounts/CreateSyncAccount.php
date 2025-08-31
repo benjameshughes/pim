@@ -57,7 +57,7 @@ class CreateSyncAccount extends Component
     {
         // Authorize creating marketplace connections
         $this->authorize('manage-marketplace-connections');
-        
+
         // Pre-fill some defaults
         $this->api_version = '2025-07';
         $this->environment = 'SANDBOX';

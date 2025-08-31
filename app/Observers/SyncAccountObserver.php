@@ -2,17 +2,17 @@
 
 namespace App\Observers;
 
-use App\Models\SyncAccount;
 use App\Models\SalesChannel;
+use App\Models\SyncAccount;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
  * 🎯 SYNC ACCOUNT OBSERVER - KISS Channel Auto-Creation
- * 
+ *
  * Automatically creates corresponding SalesChannels when SyncAccounts are created/updated.
  * Format: {channel}_{account_name} → ebay_blindsoutlet, shopify_main, etc.
- * 
+ *
  * This enables channel-specific pricing: ebay_blindsoutlet_price, shopify_main_price
  */
 class SyncAccountObserver
@@ -49,23 +49,25 @@ class SyncAccountObserver
      */
     protected function createCorrespondingSalesChannel(SyncAccount $syncAccount): void
     {
-        if (!$syncAccount->channel || !$syncAccount->name) {
+        if (! $syncAccount->channel || ! $syncAccount->name) {
             Log::warning('🚫 Cannot create SalesChannel: missing channel or name', [
                 'sync_account_id' => $syncAccount->id,
                 'channel' => $syncAccount->channel,
                 'name' => $syncAccount->name,
             ]);
+
             return;
         }
 
         $channelCode = $this->generateChannelCode($syncAccount);
-        
+
         // Check if channel already exists
         if (SalesChannel::where('code', $channelCode)->exists()) {
             Log::info('⚠️ SalesChannel already exists, skipping creation', [
                 'channel_code' => $channelCode,
                 'sync_account_id' => $syncAccount->id,
             ]);
+
             return;
         }
 
@@ -103,14 +105,15 @@ class SyncAccountObserver
     {
         $oldChannelCode = $this->generateChannelCodeFromOriginal($syncAccount);
         $newChannelCode = $this->generateChannelCode($syncAccount);
-        
+
         $salesChannel = SalesChannel::where('config->sync_account_id', $syncAccount->id)->first();
-        
-        if (!$salesChannel) {
+
+        if (! $salesChannel) {
             Log::info('🔄 No existing SalesChannel found, creating new one', [
                 'sync_account_id' => $syncAccount->id,
             ]);
             $this->createCorrespondingSalesChannel($syncAccount);
+
             return;
         }
 
@@ -145,17 +148,17 @@ class SyncAccountObserver
     protected function deleteCorrespondingSalesChannel(SyncAccount $syncAccount): void
     {
         $salesChannel = SalesChannel::where('config->sync_account_id', $syncAccount->id)->first();
-        
+
         if ($salesChannel) {
             $channelCode = $salesChannel->code;
             $salesChannel->delete();
-            
+
             Log::info('🗑️ Deleted SalesChannel for SyncAccount', [
                 'sync_account_id' => $syncAccount->id,
                 'channel_code' => $channelCode,
                 'sales_channel_id' => $salesChannel->id,
             ]);
-            
+
             // Clean up attributes after deletion
             $this->syncChannelAttributes();
         }
@@ -168,7 +171,7 @@ class SyncAccountObserver
     {
         $channel = Str::slug($syncAccount->channel);
         $name = Str::slug($syncAccount->name);
-        
+
         return "{$channel}_{$name}";
     }
 
@@ -179,8 +182,8 @@ class SyncAccountObserver
     {
         $originalChannel = $syncAccount->getOriginal('channel') ?? $syncAccount->channel;
         $originalName = $syncAccount->getOriginal('name') ?? $syncAccount->name;
-        
-        return Str::slug($originalChannel) . '_' . Str::slug($originalName);
+
+        return Str::slug($originalChannel).'_'.Str::slug($originalName);
     }
 
     /**
@@ -190,7 +193,7 @@ class SyncAccountObserver
     {
         $channelName = ucfirst($syncAccount->channel);
         $accountName = $syncAccount->display_name ?: ucfirst($syncAccount->name);
-        
+
         return "{$channelName} - {$accountName}";
     }
 
@@ -199,7 +202,7 @@ class SyncAccountObserver
      */
     protected function generateChannelDescription(SyncAccount $syncAccount): string
     {
-        return "Auto-generated sales channel for {$syncAccount->channel} account '{$syncAccount->name}'. " .
+        return "Auto-generated sales channel for {$syncAccount->channel} account '{$syncAccount->name}'. ".
                "Channel-specific pricing available via {$this->generateChannelCode($syncAccount)}_price attribute.";
     }
 
@@ -208,7 +211,7 @@ class SyncAccountObserver
      */
     protected function getChannelPriority(string $channel): int
     {
-        return match($channel) {
+        return match ($channel) {
             'shopify' => 100,
             'ebay' => 90,
             'amazon' => 80,

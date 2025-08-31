@@ -24,7 +24,7 @@ class ImageProcessingTracker
     public function getStatus(Image $image): ?ImageProcessingStatus
     {
         $status = Cache::get($this->getCacheKey($image));
-        
+
         return $status ? ImageProcessingStatus::from($status) : null;
     }
 
@@ -56,8 +56,8 @@ class ImageProcessingTracker
     public function getStatusWithMeta(Image $image): ?array
     {
         $status = $this->getStatus($image);
-        
-        if (!$status) {
+
+        if (! $status) {
             return null;
         }
 
@@ -72,19 +72,19 @@ class ImageProcessingTracker
     /**
      * Get processing status for multiple images efficiently
      *
-     * @param Image[] $images
+     * @param  Image[]  $images
      * @return array<int, array|null>
      */
     public function getMultipleStatuses(array $images): array
     {
-        $keys = array_map(fn($image) => $this->getCacheKey($image), $images);
+        $keys = array_map(fn ($image) => $this->getCacheKey($image), $images);
         $statuses = Cache::many($keys);
-        
+
         $result = [];
         foreach ($images as $index => $image) {
             $key = $this->getCacheKey($image);
             $status = $statuses[$key] ?? null;
-            
+
             $result[$image->id] = $status ? [
                 'status' => ImageProcessingStatus::from($status),
                 'label' => ImageProcessingStatus::from($status)->label(),
@@ -92,7 +92,7 @@ class ImageProcessingTracker
                 'icon' => ImageProcessingStatus::from($status)->icon(),
             ] : null;
         }
-        
+
         return $result;
     }
 

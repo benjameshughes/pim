@@ -20,7 +20,7 @@ class AssignPricing
             // Use default sales channel if none provided
             if ($salesChannelId === null) {
                 $defaultChannel = SalesChannel::getDefault();
-                if (!$defaultChannel) {
+                if (! $defaultChannel) {
                     throw new Exception('No default sales channel available. Please run sales channel seeder.');
                 }
                 $salesChannelId = $defaultChannel->id;
@@ -35,14 +35,14 @@ class AssignPricing
                 [
                     'price' => $price,
                     'currency' => 'GBP', // Default currency
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]
             );
 
             return $pricing;
 
         } catch (Exception $e) {
-            throw new Exception('Failed to assign pricing: ' . $e->getMessage());
+            throw new Exception('Failed to assign pricing: '.$e->getMessage());
         }
     }
 }

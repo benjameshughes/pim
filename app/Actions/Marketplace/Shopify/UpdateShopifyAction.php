@@ -15,30 +15,31 @@ use App\Services\Marketplace\ValueObjects\SyncResult;
 class UpdateShopifyAction
 {
     protected ?SyncAccount $syncAccount = null;
+
     /**
      * Execute partial update to Shopify product
      *
-     * @param int $productId Local product ID
-     * @param array $fieldsToUpdate Fields that should be updated
-     * @param SyncAccount $syncAccount Shopify credentials
+     * @param  int  $productId  Local product ID
+     * @param  array  $fieldsToUpdate  Fields that should be updated
+     * @param  SyncAccount  $syncAccount  Shopify credentials
      * @return SyncResult Update operation result
      */
     public function execute(int $productId, array $fieldsToUpdate, SyncAccount $syncAccount): SyncResult
     {
         $this->syncAccount = $syncAccount;
-        
+
         try {
             $product = Product::with(['variants'])->find($productId);
-            
-            if (!$product) {
+
+            if (! $product) {
                 return SyncResult::failure("Product with ID {$productId} not found");
             }
 
             // First, we need to find existing Shopify products for this local product
             $existingProducts = $this->findShopifyProducts($product, $syncAccount);
-            
+
             if (empty($existingProducts)) {
-                return SyncResult::failure("No existing Shopify products found for this product. Use create() instead.");
+                return SyncResult::failure('No existing Shopify products found for this product. Use create() instead.');
             }
 
             $client = new \App\Services\Marketplace\Shopify\ShopifyGraphQLClient($syncAccount);
@@ -47,10 +48,10 @@ class UpdateShopifyAction
 
             foreach ($existingProducts as $shopifyProductId => $colorGroup) {
                 $updateData = $this->prepareUpdateData($product, $colorGroup, $fieldsToUpdate);
-                
-                if (!empty($updateData)) {
+
+                if (! empty($updateData)) {
                     $result = $this->updateSingleShopifyProduct($client, $shopifyProductId, $updateData);
-                    
+
                     if ($result['success']) {
                         $updateResults[] = $result;
                     } else {
@@ -60,7 +61,7 @@ class UpdateShopifyAction
             }
 
             $success = empty($errors);
-            $message = $success 
+            $message = $success
                 ? sprintf('Successfully updated %d Shopify products', count($updateResults))
                 : sprintf('Updated %d products, %d failed', count($updateResults), count($errors));
 
@@ -77,7 +78,7 @@ class UpdateShopifyAction
 
         } catch (\Exception $e) {
             return SyncResult::failure(
-                message: 'Update failed: ' . $e->getMessage(),
+                message: 'Update failed: '.$e->getMessage(),
                 errors: [$e->getMessage()]
             );
         }
@@ -94,7 +95,7 @@ class UpdateShopifyAction
         $status = $product->getSmartAttributeValue('shopify_status');
 
         // Verify this product is synced with the correct account and is active
-        if (!$shopifyProductIds || !$syncAccountId || $syncAccountId != $syncAccount->id || $status !== 'synced') {
+        if (! $shopifyProductIds || ! $syncAccountId || $syncAccountId != $syncAccount->id || $status !== 'synced') {
             return []; // Not synced or wrong account
         }
 
@@ -105,8 +106,8 @@ class UpdateShopifyAction
         } elseif (is_array($shopifyProductIds)) {
             $productIds = $shopifyProductIds;
         }
-        
-        if (!is_array($productIds)) {
+
+        if (! is_array($productIds)) {
             return [];
         }
 
@@ -127,7 +128,7 @@ class UpdateShopifyAction
         $updateData = [];
 
         if (isset($fieldsToUpdate['title'])) {
-            $updateData['title'] = $fieldsToUpdate['title'] . ' - ' . $colorGroup;
+            $updateData['title'] = $fieldsToUpdate['title'].' - '.$colorGroup;
         }
 
         if (isset($fieldsToUpdate['images'])) {
@@ -150,6 +151,7 @@ class UpdateShopifyAction
     {
         // Use account-specific channel code: shopify_main, ebay_blindsoutlet, etc.
         $channelCode = $syncAccount->getChannelCode();
+
         return $variant->getChannelPrice($channelCode);
     }
 
@@ -159,7 +161,7 @@ class UpdateShopifyAction
     protected function transformVariantsForUpdate($variants): array
     {
         $variantUpdates = [];
-        
+
         foreach ($variants as $variant) {
             $variantUpdates[] = [
                 'sku' => $variant->sku,
@@ -167,7 +169,7 @@ class UpdateShopifyAction
                 'inventoryQuantity' => $variant->stock_level ?? 0,
             ];
         }
-        
+
         return $variantUpdates;
     }
 
@@ -178,19 +180,19 @@ class UpdateShopifyAction
     {
         try {
             $updatedFields = [];
-            
+
             // Handle title updates
             if (isset($updateData['title'])) {
                 $result = $client->updateProductTitle($shopifyProductId, $updateData['title']);
                 $userErrors = $result['productUpdate']['userErrors'] ?? [];
-                
+
                 if (empty($userErrors)) {
                     $updatedFields[] = 'title';
                 } else {
-                    throw new \Exception('Title update failed: ' . json_encode($userErrors));
+                    throw new \Exception('Title update failed: '.json_encode($userErrors));
                 }
             }
-            
+
             // Handle variant/pricing updates - KISS approach
             if (isset($updateData['variants'])) {
                 $pricingUpdated = $this->updateVariantPricing($client, $shopifyProductId, $updateData['variants']);
@@ -198,7 +200,7 @@ class UpdateShopifyAction
                     $updatedFields[] = 'pricing';
                 }
             }
-            
+
             // Handle image updates
             if (isset($updateData['images'])) {
                 // TODO: Implement image updates via GraphQL productImageUpdate mutations
@@ -209,14 +211,14 @@ class UpdateShopifyAction
                 'success' => true,
                 'shopify_product_id' => $shopifyProductId,
                 'updated_fields' => $updatedFields,
-                'note' => empty($updatedFields) ? 'No fields required update' : 'Updated: ' . implode(', ', $updatedFields),
+                'note' => empty($updatedFields) ? 'No fields required update' : 'Updated: '.implode(', ', $updatedFields),
             ];
 
         } catch (\Exception $e) {
             return [
                 'success' => false,
                 'shopify_product_id' => $shopifyProductId,
-                'error' => 'Update failed: ' . $e->getMessage(),
+                'error' => 'Update failed: '.$e->getMessage(),
             ];
         }
     }
@@ -230,14 +232,14 @@ class UpdateShopifyAction
             // Step 1: Get current Shopify product with variants
             $productData = $client->getProduct($shopifyProductId);
             $product = $productData['product'] ?? null;
-            
-            if (!$product) {
+
+            if (! $product) {
                 return false;
             }
 
             // Step 2: Get variant IDs from Shopify
             $shopifyVariants = $product['variants']['edges'] ?? [];
-            
+
             // Step 3: Match and update each variant by SKU
             $updatedCount = 0;
             foreach ($shopifyVariants as $edge) {
@@ -245,7 +247,7 @@ class UpdateShopifyAction
                 $shopifyVariantId = $shopifyVariant['id'] ?? null;
                 $shopifyVariantSku = $shopifyVariant['sku'] ?? null;
 
-                if (!$shopifyVariantId || !$shopifyVariantSku) {
+                if (! $shopifyVariantId || ! $shopifyVariantSku) {
                     continue;
                 }
 
@@ -254,9 +256,9 @@ class UpdateShopifyAction
                     if ($localVariant['sku'] === $shopifyVariantSku) {
                         // KISS: Update this specific variant ID with new price
                         $result = $client->updateSingleVariant($shopifyVariantId, [
-                            'price' => $localVariant['price']
+                            'price' => $localVariant['price'],
                         ]);
-                        
+
                         // Fixed: Use correct response path for bulk update
                         $userErrors = $result['productVariantsBulkUpdate']['userErrors'] ?? [];
                         if (empty($userErrors)) {
@@ -270,7 +272,8 @@ class UpdateShopifyAction
             return $updatedCount > 0;
 
         } catch (\Exception $e) {
-            error_log('Variant pricing update failed: ' . $e->getMessage());
+            error_log('Variant pricing update failed: '.$e->getMessage());
+
             return false;
         }
     }

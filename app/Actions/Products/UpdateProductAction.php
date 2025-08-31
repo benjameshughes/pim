@@ -17,6 +17,7 @@ use InvalidArgumentException;
 class UpdateProductAction extends BaseAction
 {
     use WithActivityLogs;
+
     /**
      * Validate parameters before execution
      */
@@ -40,7 +41,7 @@ class UpdateProductAction extends BaseAction
     {
         // Authorize editing products
         $this->authorizeWithRole('edit-products', 'admin');
-        
+
         $product = $params[0];
         $data = $params[1] ?? [];
 

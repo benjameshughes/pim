@@ -2,9 +2,9 @@
 
 namespace App\Services\Pricing;
 
+use App\Actions\Products\Pricing\BulkUpdateChannelPricingAction;
 use App\Actions\Products\Pricing\GetChannelPriceAction;
 use App\Actions\Products\Pricing\SetChannelPriceAction;
-use App\Actions\Products\Pricing\BulkUpdateChannelPricingAction;
 use App\Actions\Products\Pricing\SyncChannelAttributesAction;
 use App\Models\ProductVariant;
 use App\Models\SalesChannel;
@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 🎯 CHANNEL PRICING SERVICE
- * 
+ *
  * Main orchestration service for channel-specific pricing using the attribute system.
  * Provides a clean, unified API for all channel pricing operations.
- * 
+ *
  * This replaces the complex Pricing table approach with simple attribute-based pricing.
  */
 class ChannelPricingService
@@ -36,6 +36,7 @@ class ChannelPricingService
     public function getPricingDetails(ProductVariant $variant, ?string $channelCode = null): array
     {
         $result = GetChannelPriceAction::run($variant, $channelCode);
+
         return $result['success'] ? $result['data'] : [];
     }
 
@@ -95,10 +96,11 @@ class ChannelPricingService
                 'channel_code' => $channelCode,
                 'type' => 'percentage_discount',
                 'value' => $discountPercentage,
-            ]
+            ],
         ];
 
-        $action = new BulkUpdateChannelPricingAction();
+        $action = new BulkUpdateChannelPricingAction;
+
         return $action->handle($variants, $pricingData);
     }
 
@@ -112,10 +114,11 @@ class ChannelPricingService
                 'channel_code' => $channelCode,
                 'type' => 'fixed',
                 'value' => $price,
-            ]
+            ],
         ];
 
-        $action = new BulkUpdateChannelPricingAction();
+        $action = new BulkUpdateChannelPricingAction;
+
         return $action->handle($variants, $pricingData);
     }
 
@@ -124,7 +127,8 @@ class ChannelPricingService
      */
     public function applyPricingRules(Collection $variants, array $pricingRules): array
     {
-        $action = new BulkUpdateChannelPricingAction();
+        $action = new BulkUpdateChannelPricingAction;
+
         return $action->handle($variants, $pricingRules);
     }
 
@@ -143,7 +147,7 @@ class ChannelPricingService
     {
         $variants = ProductVariant::where('product_id', $productId)->get();
         $channels = $this->getAvailableChannels();
-        
+
         $summary = [
             'product_id' => $productId,
             'variants_count' => $variants->count(),
@@ -163,7 +167,7 @@ class ChannelPricingService
             foreach ($variants as $variant) {
                 $price = $this->getPriceForChannel($variant, $channel->code);
                 $hasOverride = $this->hasChannelOverride($variant, $channel->code);
-                
+
                 if ($hasOverride) {
                     $channelSummary['variants_with_override']++;
                 } else {
@@ -171,7 +175,7 @@ class ChannelPricingService
                 }
 
                 $channelSummary['prices'][] = $price;
-                
+
                 if ($channelSummary['price_range']['min'] === null || $price < $channelSummary['price_range']['min']) {
                     $channelSummary['price_range']['min'] = $price;
                 }
@@ -191,7 +195,8 @@ class ChannelPricingService
      */
     public function syncChannelAttributes(bool $forceUpdate = false): array
     {
-        $action = new SyncChannelAttributesAction();
+        $action = new SyncChannelAttributesAction;
+
         return $action->handle($forceUpdate);
     }
 
@@ -201,7 +206,7 @@ class ChannelPricingService
     public function getPricingRecommendations(ProductVariant $variant, string $channelCode): array
     {
         $channel = SalesChannel::where('code', $channelCode)->first();
-        if (!$channel) {
+        if (! $channel) {
             return [];
         }
 
@@ -212,7 +217,7 @@ class ChannelPricingService
         $recommendations = [];
 
         // Channel-specific markup recommendations
-        $recommendedMarkups = match($channelCode) {
+        $recommendedMarkups = match ($channelCode) {
             'ebay' => ['low' => 5, 'medium' => 10, 'high' => 15],
             'amazon' => ['low' => 8, 'medium' => 12, 'high' => 18],
             'shopify' => ['low' => 0, 'medium' => 5, 'high' => 10],
@@ -260,10 +265,10 @@ class ChannelPricingService
             foreach ($channels as $channel) {
                 $price = $this->getPriceForChannel($variant, $channel->code);
                 $hasOverride = $this->hasChannelOverride($variant, $channel->code);
-                
-                $variantData[$channel->code . '_price'] = $price;
-                $variantData[$channel->code . '_has_override'] = $hasOverride;
-                $variantData[$channel->code . '_markup_percentage'] = $variant->price > 0 
+
+                $variantData[$channel->code.'_price'] = $price;
+                $variantData[$channel->code.'_has_override'] = $hasOverride;
+                $variantData[$channel->code.'_markup_percentage'] = $variant->price > 0
                     ? round((($price - $variant->price) / $variant->price) * 100, 2)
                     : 0;
             }

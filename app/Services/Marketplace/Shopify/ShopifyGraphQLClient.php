@@ -15,17 +15,19 @@ use Illuminate\Support\Facades\Http;
 class ShopifyGraphQLClient
 {
     protected string $shopDomain;
+
     protected string $accessToken;
+
     protected string $apiVersion;
-    
+
     public function __construct(SyncAccount $syncAccount)
     {
         $credentials = $syncAccount->credentials;
-        
+
         if (empty($credentials['shop_domain']) || empty($credentials['access_token'])) {
             throw new \InvalidArgumentException('Missing required Shopify credentials: shop_domain and access_token');
         }
-        
+
         $this->shopDomain = $credentials['shop_domain'];
         $this->accessToken = $credentials['access_token'];
         $this->apiVersion = $credentials['api_version'] ?? '2024-07';
@@ -37,9 +39,9 @@ class ShopifyGraphQLClient
     public function query(string $query, array $variables = []): array
     {
         $payload = ['query' => $query];
-        
+
         // Only include variables if they're not empty
-        if (!empty($variables)) {
+        if (! empty($variables)) {
             $payload['variables'] = $variables;
         }
 
@@ -48,14 +50,14 @@ class ShopifyGraphQLClient
             'Content-Type' => 'application/json',
         ])->post($this->getGraphQLEndpoint(), $payload);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception("Shopify API error: {$response->status()} - {$response->body()}");
         }
 
         $body = $response->json();
-        
+
         if (isset($body['errors'])) {
-            throw new \Exception('GraphQL errors: ' . json_encode($body['errors']));
+            throw new \Exception('GraphQL errors: '.json_encode($body['errors']));
         }
 
         return $body['data'] ?? [];
@@ -160,13 +162,14 @@ class ShopifyGraphQLClient
         ';
 
         $productInput['id'] = $productId;
+
         return $this->mutate($mutation, ['input' => $productInput]);
     }
 
     /**
      * Get products using GraphQL query
      */
-    public function getProducts(int $limit = 50, string $after = null): array
+    public function getProducts(int $limit = 50, ?string $after = null): array
     {
         $query = '
             query getProducts($first: Int!, $after: String) {
@@ -215,7 +218,7 @@ class ShopifyGraphQLClient
     public function bulkCreateProducts(array $productInputs): array
     {
         $results = [];
-        
+
         foreach ($productInputs as $productInput) {
             $result = $this->createProduct($productInput);
             $results[] = [
@@ -224,11 +227,11 @@ class ShopifyGraphQLClient
                 'errors' => $result['productCreate']['userErrors'] ?? [],
                 'input' => $productInput,
             ];
-            
+
             // Rate limiting: Shopify allows 40 requests per minute
             usleep(1500000); // 1.5 second delay between requests
         }
-        
+
         return $results;
     }
 
@@ -368,34 +371,34 @@ class ShopifyGraphQLClient
                 'id' => $variant['id'], // CRITICAL: Shopify needs the variant ID
                 'price' => $variant['price'], // The price to update
             ];
-            
+
             // Add compareAtPrice if provided (supported field)
             if (isset($variant['compareAtPrice'])) {
                 $bulkVariant['compareAtPrice'] = $variant['compareAtPrice'];
             }
-            
+
             // Add metafields if provided (supported field)
             if (isset($variant['metafields'])) {
                 $bulkVariant['metafields'] = $variant['metafields'];
             }
-            
+
             // NOTE: SKU, barcode, and inventoryQuantity are NOT supported in ProductVariantsBulkInput
             // These need to be handled via separate API calls or different mutations
-            
+
             $bulkVariants[] = $bulkVariant;
         }
 
         $result = $this->mutate($mutation, [
             'productId' => $productId,
-            'variants' => $bulkVariants
+            'variants' => $bulkVariants,
         ]);
-        
+
         // Handle unsupported fields (SKU, barcode, inventoryQuantity) via separate calls
         $this->updateUnsupportedVariantFields($productId, $variants, $result);
-        
+
         return $result;
     }
-    
+
     /**
      * Update fields not supported by ProductVariantsBulkInput
      * Uses REST API for SKU updates since GraphQL doesn't support it
@@ -403,36 +406,36 @@ class ShopifyGraphQLClient
     protected function updateUnsupportedVariantFields(string $productId, array $variants, array $bulkResult): void
     {
         $updatedVariants = $bulkResult['productVariantsBulkUpdate']['productVariants'] ?? [];
-        
+
         foreach ($variants as $index => $requestedVariant) {
             $updatedVariant = $updatedVariants[$index] ?? null;
-            if (!$updatedVariant) {
+            if (! $updatedVariant) {
                 continue;
             }
-            
+
             $variantId = $updatedVariant['id'];
             $needsUpdate = false;
             $updateData = [];
-            
+
             // Check if SKU needs updating
             if (isset($requestedVariant['sku']) && $requestedVariant['sku'] !== ($updatedVariant['sku'] ?? '')) {
                 $updateData['sku'] = $requestedVariant['sku'];
                 $needsUpdate = true;
             }
-            
-            // Check if barcode needs updating  
+
+            // Check if barcode needs updating
             if (isset($requestedVariant['barcode']) && $requestedVariant['barcode'] !== ($updatedVariant['barcode'] ?? '')) {
                 $updateData['barcode'] = $requestedVariant['barcode'];
                 $needsUpdate = true;
             }
-            
+
             // Update via REST API if needed
             if ($needsUpdate) {
                 $this->updateVariantViaRest($variantId, $updateData);
             }
         }
     }
-    
+
     /**
      * Update variant via REST API (for SKU, barcode, etc.)
      */
@@ -441,26 +444,26 @@ class ShopifyGraphQLClient
         try {
             // Extract numeric ID from GraphQL ID (gid://shopify/ProductVariant/123 -> 123)
             $numericId = basename($variantId);
-            
+
             $url = "https://{$this->syncAccount->shop_domain}/admin/api/2024-10/variants/{$numericId}.json";
-            
+
             $data = [
-                'variant' => $updateData
+                'variant' => $updateData,
             ];
-            
+
             $response = Http::withHeaders([
                 'X-Shopify-Access-Token' => $this->syncAccount->access_token,
                 'Content-Type' => 'application/json',
             ])->put($url, $data);
-            
-            if (!$response->successful()) {
-                error_log("REST API variant update failed for {$variantId}: " . $response->body());
+
+            if (! $response->successful()) {
+                error_log("REST API variant update failed for {$variantId}: ".$response->body());
             } else {
-                error_log("✅ Updated variant {$variantId} via REST API: " . json_encode($updateData));
+                error_log("✅ Updated variant {$variantId} via REST API: ".json_encode($updateData));
             }
-            
+
         } catch (\Exception $e) {
-            error_log("Exception updating variant {$variantId} via REST: " . $e->getMessage());
+            error_log("Exception updating variant {$variantId} via REST: ".$e->getMessage());
         }
     }
 
@@ -471,10 +474,10 @@ class ShopifyGraphQLClient
     {
         // Extract product ID from variant ID (gid://shopify/ProductVariant/123 -> we need product ID)
         // We'll need to get this from the calling code or make a separate query
-        
+
         // For now, let's use the bulk update with the variant ID and updates
         $variantData = array_merge(['id' => $variantId], $updates);
-        
+
         // We need the product ID for productVariantsBulkUpdate
         // Let's get it by querying the variant first
         $variantQuery = '
@@ -487,14 +490,14 @@ class ShopifyGraphQLClient
                 }
             }
         ';
-        
+
         $variantResult = $this->query($variantQuery, ['id' => $variantId]);
         $productId = $variantResult['productVariant']['product']['id'] ?? null;
-        
-        if (!$productId) {
+
+        if (! $productId) {
             return ['error' => 'Could not find product ID for variant'];
         }
-        
+
         // Now use bulk update with one variant
         return $this->updateProductVariants($productId, [$variantData]);
     }
@@ -548,8 +551,8 @@ class ShopifyGraphQLClient
 
         return $this->mutate($mutation, [
             'input' => [
-                'id' => $productId
-            ]
+                'id' => $productId,
+            ],
         ]);
     }
 
@@ -563,7 +566,7 @@ class ShopifyGraphQLClient
         }
 
         // Build SKU search query - Shopify supports searching by variant SKU
-        $skuQueries = array_map(fn($sku) => "sku:{$sku}", $skus);
+        $skuQueries = array_map(fn ($sku) => "sku:{$sku}", $skus);
         $searchQuery = implode(' OR ', $skuQueries);
 
         $query = '
@@ -600,19 +603,19 @@ class ShopifyGraphQLClient
 
         $variables = [
             'query' => $searchQuery,
-            'first' => 50 // Should be enough for most scenarios
+            'first' => 50, // Should be enough for most scenarios
         ];
 
         $result = $this->query($query, $variables);
-        
+
         // Transform GraphQL response to simpler format
         $products = [];
         $productEdges = $result['products']['edges'] ?? [];
-        
+
         foreach ($productEdges as $edge) {
             $product = $edge['node'];
             $variants = [];
-            
+
             foreach ($product['variants']['edges'] ?? [] as $variantEdge) {
                 $variant = $variantEdge['node'];
                 $variants[] = [
@@ -624,7 +627,7 @@ class ShopifyGraphQLClient
                     'selectedOptions' => $variant['selectedOptions'],
                 ];
             }
-            
+
             $products[] = [
                 'id' => $product['id'],
                 'title' => $product['title'],
@@ -635,7 +638,7 @@ class ShopifyGraphQLClient
                 'variants' => $variants,
             ];
         }
-        
+
         return $products;
     }
 }

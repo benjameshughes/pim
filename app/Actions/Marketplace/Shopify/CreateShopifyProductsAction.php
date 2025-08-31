@@ -2,14 +2,14 @@
 
 namespace App\Actions\Marketplace\Shopify;
 
+use App\Models\Product;
+use App\Models\SyncAccount;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
-use App\Models\SyncAccount;
-use App\Models\Product;
 
 /**
  * 🆕 CREATE SHOPIFY PRODUCTS ACTION
- * 
+ *
  * Single responsibility: Create NEW products on Shopify
  * - Fails if products already exist (unless forced)
  * - Sets SKUs and pricing correctly from the start
@@ -20,22 +20,22 @@ class CreateShopifyProductsAction
     /**
      * Create new products on Shopify
      *
-     * @param MarketplaceProduct $marketplaceProduct Prepared Shopify products
-     * @param SyncAccount $syncAccount Shopify account credentials  
-     * @param bool $forceCreate Skip duplicate check (for recreate)
+     * @param  MarketplaceProduct  $marketplaceProduct  Prepared Shopify products
+     * @param  SyncAccount  $syncAccount  Shopify account credentials
+     * @param  bool  $forceCreate  Skip duplicate check (for recreate)
      * @return SyncResult Creation result
      */
     public function execute(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount, bool $forceCreate = false): SyncResult
     {
         try {
             $shopifyProducts = $marketplaceProduct->getData();
-            
+
             if (empty($shopifyProducts)) {
                 return SyncResult::failure('No Shopify products to create');
             }
 
             // 🎯 DUPLICATE PREVENTION (unless forcing create)
-            if (!$forceCreate && $this->productsAlreadyExist($marketplaceProduct, $syncAccount)) {
+            if (! $forceCreate && $this->productsAlreadyExist($marketplaceProduct, $syncAccount)) {
                 return SyncResult::failure('Products already exist on Shopify. Use update() instead of create().');
             }
 
@@ -46,7 +46,7 @@ class CreateShopifyProductsAction
             // Create each Shopify product (one per color)
             foreach ($shopifyProducts as $shopifyProduct) {
                 $result = $this->createSingleProduct($client, $shopifyProduct, $syncAccount);
-                
+
                 if ($result['success']) {
                     $results[] = $result;
                 } else {
@@ -55,12 +55,12 @@ class CreateShopifyProductsAction
             }
 
             $success = empty($errors);
-            $message = $success 
+            $message = $success
                 ? sprintf('Successfully created %d Shopify products', count($results))
                 : sprintf('Created %d products, %d failed', count($results), count($errors));
 
             // Save successful creations to attributes
-            if (!empty($results)) {
+            if (! empty($results)) {
                 $this->saveShopifyAttributes($results, $marketplaceProduct, $syncAccount);
             }
 
@@ -76,7 +76,7 @@ class CreateShopifyProductsAction
 
         } catch (\Exception $e) {
             return SyncResult::failure(
-                message: 'Create operation failed: ' . $e->getMessage(),
+                message: 'Create operation failed: '.$e->getMessage(),
                 errors: [$e->getMessage()]
             );
         }
@@ -93,14 +93,14 @@ class CreateShopifyProductsAction
         try {
             // Step 1: Create product (Shopify auto-generates variants from options)
             $result = $client->createProduct($productInput);
-            
+
             $userErrors = $result['productCreate']['userErrors'] ?? [];
             $product = $result['productCreate']['product'] ?? null;
-            
-            if (!empty($userErrors) || !$product) {
+
+            if (! empty($userErrors) || ! $product) {
                 return [
                     'success' => false,
-                    'error' => !empty($userErrors) ? 'Shopify validation: ' . json_encode($userErrors) : 'No product returned',
+                    'error' => ! empty($userErrors) ? 'Shopify validation: '.json_encode($userErrors) : 'No product returned',
                     'color_group' => $internalData['color_group'] ?? 'unknown',
                 ];
             }
@@ -121,7 +121,7 @@ class CreateShopifyProductsAction
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'error' => 'Create failed: ' . $e->getMessage(),
+                'error' => 'Create failed: '.$e->getMessage(),
                 'color_group' => $internalData['color_group'] ?? 'unknown',
             ];
         }
@@ -146,7 +146,7 @@ class CreateShopifyProductsAction
             $shopifyVariant = $edge['node'] ?? [];
             $shopifyVariantId = $shopifyVariant['id'] ?? null;
 
-            if (!$shopifyVariantId || !isset($localVariants[$index])) {
+            if (! $shopifyVariantId || ! isset($localVariants[$index])) {
                 continue;
             }
 
@@ -155,24 +155,24 @@ class CreateShopifyProductsAction
             // Update with comprehensive variant data (SKU, pricing, barcode, etc.)
             $updateData = [
                 'sku' => $localVariant['sku'],
-                'price' => $localVariant['price']
+                'price' => $localVariant['price'],
             ];
-            
+
             // Add barcode if available
-            if (!empty($localVariant['barcode'])) {
+            if (! empty($localVariant['barcode'])) {
                 $updateData['barcode'] = $localVariant['barcode'];
             }
-            
+
             // Add compareAtPrice if available
-            if (!empty($localVariant['compareAtPrice'])) {
+            if (! empty($localVariant['compareAtPrice'])) {
                 $updateData['compareAtPrice'] = $localVariant['compareAtPrice'];
             }
-            
+
             // Add inventory quantity if available
             if (isset($localVariant['inventoryQuantity'])) {
                 $updateData['inventoryQuantity'] = (int) $localVariant['inventoryQuantity'];
             }
-            
+
             $client->updateSingleVariant($shopifyVariantId, $updateData);
         }
     }
@@ -185,12 +185,12 @@ class CreateShopifyProductsAction
         $metadata = $marketplaceProduct->getMetadata();
         $originalProductId = $metadata['original_product_id'] ?? null;
 
-        if (!$originalProductId) {
+        if (! $originalProductId) {
             return false;
         }
 
         $localProduct = Product::find($originalProductId);
-        if (!$localProduct) {
+        if (! $localProduct) {
             return false;
         }
 
@@ -198,8 +198,8 @@ class CreateShopifyProductsAction
         $syncAccountId = $localProduct->getSmartAttributeValue('shopify_sync_account_id');
         $status = $localProduct->getSmartAttributeValue('shopify_status');
 
-        return !empty($shopifyProductIds) && 
-               $syncAccountId == $syncAccount->id && 
+        return ! empty($shopifyProductIds) &&
+               $syncAccountId == $syncAccount->id &&
                $status === 'synced';
     }
 
@@ -211,12 +211,12 @@ class CreateShopifyProductsAction
         $metadata = $marketplaceProduct->getMetadata();
         $originalProductId = $metadata['original_product_id'] ?? null;
 
-        if (!$originalProductId) {
+        if (! $originalProductId) {
             return;
         }
 
         $localProduct = Product::find($originalProductId);
-        if (!$localProduct) {
+        if (! $localProduct) {
             return;
         }
 

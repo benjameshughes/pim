@@ -17,6 +17,7 @@ use InvalidArgumentException;
 class CreateProductAction extends BaseAction
 {
     use WithActivityLogs;
+
     /**
      * Perform the actual product creation action
      *
@@ -29,7 +30,7 @@ class CreateProductAction extends BaseAction
     {
         // Authorize creating products
         $this->authorizeWithRole('create-products', 'admin');
-        
+
         $data = $params[0] ?? [];
 
         $this->validateProductData($data);

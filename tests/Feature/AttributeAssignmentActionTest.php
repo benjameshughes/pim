@@ -9,25 +9,25 @@ describe('AttributeAssignmentAction', function () {
         $this->product = Product::factory()->create([
             'name' => 'Test Product',
             'parent_sku' => 'TEST123',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->variant = ProductVariant::factory()->create([
             'product_id' => $this->product->id,
             'sku' => 'TEST123-RED',
             'title' => 'Test Product - Red',
             'color' => 'Red',
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
-        $this->action = new AttributeAssignmentAction();
+        $this->action = new AttributeAssignmentAction;
     });
 
     test('assigns auto attributes from unmapped CSV columns', function () {
         $csvData = ['Test Product', 'RED', '100', 'Premium Brand', 'Electronics'];
         $mappings = ['title' => 0, 'color' => 1, 'width' => 2]; // brand and category unmapped
         $csvHeaders = ['title', 'color', 'width', 'brand', 'category'];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -44,7 +44,7 @@ describe('AttributeAssignmentAction', function () {
         // Check that brand was assigned as product attribute
         expect($results['product_attributes']['created'])
             ->toContain('brand');
-            
+
         // Check that category was assigned as variant attribute (not product-level)
         expect($results['variant_attributes']['created'])
             ->toContain('category');
@@ -54,9 +54,9 @@ describe('AttributeAssignmentAction', function () {
         $adHocAttributes = [
             'supplier' => 'Acme Corp',
             'season' => 'Winter 2024',
-            'material' => 'Cotton'
+            'material' => 'Cotton',
         ];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -94,7 +94,7 @@ describe('AttributeAssignmentAction', function () {
 
         // Check the actual value was from ad-hoc
         $brandAttribute = $this->product->fresh()->attributes()
-            ->where('attribute_definition_id', function($query) {
+            ->where('attribute_definition_id', function ($query) {
                 $query->select('id')->from('attribute_definitions')->where('key', 'brand');
             })
             ->first();
@@ -106,7 +106,7 @@ describe('AttributeAssignmentAction', function () {
         $csvData = ['Product', '', 'Brand', null];
         $mappings = ['title' => 0]; // color, brand, description unmapped
         $csvHeaders = ['title', 'color', 'brand', 'description'];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -121,7 +121,7 @@ describe('AttributeAssignmentAction', function () {
             $results['product_attributes']['created'],
             $results['variant_attributes']['created']
         );
-        
+
         expect($allCreated)
             ->toContain('brand')
             ->not()->toContain('color')
@@ -132,9 +132,9 @@ describe('AttributeAssignmentAction', function () {
         $adHocAttributes = [
             'Brand Name!' => 'Test Brand',
             'Product Category' => 'Electronics',
-            'special-field_123' => 'Special Value'
+            'special-field_123' => 'Special Value',
         ];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -160,9 +160,9 @@ describe('AttributeAssignmentAction', function () {
             'brand' => 'Test Brand',        // Product-level
             'manufacturer' => 'Test Mfg',   // Product-level
             'color_code' => '#FF0000',      // Variant-level
-            'custom_field' => 'Custom'      // Should go to variant (not in product list)
+            'custom_field' => 'Custom',      // Should go to variant (not in product list)
         ];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -191,9 +191,9 @@ describe('AttributeAssignmentAction', function () {
         $csvHeaders = ['title', 'color', 'brand'];
         $adHocAttributes = [
             'supplier' => 'Acme Corp',
-            'warranty' => '2 years'
+            'warranty' => '2 years',
         ];
-        
+
         $results = $this->action->execute(
             $this->product,
             $this->variant,
@@ -234,7 +234,7 @@ describe('AttributeAssignmentAction', function () {
 
     test('works without variant (product-only attributes)', function () {
         $adHocAttributes = ['brand' => 'Test Brand'];
-        
+
         $results = $this->action->execute(
             $this->product,
             null, // No variant

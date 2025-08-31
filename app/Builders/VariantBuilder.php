@@ -32,7 +32,7 @@ class VariantBuilder
     {
         $this->product = $product;
         $this->data['product_id'] = $product->id;
-        
+
         // Try to get barcode service if it exists
         try {
             $this->barcodeService = App::make(BarcodeAssignmentService::class);
@@ -208,17 +208,17 @@ class VariantBuilder
     protected function generateTitle(): string
     {
         $titleParts = [$this->product->name];
-        
-        if (!empty($this->data['color'])) {
+
+        if (! empty($this->data['color'])) {
             $titleParts[] = $this->data['color'];
         }
-        
-        if (!empty($this->data['width']) && !empty($this->data['drop'])) {
-            $titleParts[] = $this->data['width'] . 'x' . $this->data['drop'] . 'cm';
-        } elseif (!empty($this->data['width'])) {
-            $titleParts[] = $this->data['width'] . 'cm';
+
+        if (! empty($this->data['width']) && ! empty($this->data['drop'])) {
+            $titleParts[] = $this->data['width'].'x'.$this->data['drop'].'cm';
+        } elseif (! empty($this->data['width'])) {
+            $titleParts[] = $this->data['width'].'cm';
         }
-        
+
         return implode(' ', $titleParts);
     }
 
@@ -233,7 +233,7 @@ class VariantBuilder
         if (empty($this->data['title'])) {
             $this->data['title'] = $this->generateTitle();
         }
-        
+
         // Set default price if not provided (new architecture uses separate Pricing table)
         if (empty($this->data['price'])) {
             $this->data['price'] = 0.00;  // Default for ProductVariant table

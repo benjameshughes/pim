@@ -10,6 +10,7 @@ use Livewire\Component;
 class ProductHistory extends Component
 {
     public Product $product;
+
     public string $activeTab = 'activity';
 
     public function mount(Product $product)
@@ -58,7 +59,7 @@ class ProductHistory extends Component
                 'type' => 'sync',
                 'timestamp' => $log->created_at,
                 'user_name' => 'System',
-                'event' => 'sync.' . $log->action,
+                'event' => 'sync.'.$log->action,
                 'description' => $log->message,
                 'details' => collect($log->details ?? []),
                 'channel' => $log->syncAccount?->channel,

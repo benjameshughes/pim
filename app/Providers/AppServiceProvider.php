@@ -26,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
         // $this->configureRateLimiting();
         // $this->registerEventListeners();
         // $this->configureUrlGeneration();
-        
+
         $this->registerRoleGates();
         $this->registerObservers();
     }
@@ -35,12 +35,12 @@ class AppServiceProvider extends ServiceProvider
     {
         // MINIMAL GATES - Only define gates for permissions that don't exist in database
         // Most permissions will be handled directly by Spatie Permission system
-        
+
         // Define only custom gates that combine multiple permissions or add business logic
         Gate::define('access-management-area', function (User $user) {
             return $user->hasRole('admin');
         });
-        
+
         // Super admin gate for emergency access
         Gate::define('super-admin', function (User $user) {
             return $user->hasRole('admin') && $user->email === 'admin@example.com';

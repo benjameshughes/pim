@@ -29,11 +29,11 @@ class FreemansAdapter extends AbstractAdapter
     public function create(int $productId): MarketplaceProduct
     {
         $product = $this->loadProduct($productId);
-        
+
         // TODO: Implement Freemans transformation actions
         // - GenerateFreemansCSVAction
         // - Create CSV row with all required fields
-        
+
         $marketplaceProduct = new MarketplaceProduct(
             data: [], // TODO: CSV row data
             metadata: [

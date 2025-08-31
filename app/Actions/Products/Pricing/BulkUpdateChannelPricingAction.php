@@ -5,7 +5,6 @@ namespace App\Actions\Products\Pricing;
 use App\Actions\Base\BaseAction;
 use App\Facades\Activity;
 use App\Models\ProductVariant;
-use App\Models\SalesChannel;
 use App\Traits\WithActivityLogs;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,10 +12,10 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * 📦 BULK UPDATE CHANNEL PRICING ACTION
- * 
+ *
  * Handles mass updates of channel pricing across multiple variants and channels.
  * Optimized for performance with batch operations and transaction safety.
- * 
+ *
  * Usage Examples:
  * - Apply 10% markup to all Shopify prices
  * - Set specific channel prices for multiple variants
@@ -25,12 +24,13 @@ use Illuminate\Support\Facades\Log;
 class BulkUpdateChannelPricingAction extends BaseAction
 {
     use WithActivityLogs;
+
     /**
      * Execute bulk channel pricing update
-     * 
-     * @param Collection|array $variants - ProductVariant instances or IDs
-     * @param array $pricingData - Channel pricing data
-     * @param array $options - Additional options
+     *
+     * @param  Collection|array  $variants  - ProductVariant instances or IDs
+     * @param  array  $pricingData  - Channel pricing data
+     * @param  array  $options  - Additional options
      */
     protected function performAction(...$params): array
     {
@@ -39,7 +39,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
         $options = $params[2] ?? [];
 
         // Normalize variants input
-        if (!$variants instanceof Collection) {
+        if (! $variants instanceof Collection) {
             if (is_array($variants)) {
                 // If array of IDs, load the variants
                 $variantIds = collect($variants)->filter()->unique()->values();
@@ -59,8 +59,8 @@ class BulkUpdateChannelPricingAction extends BaseAction
 
         // Validate pricing data structure
         $validationResult = $this->validatePricingData($pricingData);
-        if (!$validationResult['valid']) {
-            return $this->failure('Invalid pricing data: ' . $validationResult['error']);
+        if (! $validationResult['valid']) {
+            return $this->failure('Invalid pricing data: '.$validationResult['error']);
         }
 
         Log::info('📦 Starting bulk channel pricing update', [
@@ -82,7 +82,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
             DB::transaction(function () use ($variants, $pricingData, &$results) {
                 foreach ($variants as $variant) {
                     $variantResults = $this->updateVariantChannelPricing($variant, $pricingData);
-                    
+
                     foreach ($variantResults as $channelCode => $result) {
                         if ($result['success']) {
                             $results['updated'][] = [
@@ -112,7 +112,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
             });
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             $summary = [
                 'variants_processed' => $variants->count(),
                 'updates_successful' => count($results['updated']),
@@ -128,7 +128,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
             $pricingTypes = collect($pricingData)->pluck('type')->unique();
             $userName = auth()->user()?->name ?? 'System';
             $variantSkus = $variants->pluck('sku')->take(5)->implode(', ');
-            $moreVariants = $variants->count() > 5 ? ' and ' . ($variants->count() - 5) . ' more' : '';
+            $moreVariants = $variants->count() > 5 ? ' and '.($variants->count() - 5).' more' : '';
 
             $description = "{$userName} bulk updated {$pricingTypes->implode(', ')} pricing for {$variants->count()} variants ({$variantSkus}{$moreVariants}) across {$channels->count()} channels ({$channels->implode(', ')}) - {$summary['updates_successful']} successful, {$summary['updates_failed']} failed";
 
@@ -147,7 +147,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
                     'updates_failed' => $summary['updates_failed'],
                     'updates_skipped' => $summary['updates_skipped'],
                     'duration_ms' => $summary['duration_ms'],
-                    'success_rate' => $summary['variants_processed'] > 0 
+                    'success_rate' => $summary['variants_processed'] > 0
                         ? round(($summary['updates_successful'] / $summary['variants_processed']) * 100, 1)
                         : 0,
                     'user_name' => $userName,
@@ -170,7 +170,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
                 'duration_ms' => $duration,
             ]);
 
-            return $this->failure('Bulk pricing update failed: ' . $e->getMessage(), [
+            return $this->failure('Bulk pricing update failed: '.$e->getMessage(), [
                 'error_type' => get_class($e),
                 'duration_ms' => $duration,
             ]);
@@ -186,21 +186,22 @@ class BulkUpdateChannelPricingAction extends BaseAction
 
         foreach ($pricingData as $rule) {
             $channelCode = $rule['channel_code'];
-            
+
             try {
                 // Skip if channel is not valid
-                if (!SetChannelPriceAction::isValidChannel($channelCode)) {
+                if (! SetChannelPriceAction::isValidChannel($channelCode)) {
                     $results[$channelCode] = [
                         'success' => false,
                         'skipped' => true,
                         'reason' => "Invalid channel: {$channelCode}",
                     ];
+
                     continue;
                 }
 
                 // Calculate the price based on the rule
                 $calculatedPrice = $this->calculatePrice($variant, $rule);
-                
+
                 // Skip if calculated price is null or invalid
                 if ($calculatedPrice === null || $calculatedPrice < 0) {
                     $results[$channelCode] = [
@@ -208,12 +209,13 @@ class BulkUpdateChannelPricingAction extends BaseAction
                         'skipped' => true,
                         'reason' => 'Calculated price is invalid or negative',
                     ];
+
                     continue;
                 }
 
                 // Use SetChannelPriceAction to actually set the price
                 $setResult = SetChannelPriceAction::run($variant, $channelCode, $calculatedPrice);
-                
+
                 if ($setResult['success']) {
                     $results[$channelCode] = [
                         'success' => true,
@@ -247,7 +249,7 @@ class BulkUpdateChannelPricingAction extends BaseAction
     protected function calculatePrice(ProductVariant $variant, array $rule): ?float
     {
         $basePrice = $variant->price;
-        
+
         return match ($rule['type']) {
             'fixed' => (float) $rule['value'],
             'percentage_markup' => $basePrice * (1 + ($rule['value'] / 100)),
@@ -269,23 +271,23 @@ class BulkUpdateChannelPricingAction extends BaseAction
         }
 
         foreach ($pricingData as $index => $rule) {
-            if (!is_array($rule)) {
+            if (! is_array($rule)) {
                 return ['valid' => false, 'error' => "Pricing rule at index {$index} must be an array"];
             }
 
             $requiredFields = ['channel_code', 'type', 'value'];
             foreach ($requiredFields as $field) {
-                if (!isset($rule[$field])) {
+                if (! isset($rule[$field])) {
                     return ['valid' => false, 'error' => "Missing required field '{$field}' in pricing rule at index {$index}"];
                 }
             }
 
             $validTypes = ['fixed', 'percentage_markup', 'percentage_discount', 'fixed_markup', 'fixed_discount', 'multiplier'];
-            if (!in_array($rule['type'], $validTypes)) {
-                return ['valid' => false, 'error' => "Invalid pricing type '{$rule['type']}' at index {$index}. Valid types: " . implode(', ', $validTypes)];
+            if (! in_array($rule['type'], $validTypes)) {
+                return ['valid' => false, 'error' => "Invalid pricing type '{$rule['type']}' at index {$index}. Valid types: ".implode(', ', $validTypes)];
             }
 
-            if (!is_numeric($rule['value'])) {
+            if (! is_numeric($rule['value'])) {
                 return ['valid' => false, 'error' => "Pricing value must be numeric at index {$index}"];
             }
         }
@@ -303,10 +305,11 @@ class BulkUpdateChannelPricingAction extends BaseAction
                 'channel_code' => $channelCode,
                 'type' => 'percentage_markup',
                 'value' => $markupPercentage,
-            ]
+            ],
         ];
 
-        $action = new static();
+        $action = new static;
+
         return $action->handle($variants, $pricingData);
     }
 
@@ -338,11 +341,11 @@ class BulkUpdateChannelPricingAction extends BaseAction
                 'channel_code' => $channelCode,
                 'type' => 'fixed',
                 'value' => 0, // This will be overridden by custom calculation
-            ]
+            ],
         ];
 
-        $action = new static();
+        $action = new static;
+
         return $action->handle($variants, $pricingData);
     }
-
 }

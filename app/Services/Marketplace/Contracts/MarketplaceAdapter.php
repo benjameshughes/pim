@@ -2,7 +2,6 @@
 
 namespace App\Services\Marketplace\Contracts;
 
-use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
 
 /**
@@ -22,7 +21,7 @@ interface MarketplaceAdapter
      * - eBay: Keep variants as options
      * - Freemans: Generate CSV row
      *
-     * @param int $productId Local product ID
+     * @param  int  $productId  Local product ID
      * @return self Returns the adapter to allow fluent chaining
      */
     public function create(int $productId): self;
@@ -30,7 +29,7 @@ interface MarketplaceAdapter
     /**
      * Prepare product data for update operations
      *
-     * @param int $productId Local product ID
+     * @param  int  $productId  Local product ID
      * @return self Returns the adapter to allow fluent chaining
      */
     public function update(int $productId): self;
@@ -53,7 +52,7 @@ interface MarketplaceAdapter
     /**
      * Recreate product - clear stale marketplace data and create fresh
      *
-     * @param int $productId Local product ID
+     * @param  int  $productId  Local product ID
      * @return self Returns the adapter to allow fluent chaining
      */
     public function recreate(int $productId): self;
@@ -80,7 +79,7 @@ interface MarketplaceAdapter
     /**
      * Pull data from marketplace (optional - not all marketplaces support this)
      *
-     * @param array $filters Optional filters for the pull operation
+     * @param  array  $filters  Optional filters for the pull operation
      * @return SyncResult Pull result with data
      */
     public function pull(array $filters = []): SyncResult;

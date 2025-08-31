@@ -11,9 +11,9 @@ describe('ProductVariantsTab Livewire Component', function () {
         $this->product = Product::factory()->create([
             'name' => 'Test Product',
             'parent_sku' => 'TEST123',
-            'status' => 'active'
+            'status' => 'active',
         ]);
-        
+
         $this->variants = collect([
             ProductVariant::factory()->create([
                 'product_id' => $this->product->id,
@@ -23,7 +23,7 @@ describe('ProductVariantsTab Livewire Component', function () {
                 'width' => 100,
                 'drop' => 150,
                 'price' => 25.99,
-                'status' => 'active'
+                'status' => 'active',
             ]),
             ProductVariant::factory()->create([
                 'product_id' => $this->product->id,
@@ -33,8 +33,8 @@ describe('ProductVariantsTab Livewire Component', function () {
                 'width' => 120,
                 'drop' => 180,
                 'price' => 27.99,
-                'status' => 'active'
-            ])
+                'status' => 'active',
+            ]),
         ]);
     });
 
@@ -48,9 +48,9 @@ describe('ProductVariantsTab Livewire Component', function () {
         $component = Livewire::test(ProductVariantsTab::class, ['product' => $this->product]);
 
         $product = $component->get('product');
-        
+
         expect($product->relationLoaded('variants'))->toBeTrue();
-        
+
         // Check that barcode relationship is available for variants
         $product->variants->each(function ($variant) {
             expect($variant->relationLoaded('barcode'))->toBeTrue();
@@ -73,7 +73,7 @@ describe('ProductVariantsTab Livewire Component', function () {
             'sku' => $this->variants[0]->sku,
             'title' => $this->variants[0]->title,
             'product_variant_id' => $this->variants[0]->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         Livewire::test(ProductVariantsTab::class, ['product' => $this->product->load('variants.barcode')])
@@ -100,7 +100,7 @@ describe('ProductVariantsTab Livewire Component', function () {
     test('handles products with no variants', function () {
         $emptyProduct = Product::factory()->create([
             'name' => 'Empty Product',
-            'parent_sku' => 'EMPTY123'
+            'parent_sku' => 'EMPTY123',
         ]);
 
         Livewire::test(ProductVariantsTab::class, ['product' => $emptyProduct])
@@ -115,11 +115,11 @@ describe('ProductVariantsTab Livewire Component', function () {
             'sku' => $this->variants[0]->sku,
             'title' => $this->variants[0]->title,
             'product_variant_id' => $this->variants[0]->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         // Second variant has no barcode (None)
-        
+
         Livewire::test(ProductVariantsTab::class, ['product' => $this->product->load('variants.barcode')])
             ->assertSee('1111111111111') // First variant's barcode
             ->assertSee('None'); // Second variant without barcode
@@ -132,17 +132,17 @@ describe('ProductVariantsTab Livewire Component', function () {
             'sku' => $this->variants[0]->sku,
             'title' => $this->variants[0]->title,
             'product_variant_id' => $this->variants[0]->id,
-            'is_assigned' => true
+            'is_assigned' => true,
         ]);
 
         $component = Livewire::test(ProductVariantsTab::class, ['product' => $this->product->load('variants.barcode')]);
-        
+
         $html = $component->render();
-        
+
         // Should contain green badge for variant with barcode
         expect($html)->toContain('color="green"');
-        
-        // Should contain gray badge for variant without barcode  
+
+        // Should contain gray badge for variant without barcode
         expect($html)->toContain('color="gray"');
     });
 
@@ -158,10 +158,10 @@ describe('ProductVariantsTab Livewire Component', function () {
 
     test('component handles product updates correctly', function () {
         $component = Livewire::test(ProductVariantsTab::class, ['product' => $this->product]);
-        
+
         // Update product name
         $this->product->update(['name' => 'Updated Product Name']);
-        
+
         // Component should handle the updated product
         expect($component->get('product.name'))->toBe('Test Product'); // Original name in component
     });
@@ -169,14 +169,14 @@ describe('ProductVariantsTab Livewire Component', function () {
     test('renders without PHP errors or warnings', function () {
         // This test ensures no PHP errors occur during rendering
         $component = Livewire::test(ProductVariantsTab::class, ['product' => $this->product]);
-        
+
         expect($component->payload['serverMemo']['errors'])->toBeEmpty();
     });
 
     test('component uses correct view file', function () {
-        $component = new ProductVariantsTab();
+        $component = new ProductVariantsTab;
         $component->mount($this->product);
-        
+
         expect($component->render()->name())->toBe('livewire.products.product-variants-tab');
     });
 
@@ -184,12 +184,12 @@ describe('ProductVariantsTab Livewire Component', function () {
         // Create many variants
         ProductVariant::factory(50)->create([
             'product_id' => $this->product->id,
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         Livewire::test(ProductVariantsTab::class, ['product' => $this->product->load('variants.barcode')])
             ->assertStatus(200);
-        
+
         // Should load all variants
         expect($this->product->fresh()->variants()->count())->toBe(52); // 2 original + 50 new
     });
@@ -198,21 +198,21 @@ describe('ProductVariantsTab Livewire Component', function () {
         // Add barcodes to variants
         $this->variants->each(function ($variant, $index) {
             Barcode::create([
-                'barcode' => '100000000000' . ($index + 1),
+                'barcode' => '100000000000'.($index + 1),
                 'sku' => $variant->sku,
                 'title' => $variant->title,
                 'product_variant_id' => $variant->id,
-                'is_assigned' => true
+                'is_assigned' => true,
             ]);
         });
 
         // Test that component mounts and renders without additional queries
         $component = Livewire::test(ProductVariantsTab::class, ['product' => $this->product]);
-        
+
         // Verify relationships are loaded
         $product = $component->get('product');
         expect($product->relationLoaded('variants'))->toBeTrue();
-        
+
         $product->variants->each(function ($variant) {
             expect($variant->relationLoaded('barcode'))->toBeTrue();
         });

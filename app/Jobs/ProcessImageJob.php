@@ -17,7 +17,7 @@ use Intervention\Image\ImageManager;
 
 class ProcessImageJob implements ShouldQueue
 {
-    use Queueable, InteractsWithQueue, SerializesModels;
+    use InteractsWithQueue, Queueable, SerializesModels;
 
     public $timeout = 300; // 5 minutes for image processing
 
@@ -31,34 +31,34 @@ class ProcessImageJob implements ShouldQueue
     {
         Log::info('🎨 Starting background image processing', [
             'image_id' => $this->image->id,
-            'filename' => $this->image->filename
+            'filename' => $this->image->filename,
         ]);
 
         // Update status to processing
         $tracker->setStatus($this->image, ImageProcessingStatus::PROCESSING);
 
         $this->extractImageMetadata();
-        
+
         // Mark as completed and clear cache after short delay
         $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
 
         Log::info('✅ Background image processing completed', [
             'image_id' => $this->image->id,
             'width' => $this->image->width,
-            'height' => $this->image->height
+            'height' => $this->image->height,
         ]);
     }
 
     protected function extractImageMetadata(): void
     {
-        if (!$this->image->filename || !$this->image->url) {
+        if (! $this->image->filename || ! $this->image->url) {
             throw ImageReprocessException::invalidImage();
         }
 
         // Download image content temporarily
         $imageContent = Storage::disk('images')->get($this->image->filename);
-        
-        if (!$imageContent) {
+
+        if (! $imageContent) {
             throw ImageReprocessException::storageRetrievalFailed();
         }
 
@@ -68,7 +68,7 @@ class ProcessImageJob implements ShouldQueue
         $tempPath = stream_get_meta_data($tempFile)['uri'];
 
         // Use Intervention Image for better metadata extraction
-        $manager = new ImageManager(new Driver());
+        $manager = new ImageManager(new Driver);
         $interventionImage = $manager->read($tempPath);
 
         $updates = [
@@ -76,7 +76,7 @@ class ProcessImageJob implements ShouldQueue
             'height' => $interventionImage->height(),
             'mime_type' => $interventionImage->origin()->mediaType(),
         ];
-        
+
         // Get file size from storage
         $size = Storage::disk('images')->size($this->image->filename);
         if ($size) {
@@ -95,7 +95,7 @@ class ProcessImageJob implements ShouldQueue
         Log::error('❌ Image processing job failed', [
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
 
         // Mark as failed in cache
