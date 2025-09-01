@@ -41,7 +41,8 @@ class ImageUploadService
     {
         $this->validateFile($file);
 
-        // Generate unique filename
+        // Generate unique filename but keep original
+        $originalFilename = $file->getClientOriginalName();
         $extension = $file->getClientOriginalExtension();
         $filename = Str::uuid().'.'.$extension;
 
@@ -53,6 +54,7 @@ class ImageUploadService
             // Create minimal image record for async processing
             $image = Image::create([
                 'filename' => $filename,
+                'original_filename' => $originalFilename,
                 'url' => $url,
                 'size' => $file->getSize(),
                 'width' => 0, // Will be filled by job
@@ -83,6 +85,7 @@ class ImageUploadService
 
             $image = Image::create([
                 'filename' => $filename,
+                'original_filename' => $originalFilename,
                 'url' => $url,
                 'size' => $file->getSize(),
                 'width' => $dimensions['width'],
@@ -108,12 +111,12 @@ class ImageUploadService
      * @param  UploadedFile[]  $files
      * @return Image[]
      */
-    public function uploadMultiple(array $files, array $metadata = []): array
+    public function uploadMultiple(array $files, array $metadata = [], bool $async = true, bool $generateVariants = true): array
     {
         $images = [];
 
         foreach ($files as $file) {
-            $images[] = $this->upload($file, $metadata);
+            $images[] = $this->upload($file, $metadata, $async, $generateVariants);
         }
 
         return $images;

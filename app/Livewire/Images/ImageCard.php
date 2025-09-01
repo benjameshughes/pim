@@ -16,6 +16,12 @@ class ImageCard extends Component
     public Image $image;
     public bool $showVariants = false;
     public $variants = null;
+    public bool $isProcessing = false;
+
+    protected $listeners = [
+        'echo:images,ImageProcessingCompleted' => 'onImageProcessed',
+        'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
+    ];
 
     public function mount(Image $image): void
     {
@@ -45,6 +51,35 @@ class ImageCard extends Component
         return Image::where('folder', 'variants')
             ->whereJsonContains('tags', "original-{$this->image->id}")
             ->count();
+    }
+
+    /**
+     * 📻 IMAGE PROCESSING COMPLETED - Update card state
+     */
+    public function onImageProcessed($event): void
+    {
+        if ($event['image_id'] == $this->image->id) {
+            $this->isProcessing = false;
+            $this->image = $this->image->fresh();
+        }
+    }
+
+    /**
+     * 🎨 VARIANTS GENERATED - Update variant count
+     */
+    public function onVariantsGenerated($event): void
+    {
+        if ($event['original_image_id'] == $this->image->id) {
+            $this->isProcessing = false;
+            
+            // Clear cached variants so they reload
+            $this->variants = null;
+            
+            // If showing variants, reload them
+            if ($this->showVariants) {
+                $this->loadVariants();
+            }
+        }
     }
 
     public function render(): View

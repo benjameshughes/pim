@@ -134,8 +134,12 @@ class ImageEditForm extends Component
         $this->isSaving = true;
 
         // Refresh metadata synchronously
-        $this->image = $reprocessImageAction->execute($this->image);
-        $this->loadImageData();
+        $result = $reprocessImageAction->execute($this->image);
+        
+        if ($result['success']) {
+            $this->image = $result['data']['image'];
+            $this->loadImageData();
+        }
 
         // Generate variants in background if requested and image is large enough
         if ($generateVariants && $this->image->isOriginal() && ($this->image->width > 150 || $this->image->height > 150)) {

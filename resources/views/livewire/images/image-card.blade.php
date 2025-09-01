@@ -10,6 +10,16 @@
         </a>
 
 
+        {{-- Processing Status Badge --}}
+        @if($isProcessing)
+            <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div class="text-center text-white">
+                    <flux:icon name="arrow-path" class="w-6 h-6 animate-spin mx-auto mb-1" />
+                    <div class="text-xs">Processing...</div>
+                </div>
+            </div>
+        @endif
+
         {{-- Attachment Status Badge --}}
         @if($image->isAttached())
             <div class="absolute bottom-2 left-2">

@@ -42,6 +42,9 @@ class ProcessImageJob implements ShouldQueue
         // Mark as completed and clear cache after short delay
         $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
 
+        // Dispatch event for real-time UI updates
+        \App\Events\Images\ImageProcessingCompleted::dispatch($this->image->fresh());
+
         Log::info('✅ Background image processing completed', [
             'image_id' => $this->image->id,
             'width' => $this->image->width,

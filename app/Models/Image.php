@@ -21,6 +21,7 @@ class Image extends Model
     protected $fillable = [
         // Core file data
         'filename',
+        'original_filename',
         'url',
         'size',
         'width',

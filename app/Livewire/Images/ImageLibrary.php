@@ -18,6 +18,11 @@ class ImageLibrary extends Component
 {
     use WithFileUploads, WithPagination;
 
+    protected $listeners = [
+        'echo:images,ImageProcessingCompleted' => 'onImageProcessed',
+        'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
+    ];
+
     // Upload
     /** @var \Illuminate\Http\UploadedFile[] */
     public $newImages = [];
@@ -92,9 +97,9 @@ class ImageLibrary extends Component
     }
 
     /**
-     * 📤 UPLOAD IMAGES
+     * 📤 UPLOAD IMAGES - Using Action pattern like reprocess button
      */
-    public function uploadImages(ImageUploadService $uploadService)
+    public function uploadImages(\App\Actions\Images\UploadImagesAction $uploadAction)
     {
         // Authorize uploading images
         $this->authorize('upload-images');
@@ -104,70 +109,43 @@ class ImageLibrary extends Component
         ]);
 
         try {
-            // Convert tags string to array if needed
-            $tags = is_string($this->uploadMetadata['tags'])
-                ? array_filter(array_map('trim', explode(',', $this->uploadMetadata['tags'])))
-                : ($this->uploadMetadata['tags'] ?? []);
+            $result = $uploadAction->execute($this->newImages, $this->uploadMetadata);
 
-            $metadata = [
-                'title' => $this->uploadMetadata['title'] ?: null,
-                'alt_text' => $this->uploadMetadata['alt_text'] ?: null,
-                'description' => $this->uploadMetadata['description'] ?: null,
-                'folder' => $this->uploadMetadata['folder'] ?: null,
-                'tags' => $tags,
-            ];
+            if ($result['success']) {
+                $uploadCount = $result['data']['upload_count'];
+                $this->dispatch('success', "{$uploadCount} images uploaded successfully! 🎉");
 
-            // Debug R2 configuration in production
-            if (app()->environment('production')) {
-                logger()->info('R2 Upload Debug', [
-                    'disk_config' => config('filesystems.disks.images'),
-                    'file_count' => count($this->newImages),
-                    'has_r2_key' => ! empty(config('filesystems.disks.images.key')),
-                    'has_r2_secret' => ! empty(config('filesystems.disks.images.secret')),
-                    'has_r2_bucket' => ! empty(config('filesystems.disks.images.bucket')),
-                ]);
+                $this->reset(['newImages', 'uploadMetadata']);
+                $this->showUploadModal = false;
+                $this->resetPage();
+            } else {
+                $this->dispatch('error', 'Upload failed: ' . $result['message']);
             }
 
-            $uploadService->uploadMultiple($this->newImages, $metadata);
-
-            $this->dispatch('success', count($this->newImages).' images uploaded successfully! 🎉');
-
-            $this->reset(['newImages', 'uploadMetadata']);
-            $this->showUploadModal = false;
-            $this->resetPage();
-
         } catch (\Exception $e) {
-            // More detailed error logging for production
-            logger()->error('Image Upload Error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'file_count' => count($this->newImages ?? []),
-            ]);
-
-            $this->dispatch('error', 'Upload failed: '.$e->getMessage());
+            $this->dispatch('error', 'Upload failed: ' . $e->getMessage());
         }
     }
 
     /**
-     * 🗑️ DELETE IMAGE
+     * 🗑️ DELETE IMAGE - Using Action pattern for consistency
      */
-    public function deleteImage(int $imageId, ImageUploadService $uploadService)
+    public function deleteImage(int $imageId, \App\Actions\Images\DeleteImageAction $deleteAction)
     {
         // Authorize deleting images
         $this->authorize('delete-images');
 
         $image = Image::find($imageId);
-        if (! $image) {
+        if (!$image) {
             return;
         }
 
         try {
-            $uploadService->delete($image);
-
+            $deleteAction->execute($image);
             $this->dispatch('success', 'Image deleted successfully! 🗑️');
 
         } catch (\Exception $e) {
-            $this->dispatch('error', 'Delete failed: '.$e->getMessage());
+            $this->dispatch('error', 'Delete failed: ' . $e->getMessage());
         }
     }
 
@@ -326,6 +304,34 @@ class ImageLibrary extends Component
 
     public function updatedFilterBy(): void
     {
+        $this->resetPage();
+    }
+
+    /**
+     * 📻 IMAGE PROCESSING COMPLETED - Real-time UI update
+     */
+    public function onImageProcessed($event): void
+    {
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => $event['message'],
+        ]);
+
+        // Refresh the images list
+        $this->resetPage();
+    }
+
+    /**
+     * 🎨 VARIANTS GENERATED - Real-time UI update
+     */
+    public function onVariantsGenerated($event): void
+    {
+        $this->dispatch('notify', [
+            'type' => 'success', 
+            'message' => $event['message'],
+        ]);
+
+        // Refresh the images list to show updated variant counts
         $this->resetPage();
     }
 

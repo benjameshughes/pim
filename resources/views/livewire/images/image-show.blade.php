@@ -16,7 +16,7 @@
                     </flux:badge>
                 @endif
             </div>
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 font-mono">{{ $image->filename }}</p>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400 font-mono">{{ $image->original_filename ?: $image->filename }}</p>
         </div>
         
         <div class="flex items-center gap-3">

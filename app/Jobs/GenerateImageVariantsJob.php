@@ -44,6 +44,14 @@ class GenerateImageVariantsJob implements ShouldQueue
         // Mark as completed
         $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
 
+        // Dispatch event for real-time UI updates if variants were generated
+        if ($result['success'] && isset($result['data']['generated_variants'])) {
+            \App\Events\Images\ImageVariantsGenerated::dispatch(
+                $this->image->fresh(),
+                $result['data']['generated_variants']
+            );
+        }
+
         Log::info('✅ Image variant generation completed', [
             'image_id' => $this->image->id,
             'action_result' => $result['success'] ? 'success' : 'failed',

@@ -20,7 +20,7 @@ class ReprocessImageAction extends BaseAction
      *
      * Refresh image dimensions and metadata from R2 storage
      */
-    protected function performAction(...$params): Image
+    protected function performAction(...$params): array
     {
         $image = $params[0] ?? null;
 
@@ -54,6 +54,16 @@ class ReprocessImageAction extends BaseAction
             ])
             ->description('Refreshed image metadata and dimensions');
 
-        return $refreshedImage;
+        return $this->success('Image reprocessed successfully', [
+            'image' => $refreshedImage,
+            'dimensions_changed' => $originalDimensions['width'] !== $refreshedImage->width 
+                || $originalDimensions['height'] !== $refreshedImage->height,
+            'original_dimensions' => $originalDimensions,
+            'new_dimensions' => [
+                'width' => $refreshedImage->width,
+                'height' => $refreshedImage->height,
+                'size' => $refreshedImage->size,
+            ],
+        ]);
     }
 }
