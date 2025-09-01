@@ -70,18 +70,21 @@ class ImageUploadService
                 'tags' => $metadata['tags'] ?? [],
             ]);
 
-            // Mark as pending and dispatch initial event
+            // Mark as pending in tracker
             app(ImageProcessingTracker::class)->setStatus($image, ImageProcessingStatus::PENDING);
             
-            // Dispatch initial pending event for real-time UI
-            \App\Events\Images\ImageProcessingProgress::dispatch(
-                $image->id,
-                ImageProcessingStatus::PENDING,
-                'Queued for processing...',
-                0
-            );
-            
+            // Dispatch job first
             ProcessImageJob::dispatch($image);
+            
+            // Dispatch initial pending event with slight delay for proper component setup
+            dispatch(function() use ($image) {
+                \App\Events\Images\ImageProcessingProgress::dispatch(
+                    $image->id,
+                    ImageProcessingStatus::PENDING,
+                    'Queued for processing...',
+                    0
+                );
+            })->afterResponse();
 
             // Optionally generate variants
             if ($generateVariants) {
