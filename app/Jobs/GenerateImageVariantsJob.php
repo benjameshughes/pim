@@ -38,19 +38,15 @@ class GenerateImageVariantsJob implements ShouldQueue
             'processing_id' => $this->processingId,
         ]);
 
-        $totalVariants = count($this->variants);
-
-        // Dispatch optimising progress
+        // Update status to optimizing and dispatch event
+        $tracker->setStatus($this->image, ImageProcessingStatus::OPTIMISING);
+        
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
             ImageProcessingStatus::OPTIMISING,
             'Generating image variants...',
-            0,
-            $totalVariants
+            75
         );
-
-        // Update status to processing variants
-        $tracker->setStatus($this->image, ImageProcessingStatus::PROCESSING);
 
         // Generate variants using the action
         $result = $action->execute($this->image, $this->variants);
@@ -63,12 +59,7 @@ class GenerateImageVariantsJob implements ShouldQueue
             $this->image->id,
             ImageProcessingStatus::SUCCESS,
             'All variants generated successfully',
-            $totalVariants,
-            $totalVariants,
-            [
-                'variants_generated' => $result['data']['variants_generated'] ?? 0,
-                'optimisation_complete' => true,
-            ]
+            100
         );
 
         // Dispatch legacy event for real-time UI updates if variants were generated

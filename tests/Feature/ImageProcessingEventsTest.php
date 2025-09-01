@@ -18,22 +18,21 @@ describe('ImageProcessingProgress Event', function () {
             imageId: 123,
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Extracting metadata...',
-            processed: 1,
-            total: 2
+            percentage: 50
         );
 
         expect($event->imageId)->toBe(123);
         expect($event->status)->toBe(ImageProcessingStatus::PROCESSING);
         expect($event->currentAction)->toBe('Extracting metadata...');
-        expect($event->processed)->toBe(1);
-        expect($event->total)->toBe(2);
+        expect($event->percentage)->toBe(50);
     });
 
     test('broadcasts on correct channel', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
             status: ImageProcessingStatus::PROCESSING,
-            currentAction: 'Processing...'
+            currentAction: 'Processing...',
+            percentage: 50
         );
 
         $channels = $event->broadcastOn();
@@ -47,22 +46,19 @@ describe('ImageProcessingProgress Event', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
             status: ImageProcessingStatus::PROCESSING,
-            currentAction: 'Processing...'
+            currentAction: 'Processing...',
+            percentage: 50
         );
 
         expect($event->broadcastAs())->toBe('ImageProcessingProgress');
     });
 
     test('includes correct data in broadcast', function () {
-        $stats = ['metadata_extracted' => true];
-        
         $event = new ImageProcessingProgress(
             imageId: 123,
             status: ImageProcessingStatus::SUCCESS,
             currentAction: 'Processing complete',
-            processed: 2,
-            total: 2,
-            stats: $stats
+            percentage: 100
         );
 
         $broadcastData = $event->broadcastWith();
@@ -73,10 +69,7 @@ describe('ImageProcessingProgress Event', function () {
         expect($broadcastData)->toHaveKey('statusColor', 'green');
         expect($broadcastData)->toHaveKey('statusIcon', 'check-circle');
         expect($broadcastData)->toHaveKey('currentAction', 'Processing complete');
-        expect($broadcastData)->toHaveKey('processed', 2);
-        expect($broadcastData)->toHaveKey('total', 2);
-        expect($broadcastData)->toHaveKey('percentage', 100.0);
-        expect($broadcastData)->toHaveKey('stats', $stats);
+        expect($broadcastData)->toHaveKey('percentage', 100);
     });
 
     test('calculates percentage correctly', function () {
@@ -84,41 +77,25 @@ describe('ImageProcessingProgress Event', function () {
             imageId: 123,
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Processing...',
-            processed: 1,
-            total: 3
+            percentage: 33
         );
 
         $broadcastData = $event->broadcastWith();
 
-        expect($broadcastData['percentage'])->toBe(33.3);
+        expect($broadcastData['percentage'])->toBe(33);
     });
 
-    test('handles zero total gracefully', function () {
+    test('handles zero percentage gracefully', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
-            status: ImageProcessingStatus::PROCESSING,
-            currentAction: 'Processing...',
-            processed: 1,
-            total: 0
+            status: ImageProcessingStatus::PENDING,
+            currentAction: 'Queued...',
+            percentage: 0
         );
 
         $broadcastData = $event->broadcastWith();
 
         expect($broadcastData['percentage'])->toBe(0);
-    });
-
-    test('provides default stats when none provided', function () {
-        $event = new ImageProcessingProgress(
-            imageId: 123,
-            status: ImageProcessingStatus::PROCESSING,
-            currentAction: 'Processing...'
-        );
-
-        $broadcastData = $event->broadcastWith();
-
-        expect($broadcastData['stats'])->toHaveKey('variants_generated', 0);
-        expect($broadcastData['stats'])->toHaveKey('optimisation_complete', false);
-        expect($broadcastData['stats'])->toHaveKey('metadata_extracted', false);
     });
 
 });

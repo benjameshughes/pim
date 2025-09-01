@@ -24,9 +24,7 @@ class ImageProcessingProgress implements ShouldBroadcastNow
         public int $imageId,
         public ImageProcessingStatus $status,
         public string $currentAction,
-        public int $processed = 0,
-        public int $total = 1,
-        public ?array $stats = null
+        public int $percentage = 0
     ) {}
 
     public function broadcastOn(): array
@@ -50,14 +48,7 @@ class ImageProcessingProgress implements ShouldBroadcastNow
             'statusColor' => $this->status->color(),
             'statusIcon' => $this->status->icon(),
             'currentAction' => $this->currentAction,
-            'processed' => $this->processed,
-            'total' => $this->total,
-            'percentage' => $this->total > 0 ? round(($this->processed / $this->total) * 100, 1) : 0,
-            'stats' => $this->stats ?? [
-                'variants_generated' => 0,
-                'optimisation_complete' => false,
-                'metadata_extracted' => false,
-            ],
+            'percentage' => $this->percentage,
         ];
     }
 }

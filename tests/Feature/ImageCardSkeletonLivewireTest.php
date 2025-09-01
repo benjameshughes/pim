@@ -69,6 +69,7 @@ describe('ImageCardSkeleton Livewire Component', function () {
             'imageId' => $image->id,
             'status' => 'uploading',
             'currentAction' => 'Uploading to storage...',
+            'percentage' => 25,
         ]);
         expect(strtolower($component->get('statusMessage')))->toContain('upload');
 
@@ -76,6 +77,7 @@ describe('ImageCardSkeleton Livewire Component', function () {
             'imageId' => $image->id,
             'status' => 'processing',
             'currentAction' => 'Extracting metadata...',
+            'percentage' => 50,
         ]);
         expect(strtolower($component->get('statusMessage')))->toContain('metadata');
 
@@ -83,6 +85,7 @@ describe('ImageCardSkeleton Livewire Component', function () {
             'imageId' => $image->id,
             'status' => 'optimising',
             'currentAction' => 'Generating variants...',
+            'percentage' => 75,
         ]);
         expect(strtolower($component->get('statusMessage')))->toContain('variants');
     });
@@ -139,6 +142,7 @@ describe('ImageCardSkeleton Event Handling', function () {
             'imageId' => $otherImage->id,
             'status' => 'success',
             'currentAction' => 'Other image done',
+            'percentage' => 100,
         ]);
 
         expect($component->get('status'))->toBe(ImageProcessingStatus::PENDING);

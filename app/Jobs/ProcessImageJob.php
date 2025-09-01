@@ -37,44 +37,26 @@ class ProcessImageJob implements ShouldQueue
             'processing_id' => $this->processingId,
         ]);
 
-        // Dispatch uploading progress
-        \App\Events\Images\ImageProcessingProgress::dispatch(
-            $this->image->id,
-            ImageProcessingStatus::UPLOADING,
-            'Image uploaded, preparing for processing...',
-            0,
-            2
-        );
-
-        // Update status to processing
+        // Set initial processing status and dispatch event
         $tracker->setStatus($this->image, ImageProcessingStatus::PROCESSING);
-
-        // Dispatch processing progress
+        
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
             ImageProcessingStatus::PROCESSING,
-            'Extracting image metadata and dimensions...',
-            1,
-            2
+            'Processing image metadata...',
+            50 // Show as 50% progress
         );
 
         $this->extractImageMetadata();
 
-        // Mark as completed and clear cache
+        // Mark as completed and dispatch success
         $tracker->setStatus($this->image, ImageProcessingStatus::SUCCESS);
 
-        // Dispatch success progress
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
             ImageProcessingStatus::SUCCESS,
-            'Image processing completed successfully',
-            2,
-            2,
-            [
-                'metadata_extracted' => true,
-                'width' => $this->image->fresh()->width,
-                'height' => $this->image->fresh()->height,
-            ]
+            'Image processing completed',
+            100
         );
 
         // Dispatch legacy event for backward compatibility

@@ -44,15 +44,18 @@ class ImageCardSkeleton extends Component
      */
     public function updateProcessingProgress($event): void
     {
-        if ($event['imageId'] == $this->image->id) {
-            $this->status = ImageProcessingStatus::from($event['status']);
-            $this->statusMessage = $event['currentAction'] ?? $this->status->label();
-            $this->progress = $event['percentage'] ?? 0;
-            
-            // Check if processing is complete
-            if ($this->status === ImageProcessingStatus::SUCCESS) {
-                $this->checkImageAvailability();
-            }
+        // Only respond to events for this image
+        if ($event['imageId'] != $this->image->id) {
+            return;
+        }
+        
+        $this->status = ImageProcessingStatus::from($event['status']);
+        $this->statusMessage = $event['currentAction'];
+        $this->progress = $event['percentage'];
+        
+        // If processing is complete, check if we should show actual card
+        if ($this->status === ImageProcessingStatus::SUCCESS) {
+            $this->checkImageAvailability();
         }
     }
 
@@ -110,23 +113,37 @@ class ImageCardSkeleton extends Component
             $this->statusMessage = 'Loading image...';
             $this->progress = 100;
             $this->checkImageAvailability();
-        } else {
-            // Check processing tracker status
-            $tracker = app(\App\Services\ImageProcessingTracker::class);
-            $cachedStatus = $tracker->getStatus($this->image);
+            return;
+        }
+        
+        // Check processing tracker status
+        $tracker = app(\App\Services\ImageProcessingTracker::class);
+        $cachedStatus = $tracker->getStatus($this->image);
+        
+        if ($cachedStatus) {
+            $this->status = $cachedStatus;
+            $this->progress = match($cachedStatus) {
+                ImageProcessingStatus::PENDING => 0,
+                ImageProcessingStatus::PROCESSING => 50,
+                ImageProcessingStatus::OPTIMISING => 75,
+                ImageProcessingStatus::SUCCESS => 100,
+                ImageProcessingStatus::FAILED => 0,
+                default => 0
+            };
             
-            if ($cachedStatus) {
-                $this->status = $cachedStatus;
-                $this->statusMessage = match($cachedStatus) {
-                    ImageProcessingStatus::PENDING => 'Queued for processing...',
-                    ImageProcessingStatus::UPLOADING => 'Uploading to storage...',
-                    ImageProcessingStatus::PROCESSING => 'Extracting metadata...',
-                    ImageProcessingStatus::OPTIMISING => 'Generating variants...',
-                    ImageProcessingStatus::SUCCESS => 'Processing complete!',
-                    ImageProcessingStatus::FAILED => 'Processing failed',
-                    default => 'Processing...'
-                };
-            }
+            $this->statusMessage = match($cachedStatus) {
+                ImageProcessingStatus::PENDING => 'Queued for processing...',
+                ImageProcessingStatus::PROCESSING => 'Processing image...',
+                ImageProcessingStatus::OPTIMISING => 'Generating variants...',
+                ImageProcessingStatus::SUCCESS => 'Processing complete!',
+                ImageProcessingStatus::FAILED => 'Processing failed',
+                default => 'Processing...'
+            };
+        } else {
+            // Default to pending if no status found
+            $this->status = ImageProcessingStatus::PENDING;
+            $this->statusMessage = 'Preparing for processing...';
+            $this->progress = 0;
         }
     }
 
