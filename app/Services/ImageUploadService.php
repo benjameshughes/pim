@@ -76,7 +76,8 @@ class ImageUploadService
 
             // Optionally generate variants
             if ($generateVariants) {
-                GenerateImageVariantsJob::dispatch($image)->delay(now()->addSeconds(30));
+                GenerateImageVariantsJob::dispatch($image)
+                    ->delay(now()->addSeconds(30));
             }
 
         } else {

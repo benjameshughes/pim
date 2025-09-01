@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Events\Images;
+
+use App\Enums\ImageProcessingStatus;
+use App\Models\Image;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+/**
+ * 📻 IMAGE PROCESSING PROGRESS EVENT
+ * 
+ * Real-time progress updates for image processing jobs
+ * Uses ShouldBroadcastNow for instant broadcasting like import system
+ */
+class ImageProcessingProgress implements ShouldBroadcastNow
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(
+        public int $imageId,
+        public ImageProcessingStatus $status,
+        public string $currentAction,
+        public int $processed = 0,
+        public int $total = 1,
+        public ?array $stats = null
+    ) {}
+
+    public function broadcastOn(): array
+    {
+        return [
+            new Channel('images'), // Use global images channel
+        ];
+    }
+
+    public function broadcastAs(): string
+    {
+        return 'ImageProcessingProgress';
+    }
+
+    public function broadcastWith(): array
+    {
+        return [
+            'imageId' => $this->imageId,
+            'status' => $this->status->value,
+            'statusLabel' => $this->status->label(),
+            'statusColor' => $this->status->color(),
+            'statusIcon' => $this->status->icon(),
+            'currentAction' => $this->currentAction,
+            'processed' => $this->processed,
+            'total' => $this->total,
+            'percentage' => $this->total > 0 ? round(($this->processed / $this->total) * 100, 1) : 0,
+            'stats' => $this->stats ?? [
+                'variants_generated' => 0,
+                'optimisation_complete' => false,
+                'metadata_extracted' => false,
+            ],
+        ];
+    }
+}

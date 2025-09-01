@@ -18,10 +18,8 @@ class ImageLibrary extends Component
 {
     use WithFileUploads, WithPagination;
 
-    protected $listeners = [
-        'echo:images,ImageProcessingCompleted' => 'onImageProcessed',
-        'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
-    ];
+    // Processing tracking
+    public array $processingImages = [];
 
     // Upload
     /** @var \Illuminate\Http\UploadedFile[] */
@@ -113,7 +111,12 @@ class ImageLibrary extends Component
 
             if ($result['success']) {
                 $uploadCount = $result['data']['upload_count'];
-                $this->dispatch('success', "{$uploadCount} images uploaded successfully! 🎉");
+                
+                // Track which images are processing
+                $uploadedImages = $result['data']['uploaded_images'] ?? [];
+                $this->processingImages = array_map(fn($img) => $img->id, $uploadedImages);
+                
+                $this->dispatch('success', "{$uploadCount} images uploaded! Processing in background... 📤");
 
                 $this->reset(['newImages', 'uploadMetadata']);
                 $this->showUploadModal = false;
@@ -308,7 +311,57 @@ class ImageLibrary extends Component
     }
 
     /**
-     * 📻 IMAGE PROCESSING COMPLETED - Real-time UI update
+     * Get real-time event listeners - Global channel approach
+     */
+    public function getListeners()
+    {
+        return [
+            // Legacy events
+            'echo:images,ImageProcessingCompleted' => 'onImageProcessed',
+            'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
+            // Global progress events - we'll filter by image ID in the handler
+            'echo:images,ImageProcessingProgress' => 'updateProcessingProgress',
+            // Skeleton replacement event
+            'image-ready' => 'replaceSkeletonWithCard',
+        ];
+    }
+
+    /**
+     * 📻 HANDLE REAL-TIME PROCESSING PROGRESS - Simplified
+     */
+    public function updateProcessingProgress($event): void
+    {
+        $imageId = $event['imageId'] ?? null;
+        $status = $event['status'] ?? null;
+        $statusLabel = $event['statusLabel'] ?? '';
+        $currentAction = $event['currentAction'] ?? '';
+
+        // Only show notifications for images we're currently tracking
+        if ($imageId && in_array($imageId, $this->processingImages)) {
+            $this->dispatch('notify', [
+                'type' => match($status) {
+                    'uploading' => 'info',
+                    'processing' => 'info', 
+                    'optimising' => 'info',
+                    'success' => 'success',
+                    'failed' => 'error',
+                    default => 'info'
+                },
+                'message' => $currentAction ?: $statusLabel,
+            ]);
+        }
+
+        // Remove from processing array when completed or failed
+        if (in_array($status, ['success', 'failed']) && $imageId) {
+            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
+            
+            // Refresh the page to replace skeleton with actual card
+            $this->resetPage();
+        }
+    }
+
+    /**
+     * 📻 IMAGE PROCESSING COMPLETED - Real-time UI update (legacy)
      */
     public function onImageProcessed($event): void
     {
@@ -322,7 +375,7 @@ class ImageLibrary extends Component
     }
 
     /**
-     * 🎨 VARIANTS GENERATED - Real-time UI update
+     * 🎨 VARIANTS GENERATED - Real-time UI update (legacy)
      */
     public function onVariantsGenerated($event): void
     {
@@ -331,8 +384,31 @@ class ImageLibrary extends Component
             'message' => $event['message'],
         ]);
 
+        $imageId = $event['original_image_id'] ?? null;
+        
+        // Remove from processing array and refresh
+        if ($imageId) {
+            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
+        }
+
         // Refresh the images list to show updated variant counts
         $this->resetPage();
+    }
+
+    /**
+     * 🔄 REPLACE SKELETON WITH ACTUAL CARD
+     */
+    public function replaceSkeletonWithCard($event): void
+    {
+        $imageId = $event['imageId'] ?? null;
+        
+        if ($imageId) {
+            // Remove from processing array to trigger card replacement
+            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
+            
+            // Refresh component to show actual card
+            $this->resetPage();
+        }
     }
 
     /**

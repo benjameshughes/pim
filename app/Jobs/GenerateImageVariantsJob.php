@@ -20,9 +20,11 @@ class GenerateImageVariantsJob implements ShouldQueue
 
     public function __construct(
         public Image $image,
-        public array $variants = ['thumb', 'small', 'medium']
+        public array $variants = ['thumb', 'small', 'medium'],
+        public ?string $processingId = null
     ) {
         $this->onQueue('images');
+        $this->processingId = $processingId ?: 'variants_'.$image->id.'_'.time();
     }
 
     public function handle(
@@ -33,7 +35,19 @@ class GenerateImageVariantsJob implements ShouldQueue
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
             'variants' => $this->variants,
+            'processing_id' => $this->processingId,
         ]);
+
+        $totalVariants = count($this->variants);
+
+        // Dispatch optimising progress
+        \App\Events\Images\ImageProcessingProgress::dispatch(
+            $this->image->id,
+            ImageProcessingStatus::OPTIMISING,
+            'Generating image variants...',
+            0,
+            $totalVariants
+        );
 
         // Update status to processing variants
         $tracker->setStatus($this->image, ImageProcessingStatus::PROCESSING);
@@ -42,9 +56,22 @@ class GenerateImageVariantsJob implements ShouldQueue
         $result = $action->execute($this->image, $this->variants);
 
         // Mark as completed
-        $tracker->setStatus($this->image, ImageProcessingStatus::COMPLETED);
+        $tracker->setStatus($this->image, ImageProcessingStatus::SUCCESS);
 
-        // Dispatch event for real-time UI updates if variants were generated
+        // Dispatch success progress
+        \App\Events\Images\ImageProcessingProgress::dispatch(
+            $this->image->id,
+            ImageProcessingStatus::SUCCESS,
+            'All variants generated successfully',
+            $totalVariants,
+            $totalVariants,
+            [
+                'variants_generated' => $result['data']['variants_generated'] ?? 0,
+                'optimisation_complete' => true,
+            ]
+        );
+
+        // Dispatch legacy event for real-time UI updates if variants were generated
         if ($result['success'] && isset($result['data']['generated_variants'])) {
             \App\Events\Images\ImageVariantsGenerated::dispatch(
                 $this->image->fresh(),
@@ -57,6 +84,7 @@ class GenerateImageVariantsJob implements ShouldQueue
             'action_result' => $result['success'] ? 'success' : 'failed',
             'variants_generated' => $result['data']['variants_generated'] ?? 0,
             'message' => $result['message'] ?? 'Unknown result',
+            'processing_id' => $this->processingId,
         ]);
     }
 
@@ -66,7 +94,17 @@ class GenerateImageVariantsJob implements ShouldQueue
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
             'error' => $exception->getMessage(),
+            'processing_id' => $this->processingId,
         ]);
+
+        // Dispatch failure progress
+        \App\Events\Images\ImageProcessingProgress::dispatch(
+            $this->image->id,
+            ImageProcessingStatus::FAILED,
+            'Variant generation failed: ' . $exception->getMessage(),
+            0,
+            count($this->variants)
+        );
 
         // Mark as failed in cache
         $tracker = app(ImageProcessingTracker::class);

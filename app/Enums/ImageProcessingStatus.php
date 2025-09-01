@@ -5,16 +5,24 @@ namespace App\Enums;
 enum ImageProcessingStatus: string
 {
     case PENDING = 'pending';
+    case UPLOADING = 'uploading';
     case PROCESSING = 'processing';
-    case COMPLETED = 'completed';
+    case OPTIMISING = 'optimising';
+    case SUCCESS = 'success';
     case FAILED = 'failed';
+    
+    // Legacy alias - keep separate value for backward compatibility
+    case COMPLETED = 'completed';
 
     public function label(): string
     {
         return match ($this) {
             self::PENDING => 'Pending',
+            self::UPLOADING => 'Uploading',
             self::PROCESSING => 'Processing',
-            self::COMPLETED => 'Completed',
+            self::OPTIMISING => 'Optimising',
+            self::SUCCESS => 'Success',
+            self::COMPLETED => 'Completed', // Legacy
             self::FAILED => 'Failed',
         };
     }
@@ -23,8 +31,11 @@ enum ImageProcessingStatus: string
     {
         return match ($this) {
             self::PENDING => 'yellow',
+            self::UPLOADING => 'blue',
             self::PROCESSING => 'blue',
-            self::COMPLETED => 'green',
+            self::OPTIMISING => 'purple',
+            self::SUCCESS => 'green',
+            self::COMPLETED => 'green', // Legacy
             self::FAILED => 'red',
         };
     }
@@ -33,8 +44,11 @@ enum ImageProcessingStatus: string
     {
         return match ($this) {
             self::PENDING => 'clock',
+            self::UPLOADING => 'arrow-up-tray',
             self::PROCESSING => 'arrow-path',
-            self::COMPLETED => 'check-circle',
+            self::OPTIMISING => 'sparkles',
+            self::SUCCESS => 'check-circle',
+            self::COMPLETED => 'check-circle', // Legacy
             self::FAILED => 'x-circle',
         };
     }

@@ -6,12 +6,31 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Event;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->user = User::factory()->create();
+    
+    // Create permissions
+    $permissions = [
+        'manage-images',
+        'upload-images', 
+        'delete-images',
+        'view-images'
+    ];
+    
+    foreach ($permissions as $permissionName) {
+        Permission::findOrCreate($permissionName);
+    }
+    
+    // Give user all image permissions
+    $this->user->givePermissionTo($permissions);
+    
     $this->actingAs($this->user);
     Storage::fake('images');
 });
@@ -277,6 +296,125 @@ describe('ImageLibrary Search and Filtering', function () {
         expect($component->get('search'))->toBe('');
         expect($component->get('selectedFolder'))->toBe('');
         expect($component->get('selectedTag'))->toBe('');
+    });
+
+});
+
+describe('ImageLibrary Real-time Processing', function () {
+
+    test('tracks processing images during upload', function () {
+        $file = UploadedFile::fake()->image('test.jpg');
+
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('newImages', [$file])
+            ->call('uploadImages')
+            ->assertStatus(200);
+
+        // Should have images in processing array
+        expect($component->get('processingImages'))->not()->toBeEmpty();
+    });
+
+    test('handles processing progress events', function () {
+        $image = Image::factory()->create();
+        
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$image->id]);
+
+        // Simulate processing progress event
+        $component->call('updateProcessingProgress', [
+            'imageId' => $image->id,
+            'status' => 'processing',
+            'statusLabel' => 'Processing...',
+            'currentAction' => 'Extracting metadata...'
+        ])->assertDispatched('notify');
+    });
+
+    test('removes image from processing array when completed', function () {
+        $image = Image::factory()->create();
+        
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$image->id]);
+
+        // Simulate success event
+        $component->call('updateProcessingProgress', [
+            'imageId' => $image->id,
+            'status' => 'success',
+            'statusLabel' => 'Completed!',
+            'currentAction' => 'Processing complete'
+        ]);
+
+        expect($component->get('processingImages'))->not()->toContain($image->id);
+    });
+
+    test('handles image processing completed event', function () {
+        $image = Image::factory()->create();
+
+        Livewire::test(ImageLibrary::class)
+            ->call('onImageProcessed', [
+                'image_id' => $image->id,
+                'message' => 'Image processed successfully'
+            ])
+            ->assertDispatched('notify');
+    });
+
+    test('handles variants generated event', function () {
+        $image = Image::factory()->create();
+
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$image->id]);
+
+        $component->call('onVariantsGenerated', [
+            'original_image_id' => $image->id,
+            'message' => 'Variants generated successfully'
+        ])->assertDispatched('notify');
+
+        expect($component->get('processingImages'))->not()->toContain($image->id);
+    });
+
+    test('handles skeleton replacement event', function () {
+        $image = Image::factory()->create();
+
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$image->id]);
+
+        $component->call('replaceSkeletonWithCard', [
+            'imageId' => $image->id
+        ]);
+
+        expect($component->get('processingImages'))->not()->toContain($image->id);
+    });
+
+});
+
+describe('ImageLibrary Conditional Rendering', function () {
+
+    test('shows skeleton for processing images', function () {
+        // Create image without dimensions (processing)
+        $processingImage = Image::factory()->create(['width' => 0, 'height' => 0]);
+        
+        // Create processed image
+        $processedImage = Image::factory()->create(['width' => 800, 'height' => 600]);
+
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$processingImage->id])
+            ->assertStatus(200);
+
+        // Should render skeleton for processing image
+        expect($component->html())->toContain('skeleton-' . $processingImage->id);
+        
+        // Should render normal card for processed image
+        expect($component->html())->toContain('image-card-' . $processedImage->id);
+    });
+
+    test('shows skeleton for images in processing array', function () {
+        $image = Image::factory()->create(['width' => 800, 'height' => 600]);
+
+        $component = Livewire::test(ImageLibrary::class)
+            ->set('processingImages', [$image->id])
+            ->assertStatus(200);
+
+        // Even processed images should show skeleton if in processing array
+        expect($component->html())->toContain('skeleton-' . $image->id);
     });
 
 });

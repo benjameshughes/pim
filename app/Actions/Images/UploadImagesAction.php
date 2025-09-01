@@ -57,8 +57,13 @@ class UploadImagesAction extends BaseAction
             ]);
         }
 
-        // Upload using the service
-        $uploadedImages = $this->uploadService->uploadMultiple($files, $processedMetadata);
+        // Upload using the service  
+        $uploadedImages = $this->uploadService->uploadMultiple(
+            $files, 
+            $processedMetadata, 
+            true, // async processing
+            true  // generate variants
+        );
 
         return $this->success('Images uploaded successfully', [
             'uploaded_images' => $uploadedImages,
