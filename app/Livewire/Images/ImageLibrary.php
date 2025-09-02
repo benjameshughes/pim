@@ -529,6 +529,61 @@ class ImageLibrary extends Component
         $this->bulkTagInput = '';
     }
 
+    /**
+     * 🔄 RETRY STUCK IMAGES
+     * 
+     * Find and reprocess images that are stuck (width=0 or height=0)
+     */
+    public function retryStuckImages()
+    {
+        $this->authorize('manage-images');
+        
+        try {
+            // Find stuck images (those with width=0 or height=0)
+            $stuckImages = Image::where('width', 0)
+                ->orWhere('height', 0)
+                ->get();
+            
+            if ($stuckImages->isEmpty()) {
+                $this->dispatch('success', 'No stuck images found! All images appear to be processed correctly. ✅');
+                return;
+            }
+            
+            $retryCount = 0;
+            foreach ($stuckImages as $image) {
+                // Dispatch processing job for stuck image
+                \App\Jobs\ProcessImageJob::dispatch($image);
+                $retryCount++;
+                
+                \Log::info('Retrying stuck image', [
+                    'image_id' => $image->id,
+                    'filename' => $image->filename,
+                    'original_filename' => $image->original_filename,
+                ]);
+            }
+            
+            $this->dispatch('success', "Retrying {$retryCount} stuck images! Processing jobs dispatched. 🔄");
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to retry stuck images', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            
+            $this->dispatch('error', 'Failed to retry stuck images: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 🔍 GET STUCK IMAGES COUNT
+     * 
+     * Count images that appear to be stuck in processing
+     */
+    public function getStuckImagesCountProperty(): int
+    {
+        return Image::where('width', 0)->orWhere('height', 0)->count();
+    }
+
     public function render(): View
     {
         return view('livewire.images.image-library');

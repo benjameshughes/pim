@@ -32,6 +32,24 @@
                         Clear Filters
                     </flux:button>
                 @endif
+                
+                {{-- Retry Stuck Images Button --}}
+                @if($this->stuckImagesCount > 0)
+                    <div class="flex items-center gap-2">
+                        <span class="text-orange-600 dark:text-orange-400 font-medium">
+                            {{ $this->stuckImagesCount }} stuck
+                        </span>
+                        <flux:button
+                            variant="outline"
+                            size="xs"
+                            icon="arrow-path"
+                            wire:click="retryStuckImages"
+                            class="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-600 dark:hover:bg-orange-900/20"
+                        >
+                            Retry
+                        </flux:button>
+                    </div>
+                @endif
             </div>
         </div>
         
