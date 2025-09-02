@@ -86,12 +86,19 @@ class UploadImagesAction extends BaseAction
                 
                 // Step 3: Dispatch ProcessImageJob only
                 // Variant generation will be chained after processing completes
-                ProcessImageJob::dispatch($image);
-                
-                Log::info('📤 Image uploaded and processing queued', [
-                    'image_id' => $image->id,
-                    'filename' => $image->filename,
-                ]);
+                try {
+                    ProcessImageJob::dispatch($image);
+                    Log::info('📤 Image uploaded and processing queued', [
+                        'image_id' => $image->id,
+                        'filename' => $image->filename,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('❌ Failed to dispatch ProcessImageJob', [
+                        'image_id' => $image->id,
+                        'filename' => $image->filename,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
                 
             } catch (\Exception $e) {
                 Log::error('Image upload failed', [

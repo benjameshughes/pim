@@ -3,23 +3,15 @@
 namespace App\Livewire\Images;
 
 use App\Models\Image;
-use App\Services\ImageUploadService;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
-/**
- * 🖼️ SIMPLE IMAGE LIBRARY
- *
- * Clean image management with upload, search, tags, folders
- */
 class ImageLibrary extends Component
 {
     use WithFileUploads, WithPagination;
-
-    // Processing tracking
-    public array $processingImages = [];
 
     // Upload
     /** @var \Illuminate\Http\UploadedFile[] */
@@ -73,7 +65,6 @@ class ImageLibrary extends Component
 
     public function mount()
     {
-        // Authorize managing images
         $this->authorize('manage-images');
     }
 
@@ -112,9 +103,8 @@ class ImageLibrary extends Component
             if ($result['success']) {
                 $uploadCount = $result['data']['upload_count'];
                 
-                // Track which images are processing
+                // No tracking needed - images are self-managing
                 $uploadedImages = $result['data']['uploaded_images'] ?? [];
-                $this->processingImages = array_map(fn($img) => $img->id, $uploadedImages);
                 
                 $this->dispatch('success', "{$uploadCount} images uploaded! Processing in background... 📤");
 
@@ -186,70 +176,37 @@ class ImageLibrary extends Component
         $this->resetPage();
     }
 
-    /**
-     * 📊 GET IMAGES - Only show original images, exclude variants
-     */
-    public function getImagesProperty()
+    public function getImages()
     {
         $query = Image::query();
 
-        // Only show original images (exclude variants)
         $query->where('folder', '!=', 'variants')
             ->orWhereNull('folder');
 
-        // Search
         if ($this->search) {
             $query->search($this->search);
         }
 
-        // Filter by folder
         if ($this->selectedFolder) {
             $query->inFolder($this->selectedFolder);
         }
 
-        // Filter by tag
         if ($this->selectedTag) {
             $query->withTag($this->selectedTag);
         }
 
-        // Filter by attachment status
         match ($this->filterBy) {
             'attached' => $query->attached(),
             'unattached' => $query->unattached(),
-            default => null, // Show all
+            default => null,
         };
 
-        // Apply sorting
         $query->orderBy($this->sortBy, $this->sortDirection);
 
         return $query->paginate($this->perPage);
     }
 
-    /**
-     * 🎨 GET VARIANT COUNT for an image
-     */
-    public function getVariantCount(int $imageId): int
-    {
-        return Image::where('folder', 'variants')
-            ->whereJsonContains('tags', "original-{$imageId}")
-            ->count();
-    }
-
-    /**
-     * 🖼️ GET VARIANTS for an image
-     */
-    public function getImageVariants(int $imageId): \Illuminate\Database\Eloquent\Collection
-    {
-        return Image::where('folder', 'variants')
-            ->whereJsonContains('tags', "original-{$imageId}")
-            ->orderBy('created_at', 'asc')
-            ->get();
-    }
-
-    /**
-     * 📁 GET FOLDERS
-     */
-    public function getFoldersProperty()
+    public function getFolders()
     {
         return Image::select('folder')
             ->whereNotNull('folder')
@@ -260,10 +217,7 @@ class ImageLibrary extends Component
             ->values();
     }
 
-    /**
-     * 🏷️ GET TAGS
-     */
-    public function getTagsProperty()
+    public function getTags()
     {
         return Image::select('tags')
             ->whereNotNull('tags')
@@ -275,21 +229,6 @@ class ImageLibrary extends Component
             ->values();
     }
 
-    /**
-     * 📊 GET STATS
-     */
-    public function getStatsProperty()
-    {
-        return [
-            'total' => Image::count(),
-            'unattached' => Image::unattached()->count(),
-            'folders' => Image::select('folder')->whereNotNull('folder')->distinct()->count(),
-        ];
-    }
-
-    /**
-     * 🔍 UPDATE FILTERS - Reset pagination when filters change
-     */
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -310,107 +249,19 @@ class ImageLibrary extends Component
         $this->resetPage();
     }
 
-    /**
-     * Get real-time event listeners - Individual channels per image
-     */
-    public function getListeners()
+    #[On('echo:images,.App\\Events\\Images\\ImageProcessingCompleted')]
+    public function onImageProcessed($event)
     {
-        $listeners = [
-            // Legacy events (still using global channel)
-            'echo:images,.ImageProcessingCompleted' => 'onImageProcessed',
-            'echo:images,.ImageVariantsGenerated' => 'onVariantsGenerated',
-            // Skeleton replacement event
-            'image-ready' => 'replaceSkeletonWithCard',
-        ];
-        
-        // Add individual listeners for each processing image
-        foreach ($this->processingImages as $imageId) {
-            $listeners["echo:image-processing.{$imageId},.ImageProcessingProgress"] = 'updateProcessingProgress';
-        }
-        
-        return $listeners;
-    }
-
-    /**
-     * 📻 HANDLE REAL-TIME PROCESSING PROGRESS - Simplified
-     */
-    public function updateProcessingProgress($event): void
-    {
-        $imageId = $event['imageId'] ?? null;
-        $status = $event['status'] ?? null;
-        $statusLabel = $event['statusLabel'] ?? '';
-        $currentAction = $event['currentAction'] ?? '';
-
-        // Only show notifications for images we're currently tracking
-        if ($imageId && in_array($imageId, $this->processingImages)) {
-            $this->dispatch('notify', [
-                'type' => match($status) {
-                    'processing' => 'info', 
-                    'optimising' => 'info',
-                    'success' => 'success',
-                    'failed' => 'error',
-                    default => 'info'
-                },
-                'message' => $currentAction ?: $statusLabel,
-            ]);
-        }
-
-        // Remove from processing array when completed or failed
-        if (in_array($status, ['success', 'failed']) && $imageId) {
-            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
-            
-            // Refresh the page to show updated images
-            $this->resetPage();
-        }
-    }
-
-    /**
-     * 📻 IMAGE PROCESSING COMPLETED - Real-time UI update (legacy)
-     */
-    public function onImageProcessed($event): void
-    {
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'message' => $event['message'],
+        // Debug: Add a log to see if this method is being called
+        \Log::info('Image processing completed event received in Livewire', [
+            'image_id' => $event['image_id'] ?? 'unknown',
+            'status' => $event['status'] ?? 'unknown'
         ]);
-
-        // Refresh the images list
-        $this->resetPage();
-    }
-
-    /**
-     * 🎨 VARIANTS GENERATED - Real-time UI update (legacy)
-     */
-    public function onVariantsGenerated($event): void
-    {
-        $this->dispatch('notify', [
-            'type' => 'success', 
-            'message' => $event['message'],
-        ]);
-
-        // Legacy event - just refresh to show new variants
-        // Job tracking is handled in updateProcessingProgress
-
-        // Refresh the images list to show updated variant counts
-        $this->resetPage();
-    }
-
-    /**
-     * 🔄 REPLACE SKELETON WITH ACTUAL CARD
-     */
-    public function replaceSkeletonWithCard($event): void
-    {
-        $imageId = $event['imageId'] ?? null;
         
-        // Refresh component to show updated cards
-        if ($imageId) {
-            $this->resetPage();
-        }
+        // Force a full component refresh
+        $this->render();
     }
 
-    /**
-     * 🎨 RENDER
-     */
     public function render(): View
     {
         return view('livewire.images.image-library');

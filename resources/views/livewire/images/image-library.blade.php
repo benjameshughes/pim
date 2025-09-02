@@ -18,7 +18,7 @@
             <div>
                 <flux:select wire:model.live="selectedFolder" placeholder="All folders">
                     <flux:select.option value="">All folders</flux:select.option>
-                    @foreach($this->folders as $folder)
+                    @foreach($this->getFolders() as $folder)
                         <flux:select.option value="{{ $folder }}">{{ ucfirst($folder) }}</flux:select.option>
                     @endforeach
                 </flux:select>
@@ -53,13 +53,14 @@
         </div>
 
         {{-- Tag Filter --}}
-        @if(!empty($this->tags))
+        @php $tags = $this->getTags() @endphp
+        @if(!empty($tags))
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Filter by tags:
                 </label>
                 <div class="flex flex-wrap gap-2">
-                    @foreach($this->tags as $tag)
+                    @foreach($tags as $tag)
                         <flux:badge
                                 variant="{{ $selectedTag === $tag ? 'primary' : 'outline' }}"
                                 class="cursor-pointer"
@@ -74,22 +75,66 @@
     </div>
 
     {{-- Simple image count instead of bulk selection --}}
-    @if($this->images->count() > 0)
+    @php $images = $this->getImages() @endphp
+    @if($images->count() > 0)
         <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm text-gray-500 dark:text-gray-400">
-                Showing {{ $this->images->count() }} of {{ $this->images->total() }} images
+                Showing {{ $images->count() }} of {{ $images->total() }} images
             </div>
         </div>
     @endif
 
     {{-- Images Grid --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        @forelse($this->images as $image)
+        @forelse($images as $image)
             <div wire:key="image-{{ $image->id }}">
-                {{-- Show skeleton only if metadata hasn't been extracted yet (no dimensions) --}}
-                @if($image->width <= 0 || $image->height <= 0)
-                    <livewire:images.image-card-skeleton :image="$image" :key="'skeleton-'.$image->id" />
+                {{-- Check if processing complete based on timestamps --}}
+                @if($image->created_at == $image->updated_at)
+                    {{-- Still processing - show skeleton directly in template --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+                        {{-- Skeleton Image Area --}}
+                        <div class="aspect-square bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                            {{-- Animated Background --}}
+                            <div class="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-pulse"></div>
+                            
+                            {{-- Simple Processing Overlay --}}
+                            <div class="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                <div class="text-center text-white p-4">
+                                    <flux:icon name="arrow-path" class="w-8 h-8 mx-auto animate-spin text-blue-400 mb-3" />
+                                    <div class="text-sm font-medium">Processing...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Skeleton Content Area --}}
+                        <div class="p-4 space-y-3">
+                            {{-- Title Skeleton --}}
+                            <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                            
+                            {{-- Metadata Skeleton --}}
+                            <div class="flex items-center justify-between">
+                                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse"></div>
+                                <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse"></div>
+                            </div>
+                            
+                            {{-- Badges Skeleton --}}
+                            <div class="flex items-center justify-between">
+                                <div class="flex gap-2">
+                                    <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-16 animate-pulse"></div>
+                                    <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-14 animate-pulse"></div>
+                                </div>
+                                
+                                {{-- Action Buttons Skeleton --}}
+                                <div class="flex gap-1">
+                                    <div class="w-8 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div class="w-8 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                    <div class="w-8 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 @else
+                    {{-- Processing complete - show actual image card --}}
                     <livewire:images.image-card :image="$image" :key="'image-card-'.$image->id" />
                 @endif
             </div>
@@ -128,10 +173,10 @@
     </div>
 
     {{-- Pagination --}}
-    @if($this->images->hasPages())
+    @if($images->hasPages())
         <div class="flex justify-center pt-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4">
-                {{ $this->images->links() }}
+                {{ $images->links() }}
             </div>
         </div>
     @endif

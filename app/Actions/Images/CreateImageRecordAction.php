@@ -35,6 +35,9 @@ class CreateImageRecordAction extends BaseAction
 
         // Process tags to ensure array format
         $tags = $this->processTags($metadata['tags'] ?? []);
+        
+        // Add 'original' tag to all uploaded images
+        $tags[] = 'original';
 
         // Create image record
         try {

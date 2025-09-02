@@ -2,44 +2,23 @@
     {{-- Main Image --}}
     <div class="aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden relative">
         <a href="{{ route('images.show', $image) }}" wire:navigate>
-            {{-- Image with loading state --}}
-            <div class="relative w-full h-full" x-data="{ imageLoaded: false }">
-                {{-- Loading placeholder --}}
-                <div class="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-pulse flex items-center justify-center"
-                     x-show="!imageLoaded"
-                     x-transition:leave="transition-opacity duration-200"
-                     x-transition:leave-start="opacity-100"
-                     x-transition:leave-end="opacity-0">
-                    <flux:icon name="photo" class="w-8 h-8 text-gray-400" />
-                </div>
-                
-                {{-- Actual Image --}}
-                <img 
-                    src="{{ $image->url }}" 
-                    alt="{{ $image->alt_text ?: $image->title ?: 'Image' }}"
-                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    @load="imageLoaded = true"
-                    x-on:error="imageLoaded = true"
-                    loading="lazy"
-                />
-            </div>
+            {{-- Get thumbnail URL, fallback to original --}}
+            @php 
+                $thumbnailImage = \App\Models\Image::where('folder', 'variants')
+                    ->whereJsonContains('tags', "original-{$image->id}")
+                    ->whereJsonContains('tags', 'thumb')
+                    ->first();
+                $displayUrl = $thumbnailImage ? $thumbnailImage->url : $image->url;
+            @endphp
+            
+            <img 
+                src="{{ $displayUrl }}" 
+                alt="{{ $image->alt_text ?: $image->title ?: 'Image' }}"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                loading="lazy"
+            />
         </a>
 
-        {{-- Processing Status Badge --}}
-        @if($isProcessing)
-            <div class="absolute inset-0 bg-black/70 flex items-center justify-center">
-                <div class="text-center text-white p-2">
-                    @if(str_contains(strtolower($processingStatus), 'uploading'))
-                        <flux:icon name="arrow-up-tray" class="w-6 h-6 animate-bounce mx-auto mb-1" />
-                    @elseif(str_contains(strtolower($processingStatus), 'optimising'))
-                        <flux:icon name="sparkles" class="w-6 h-6 animate-pulse mx-auto mb-1" />
-                    @else
-                        <flux:icon name="arrow-path" class="w-6 h-6 animate-spin mx-auto mb-1" />
-                    @endif
-                    <div class="text-xs font-medium">{{ $processingStatus ?: 'Processing...' }}</div>
-                </div>
-            </div>
-        @endif
 
         {{-- Attachment Status Badge --}}
         @if($image->isAttached())
@@ -77,7 +56,8 @@
                 </flux:badge>
                 
                 {{-- Variant Count Badge --}}
-                @if($this->variantCount > 0)
+                @php $variantCount = $this->getVariantCount() @endphp
+                @if($variantCount > 0)
                     <flux:badge 
                         size="xs" 
                         color="blue"
@@ -85,7 +65,7 @@
                         wire:click="toggleVariants"
                     >
                         <flux:icon name="sparkles" class="h-3 w-3" />
-                        {{ $this->variantCount }}
+                        {{ $variantCount }}
                     </flux:badge>
                 @endif
             </div>
