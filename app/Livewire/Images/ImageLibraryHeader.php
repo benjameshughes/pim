@@ -15,29 +15,37 @@ class ImageLibraryHeader extends Component
     public string $sortBy = 'created_at';
     public string $sortDirection = 'desc';
 
-    // For bulk actions (will be implemented)
+    // For bulk actions
     public array $selectedImages = [];
     public bool $showBulkActions = false;
+    
+    // Modal states
+    public bool $showBulkMoveModal = false;
+    public bool $showBulkTagModal = false;
+    public string $bulkMoveTargetFolder = '';
+    public string $bulkTagInput = '';
+    public string $bulkTagOperation = 'add';
 
     protected $listeners = [
         'filterChanged' => 'handleFilterChange',
-        'selectionChanged' => 'handleSelectionChange',
+        'selection-changed' => 'handleSelectionChange',
+        'selection-updated' => 'handleSelectionChange',
     ];
 
     public function mount(
-        string $search = '',
-        string $selectedFolder = '',
-        string $selectedTag = '',
-        string $filterBy = 'all',
-        string $sortBy = 'created_at',
-        string $sortDirection = 'desc'
+        $search = '',
+        $selectedFolder = '',
+        $selectedTag = '',
+        $filterBy = 'all',
+        $sortBy = 'created_at',
+        $sortDirection = 'desc'
     ) {
-        $this->search = $search;
-        $this->selectedFolder = $selectedFolder;
-        $this->selectedTag = $selectedTag;
-        $this->filterBy = $filterBy;
-        $this->sortBy = $sortBy;
-        $this->sortDirection = $sortDirection;
+        $this->search = $search ?: '';
+        $this->selectedFolder = $selectedFolder ?: '';
+        $this->selectedTag = $selectedTag ?: '';
+        $this->filterBy = $filterBy ?: 'all';
+        $this->sortBy = $sortBy ?: 'created_at';
+        $this->sortDirection = $sortDirection ?: 'desc';
     }
 
     /**
@@ -167,8 +175,10 @@ class ImageLibraryHeader extends Component
      */
     public function handleSelectionChange($selectedImages)
     {
-        $this->selectedImages = $selectedImages;
-        $this->showBulkActions = !empty($selectedImages);
+        \Log::info('ImageLibraryHeader received selection-changed event', ['selectedImages' => $selectedImages]);
+        $this->selectedImages = is_array($selectedImages) ? $selectedImages : [];
+        $this->showBulkActions = !empty($this->selectedImages);
+        \Log::info('ImageLibraryHeader showBulkActions set to', ['showBulkActions' => $this->showBulkActions]);
     }
 
     /**
@@ -187,33 +197,69 @@ class ImageLibraryHeader extends Component
     }
 
     /**
-     * 📁 BULK MOVE (placeholder for implementation)
+     * 📁 OPEN BULK MOVE MODAL
      */
-    public function bulkMove()
+    public function openBulkMoveModal()
     {
         if (empty($this->selectedImages)) {
+            return;
+        }
+        
+        $this->bulkMoveTargetFolder = '';
+        $this->showBulkMoveModal = true;
+    }
+
+    /**
+     * 📁 EXECUTE BULK MOVE
+     */
+    public function executeBulkMove()
+    {
+        if (empty($this->selectedImages) || empty(trim($this->bulkMoveTargetFolder))) {
             return;
         }
 
         $this->dispatch('bulk-action-requested', [
             'action' => 'move',
-            'images' => $this->selectedImages
+            'images' => $this->selectedImages,
+            'targetFolder' => trim($this->bulkMoveTargetFolder)
         ]);
+        
+        $this->showBulkMoveModal = false;
+        $this->bulkMoveTargetFolder = '';
     }
 
     /**
-     * 🏷️ BULK TAG (placeholder for implementation)
+     * 🏷️ OPEN BULK TAG MODAL
      */
-    public function bulkTag()
+    public function openBulkTagModal()
     {
         if (empty($this->selectedImages)) {
+            return;
+        }
+        
+        $this->bulkTagInput = '';
+        $this->bulkTagOperation = 'add';
+        $this->showBulkTagModal = true;
+    }
+
+    /**
+     * 🏷️ EXECUTE BULK TAG
+     */
+    public function executeBulkTag()
+    {
+        if (empty($this->selectedImages) || empty(trim($this->bulkTagInput))) {
             return;
         }
 
         $this->dispatch('bulk-action-requested', [
             'action' => 'tag',
-            'images' => $this->selectedImages
+            'images' => $this->selectedImages,
+            'tags' => trim($this->bulkTagInput),
+            'operation' => $this->bulkTagOperation
         ]);
+        
+        $this->showBulkTagModal = false;
+        $this->bulkTagInput = '';
     }
 
     public function render()

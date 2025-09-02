@@ -202,4 +202,34 @@ class ActivityLogger
             $model->id
         )->latest('occurred_at')->get();
     }
+
+    public function bulkDeleted(array $items): self
+    {
+        $this->data['event'] = 'images.bulk_deleted';
+        $this->data['subject'] = [
+            'type' => 'bulk_operation',
+            'items' => $items,
+        ];
+        return $this;
+    }
+
+    public function bulkMoved(array $items): self
+    {
+        $this->data['event'] = 'images.bulk_moved';
+        $this->data['subject'] = [
+            'type' => 'bulk_operation',
+            'items' => $items,
+        ];
+        return $this;
+    }
+
+    public function bulkTagged(array $items): self
+    {
+        $this->data['event'] = 'images.bulk_tagged';
+        $this->data['subject'] = [
+            'type' => 'bulk_operation',
+            'items' => $items,
+        ];
+        return $this;
+    }
 }

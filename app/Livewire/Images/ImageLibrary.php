@@ -27,7 +27,14 @@ class ImageLibrary extends Component
     
     // Selection state for bulk actions
     public array $selectedImages = [];
-    public bool $selectAll = false;
+    public bool $showBulkActions = false;
+    
+    // Modal states
+    public bool $showBulkMoveModal = false;
+    public bool $showBulkTagModal = false;
+    public string $bulkMoveTargetFolder = '';
+    public string $bulkTagInput = '';
+    public string $bulkTagOperation = 'add';
 
     // New image metadata (for simple interface)
     public string $newImageFolder = '';
@@ -62,14 +69,7 @@ class ImageLibrary extends Component
         'page' => ['except' => 1],
     ];
     
-    protected $listeners = [
-        'filter-changed' => 'handleFilterChange',
-        'sort-changed' => 'handleSortChange', 
-        'filters-cleared' => 'handleFiltersClear',
-        'bulk-action-requested' => 'handleBulkAction',
-        'image-selection-toggled' => 'toggleImageSelection',
-        'delete-image-requested' => 'handleDeleteImageRequest',
-    ];
+    // All functionality is now contained in single component
 
     public function mount()
     {
@@ -131,7 +131,7 @@ class ImageLibrary extends Component
     /**
      * 🗑️ DELETE IMAGE - Using Action pattern for consistency
      */
-    public function deleteImage(int $imageId, \App\Actions\Images\DeleteImageAction $deleteAction)
+    public function deleteImage(int $imageId)
     {
         // Authorize deleting images
         $this->authorize('delete-images');
@@ -142,6 +142,7 @@ class ImageLibrary extends Component
         }
 
         try {
+            $deleteAction = app(\App\Actions\Images\DeleteImageAction::class);
             $deleteAction->execute($image);
             $this->dispatch('success', 'Image deleted successfully! 🗑️');
 
@@ -217,27 +218,22 @@ class ImageLibrary extends Component
         
         match ($action) {
             'delete' => $this->bulkDeleteImages($imageIds),
-            'move' => $this->bulkMoveImages($imageIds),
-            'tag' => $this->bulkTagImages($imageIds),
+            'move' => $this->bulkMoveImages(
+                $imageIds, 
+                $actionData['targetFolder'] ?? null,
+                app(\App\Actions\Images\BulkMoveImagesAction::class)
+            ),
+            'tag' => $this->bulkTagImages(
+                $imageIds,
+                $actionData['tags'] ?? null,
+                $actionData['operation'] ?? 'add',
+                app(\App\Actions\Images\BulkTagImagesAction::class)
+            ),
             default => null,
         };
     }
     
-    /**
-     * ☑️ TOGGLE IMAGE SELECTION (from row component)
-     */
-    public function toggleImageSelection($imageId)
-    {
-        if (in_array($imageId, $this->selectedImages)) {
-            $this->selectedImages = array_values(array_diff($this->selectedImages, [$imageId]));
-        } else {
-            $this->selectedImages[] = $imageId;
-        }
-        
-        $this->selectAll = count($this->selectedImages) === $this->getImages()->count();
-        $this->dispatch('selection-changed', $this->selectedImages);
-        $this->dispatch('selection-updated', $this->selectedImages);
-    }
+    // Individual selection is now handled by Alpine.js to avoid re-render issues
     
     // Note: toggleSelectAll is now handled by Alpine.js in the template
     
@@ -249,11 +245,23 @@ class ImageLibrary extends Component
         $this->deleteImage($imageId, app(\App\Actions\Images\DeleteImageAction::class));
     }
     
+    // Selection is now handled automatically by Flux checkbox group
+    
+    /**
+     * 📡 WATCH SELECTION CHANGES AND UPDATE UI STATE
+     */
+    public function updatedSelectedImages()
+    {
+        \Log::info('ImageLibrary updatedSelectedImages called', ['selectedImages' => $this->selectedImages]);
+        $this->showBulkActions = !empty($this->selectedImages);
+    }
+    
     /**
      * 🗑️ BULK DELETE IMAGES
      */
-    public function bulkDeleteImages($imageIds, \App\Actions\Images\BulkDeleteImagesAction $bulkDeleteAction)
+    public function bulkDeleteImages($imageIds)
     {
+        $bulkDeleteAction = app(\App\Actions\Images\BulkDeleteImagesAction::class);
         $this->authorize('delete-images');
         
         if (empty($imageIds)) {
@@ -270,8 +278,8 @@ class ImageLibrary extends Component
                 
                 // Clear selection and refresh
                 $this->selectedImages = [];
-                $this->selectAll = false;
                 $this->dispatch('selection-changed', $this->selectedImages);
+                $this->dispatch('selection-updated', $this->selectedImages);
                 $this->resetPage();
             } else {
                 $this->dispatch('error', 'Bulk delete failed: ' . $result['message']);
@@ -294,9 +302,8 @@ class ImageLibrary extends Component
             return;
         }
         
-        // For now, prompt for folder name (can be enhanced with a modal later)
         if (!$targetFolder) {
-            $this->dispatch('info', 'Bulk move will prompt for target folder in next implementation!');
+            $this->dispatch('error', 'Target folder is required for bulk move operation.');
             return;
         }
         
@@ -310,8 +317,8 @@ class ImageLibrary extends Component
                 
                 // Clear selection and refresh
                 $this->selectedImages = [];
-                $this->selectAll = false;
                 $this->dispatch('selection-changed', $this->selectedImages);
+                $this->dispatch('selection-updated', $this->selectedImages);
                 $this->resetPage();
             } else {
                 $this->dispatch('error', 'Bulk move failed: ' . $result['message']);
@@ -334,9 +341,8 @@ class ImageLibrary extends Component
             return;
         }
         
-        // For now, prompt for tags (can be enhanced with a modal later)
         if (!$tags) {
-            $this->dispatch('info', 'Bulk tag will prompt for tags in next implementation!');
+            $this->dispatch('error', 'Tags are required for bulk tag operation.');
             return;
         }
         
@@ -346,12 +352,18 @@ class ImageLibrary extends Component
             if ($result['success']) {
                 $updatedCount = $result['data']['updated_count'];
                 $tagsStr = implode(', ', $result['data']['tags_processed']);
-                $this->dispatch('success', "{$operation} tags ({$tagsStr}) on {$updatedCount} images! 🏷️");
+                $operationText = match($operation) {
+                    'add' => 'Added',
+                    'replace' => 'Replaced with',
+                    'remove' => 'Removed',
+                    default => ucfirst($operation)
+                };
+                $this->dispatch('success', "{$operationText} tags ({$tagsStr}) on {$updatedCount} images! 🏷️");
                 
                 // Clear selection and refresh
                 $this->selectedImages = [];
-                $this->selectAll = false;
                 $this->dispatch('selection-changed', $this->selectedImages);
+                $this->dispatch('selection-updated', $this->selectedImages);
                 $this->resetPage();
             } else {
                 $this->dispatch('error', 'Bulk tag failed: ' . $result['message']);
@@ -447,6 +459,74 @@ class ImageLibrary extends Component
         
         // Force a full component refresh
         $this->render();
+    }
+
+
+
+    /**
+     * 🔄 TOGGLE SORT DIRECTION
+     */
+    public function toggleSortDirection()
+    {
+        $this->sortDirection = $this->sortDirection === 'desc' ? 'asc' : 'desc';
+        $this->resetPage();
+    }
+    
+    /**
+     * 📁 OPEN BULK MOVE MODAL
+     */
+    public function openBulkMoveModal()
+    {
+        if (empty($this->selectedImages)) {
+            return;
+        }
+        
+        $this->bulkMoveTargetFolder = '';
+        $this->showBulkMoveModal = true;
+    }
+
+    /**
+     * 📁 EXECUTE BULK MOVE
+     */
+    public function executeBulkMove()
+    {
+        if (empty($this->selectedImages) || empty(trim($this->bulkMoveTargetFolder))) {
+            return;
+        }
+
+        $this->bulkMoveImages($this->selectedImages, trim($this->bulkMoveTargetFolder));
+        
+        $this->showBulkMoveModal = false;
+        $this->bulkMoveTargetFolder = '';
+    }
+
+    /**
+     * 🏷️ OPEN BULK TAG MODAL
+     */
+    public function openBulkTagModal()
+    {
+        if (empty($this->selectedImages)) {
+            return;
+        }
+        
+        $this->bulkTagInput = '';
+        $this->bulkTagOperation = 'add';
+        $this->showBulkTagModal = true;
+    }
+
+    /**
+     * 🏷️ EXECUTE BULK TAG
+     */
+    public function executeBulkTag()
+    {
+        if (empty($this->selectedImages) || empty(trim($this->bulkTagInput))) {
+            return;
+        }
+
+        $this->bulkTagImages($this->selectedImages, trim($this->bulkTagInput), $this->bulkTagOperation);
+        
+        $this->showBulkTagModal = false;
+        $this->bulkTagInput = '';
     }
 
     public function render(): View

@@ -27,17 +27,14 @@
     </div>
 @else
     {{-- Processing complete - show actual image row --}}
-    <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+    <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50" wire:key="image-{{ $image->id }}">
         {{-- Selection Checkbox --}}
         <div class="mr-3">
-            <input 
-                type="checkbox" 
-                wire:click="toggleSelection"
-                data-image-checkbox
-                data-image-id="{{ $image->id }}"
-                @if($isSelected) checked @endif
-                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
-            >
+            <flux:checkbox 
+                value="{{ $image->id }}"
+                :checked="$isSelected"
+                x-on:change="$dispatch('image-selection-toggled', { imageId: {{ $image->id }}, checked: $event.target.checked })"
+            />
         </div>
         
         {{-- Thumbnail --}}

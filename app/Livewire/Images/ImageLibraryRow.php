@@ -13,6 +13,7 @@ class ImageLibraryRow extends Component
 
     protected $listeners = [
         'selection-updated' => 'updateSelection',
+        'selection-changed' => 'updateSelection',
     ];
 
     public function mount(Image $image, array $selectedImages = [])
@@ -22,13 +23,7 @@ class ImageLibraryRow extends Component
         $this->isProcessing = $image->created_at == $image->updated_at;
     }
 
-    /**
-     * ☑️ TOGGLE SELECTION
-     */
-    public function toggleSelection()
-    {
-        $this->dispatch('image-selection-toggled', $this->image->id);
-    }
+    // Selection is now handled automatically by Flux checkbox group
 
     /**
      * 📋 COPY URL TO CLIPBOARD (handled by Alpine.js)

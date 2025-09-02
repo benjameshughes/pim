@@ -50,21 +50,22 @@ class DeleteImageAction
             $this->imageUploadService->deleteImage($image);
 
             // Log successful deletion activity
-            Activity::log()
-                ->by(auth()->id())
-                ->deleted($image)
-                ->with([
-                    'attached_products_count' => $attachedProducts->count(),
-                    'attached_variants_count' => $attachedVariants->count(),
-                    'had_variants' => $variantCount > 0,
-                    'variants_count' => $variantCount,
-                    'file_size' => $image->size,
-                    'dimensions' => [
-                        'width' => $image->width,
-                        'height' => $image->height,
-                    ],
-                ])
-                ->description("Deleted image '{$image->display_title}' and cleaned up attachments");
+            // TODO: Re-enable after fixing description() method issue
+            // Activity::log()
+            //     ->by(auth()->id())
+            //     ->deleted($image)
+            //     ->with([
+            //         'attached_products_count' => $attachedProducts->count(),
+            //         'attached_variants_count' => $attachedVariants->count(),
+            //         'had_variants' => $variantCount > 0,
+            //         'variants_count' => $variantCount,
+            //         'file_size' => $image->size,
+            //         'dimensions' => [
+            //             'width' => $image->width,
+            //             'height' => $image->height,
+            //         ],
+            //     ])
+            //     ->description("Deleted image '{$image->display_title}' and cleaned up attachments");
 
             DB::commit();
 

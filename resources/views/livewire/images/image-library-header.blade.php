@@ -35,37 +35,43 @@
     
     {{-- Secondary Controls --}}
     <div class="flex flex-wrap items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50">
-        {{-- Bulk Actions (show when items selected) --}}
+        {{-- Enhanced Bulk Action Bar (show when items selected) --}}
         @if($showBulkActions)
-            <div class="flex items-center gap-2 mr-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <span class="text-sm font-medium text-blue-700 dark:text-blue-300">
-                    {{ count($selectedImages) }} selected
-                </span>
-                <div class="flex gap-1">
+            <div class="flex items-center gap-3 mr-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                <div class="flex items-center gap-2">
+                    <flux:icon name="check-circle" class="w-4 h-4 text-blue-600 dark:text-blue-400"/>
+                    <span class="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        {{ count($selectedImages) }} image{{ count($selectedImages) !== 1 ? 's' : '' }} selected
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 pl-2 border-l border-blue-200 dark:border-blue-600">
                     <flux:button
-                        size="xs"
-                        variant="ghost"
+                        size="sm"
+                        variant="outline"
                         wire:click="bulkDelete"
                         wire:confirm="Are you sure you want to delete {{ count($selectedImages) }} images? This cannot be undone."
-                        class="text-red-600 hover:text-red-700"
+                        class="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:text-red-400 dark:border-red-700 dark:hover:bg-red-900/20"
                     >
-                        <flux:icon name="trash" class="w-3 h-3"/>
+                        <flux:icon name="trash" class="w-4 h-4 mr-1"/>
+                        Delete
                     </flux:button>
                     <flux:button
-                        size="xs"
-                        variant="ghost"
-                        wire:click="bulkMove"
-                        class="text-blue-600 hover:text-blue-700"
+                        size="sm"
+                        variant="outline"
+                        wire:click="openBulkMoveModal"
+                        class="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-900/20"
                     >
-                        <flux:icon name="folder" class="w-3 h-3"/>
+                        <flux:icon name="folder" class="w-4 h-4 mr-1"/>
+                        Move
                     </flux:button>
                     <flux:button
-                        size="xs"
-                        variant="ghost"
-                        wire:click="bulkTag"
-                        class="text-green-600 hover:text-green-700"
+                        size="sm"
+                        variant="outline"
+                        wire:click="openBulkTagModal"
+                        class="text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900/20"
                     >
-                        <flux:icon name="tag" class="w-3 h-3"/>
+                        <flux:icon name="tag" class="w-4 h-4 mr-1"/>
+                        Tag
                     </flux:button>
                 </div>
             </div>
@@ -164,4 +170,101 @@
             @endif
         </div>
     @endif
+
+    {{-- Bulk Move Modal --}}
+    <flux:modal wire:model="showBulkMoveModal" class="w-full max-w-md mx-auto">
+        <div class="p-6">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Move Images to Folder</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Move {{ count($selectedImages) }} selected image{{ count($selectedImages) !== 1 ? 's' : '' }} to a new folder.
+                </p>
+            </div>
+
+            <form wire:submit="executeBulkMove" class="space-y-4">
+                <div>
+                    <flux:input
+                        label="Target Folder"
+                        wire:model="bulkMoveTargetFolder"
+                        placeholder="Enter folder name..."
+                        required
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Only letters, numbers, hyphens, and underscores allowed.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                    <flux:button
+                        type="button"
+                        variant="ghost"
+                        wire:click="$set('showBulkMoveModal', false)"
+                    >
+                        Cancel
+                    </flux:button>
+                    <flux:button
+                        type="submit"
+                        variant="primary"
+                        icon="folder"
+                    >
+                        Move Images
+                    </flux:button>
+                </div>
+            </form>
+        </div>
+    </flux:modal>
+
+    {{-- Bulk Tag Modal --}}
+    <flux:modal wire:model="showBulkTagModal" class="w-full max-w-md mx-auto">
+        <div class="p-6">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Manage Tags</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Update tags for {{ count($selectedImages) }} selected image{{ count($selectedImages) !== 1 ? 's' : '' }}.
+                </p>
+            </div>
+
+            <form wire:submit="executeBulkTag" class="space-y-4">
+                <div>
+                    <flux:select
+                        label="Operation"
+                        wire:model="bulkTagOperation"
+                    >
+                        <flux:select.option value="add">Add tags</flux:select.option>
+                        <flux:select.option value="replace">Replace all tags</flux:select.option>
+                        <flux:select.option value="remove">Remove tags</flux:select.option>
+                    </flux:select>
+                </div>
+
+                <div>
+                    <flux:input
+                        label="Tags"
+                        wire:model="bulkTagInput"
+                        placeholder="product, hero, banner..."
+                        required
+                    />
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Separate multiple tags with commas.
+                    </p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4">
+                    <flux:button
+                        type="button"
+                        variant="ghost"
+                        wire:click="$set('showBulkTagModal', false)"
+                    >
+                        Cancel
+                    </flux:button>
+                    <flux:button
+                        type="submit"
+                        variant="primary"
+                        icon="tag"
+                    >
+                        Update Tags
+                    </flux:button>
+                </div>
+            </form>
+        </div>
+    </flux:modal>
 </div>

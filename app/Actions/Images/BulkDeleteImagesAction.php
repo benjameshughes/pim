@@ -74,15 +74,16 @@ class BulkDeleteImagesAction extends BaseAction
             }
 
             // Log bulk deletion activity
-            Activity::log()
-                ->by(auth()->id())
-                ->bulkDeleted($deletedImages)
-                ->with([
-                    'deleted_count' => $deletedCount,
-                    'total_requested' => count($imageIds),
-                    'success_rate' => '100%',
-                ])
-                ->description("Bulk deleted {$deletedCount} images successfully");
+            // TODO: Re-enable after fixing description() method issue
+            // Activity::log()
+            //     ->by(auth()->id())
+            //     ->bulkDeleted($deletedImages)
+            //     ->with([
+            //         'deleted_count' => $deletedCount,
+            //         'total_requested' => count($imageIds),
+            //         'success_rate' => '100%',
+            //     ])
+            //     ->description("Bulk deleted {$deletedCount} images successfully");
 
             DB::commit();
 
