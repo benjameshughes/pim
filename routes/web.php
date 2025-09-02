@@ -193,10 +193,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('logs', \App\Livewire\LogDashboard::class)->name('log-dashboard');
 
         // 📑 LOG DASHBOARD TABS - Clean TabSet Integration
-        Route::get('logs/overview', \App\Livewire\LogDashboard\Tabs\Overview::class)->name('log-dashboard.overview');
-        Route::get('logs/activity', \App\Livewire\LogDashboard\Tabs\ActivityTab::class)->name('log-dashboard.activity');
-        Route::get('logs/performance', \App\Livewire\LogDashboard\Tabs\Performance::class)->name('log-dashboard.performance');
-        Route::get('logs/errors', \App\Livewire\LogDashboard\Tabs\Errors::class)->name('log-dashboard.errors');
+        Route::get('logs/overview', \App\Livewire\LogDashboard::class)->name('log-dashboard.overview');
+        Route::get('logs/activity', \App\Livewire\LogDashboard::class)->name('log-dashboard.activity');
+        Route::get('logs/performance', \App\Livewire\LogDashboard::class)->name('log-dashboard.performance');
+        Route::get('logs/errors', \App\Livewire\LogDashboard::class)->name('log-dashboard.errors');
     });
 
     // 🏢 MANAGEMENT - USER ADMINISTRATION (Admin only)

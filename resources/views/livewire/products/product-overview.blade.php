@@ -83,7 +83,22 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Product Image</h3>
             
-            @if ($product->image_url)
+            @php
+                $primaryImage = $product->primaryImage();
+            @endphp
+            
+            @if ($primaryImage)
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                    <img src="{{ $primaryImage->url }}" alt="{{ $primaryImage->alt_text ?? $product->name }}" class="w-full h-full object-cover">
+                </div>
+            @elseif ($product->images->count() > 0)
+                {{-- Fallback to first image if no primary image is set --}}
+                @php $firstImage = $product->images->first(); @endphp
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                    <img src="{{ $firstImage->url }}" alt="{{ $firstImage->alt_text ?? $product->name }}" class="w-full h-full object-cover">
+                </div>
+            @elseif ($product->image_url)
+                {{-- Legacy fallback --}}
                 <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                 </div>

@@ -158,6 +158,7 @@
                                     size="sm" 
                                     variant="ghost" 
                                     icon="eye"
+                                    wire:navigate
                                 >
                                     View
                                 </flux:button>

@@ -16,7 +16,7 @@ class ProductOverview extends Component
     {
         $this->authorize('view-product-details');
 
-        $this->product = $product->load(['variants']);
+        $this->product = $product->load(['variants', 'images']);
     }
 
     public function pushToShopify()

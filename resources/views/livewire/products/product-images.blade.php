@@ -5,9 +5,14 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $product->images->count() }} image(s)</p>
         </div>
         
-        <flux:button wire:navigate href="{{ route('images.index') }}" variant="outline" icon="plus">
-            Manage Images
-        </flux:button>
+        <div class="flex items-center gap-2">
+            <flux:button wire:click="refreshImages" variant="ghost" icon="arrow-path" size="sm">
+                Refresh
+            </flux:button>
+            <flux:button wire:navigate href="{{ route('images.index') }}" variant="outline" icon="plus">
+                Manage Images
+            </flux:button>
+        </div>
     </div>
 
     @if($product->images->count() > 0)

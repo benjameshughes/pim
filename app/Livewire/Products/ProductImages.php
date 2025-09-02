@@ -21,6 +21,15 @@ class ProductImages extends Component
 
         $this->product = $product->load(['images']);
     }
+    
+    /**
+     * 🔄 REFRESH IMAGES - Force reload images relationship
+     */
+    public function refreshImages()
+    {
+        $this->product = $this->product->fresh(['images']);
+        $this->dispatch('success', 'Images refreshed successfully!');
+    }
 
     public function render()
     {

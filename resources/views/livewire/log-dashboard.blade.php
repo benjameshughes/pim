@@ -33,4 +33,25 @@
             @endforeach
         </nav>
     </div>
+
+    {{-- 📑 TAB CONTENT --}}
+    <div class="tab-content">
+        @switch(request()->route()->getName())
+            @case('log-dashboard.overview')
+                <livewire:log-dashboard.tabs.overview />
+                @break
+            @case('log-dashboard.activity')
+                <livewire:log-dashboard.tabs.activity-tab />
+                @break
+            @case('log-dashboard.performance')
+                <livewire:log-dashboard.tabs.performance />
+                @break
+            @case('log-dashboard.errors')
+                <livewire:log-dashboard.tabs.errors />
+                @break
+            @default
+                {{-- Default Overview Tab --}}
+                <livewire:log-dashboard.tabs.overview />
+        @endswitch
+    </div>
 </div>

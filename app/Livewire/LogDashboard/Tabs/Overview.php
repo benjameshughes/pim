@@ -5,6 +5,7 @@ namespace App\Livewire\LogDashboard\Tabs;
 use App\Facades\Activity;
 use App\Services\LogParserService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Overview extends Component
@@ -36,7 +37,7 @@ class Overview extends Component
     {
         return Activity::recent(24)
             ->groupBy(function ($log) {
-                return str_before($log->event, '.');
+                return Str::before($log->event, '.');
             })
             ->map(fn ($group) => [
                 'type' => ucwords(str_replace('_', ' ', $group->first()->event)),
