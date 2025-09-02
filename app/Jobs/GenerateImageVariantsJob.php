@@ -20,7 +20,7 @@ class GenerateImageVariantsJob implements ShouldQueue
 
     public function __construct(
         public Image $image,
-        public array $variants = ['thumb', 'small', 'medium'],
+        public array $variants = ['thumb', 'small', 'medium', 'large', 'extra-large'],
         public ?string $processingId = null
     ) {
         $this->onQueue('images');

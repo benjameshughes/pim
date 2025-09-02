@@ -24,7 +24,7 @@ class BulkDeleteImagesAction extends BaseAction
     /**
      * Execute bulk image deletion with transaction safety
      *
-     * @param array $imageIds Array of image IDs to delete
+     * @param array ...$params First parameter is array of image IDs to delete
      * @throws \Exception When deletion fails
      */
     protected function performAction(...$params): array

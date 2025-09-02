@@ -46,6 +46,23 @@ class DeleteImageAction
             // Detach from all relationships first
             $this->detachFromAllRelationships($image);
 
+            // If this is an original image, also delete its variants
+            if ($image->isOriginal()) {
+                $variants = $this->getVariantsOfOriginal($image);
+                foreach ($variants as $variant) {
+                    $this->imageUploadService->deleteImage($variant);
+                    Log::debug('Deleted variant image', [
+                        'variant_id' => $variant->id,
+                        'variant_filename' => $variant->filename,
+                        'original_id' => $image->id,
+                    ]);
+                }
+                Log::info('Deleted ' . $variants->count() . ' variants for original image', [
+                    'original_id' => $image->id,
+                    'variants_deleted' => $variants->count(),
+                ]);
+            }
+
             // Use the existing ImageUploadService for file and database cleanup
             $this->imageUploadService->deleteImage($image);
 

@@ -18,9 +18,7 @@ class BulkTagImagesAction extends BaseAction
     /**
      * Execute bulk image tagging with transaction safety
      *
-     * @param array $imageIds Array of image IDs to tag
-     * @param array|string $tags Tags to add (can be array or comma-separated string)
-     * @param string $operation Operation type: 'add', 'replace', 'remove'
+     * @param array ...$params First parameter is array of image IDs, second is tags, third is operation
      * @throws \Exception When tagging operation fails
      */
     protected function performAction(...$params): array

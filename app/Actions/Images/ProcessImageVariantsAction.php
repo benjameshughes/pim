@@ -16,6 +16,7 @@ class ProcessImageVariantsAction extends BaseAction
         'small' => 300,
         'medium' => 600,
         'large' => 1200,
+        'extra-large' => 1920,
     ];
 
     protected int $quality = 85;

@@ -211,7 +211,7 @@
                                 <div class="min-w-0 flex-1">
                                     {{-- Filename/Title --}}
                                     <h3 class="font-medium text-gray-900 dark:text-white truncate">
-                                        {{ $image->title ?: $image->display_title }}
+                                        {{ $image->title ?: $image->original_filename }}
                                     </h3>
                                     
                                     {{-- Metadata Row --}}

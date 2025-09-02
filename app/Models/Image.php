@@ -222,11 +222,11 @@ class Image extends Model
     }
 
     /**
-     * 📊 Get display title (with fallback to filename)
+     * 📊 Get display title (with fallback to original filename)
      */
     public function getDisplayTitleAttribute(): string
     {
-        return $this->title ?: pathinfo($this->filename, PATHINFO_FILENAME);
+        return $this->title ?: pathinfo($this->original_filename, PATHINFO_FILENAME);
     }
 
     /**
@@ -234,12 +234,17 @@ class Image extends Model
      */
     public function getOriginalFilenameAttribute(): string
     {
-        // If title contains an extension, use it as original filename
+        // Use the stored original_filename if available
+        if ($this->attributes['original_filename']) {
+            return $this->attributes['original_filename'];
+        }
+
+        // Fallback: If title contains an extension, use it as original filename
         if ($this->title && str_contains($this->title, '.')) {
             return $this->title;
         }
 
-        // Otherwise use the stored filename
+        // Final fallback: use the stored filename
         return $this->filename;
     }
 
@@ -398,7 +403,7 @@ class Image extends Model
      */
     public function getVariantType(): ?string
     {
-        $variantTags = ['thumb', 'small', 'medium', 'large'];
+        $variantTags = ['thumb', 'small', 'medium', 'large', 'extra-large'];
 
         foreach ($this->tags ?? [] as $tag) {
             if (in_array($tag, $variantTags)) {

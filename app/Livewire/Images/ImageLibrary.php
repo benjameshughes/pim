@@ -242,7 +242,7 @@ class ImageLibrary extends Component
      */
     public function handleDeleteImageRequest($imageId)
     {
-        $this->deleteImage($imageId, app(\App\Actions\Images\DeleteImageAction::class));
+        $this->deleteImage($imageId);
     }
     
     // Selection is now handled automatically by Flux checkbox group
@@ -293,7 +293,7 @@ class ImageLibrary extends Component
     /**
      * 📁 BULK MOVE IMAGES
      */
-    public function bulkMoveImages($imageIds, $targetFolder = null, \App\Actions\Images\BulkMoveImagesAction $bulkMoveAction = null)
+    public function bulkMoveImages($imageIds, ?string $targetFolder = null, ?\App\Actions\Images\BulkMoveImagesAction $bulkMoveAction = null)
     {
         $this->authorize('manage-images');
         
@@ -332,7 +332,7 @@ class ImageLibrary extends Component
     /**
      * 🏷️ BULK TAG IMAGES
      */
-    public function bulkTagImages($imageIds, $tags = null, $operation = 'add', \App\Actions\Images\BulkTagImagesAction $bulkTagAction = null)
+    public function bulkTagImages($imageIds, ?string $tags = null, string $operation = 'add', ?\App\Actions\Images\BulkTagImagesAction $bulkTagAction = null)
     {
         $this->authorize('manage-images');
         

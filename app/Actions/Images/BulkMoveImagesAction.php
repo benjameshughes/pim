@@ -18,8 +18,7 @@ class BulkMoveImagesAction extends BaseAction
     /**
      * Execute bulk image folder move with transaction safety
      *
-     * @param array $imageIds Array of image IDs to move
-     * @param string $targetFolder Target folder name
+     * @param array ...$params First parameter is array of image IDs, second is target folder name
      * @throws \Exception When move operation fails
      */
     protected function performAction(...$params): array
