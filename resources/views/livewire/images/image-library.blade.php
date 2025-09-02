@@ -170,7 +170,7 @@
 
             @forelse($this->getImages() as $image)
                 {{-- Inline Image Row --}}
-                @if($image->created_at == $image->updated_at)
+                @if($image->width == 0 || $image->height == 0)
                     {{-- Still processing - show skeleton row --}}
                     <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                         {{-- Skeleton Checkbox --}}
