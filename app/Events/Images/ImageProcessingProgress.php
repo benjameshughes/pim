@@ -31,7 +31,7 @@ class ImageProcessingProgress implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('images-processing'), // Global processing channel
+            new Channel("image-processing.{$this->imageId}"), // Individual channel per image
         ];
     }
 

@@ -72,6 +72,10 @@ class ProcessImageJob implements ShouldQueue
             // Dispatch legacy event for backward compatibility
             \App\Events\Images\ImageProcessingCompleted::dispatch($this->image->fresh());
 
+            // Chain variant generation after processing completes
+            \App\Jobs\GenerateImageVariantsJob::dispatch($this->image)
+                ->delay(now()->addSeconds(2)); // Small delay to let UI update
+
             Log::info('✅ Background image processing completed successfully', [
                 'image_id' => $this->image->id,
                 'width' => $result['data']['width'],

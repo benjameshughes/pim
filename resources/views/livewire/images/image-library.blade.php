@@ -86,8 +86,8 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         @forelse($this->images as $image)
             <div wire:key="image-{{ $image->id }}">
-                {{-- Show skeleton for processing images or those without dimensions --}}
-                @if(($image->width <= 0 || $image->height <= 0) || in_array($image->id, $processingImages))
+                {{-- Show skeleton only if metadata hasn't been extracted yet (no dimensions) --}}
+                @if($image->width <= 0 || $image->height <= 0)
                     <livewire:images.image-card-skeleton :image="$image" :key="'skeleton-'.$image->id" />
                 @else
                     <livewire:images.image-card :image="$image" :key="'image-card-'.$image->id" />

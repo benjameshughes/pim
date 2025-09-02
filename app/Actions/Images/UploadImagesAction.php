@@ -84,7 +84,8 @@ class UploadImagesAction extends BaseAction
                 $image = $recordResult['data']['image'];
                 $uploadedImages[] = $image;
                 
-                // Step 3: Dispatch existing ProcessImageJob
+                // Step 3: Dispatch ProcessImageJob only
+                // Variant generation will be chained after processing completes
                 ProcessImageJob::dispatch($image);
                 
                 Log::info('📤 Image uploaded and processing queued', [

@@ -311,19 +311,24 @@ class ImageLibrary extends Component
     }
 
     /**
-     * Get real-time event listeners - Use global processing channel
+     * Get real-time event listeners - Individual channels per image
      */
     public function getListeners()
     {
-        return [
-            // Global channel for all processing updates
-            'echo:images-processing,.ImageProcessingProgress' => 'updateProcessingProgress',
+        $listeners = [
             // Legacy events (still using global channel)
             'echo:images,.ImageProcessingCompleted' => 'onImageProcessed',
             'echo:images,.ImageVariantsGenerated' => 'onVariantsGenerated',
             // Skeleton replacement event
             'image-ready' => 'replaceSkeletonWithCard',
         ];
+        
+        // Add individual listeners for each processing image
+        foreach ($this->processingImages as $imageId) {
+            $listeners["echo:image-processing.{$imageId},.ImageProcessingProgress"] = 'updateProcessingProgress';
+        }
+        
+        return $listeners;
     }
 
     /**
