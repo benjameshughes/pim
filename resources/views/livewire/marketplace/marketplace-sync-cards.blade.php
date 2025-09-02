@@ -30,13 +30,6 @@
         :available-accounts="$this->availableAccounts" 
         :external-product-id="$externalProductId" />
 
-    <x-marketplace.shopify-color-modal 
-        :show-shopify-color-modal="$showShopifyColorModal"
-        :linking-account-id="$linkingAccountId"
-        :available-accounts="$this->availableAccounts"
-        :discovery-loading="$discoveryLoading"
-        :color-mappings="$colorMappings"
-        :shopify-products="$shopifyProducts" />
 
     <x-marketplace.edit-links-modal 
         :show-edit-links-modal="$showEditLinksModal"
