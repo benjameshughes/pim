@@ -235,7 +235,7 @@ class Image extends Model
     public function getOriginalFilenameAttribute(): string
     {
         // Use the stored original_filename if available
-        if ($this->attributes['original_filename']) {
+        if (!empty($this->attributes['original_filename'])) {
             return $this->attributes['original_filename'];
         }
 
@@ -244,8 +244,8 @@ class Image extends Model
             return $this->title;
         }
 
-        // Final fallback: use the stored filename
-        return $this->filename;
+        // Final fallback: use the stored filename or empty string
+        return $this->filename ?? '';
     }
 
     /**

@@ -583,6 +583,51 @@ class ImageLibrary extends Component
     {
         return Image::where('width', 0)->orWhere('height', 0)->count();
     }
+    
+    /**
+     * 🔄 REPROCESS ALL IMAGES
+     * 
+     * Reprocess all original images (not variants) to fix any legacy issues
+     */
+    public function reprocessAllImages()
+    {
+        $this->authorize('manage-images');
+        
+        try {
+            // Get all original images (not variants)
+            $originalImages = Image::where('folder', '!=', 'variants')
+                ->orWhereNull('folder')
+                ->get();
+            
+            if ($originalImages->isEmpty()) {
+                $this->dispatch('info', 'No original images found to reprocess. 📷');
+                return;
+            }
+            
+            $reprocessCount = 0;
+            foreach ($originalImages as $image) {
+                // Dispatch processing job for each image
+                \App\Jobs\ProcessImageJob::dispatch($image);
+                $reprocessCount++;
+                
+                \Log::info('Reprocessing image', [
+                    'image_id' => $image->id,
+                    'filename' => $image->filename,
+                    'original_filename' => $image->original_filename,
+                ]);
+            }
+            
+            $this->dispatch('success', "Reprocessing {$reprocessCount} images! This will regenerate variants and fix legacy issues. ⚡");
+            
+        } catch (\Exception $e) {
+            \Log::error('Failed to reprocess all images', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->id(),
+            ]);
+            
+            $this->dispatch('error', 'Failed to reprocess images: ' . $e->getMessage());
+        }
+    }
 
     public function render(): View
     {

@@ -50,6 +50,18 @@
                         </flux:button>
                     </div>
                 @endif
+                
+                {{-- Reprocess All Images Button --}}
+                <flux:button
+                    variant="outline"
+                    size="xs"
+                    icon="sparkles"
+                    wire:click="reprocessAllImages"
+                    wire:confirm="This will reprocess ALL images and regenerate variants. This may take a while. Continue?"
+                    class="text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-600 dark:hover:bg-blue-900/20"
+                >
+                    Reprocess All
+                </flux:button>
             </div>
         </div>
         
