@@ -36,7 +36,7 @@ class VariantIndex extends Component
             ->orderBy('updated_at', 'desc')
             ->paginate(20);
 
-        // Define columns for our enhanced flux:table
+        // Define columns for table display
         $columns = [
             ['key' => 'product.name', 'label' => 'Product', 'sortable' => true],
             ['key' => 'sku', 'label' => 'SKU', 'sortable' => true],

@@ -196,91 +196,110 @@
             </div>
 
             {{-- 📋 PRODUCTS TABLE --}}
-            <flux:table :data="$products">
-                <flux:table.columns>
-                    <flux:table.column>
-                        <input type="checkbox" wire:click="selectAllVisible" 
-                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                    </flux:table.column>
-                    <flux:table.column sortable>Product Name</flux:table.column>
-                    <flux:table.column>SKU</flux:table.column>
-                    <flux:table.column>Sync Status</flux:table.column>
-                    <flux:table.column>Variants</flux:table.column>
-                    <flux:table.column>Last Synced</flux:table.column>
-                    <flux:table.column>Actions</flux:table.column>
-                </flux:table.columns>
-
-                <flux:table.rows>
-                    @forelse($products as $product)
-                        <flux:table.row :key="$product->id">
-                            <flux:table.cell>
-                                <input type="checkbox" 
-                                       wire:click="toggleProduct({{ $product->id }})"
-                                       @checked(in_array($product->id, $selectedProducts))
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <input type="checkbox" wire:click="selectAllVisible" 
                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            </flux:table.cell>
-                            
-                            <flux:table.cell variant="strong">
-                                {{ $product->name }}
-                            </flux:table.cell>
-                            
-                            <flux:table.cell class="font-mono text-sm">
-                                {{ $product->parent_sku }}
-                            </flux:table.cell>
-                            
-                            <flux:table.cell>
-                                @php
-                                    $syncStatus = $product->shopifySyncStatus?->first();
-                                    $status = $syncStatus?->sync_status ?? 'never_synced';
-                                    $color = match($status) {
-                                        'synced' => 'green',
-                                        'pending' => 'orange', 
-                                        'failed' => 'red',
-                                        default => 'gray'
-                                    };
-                                @endphp
-                                <flux:badge size="sm" color="{{ $color }}">
-                                    {{ ucfirst(str_replace('_', ' ', $status)) }}
-                                </flux:badge>
-                            </flux:table.cell>
-                            
-                            <flux:table.cell>
-                                <span class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ $product->variants_count ?? $product->variants->count() }} variants
-                                </span>
-                            </flux:table.cell>
-                            
-                            <flux:table.cell>
-                                @if($syncStatus?->last_synced_at)
-                                    <span class="text-xs text-gray-500">
-                                        {{ $syncStatus->last_synced_at->diffForHumans() }}
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Product Name
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                SKU
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Sync Status
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Variants
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Last Synced
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        @forelse($products as $product)
+                            <tr wire:key="product-{{ $product->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <input type="checkbox" 
+                                           wire:click="toggleProduct({{ $product->id }})"
+                                           @checked(in_array($product->id, $selectedProducts))
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ $product->name }}
+                                    </div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm font-mono text-gray-900 dark:text-white">
+                                        {{ $product->parent_sku }}
+                                    </div>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @php
+                                        $syncStatus = $product->shopifySyncStatus?->first();
+                                        $status = $syncStatus?->sync_status ?? 'never_synced';
+                                        $color = match($status) {
+                                            'synced' => 'green',
+                                            'pending' => 'orange', 
+                                            'failed' => 'red',
+                                            default => 'gray'
+                                        };
+                                    @endphp
+                                    <flux:badge size="sm" color="{{ $color }}">
+                                        {{ ucfirst(str_replace('_', ' ', $status)) }}
+                                    </flux:badge>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                                        {{ $product->variants_count ?? $product->variants->count() }} variants
                                     </span>
-                                @else
-                                    <span class="text-xs text-gray-400">Never</span>
-                                @endif
-                            </flux:table.cell>
-                            
-                            <flux:table.cell>
-                                <div class="flex items-center gap-1">
-                                    <flux:button href="{{ route('products.show', $product->id) }}" 
-                                               variant="ghost" size="sm" icon="eye">
-                                        View
-                                    </flux:button>
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
-                    @empty
-                        <flux:table.row>
-                            <flux:table.cell colspan="7" class="text-center py-12">
-                                <div class="flex flex-col items-center gap-3">
-                                    <flux:icon name="squares-plus" class="w-8 h-8 text-gray-400" />
-                                    <p class="text-gray-500">No products found matching your criteria ✨</p>
-                                </div>
-                            </flux:table.cell>
-                        </flux:table.row>
-                    @endforelse
-                </flux:table.rows>
-            </flux:table>
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($syncStatus?->last_synced_at)
+                                        <span class="text-xs text-gray-500">
+                                            {{ $syncStatus->last_synced_at->diffForHumans() }}
+                                        </span>
+                                    @else
+                                        <span class="text-xs text-gray-400">Never</span>
+                                    @endif
+                                </td>
+                                
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-1">
+                                        <flux:button href="{{ route('products.show', $product->id) }}" 
+                                                   variant="ghost" size="sm" icon="eye">
+                                            View
+                                        </flux:button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <flux:icon name="squares-plus" class="w-8 h-8 text-gray-400" />
+                                        <p class="text-gray-500">No products found matching your criteria ✨</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     @endif
 
@@ -747,57 +766,76 @@
     @if($activeTab === 'sync_history')
         <div class="space-y-6">
             @if(isset($syncHistory) && $syncHistory->count() > 0)
-                <flux:table :data="$syncHistory">
-                    <flux:table.columns>
-                        <flux:table.column>Product</flux:table.column>
-                        <flux:table.column>Status</flux:table.column>
-                        <flux:table.column>Shopify ID</flux:table.column>
-                        <flux:table.column>Synced At</flux:table.column>
-                        <flux:table.column>Error</flux:table.column>
-                    </flux:table.columns>
-
-                    <flux:table.rows>
-                        @foreach($syncHistory as $sync)
-                            <flux:table.row :key="$sync->id">
-                                <flux:table.cell>
-                                    {{ $sync->product->name ?? 'Unknown Product' }}
-                                </flux:table.cell>
-                                
-                                <flux:table.cell>
-                                    @php
-                                        $color = match($sync->sync_status) {
-                                            'synced' => 'green',
-                                            'pending' => 'orange',
-                                            'failed' => 'red',
-                                            default => 'gray'
-                                        };
-                                    @endphp
-                                    <flux:badge size="sm" color="{{ $color }}">
-                                        {{ ucfirst($sync->sync_status) }}
-                                    </flux:badge>
-                                </flux:table.cell>
-                                
-                                <flux:table.cell class="font-mono text-sm">
-                                    {{ $sync->external_id ?? '-' }}
-                                </flux:table.cell>
-                                
-                                <flux:table.cell>
-                                    {{ $sync->last_synced_at?->diffForHumans() ?? '-' }}
-                                </flux:table.cell>
-                                
-                                <flux:table.cell>
-                                    @if($sync->error_message)
-                                        <span class="text-xs text-red-600" title="{{ $sync->error_message }}">
-                                            {{ Str::limit($sync->error_message, 30) }}
-                                        </span>
-                                    @else
-                                        -
-                                    @endif
-                                </flux:table.cell>
-                            </flux:table.row>
-                        @endforeach
-                    </flux:table.rows>
-                </flux:table>
+                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Product
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Shopify ID
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Synced At
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                    Error
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            @foreach($syncHistory as $sync)
+                                <tr wire:key="sync-{{ $sync->id }}" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900 dark:text-white">
+                                            {{ $sync->product->name ?? 'Unknown Product' }}
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @php
+                                            $color = match($sync->sync_status) {
+                                                'synced' => 'green',
+                                                'pending' => 'orange',
+                                                'failed' => 'red',
+                                                default => 'gray'
+                                            };
+                                        @endphp
+                                        <flux:badge size="sm" color="{{ $color }}">
+                                            {{ ucfirst($sync->sync_status) }}
+                                        </flux:badge>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-mono text-gray-900 dark:text-white">
+                                            {{ $sync->external_id ?? '-' }}
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900 dark:text-white">
+                                            {{ $sync->last_synced_at?->diffForHumans() ?? '-' }}
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        @if($sync->error_message)
+                                            <span class="text-xs text-red-600" title="{{ $sync->error_message }}">
+                                                {{ Str::limit($sync->error_message, 30) }}
+                                            </span>
+                                        @else
+                                            <span class="text-sm text-gray-400">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @else
                 <div class="text-center py-12">
                     <flux:icon name="clock" class="w-12 h-12 text-gray-400 mx-auto mb-4" />
