@@ -1,22 +1,45 @@
-<div class="space-y-6">
-    {{-- Filters and Search --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="space-y-4">
+    {{-- Header Bar --}}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {{-- Primary Controls --}}
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             {{-- Search --}}
-            <div>
+            <div class="flex-1 max-w-sm">
                 <flux:input
-                        wire:model.live.debounce.300ms="search"
-                        placeholder="Search images..."
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="Search images..."
+                    size="sm"
                 >
                     <x-slot name="iconTrailing">
-                        <flux:icon.magnifying-glass class="w-5 h-5 text-gray-400"/>
+                        <flux:icon.magnifying-glass class="w-4 h-4 text-gray-400"/>
                     </x-slot>
                 </flux:input>
             </div>
-
+            
+            {{-- Quick Stats --}}
+            @php $images = $this->getImages() @endphp
+            <div class="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+                <span class="font-medium">
+                    {{ number_format($images->total()) }} images
+                </span>
+                @if($search || $selectedFolder || $selectedTag || $filterBy !== 'all')
+                    <span>({{ number_format($images->count()) }} filtered)</span>
+                    <flux:button
+                        variant="outline"
+                        size="xs"
+                        wire:click="clearFilters"
+                    >
+                        Clear Filters
+                    </flux:button>
+                @endif
+            </div>
+        </div>
+        
+        {{-- Secondary Controls --}}
+        <div class="flex flex-wrap items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50">
             {{-- Folder Filter --}}
-            <div>
-                <flux:select wire:model.live="selectedFolder" placeholder="All folders">
+            <div class="min-w-0">
+                <flux:select wire:model.live="selectedFolder" placeholder="All folders" size="sm">
                     <flux:select.option value="">All folders</flux:select.option>
                     @foreach($this->getFolders() as $folder)
                         <flux:select.option value="{{ $folder }}">{{ ucfirst($folder) }}</flux:select.option>
@@ -25,64 +48,90 @@
             </div>
 
             {{-- Status Filter --}}
-            <div>
-                <flux:select wire:model.live="filterBy" placeholder="All images">
+            <div class="min-w-0">
+                <flux:select wire:model.live="filterBy" size="sm">
                     <flux:select.option value="all">All images</flux:select.option>
                     <flux:select.option value="unattached">Unlinked</flux:select.option>
-                    <flux:select.option value="attached">Linked to products</flux:select.option>
+                    <flux:select.option value="attached">Linked</flux:select.option>
                 </flux:select>
             </div>
 
-            {{-- Sort --}}
-            <div class="flex space-x-2">
-                <flux:select wire:model.live="sortBy" class="flex-1">
+            {{-- Tag Filter --}}
+            @php $tags = $this->getTags() @endphp
+            @if(!empty($tags))
+                <div class="min-w-0">
+                    <flux:select wire:model.live="selectedTag" placeholder="All tags" size="sm">
+                        <flux:select.option value="">All tags</flux:select.option>
+                        @foreach($tags as $tag)
+                            <flux:select.option value="{{ $tag }}">{{ $tag }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
+
+            {{-- Sort Controls --}}
+            <div class="flex items-center gap-2 ml-auto">
+                <flux:select wire:model.live="sortBy" size="sm" class="min-w-0">
                     <flux:select.option value="created_at">Upload date</flux:select.option>
                     <flux:select.option value="title">Title</flux:select.option>
                     <flux:select.option value="filename">Filename</flux:select.option>
                     <flux:select.option value="size">File size</flux:select.option>
                 </flux:select>
                 <flux:button
-                        variant="outline"
-                        size="sm"
-                        wire:click="$toggle('sortDirection')"
-                        class="px-3"
+                    variant="ghost"
+                    size="sm"
+                    wire:click="$toggle('sortDirection')"
+                    class="px-2"
                 >
                     <flux:icon.arrows-up-down class="w-4 h-4"/>
                 </flux:button>
             </div>
         </div>
-
-        {{-- Tag Filter --}}
-        @php $tags = $this->getTags() @endphp
-        @if(!empty($tags))
-            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Filter by tags:
-                </label>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($tags as $tag)
-                        <flux:badge
-                                variant="{{ $selectedTag === $tag ? 'primary' : 'outline' }}"
-                                class="cursor-pointer"
-                                wire:click="$set('selectedTag', '{{ $selectedTag === $tag ? '' : $tag }}')"
-                        >
-                            {{ $tag }}
-                        </flux:badge>
-                    @endforeach
-                </div>
+        
+        {{-- Active Filters Display --}}
+        @if($search || $selectedFolder || $selectedTag || $filterBy !== 'all')
+            <div class="flex flex-wrap items-center gap-2 p-3 border-t border-gray-200 dark:border-gray-700">
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Active filters:</span>
+                
+                @if($search)
+                    <flux:badge size="sm" color="blue">
+                        Search: "{{ $search }}"
+                        <button wire:click="$set('search', '')" class="ml-1 hover:text-red-600">
+                            <flux:icon name="x-mark" class="w-3 h-3"/>
+                        </button>
+                    </flux:badge>
+                @endif
+                
+                @if($selectedFolder)
+                    <flux:badge size="sm" color="green">
+                        Folder: {{ $selectedFolder }}
+                        <button wire:click="$set('selectedFolder', '')" class="ml-1 hover:text-red-600">
+                            <flux:icon name="x-mark" class="w-3 h-3"/>
+                        </button>
+                    </flux:badge>
+                @endif
+                
+                @if($selectedTag)
+                    <flux:badge size="sm" color="purple">
+                        Tag: {{ $selectedTag }}
+                        <button wire:click="$set('selectedTag', '')" class="ml-1 hover:text-red-600">
+                            <flux:icon name="x-mark" class="w-3 h-3"/>
+                        </button>
+                    </flux:badge>
+                @endif
+                
+                @if($filterBy !== 'all')
+                    <flux:badge size="sm" color="orange">
+                        Status: {{ ucfirst($filterBy) }}
+                        <button wire:click="$set('filterBy', 'all')" class="ml-1 hover:text-red-600">
+                            <flux:icon name="x-mark" class="w-3 h-3"/>
+                        </button>
+                    </flux:badge>
+                @endif
             </div>
         @endif
     </div>
 
-    {{-- Simple image count instead of bulk selection --}}
-    @php $images = $this->getImages() @endphp
-    @if($images->count() > 0)
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div class="text-sm text-gray-500 dark:text-gray-400">
-                Showing {{ $images->count() }} of {{ $images->total() }} images
-            </div>
-        </div>
-    @endif
 
     {{-- Images List --}}
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
