@@ -3,20 +3,22 @@
 namespace App\Actions\Images;
 
 use App\Actions\Base\BaseAction;
-use App\Services\ImageUploadService;
+use App\Actions\Images\CreateImageRecordAction;
+use App\Actions\Images\UploadImageToStorageAction;
+use App\Jobs\ProcessImageJob;
+use App\Models\Image;
 use Illuminate\Support\Facades\Log;
 
 /**
  * 📤 UPLOAD IMAGES ACTION
  *
- * Handles multiple image uploads with metadata using proper Action pattern
- * Integrates with ImageUploadService for consistent file handling
+ * Handles uploads using Actions then dispatches ProcessImageJob
+ * Back to simple working pattern
  */
 class UploadImagesAction extends BaseAction
 {
-    public function __construct(
-        protected ImageUploadService $uploadService
-    ) {
+    public function __construct()
+    {
         parent::__construct();
     }
 
@@ -45,25 +47,59 @@ class UploadImagesAction extends BaseAction
             'tags' => $this->processTags($metadata['tags'] ?? []),
         ];
 
-        // Debug logging for production
-        if (app()->environment('production')) {
-            Log::info('Image Upload Action Debug', [
-                'disk_config' => config('filesystems.disks.images'),
-                'file_count' => count($files),
-                'has_r2_key' => !empty(config('filesystems.disks.images.key')),
-                'has_r2_secret' => !empty(config('filesystems.disks.images.secret')),
-                'has_r2_bucket' => !empty(config('filesystems.disks.images.bucket')),
-                'metadata' => $processedMetadata,
-            ]);
+        // Process each file using Actions then dispatch jobs  
+        $uploadedImages = [];
+        
+        foreach ($files as $file) {
+            try {
+                // Step 1: Upload to storage using Action
+                $uploadAction = new UploadImageToStorageAction();
+                $uploadResult = $uploadAction->execute($file);
+                
+                if (!$uploadResult['success']) {
+                    Log::error('Storage upload failed', [
+                        'filename' => $file->getClientOriginalName(),
+                        'error' => $uploadResult['message']
+                    ]);
+                    continue;
+                }
+                
+                // Step 2: Create image record using Action  
+                $createRecordAction = new CreateImageRecordAction();
+                $recordResult = $createRecordAction->execute(
+                    $uploadResult['data'], // storage data
+                    $file->getClientOriginalName(),
+                    $file->getMimeType(),
+                    $processedMetadata
+                );
+                
+                if (!$recordResult['success']) {
+                    Log::error('Image record creation failed', [
+                        'filename' => $file->getClientOriginalName(),
+                        'error' => $recordResult['message']
+                    ]);
+                    continue;
+                }
+                
+                $image = $recordResult['data']['image'];
+                $uploadedImages[] = $image;
+                
+                // Step 3: Dispatch existing ProcessImageJob
+                ProcessImageJob::dispatch($image);
+                
+                Log::info('📤 Image uploaded and processing queued', [
+                    'image_id' => $image->id,
+                    'filename' => $image->filename,
+                ]);
+                
+            } catch (\Exception $e) {
+                Log::error('Image upload failed', [
+                    'filename' => $file->getClientOriginalName(),
+                    'error' => $e->getMessage()
+                ]);
+                continue;
+            }
         }
-
-        // Upload using the service  
-        $uploadedImages = $this->uploadService->uploadMultiple(
-            $files, 
-            $processedMetadata, 
-            true, // async processing
-            true  // generate variants
-        );
 
         return $this->success('Images uploaded successfully', [
             'uploaded_images' => $uploadedImages,

@@ -29,12 +29,12 @@ class ImageCardSkeleton extends Component
     }
 
     /**
-     * Get real-time event listeners for processing updates
+     * Get real-time event listeners for processing updates - Global channel
      */
     public function getListeners()
     {
         return [
-            'echo:images,ImageProcessingProgress' => 'updateProcessingProgress',
+            'echo:images-processing,ImageProcessingProgress' => 'updateProcessingProgress',
             'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
         ];
     }

@@ -29,9 +29,11 @@ class ProcessImageJob implements ShouldQueue
         $this->processingId = $processingId ?: 'process_'.$image->id.'_'.time();
     }
 
-    public function handle(ImageProcessingTracker $tracker): void
-    {
-        Log::info('🎨 Starting background image processing', [
+    public function handle(
+        \App\Actions\Images\ExtractImageMetadataAction $extractMetadataAction,
+        ImageProcessingTracker $tracker
+    ): void {
+        Log::info('🎨 Starting background image processing using Action', [
             'image_id' => $this->image->id,
             'filename' => $this->image->filename,
             'processing_id' => $this->processingId,
@@ -42,74 +44,52 @@ class ProcessImageJob implements ShouldQueue
         
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
+            $this->image->uuid,
             ImageProcessingStatus::PROCESSING,
-            'Processing image metadata...',
-            50 // Show as 50% progress
+            'Extracting image metadata...',
+            50
         );
 
-        $this->extractImageMetadata();
+        try {
+            // Extract metadata using Action
+            $result = $extractMetadataAction->execute($this->image);
+            
+            if (!$result['success']) {
+                throw new \RuntimeException('Metadata extraction failed: ' . $result['message']);
+            }
 
-        // Mark as completed and dispatch success
-        $tracker->setStatus($this->image, ImageProcessingStatus::SUCCESS);
+            // Mark as completed and dispatch success
+            $tracker->setStatus($this->image, ImageProcessingStatus::SUCCESS);
 
-        \App\Events\Images\ImageProcessingProgress::dispatch(
-            $this->image->id,
-            ImageProcessingStatus::SUCCESS,
-            'Image processing completed',
-            100
-        );
+            \App\Events\Images\ImageProcessingProgress::dispatch(
+                $this->image->id,
+                $this->image->uuid,
+                ImageProcessingStatus::SUCCESS,
+                'Image processing completed',
+                100
+            );
 
-        // Dispatch legacy event for backward compatibility
-        \App\Events\Images\ImageProcessingCompleted::dispatch($this->image->fresh());
+            // Dispatch legacy event for backward compatibility
+            \App\Events\Images\ImageProcessingCompleted::dispatch($this->image->fresh());
 
-        Log::info('✅ Background image processing completed', [
-            'image_id' => $this->image->id,
-            'width' => $this->image->width,
-            'height' => $this->image->height,
-            'processing_id' => $this->processingId,
-        ]);
+            Log::info('✅ Background image processing completed successfully', [
+                'image_id' => $this->image->id,
+                'width' => $result['data']['width'],
+                'height' => $result['data']['height'],
+                'processing_id' => $this->processingId,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('❌ Image processing failed', [
+                'image_id' => $this->image->id,
+                'error' => $e->getMessage(),
+                'processing_id' => $this->processingId,
+            ]);
+
+            throw $e;
+        }
     }
 
-    protected function extractImageMetadata(): void
-    {
-        if (! $this->image->filename || ! $this->image->url) {
-            throw ImageReprocessException::invalidImage();
-        }
-
-        // Download image content temporarily
-        $imageContent = Storage::disk('images')->get($this->image->filename);
-
-        if (! $imageContent) {
-            throw ImageReprocessException::storageRetrievalFailed();
-        }
-
-        // Create temporary file for processing
-        $tempFile = tmpfile();
-        fwrite($tempFile, $imageContent);
-        $tempPath = stream_get_meta_data($tempFile)['uri'];
-
-        // Use Intervention Image for better metadata extraction
-        $manager = new ImageManager(new Driver);
-        $interventionImage = $manager->read($tempPath);
-
-        $updates = [
-            'width' => $interventionImage->width(),
-            'height' => $interventionImage->height(),
-            'mime_type' => $interventionImage->origin()->mediaType(),
-        ];
-
-        // Get file size from storage
-        $size = Storage::disk('images')->size($this->image->filename);
-        if ($size) {
-            $updates['size'] = $size;
-        }
-
-        // Clean up temp file
-        fclose($tempFile);
-
-        // Update image record
-        $this->image->update($updates);
-    }
 
     public function failed(\Throwable $exception): void
     {
@@ -123,10 +103,10 @@ class ProcessImageJob implements ShouldQueue
         // Dispatch failure progress
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
+            $this->image->uuid,
             ImageProcessingStatus::FAILED,
             'Image processing failed: ' . $exception->getMessage(),
-            0,
-            2
+            0
         );
 
         // Mark as failed in cache

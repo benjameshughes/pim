@@ -16,12 +16,14 @@ describe('ImageProcessingProgress Event', function () {
     test('can be constructed with required parameters', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Extracting metadata...',
             percentage: 50
         );
 
         expect($event->imageId)->toBe(123);
+        expect($event->imageUuid)->toBe('test-uuid-123');
         expect($event->status)->toBe(ImageProcessingStatus::PROCESSING);
         expect($event->currentAction)->toBe('Extracting metadata...');
         expect($event->percentage)->toBe(50);
@@ -30,6 +32,7 @@ describe('ImageProcessingProgress Event', function () {
     test('broadcasts on correct channel', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Processing...',
             percentage: 50
@@ -39,12 +42,13 @@ describe('ImageProcessingProgress Event', function () {
 
         expect($channels)->toHaveCount(1);
         expect($channels[0])->toBeInstanceOf(Channel::class);
-        expect($channels[0]->name)->toBe('images');
+        expect($channels[0]->name)->toBe('images-processing');
     });
 
     test('has correct broadcast name', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Processing...',
             percentage: 50
@@ -56,6 +60,7 @@ describe('ImageProcessingProgress Event', function () {
     test('includes correct data in broadcast', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::SUCCESS,
             currentAction: 'Processing complete',
             percentage: 100
@@ -75,6 +80,7 @@ describe('ImageProcessingProgress Event', function () {
     test('calculates percentage correctly', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::PROCESSING,
             currentAction: 'Processing...',
             percentage: 33
@@ -88,6 +94,7 @@ describe('ImageProcessingProgress Event', function () {
     test('handles zero percentage gracefully', function () {
         $event = new ImageProcessingProgress(
             imageId: 123,
+            imageUuid: 'test-uuid-123',
             status: ImageProcessingStatus::PENDING,
             currentAction: 'Queued...',
             percentage: 0
@@ -181,6 +188,7 @@ describe('Event Integration', function () {
 
         ImageProcessingProgress::dispatch(
             $image->id,
+            $image->uuid,
             ImageProcessingStatus::PROCESSING,
             'Testing...'
         );
@@ -201,7 +209,8 @@ describe('Event Integration', function () {
         $status = ImageProcessingStatus::UPLOADING;
         $action = 'Uploading to storage...';
 
-        ImageProcessingProgress::dispatch($imageId, $status, $action, 0, 1);
+        $imageUuid = 'test-uuid-' . $imageId;
+        ImageProcessingProgress::dispatch($imageId, $imageUuid, $status, $action, 0);
 
         Event::assertDispatched(ImageProcessingProgress::class, function ($event) use ($imageId, $status, $action) {
             return $event->imageId === $imageId

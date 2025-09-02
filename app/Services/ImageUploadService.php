@@ -45,12 +45,25 @@ class ImageUploadService
         $originalFilename = $file->getClientOriginalName();
         $extension = $file->getClientOriginalExtension();
         $filename = Str::uuid().'.'.$extension;
+        $uuid = pathinfo($filename, PATHINFO_FILENAME);
+
+        // Dispatch UPLOADING event if async processing
+        if ($async) {
+            \App\Events\Images\ImageProcessingProgress::dispatch(
+                0, // Temporary ID, will be updated after image creation
+                $uuid,
+                ImageProcessingStatus::UPLOADING,
+                'Uploading to storage...',
+                25
+            );
+        }
 
         // Store to R2
         $path = Storage::disk($this->disk)->putFileAs('', $file, $filename);
         $url = Storage::disk($this->disk)->url($path);
 
         if ($async) {
+
             // Create minimal image record for async processing
             $image = Image::create([
                 'filename' => $filename,
@@ -73,23 +86,22 @@ class ImageUploadService
             // Mark as pending in tracker
             app(ImageProcessingTracker::class)->setStatus($image, ImageProcessingStatus::PENDING);
             
-            // Dispatch job first
-            ProcessImageJob::dispatch($image);
+            // Dispatch PENDING event BEFORE job (immediate, no delay)
+            \App\Events\Images\ImageProcessingProgress::dispatch(
+                $image->id,
+                $image->uuid,
+                ImageProcessingStatus::PENDING,
+                'Queued for processing...',
+                0
+            );
             
-            // Dispatch initial pending event with slight delay for proper component setup
-            dispatch(function() use ($image) {
-                \App\Events\Images\ImageProcessingProgress::dispatch(
-                    $image->id,
-                    ImageProcessingStatus::PENDING,
-                    'Queued for processing...',
-                    0
-                );
-            })->afterResponse();
+            // Dispatch job AFTER events are set up
+            ProcessImageJob::dispatch($image);
 
-            // Optionally generate variants
+            // Optionally generate variants with reduced delay
             if ($generateVariants) {
                 GenerateImageVariantsJob::dispatch($image)
-                    ->delay(now()->addSeconds(30));
+                    ->delay(now()->addSeconds(5)); // Reduced from 30 to 5 seconds
             }
 
         } else {

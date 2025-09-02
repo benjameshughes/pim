@@ -6,3 +6,6 @@ parameters:
     paths:
         - app/UI/Components/
         - app/Concerns/
+        - app/Actions/Images/
+        - app/Jobs/
+        - app/Livewire/Images/

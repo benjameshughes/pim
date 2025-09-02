@@ -22,6 +22,7 @@ class ImageProcessingProgress implements ShouldBroadcastNow
 
     public function __construct(
         public int $imageId,
+        public string $imageUuid,
         public ImageProcessingStatus $status,
         public string $currentAction,
         public int $percentage = 0
@@ -30,7 +31,7 @@ class ImageProcessingProgress implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('images'), // Use global images channel
+            new Channel('images-processing'), // Global processing channel
         ];
     }
 

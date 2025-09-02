@@ -43,6 +43,7 @@ class GenerateImageVariantsJob implements ShouldQueue
         
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
+            $this->image->uuid,
             ImageProcessingStatus::OPTIMISING,
             'Generating image variants...',
             75
@@ -57,6 +58,7 @@ class GenerateImageVariantsJob implements ShouldQueue
         // Dispatch success progress
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
+            $this->image->uuid,
             ImageProcessingStatus::SUCCESS,
             'All variants generated successfully',
             100
@@ -91,10 +93,10 @@ class GenerateImageVariantsJob implements ShouldQueue
         // Dispatch failure progress
         \App\Events\Images\ImageProcessingProgress::dispatch(
             $this->image->id,
+            $this->image->uuid,
             ImageProcessingStatus::FAILED,
             'Variant generation failed: ' . $exception->getMessage(),
-            0,
-            count($this->variants)
+            0
         );
 
         // Mark as failed in cache

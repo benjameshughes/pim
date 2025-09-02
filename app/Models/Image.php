@@ -46,6 +46,14 @@ class Image extends Model
         'tags' => 'array',
     ];
 
+    /**
+     * Get the UUID from filename (filename is UUID.extension)
+     */
+    public function getUuidAttribute(): string
+    {
+        return pathinfo($this->filename, PATHINFO_FILENAME);
+    }
+
     // REMOVED: Polymorphic relationship - using pivot tables instead
     // /**
     //  * 🔗 Polymorphic relationship to any model

@@ -311,16 +311,16 @@ class ImageLibrary extends Component
     }
 
     /**
-     * Get real-time event listeners - Global channel approach
+     * Get real-time event listeners - Use global processing channel
      */
     public function getListeners()
     {
         return [
-            // Legacy events
-            'echo:images,ImageProcessingCompleted' => 'onImageProcessed',
-            'echo:images,ImageVariantsGenerated' => 'onVariantsGenerated',
-            // Global progress events - we'll filter by image ID in the handler
-            'echo:images,ImageProcessingProgress' => 'updateProcessingProgress',
+            // Global channel for all processing updates
+            'echo:images-processing,.ImageProcessingProgress' => 'updateProcessingProgress',
+            // Legacy events (still using global channel)
+            'echo:images,.ImageProcessingCompleted' => 'onImageProcessed',
+            'echo:images,.ImageVariantsGenerated' => 'onVariantsGenerated',
             // Skeleton replacement event
             'image-ready' => 'replaceSkeletonWithCard',
         ];
@@ -340,7 +340,6 @@ class ImageLibrary extends Component
         if ($imageId && in_array($imageId, $this->processingImages)) {
             $this->dispatch('notify', [
                 'type' => match($status) {
-                    'uploading' => 'info',
                     'processing' => 'info', 
                     'optimising' => 'info',
                     'success' => 'success',
@@ -355,7 +354,7 @@ class ImageLibrary extends Component
         if (in_array($status, ['success', 'failed']) && $imageId) {
             $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
             
-            // Refresh the page to replace skeleton with actual card
+            // Refresh the page to show updated images
             $this->resetPage();
         }
     }
@@ -384,12 +383,8 @@ class ImageLibrary extends Component
             'message' => $event['message'],
         ]);
 
-        $imageId = $event['original_image_id'] ?? null;
-        
-        // Remove from processing array and refresh
-        if ($imageId) {
-            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
-        }
+        // Legacy event - just refresh to show new variants
+        // Job tracking is handled in updateProcessingProgress
 
         // Refresh the images list to show updated variant counts
         $this->resetPage();
@@ -402,11 +397,8 @@ class ImageLibrary extends Component
     {
         $imageId = $event['imageId'] ?? null;
         
+        // Refresh component to show updated cards
         if ($imageId) {
-            // Remove from processing array to trigger card replacement
-            $this->processingImages = array_filter($this->processingImages, fn($id) => $id !== $imageId);
-            
-            // Refresh component to show actual card
             $this->resetPage();
         }
     }

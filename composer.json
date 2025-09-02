@@ -12,6 +12,7 @@
         "php": "^8.4",
         "intervention/image": "^3.11",
         "laravel/framework": "^v12.19.3",
+        "laravel/horizon": "^5.33",
         "laravel/tinker": "^2.10.1",
         "league/csv": "^9.24",
         "league/flysystem-aws-s3-v3": "^3.29",
@@ -21,6 +22,7 @@
         "maize-tech/laravel-magic-login": "^2.3",
         "mirakl/sdk-php-shop": "^1.22",
         "phpclassic/php-shopify": "^1.2",
+        "predis/predis": "^3.2",
         "pusher/pusher-php-server": "^7.2",
         "shopify/shopify-api": "^5.11",
         "spatie/laravel-permission": "^6.21"
@@ -71,7 +73,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen images --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,horizon,logs,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi",
