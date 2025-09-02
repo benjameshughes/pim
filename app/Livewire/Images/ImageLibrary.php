@@ -17,18 +17,17 @@ class ImageLibrary extends Component
     /** @var \Illuminate\Http\UploadedFile[] */
     public $newImages = [];
 
-    // Search and filtering
+    // Search and filtering (moved to ImageLibraryHeader)
     public string $search = '';
-
     public string $selectedFolder = '';
-
     public string $selectedTag = '';
-
-    public string $filterBy = 'all'; // all, attached, unattached
-
+    public string $filterBy = 'all';
     public string $sortBy = 'created_at';
-
     public string $sortDirection = 'desc';
+    
+    // Selection state for bulk actions
+    public array $selectedImages = [];
+    public bool $selectAll = false;
 
     // New image metadata (for simple interface)
     public string $newImageFolder = '';
@@ -61,6 +60,15 @@ class ImageLibrary extends Component
         'filterBy' => ['except' => 'all'],
         'view' => ['except' => 'grid'],
         'page' => ['except' => 1],
+    ];
+    
+    protected $listeners = [
+        'filter-changed' => 'handleFilterChange',
+        'sort-changed' => 'handleSortChange', 
+        'filters-cleared' => 'handleFiltersClear',
+        'bulk-action-requested' => 'handleBulkAction',
+        'image-selection-toggled' => 'toggleImageSelection',
+        'delete-image-requested' => 'handleDeleteImageRequest',
     ];
 
     public function mount()
@@ -168,12 +176,190 @@ class ImageLibrary extends Component
     }
 
     /**
-     * 🔍 CLEAR FILTERS
+     * 📡 HANDLE FILTER CHANGES FROM HEADER
      */
-    public function clearFilters()
+    public function handleFilterChange($filters)
+    {
+        foreach ($filters as $key => $value) {
+            if (property_exists($this, $key)) {
+                $this->$key = $value;
+            }
+        }
+        $this->resetPage();
+    }
+    
+    /**
+     * 📡 HANDLE SORT CHANGES FROM HEADER
+     */
+    public function handleSortChange($sortData)
+    {
+        $this->sortBy = $sortData['sortBy'];
+        $this->sortDirection = $sortData['sortDirection'];
+        $this->resetPage();
+    }
+    
+    /**
+     * 📡 HANDLE FILTERS CLEAR FROM HEADER
+     */
+    public function handleFiltersClear()
     {
         $this->reset(['search', 'selectedFolder', 'selectedTag', 'filterBy']);
         $this->resetPage();
+    }
+    
+    /**
+     * 📡 HANDLE BULK ACTIONS FROM HEADER
+     */
+    public function handleBulkAction($actionData)
+    {
+        $action = $actionData['action'];
+        $imageIds = $actionData['images'];
+        
+        match ($action) {
+            'delete' => $this->bulkDeleteImages($imageIds),
+            'move' => $this->bulkMoveImages($imageIds),
+            'tag' => $this->bulkTagImages($imageIds),
+            default => null,
+        };
+    }
+    
+    /**
+     * ☑️ TOGGLE IMAGE SELECTION (from row component)
+     */
+    public function toggleImageSelection($imageId)
+    {
+        if (in_array($imageId, $this->selectedImages)) {
+            $this->selectedImages = array_values(array_diff($this->selectedImages, [$imageId]));
+        } else {
+            $this->selectedImages[] = $imageId;
+        }
+        
+        $this->selectAll = count($this->selectedImages) === $this->getImages()->count();
+        $this->dispatch('selection-changed', $this->selectedImages);
+        $this->dispatch('selection-updated', $this->selectedImages);
+    }
+    
+    // Note: toggleSelectAll is now handled by Alpine.js in the template
+    
+    /**
+     * 🗑️ HANDLE DELETE IMAGE REQUEST (from row component)
+     */
+    public function handleDeleteImageRequest($imageId)
+    {
+        $this->deleteImage($imageId, app(\App\Actions\Images\DeleteImageAction::class));
+    }
+    
+    /**
+     * 🗑️ BULK DELETE IMAGES
+     */
+    public function bulkDeleteImages($imageIds, \App\Actions\Images\BulkDeleteImagesAction $bulkDeleteAction)
+    {
+        $this->authorize('delete-images');
+        
+        if (empty($imageIds)) {
+            $this->dispatch('error', 'No images selected for deletion.');
+            return;
+        }
+        
+        try {
+            $result = $bulkDeleteAction->execute($imageIds);
+            
+            if ($result['success']) {
+                $deletedCount = $result['data']['deleted_count'];
+                $this->dispatch('success', "{$deletedCount} images deleted successfully! 🗑️");
+                
+                // Clear selection and refresh
+                $this->selectedImages = [];
+                $this->selectAll = false;
+                $this->dispatch('selection-changed', $this->selectedImages);
+                $this->resetPage();
+            } else {
+                $this->dispatch('error', 'Bulk delete failed: ' . $result['message']);
+            }
+            
+        } catch (\Exception $e) {
+            $this->dispatch('error', 'Bulk delete failed: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 📁 BULK MOVE IMAGES
+     */
+    public function bulkMoveImages($imageIds, $targetFolder = null, \App\Actions\Images\BulkMoveImagesAction $bulkMoveAction = null)
+    {
+        $this->authorize('manage-images');
+        
+        if (empty($imageIds)) {
+            $this->dispatch('error', 'No images selected for moving.');
+            return;
+        }
+        
+        // For now, prompt for folder name (can be enhanced with a modal later)
+        if (!$targetFolder) {
+            $this->dispatch('info', 'Bulk move will prompt for target folder in next implementation!');
+            return;
+        }
+        
+        try {
+            $result = $bulkMoveAction->execute($imageIds, $targetFolder);
+            
+            if ($result['success']) {
+                $movedCount = $result['data']['moved_count'];
+                $folder = $result['data']['target_folder'];
+                $this->dispatch('success', "{$movedCount} images moved to '{$folder}' folder! 📁");
+                
+                // Clear selection and refresh
+                $this->selectedImages = [];
+                $this->selectAll = false;
+                $this->dispatch('selection-changed', $this->selectedImages);
+                $this->resetPage();
+            } else {
+                $this->dispatch('error', 'Bulk move failed: ' . $result['message']);
+            }
+            
+        } catch (\Exception $e) {
+            $this->dispatch('error', 'Bulk move failed: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * 🏷️ BULK TAG IMAGES
+     */
+    public function bulkTagImages($imageIds, $tags = null, $operation = 'add', \App\Actions\Images\BulkTagImagesAction $bulkTagAction = null)
+    {
+        $this->authorize('manage-images');
+        
+        if (empty($imageIds)) {
+            $this->dispatch('error', 'No images selected for tagging.');
+            return;
+        }
+        
+        // For now, prompt for tags (can be enhanced with a modal later)
+        if (!$tags) {
+            $this->dispatch('info', 'Bulk tag will prompt for tags in next implementation!');
+            return;
+        }
+        
+        try {
+            $result = $bulkTagAction->execute($imageIds, $tags, $operation);
+            
+            if ($result['success']) {
+                $updatedCount = $result['data']['updated_count'];
+                $tagsStr = implode(', ', $result['data']['tags_processed']);
+                $this->dispatch('success', "{$operation} tags ({$tagsStr}) on {$updatedCount} images! 🏷️");
+                
+                // Clear selection and refresh
+                $this->selectedImages = [];
+                $this->selectAll = false;
+                $this->dispatch('selection-changed', $this->selectedImages);
+                $this->resetPage();
+            } else {
+                $this->dispatch('error', 'Bulk tag failed: ' . $result['message']);
+            }
+            
+        } catch (\Exception $e) {
+            $this->dispatch('error', 'Bulk tag failed: ' . $e->getMessage());
+        }
     }
 
     public function getImages()
@@ -205,6 +391,7 @@ class ImageLibrary extends Component
 
         return $query->paginate($this->perPage);
     }
+
 
     public function getFolders()
     {
