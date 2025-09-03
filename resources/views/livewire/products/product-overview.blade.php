@@ -8,7 +8,41 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                    <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->name }}</p>
+                    @if($editingName)
+                        <div class="mt-1 flex items-center gap-2">
+                            <flux:input 
+                                wire:model="tempName" 
+                                wire:keydown.enter="saveName"
+                                wire:keydown.escape="cancelEditingName"
+                                class="flex-1"
+                                autofocus
+                            />
+                            <flux:button 
+                                wire:click="saveName" 
+                                size="sm" 
+                                icon="check" 
+                                variant="filled"
+                                class="text-green-600"
+                            />
+                            <flux:button 
+                                wire:click="cancelEditingName" 
+                                size="sm" 
+                                icon="x-mark" 
+                                variant="ghost"
+                                class="text-gray-500"
+                            />
+                        </div>
+                        @error('tempName') 
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    @else
+                        <p class="mt-1 text-sm text-gray-900 dark:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1 transition-colors group flex items-center"
+                           wire:click="startEditingName"
+                           title="Click to edit">
+                            {{ $product->name }}
+                            <flux:icon name="pencil" class="w-3 h-3 ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </p>
+                    @endif
                 </div>
                 
                 <div>
@@ -31,12 +65,55 @@
                 </div>
             </div>
 
-            @if ($product->description)
-                <div class="mt-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-                    <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ $product->description }}</p>
-                </div>
-            @endif
+            <div class="mt-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
+                @if($editingDescription)
+                    <div class="mt-1 space-y-2">
+                        <flux:textarea 
+                            wire:model="tempDescription" 
+                            wire:keydown.escape="cancelEditingDescription"
+                            rows="3"
+                            placeholder="Add a description..."
+                            autofocus
+                        />
+                        <div class="flex items-center gap-2">
+                            <flux:button 
+                                wire:click="saveDescription" 
+                                size="sm" 
+                                icon="check" 
+                                variant="filled"
+                                class="text-green-600"
+                            />
+                            <flux:button 
+                                wire:click="cancelEditingDescription" 
+                                size="sm" 
+                                icon="x-mark" 
+                                variant="ghost"
+                                class="text-gray-500"
+                            />
+                        </div>
+                    </div>
+                    @error('tempDescription') 
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                @else
+                    @if($product->description)
+                        <p class="mt-1 text-sm text-gray-900 dark:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1 transition-colors group"
+                           wire:click="startEditingDescription"
+                           title="Click to edit">
+                            {{ $product->description }}
+                            <flux:icon name="pencil" class="w-3 h-3 ml-2 opacity-0 group-hover:opacity-50 transition-opacity inline" />
+                        </p>
+                    @else
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1 transition-colors group flex items-center italic"
+                           wire:click="startEditingDescription"
+                           title="Click to add description">
+                            No description - click to add
+                            <flux:icon name="plus" class="w-3 h-3 ml-2 opacity-0 group-hover:opacity-50 transition-opacity" />
+                        </p>
+                    @endif
+                @endif
+            </div>
         </div>
 
         {{-- 🎨 COLOR PALETTE SHOWCASE --}}

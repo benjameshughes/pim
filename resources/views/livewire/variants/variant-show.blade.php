@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                💎 {{ $variant->sku }}
+                {{ $variant->sku }}
             </h1>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
                 <a href="{{ route('products.show', $variant->product) }}" class="hover:text-blue-600 dark:hover:text-blue-400">

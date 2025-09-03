@@ -12,11 +12,81 @@ class ProductOverview extends Component
 
     public ?array $shopifyPushResult = null;
 
+    // Inline editing states
+    public bool $editingName = false;
+    public bool $editingDescription = false;
+    public string $tempName = '';
+    public string $tempDescription = '';
+
     public function mount(Product $product)
     {
         $this->authorize('view-product-details');
 
         $this->product = $product->load(['variants', 'images']);
+    }
+
+    // Inline editing methods for Name
+    public function startEditingName()
+    {
+        $this->authorize('edit-products');
+        $this->editingName = true;
+        $this->tempName = $this->product->name;
+    }
+
+    public function saveName()
+    {
+        $this->authorize('edit-products');
+        
+        $this->validate([
+            'tempName' => 'required|string|max:255'
+        ]);
+
+        $this->product->update(['name' => $this->tempName]);
+        $this->editingName = false;
+
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => 'Product name updated successfully! ✨'
+        ]);
+    }
+
+    public function cancelEditingName()
+    {
+        $this->editingName = false;
+        $this->tempName = $this->product->name;
+        $this->resetErrorBag('tempName');
+    }
+
+    // Inline editing methods for Description
+    public function startEditingDescription()
+    {
+        $this->authorize('edit-products');
+        $this->editingDescription = true;
+        $this->tempDescription = $this->product->description ?? '';
+    }
+
+    public function saveDescription()
+    {
+        $this->authorize('edit-products');
+        
+        $this->validate([
+            'tempDescription' => 'nullable|string|max:1000'
+        ]);
+
+        $this->product->update(['description' => $this->tempDescription ?: null]);
+        $this->editingDescription = false;
+
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => 'Product description updated successfully! ✨'
+        ]);
+    }
+
+    public function cancelEditingDescription()
+    {
+        $this->editingDescription = false;
+        $this->tempDescription = $this->product->description ?? '';
+        $this->resetErrorBag('tempDescription');
     }
 
     public function pushToShopify()
