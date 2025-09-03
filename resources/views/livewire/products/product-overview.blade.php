@@ -158,32 +158,105 @@
     <div class="space-y-6">
         {{-- Product Image --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Product Image</h3>
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Product Images</h3>
+                <flux:badge color="blue" size="sm">
+                    {{ $product->images->count() }}
+                </flux:badge>
+            </div>
             
             @php
                 $primaryImage = $product->primaryImage();
             @endphp
             
+            {{-- Primary Image Display --}}
             @if ($primaryImage)
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group relative"
+                     wire:click="openImageModal"
+                     title="Click to manage images">
                     <img src="{{ $primaryImage->url }}" alt="{{ $primaryImage->alt_text ?? $product->name }}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
+                            <flux:icon name="pencil" class="w-4 h-4 text-white" />
+                        </div>
+                    </div>
                 </div>
             @elseif ($product->images->count() > 0)
                 {{-- Fallback to first image if no primary image is set --}}
                 @php $firstImage = $product->images->first(); @endphp
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group relative"
+                     wire:click="openImageModal"
+                     title="Click to manage images">
                     <img src="{{ $firstImage->url }}" alt="{{ $firstImage->alt_text ?? $product->name }}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
+                            <flux:icon name="pencil" class="w-4 h-4 text-white" />
+                        </div>
+                    </div>
                 </div>
             @elseif ($product->image_url)
                 {{-- Legacy fallback --}}
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group relative"
+                     wire:click="openImageModal"
+                     title="Click to manage images">
                     <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
+                            <flux:icon name="pencil" class="w-4 h-4 text-white" />
+                        </div>
+                    </div>
                 </div>
             @else
-                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                    <flux:icon name="photo" class="w-12 h-12 text-gray-400" />
+                <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors group"
+                     wire:click="openImageModal"
+                     title="Click to add images">
+                    <div class="text-center">
+                        <flux:icon name="photo" class="w-12 h-12 text-gray-400 group-hover:text-gray-500 mx-auto mb-2" />
+                        <p class="text-sm text-gray-500 group-hover:text-gray-600 dark:text-gray-400">
+                            Click to add images
+                        </p>
+                    </div>
                 </div>
             @endif
+
+            {{-- Image Thumbnails --}}
+            @if($product->images->count() > 1)
+                <div class="mt-4">
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">All Images</p>
+                    <div class="flex gap-2 overflow-x-auto pb-2">
+                        @foreach($product->images->take(5) as $image)
+                            @php
+                                $thumbnailImage = \App\Models\Image::where('folder', 'variants')
+                                    ->whereJsonContains('tags', "original-{$image->id}")
+                                    ->whereJsonContains('tags', 'thumb')
+                                    ->first();
+                                $displayUrl = $thumbnailImage ? $thumbnailImage->url : $image->url;
+                            @endphp
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden border-2 {{ $image->pivot->is_primary ? 'border-blue-500' : 'border-transparent' }}"
+                                 title="{{ $image->display_title }}">
+                                <img src="{{ $displayUrl }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover">
+                            </div>
+                        @endforeach
+                        @if($product->images->count() > 5)
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center text-xs text-gray-500">
+                                +{{ $product->images->count() - 5 }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            <div class="mt-4">
+                <flux:button 
+                    wire:click="openImageModal" 
+                    variant="outline" 
+                    size="sm" 
+                    icon="photo" 
+                    class="w-full"
+                >
+                    {{ $product->images->count() > 0 ? 'Manage Images' : 'Add Images' }}
+                </flux:button>
+            </div>
         </div>
 
         {{-- Quick Stats --}}
@@ -347,4 +420,179 @@
             </div>
         </div>
     </div>
+
+    {{-- 🖼️ IMAGE MANAGEMENT MODAL --}}
+    @if($showImageModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto" x-data="{ show: @entangle('showImageModal') }" x-show="show" x-transition>
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="fixed inset-0 bg-black bg-opacity-50" wire:click="closeImageModal"></div>
+                
+                <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                    {{-- Modal Header --}}
+                    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Manage Product Images</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {{ $product->name }}
+                            </p>
+                        </div>
+                        <flux:button wire:click="closeImageModal" variant="ghost" icon="x-mark" size="sm" />
+                    </div>
+
+                    {{-- Modal Body --}}
+                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+                        {{-- Current Images --}}
+                        @if($product->images->count() > 0)
+                            <div class="mb-8">
+                                <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                    <flux:icon name="photo" class="w-5 h-5 text-blue-600" />
+                                    Current Images ({{ $product->images->count() }})
+                                </h4>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    @foreach($product->images as $image)
+                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square group">
+                                            @php
+                                                $thumbnailImage = \App\Models\Image::where('folder', 'variants')
+                                                    ->whereJsonContains('tags', "original-{$image->id}")
+                                                    ->whereJsonContains('tags', 'thumb')
+                                                    ->first();
+                                                $displayUrl = $thumbnailImage ? $thumbnailImage->url : $image->url;
+                                            @endphp
+                                            <img src="{{ $displayUrl }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover"
+                                                 title="Original: {{ $image->display_title }}">
+                                            
+                                            {{-- Primary Badge --}}
+                                            @if($image->pivot->is_primary)
+                                                <div class="absolute top-2 left-2">
+                                                    <flux:badge color="yellow" size="sm">
+                                                        <flux:icon name="star" class="w-3 h-3" />
+                                                        Primary
+                                                    </flux:badge>
+                                                </div>
+                                            @endif
+
+                                            {{-- Action Buttons --}}
+                                            <div class="absolute inset-0">
+                                                <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white bg-opacity-10 rounded backdrop-blur-sm p-1">
+                                                    @if(!$image->pivot->is_primary)
+                                                        <flux:button 
+                                                            wire:click="setPrimaryImage({{ $image->id }})" 
+                                                            size="xs" 
+                                                            variant="ghost" 
+                                                            icon="star"
+                                                            class="bg-white bg-opacity-90 text-yellow-600 hover:bg-yellow-50"
+                                                            title="Set as primary"
+                                                        />
+                                                    @endif
+                                                    <flux:button 
+                                                        wire:click="detachImage({{ $image->id }})" 
+                                                        size="xs" 
+                                                        variant="ghost" 
+                                                        icon="x"
+                                                        class="bg-white bg-opacity-90 text-red-600 hover:bg-red-50"
+                                                        title="Remove image"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {{-- Image Info --}}
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                                                <p class="text-white text-xs truncate">{{ $image->display_title }}</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Available Images --}}
+                        <div>
+                            <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <flux:icon name="plus" class="w-5 h-5 text-green-600" />
+                                Available Images ({{ count($availableImages) }})
+                            </h4>
+
+                            @if(empty($availableImages))
+                                <div class="text-center py-8">
+                                    <flux:icon name="photo" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                                    <p class="text-gray-500 dark:text-gray-400">No available images to attach</p>
+                                    <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                                        All images from the library are already attached to this product.
+                                    </p>
+                                </div>
+                            @else
+                                {{-- Selected Images Summary --}}
+                                @if(!empty($selectedImages))
+                                    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-700/50">
+                                        <p class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                                            {{ count($selectedImages) }} image{{ count($selectedImages) > 1 ? 's' : '' }} selected
+                                        </p>
+                                        <flux:button 
+                                            wire:click="attachSelectedImages" 
+                                            variant="primary" 
+                                            size="sm"
+                                            icon="link"
+                                        >
+                                            Attach Selected Images
+                                        </flux:button>
+                                    </div>
+                                @endif
+
+                                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    @foreach($availableImages as $image)
+                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group {{ in_array($image['id'], $selectedImages) ? 'ring-2 ring-blue-500 ring-offset-2' : '' }}"
+                                             wire:click="toggleImageSelection({{ $image['id'] }})">
+                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover"
+                                                 title="Original: {{ $image['display_title'] }}">
+                                            
+                                            {{-- Selection Indicator --}}
+                                            @if(in_array($image['id'], $selectedImages))
+                                                <div class="absolute top-2 right-2">
+                                                    <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                                        <flux:icon name="check" class="w-4 h-4 text-white" />
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            {{-- Hover Overlay --}}
+                                            <div class="absolute inset-0 flex items-center justify-center">
+                                                @if(!in_array($image['id'], $selectedImages))
+                                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
+                                                        <flux:icon name="plus" class="w-6 h-6 text-white" />
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            {{-- Image Info --}}
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
+                                                <p class="text-white text-xs truncate">{{ $image['display_title'] }}</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Modal Footer --}}
+                    <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Click images to select, then attach to product
+                        </div>
+                        <div class="flex gap-3">
+                            <flux:button wire:click="closeImageModal" variant="ghost">
+                                Close
+                            </flux:button>
+                            @if(!empty($selectedImages))
+                                <flux:button wire:click="attachSelectedImages" variant="primary" icon="link">
+                                    Attach {{ count($selectedImages) }} Image{{ count($selectedImages) > 1 ? 's' : '' }}
+                                </flux:button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

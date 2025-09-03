@@ -18,6 +18,11 @@ class ProductOverview extends Component
     public string $tempName = '';
     public string $tempDescription = '';
 
+    // Image modal states
+    public bool $showImageModal = false;
+    public array $availableImages = [];
+    public array $selectedImages = [];
+
     public function mount(Product $product)
     {
         $this->authorize('view-product-details');
@@ -87,6 +92,127 @@ class ProductOverview extends Component
         $this->editingDescription = false;
         $this->tempDescription = $this->product->description ?? '';
         $this->resetErrorBag('tempDescription');
+    }
+
+    // Image modal methods
+    public function openImageModal()
+    {
+        $this->authorize('edit-products');
+        $this->showImageModal = true;
+        $this->loadAvailableImages();
+    }
+
+    public function closeImageModal()
+    {
+        $this->showImageModal = false;
+        $this->selectedImages = [];
+    }
+
+    public function loadAvailableImages()
+    {
+        // Get all ORIGINAL images not already attached to this product (exclude variants)
+        $currentImageIds = $this->product->images()->pluck('images.id')->toArray();
+        
+        $this->availableImages = \App\Models\Image::query()
+            ->originals() // Only show original images, not variants
+            ->whereNotIn('id', $currentImageIds)
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(function ($image) {
+                return [
+                    'id' => $image->id,
+                    'url' => $image->url,
+                    'thumb_url' => $this->getThumbnailUrl($image),
+                    'filename' => $image->filename,
+                    'display_title' => $image->display_title,
+                    'alt_text' => $image->alt_text,
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get thumbnail URL for an image (with fallback to original)
+     */
+    private function getThumbnailUrl(\App\Models\Image $image): string
+    {
+        $thumbnailImage = \App\Models\Image::where('folder', 'variants')
+            ->whereJsonContains('tags', "original-{$image->id}")
+            ->whereJsonContains('tags', 'thumb')
+            ->first();
+
+        return $thumbnailImage ? $thumbnailImage->url : $image->url;
+    }
+
+    public function toggleImageSelection(int $imageId)
+    {
+        if (in_array($imageId, $this->selectedImages)) {
+            $this->selectedImages = array_values(array_filter($this->selectedImages, fn($id) => $id !== $imageId));
+        } else {
+            $this->selectedImages[] = $imageId;
+        }
+    }
+
+    public function attachSelectedImages()
+    {
+        $this->authorize('edit-products');
+
+        if (empty($this->selectedImages)) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Please select at least one image to attach.'
+            ]);
+            return;
+        }
+
+        // Attach selected ORIGINAL images to the product 
+        // (selectedImages contains original image IDs, thumbnails are just for display)
+        $this->product->images()->attach($this->selectedImages);
+        
+        $count = count($this->selectedImages);
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => "Successfully attached {$count} image" . ($count > 1 ? 's' : '') . "! ✨"
+        ]);
+
+        // Refresh product data and close modal
+        $this->product->refresh();
+        $this->closeImageModal();
+    }
+
+    public function detachImage(int $imageId)
+    {
+        $this->authorize('edit-products');
+        
+        $this->product->images()->detach($imageId);
+        
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => 'Image detached successfully! 🗑️'
+        ]);
+
+        // Refresh product data
+        $this->product->refresh();
+    }
+
+    public function setPrimaryImage(int $imageId)
+    {
+        $this->authorize('edit-products');
+        
+        // Remove primary flag from all current images
+        $this->product->images()->updateExistingPivot($this->product->images()->pluck('images.id'), ['is_primary' => false]);
+        
+        // Set the selected image as primary
+        $this->product->images()->updateExistingPivot($imageId, ['is_primary' => true]);
+        
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => 'Primary image updated successfully! ⭐'
+        ]);
+
+        // Refresh product data
+        $this->product->refresh();
     }
 
     public function pushToShopify()
