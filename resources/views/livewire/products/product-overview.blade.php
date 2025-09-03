@@ -290,16 +290,9 @@
                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">All Images</p>
                     <div class="flex gap-2 overflow-x-auto pb-2">
                         @foreach($product->images->take(5) as $image)
-                            @php
-                                $thumbnailImage = \App\Models\Image::where('folder', 'variants')
-                                    ->whereJsonContains('tags', "original-{$image->id}")
-                                    ->whereJsonContains('tags', 'thumb')
-                                    ->first();
-                                $displayUrl = $thumbnailImage ? $thumbnailImage->url : $image->url;
-                            @endphp
                             <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden border-2 {{ $image->pivot->is_primary ? 'border-blue-500' : 'border-transparent' }}"
                                  title="{{ $image->display_title }}">
-                                <img src="{{ $displayUrl }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover">
+                                <img src="{{ $thumbnails[$image->id]->url ?? $image->url }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover">
                             </div>
                         @endforeach
                         @if($product->images->count() > 5)
@@ -527,14 +520,7 @@
                                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     @foreach($product->images as $image)
                                         <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square group">
-                                            @php
-                                                $thumbnailImage = \App\Models\Image::where('folder', 'variants')
-                                                    ->whereJsonContains('tags', "original-{$image->id}")
-                                                    ->whereJsonContains('tags', 'thumb')
-                                                    ->first();
-                                                $displayUrl = $thumbnailImage ? $thumbnailImage->url : $image->url;
-                                            @endphp
-                                            <img src="{{ $displayUrl }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover"
+                                            <img src="{{ $thumbnails[$image->id]->url ?? $image->url }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover"
                                                  title="Original: {{ $image->display_title }}">
                                             
                                             {{-- Primary Badge --}}

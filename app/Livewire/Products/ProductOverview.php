@@ -23,11 +23,17 @@ class ProductOverview extends Component
     public array $availableImages = [];
     public array $selectedImages = [];
 
+    // Thumbnail cache
+    public \Illuminate\Support\Collection $thumbnails;
+
     public function mount(Product $product)
     {
         $this->authorize('view-product-details');
 
         $this->product = $product->load(['variants', 'images']);
+        
+        // Load all thumbnails in a single query for performance
+        $this->loadThumbnails();
     }
 
     // Inline editing methods for Name
@@ -113,23 +119,87 @@ class ProductOverview extends Component
         // Get all ORIGINAL images not already attached to this product (exclude variants)
         $currentImageIds = $this->product->images()->pluck('images.id')->toArray();
         
-        $this->availableImages = \App\Models\Image::query()
+        $availableImages = \App\Models\Image::query()
             ->originals() // Only show original images, not variants
             ->whereNotIn('id', $currentImageIds)
             ->orderBy('created_at', 'desc')
             ->limit(50)
+            ->get();
+            
+        // Get thumbnails for all available images in a single query for performance
+        $availableImageIds = $availableImages->pluck('id');
+        $availableThumbnails = \App\Models\Image::where('folder', 'variants')
+            ->whereJsonContains('tags', 'thumb')
             ->get()
-            ->map(function ($image) {
-                return [
-                    'id' => $image->id,
-                    'url' => $image->url,
-                    'thumb_url' => $this->getThumbnailUrl($image),
-                    'filename' => $image->filename,
-                    'display_title' => $image->display_title,
-                    'alt_text' => $image->alt_text,
-                ];
+            ->filter(function($thumbnail) use ($availableImageIds) {
+                foreach ($thumbnail->tags ?? [] as $tag) {
+                    if (str_starts_with($tag, 'original-')) {
+                        $originalId = (int) str_replace('original-', '', $tag);
+                        return $availableImageIds->contains($originalId);
+                    }
+                }
+                return false;
             })
-            ->toArray();
+            ->keyBy(function($thumbnail) {
+                foreach ($thumbnail->tags ?? [] as $tag) {
+                    if (str_starts_with($tag, 'original-')) {
+                        return (int) str_replace('original-', '', $tag);
+                    }
+                }
+                return null;
+            })
+            ->filter();
+        
+        $this->availableImages = $availableImages->map(function ($image) use ($availableThumbnails) {
+            return [
+                'id' => $image->id,
+                'url' => $image->url,
+                'thumb_url' => $availableThumbnails[$image->id]->url ?? $image->url,
+                'filename' => $image->filename,
+                'display_title' => $image->display_title,
+                'alt_text' => $image->alt_text,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Load all thumbnails for product images in a single query
+     */
+    public function loadThumbnails(): void
+    {
+        if ($this->product->images->isEmpty()) {
+            $this->thumbnails = collect();
+            return;
+        }
+        
+        $imageIds = $this->product->images->pluck('id');
+        
+        // Single query to get all relevant thumbnails
+        $thumbnails = \App\Models\Image::where('folder', 'variants')
+            ->whereJsonContains('tags', 'thumb')
+            ->get()
+            ->filter(function($thumbnail) use ($imageIds) {
+                // Filter thumbnails that belong to our product images
+                foreach ($thumbnail->tags ?? [] as $tag) {
+                    if (str_starts_with($tag, 'original-')) {
+                        $originalId = (int) str_replace('original-', '', $tag);
+                        return $imageIds->contains($originalId);
+                    }
+                }
+                return false;
+            })
+            ->keyBy(function($thumbnail) {
+                // Key by original image ID for easy lookup
+                foreach ($thumbnail->tags ?? [] as $tag) {
+                    if (str_starts_with($tag, 'original-')) {
+                        return (int) str_replace('original-', '', $tag);
+                    }
+                }
+                return null;
+            })
+            ->filter(); // Remove null keys
+            
+        $this->thumbnails = $thumbnails;
     }
 
     /**
@@ -137,12 +207,12 @@ class ProductOverview extends Component
      */
     private function getThumbnailUrl(\App\Models\Image $image): string
     {
-        $thumbnailImage = \App\Models\Image::where('folder', 'variants')
-            ->whereJsonContains('tags', "original-{$image->id}")
-            ->whereJsonContains('tags', 'thumb')
-            ->first();
+        // Use cached thumbnail if available
+        if (isset($this->thumbnails[$image->id])) {
+            return $this->thumbnails[$image->id]->url;
+        }
 
-        return $thumbnailImage ? $thumbnailImage->url : $image->url;
+        return $image->url;
     }
 
     public function toggleImageSelection(int $imageId)
