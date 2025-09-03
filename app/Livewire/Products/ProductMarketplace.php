@@ -14,12 +14,8 @@ class ProductMarketplace extends Component
         // Authorize viewing marketplace connections
         $this->authorize('view-marketplace-connections');
 
-        $this->product = $product->load([
-            'syncStatuses.syncAccount',
-            'syncLogs' => function ($query) {
-                $query->with('syncAccount')->latest()->limit(10);
-            },
-        ]);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded syncStatuses.syncAccount and syncLogs
+        $this->product = $product;
     }
 
     public function render()

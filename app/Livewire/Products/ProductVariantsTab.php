@@ -14,7 +14,8 @@ class ProductVariantsTab extends Component
         // Authorize viewing variants
         $this->authorize('view-variants');
 
-        $this->product = $product->load(['variants.barcode']);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded variants.barcode
+        $this->product = $product;
     }
 
     public function render()

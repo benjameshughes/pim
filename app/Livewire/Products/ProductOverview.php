@@ -30,7 +30,8 @@ class ProductOverview extends Component
     {
         $this->authorize('view-product-details');
 
-        $this->product = $product->load(['variants', 'images']);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded all needed data
+        $this->product = $product;
         
         // Load all thumbnails in a single query for performance
         $this->loadThumbnails();

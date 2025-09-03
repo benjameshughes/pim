@@ -20,13 +20,15 @@ class ProductShow extends Component
         // Authorize viewing product details
         $this->authorize('view-product-details');
 
+        // 🚀 CONSOLIDATE ALL RELATIONSHIP LOADING - Single query for all tab data
         $this->product = $product->load([
-            'variants',  // Remove .barcodes since it's not a proper relationship
-            'images',    // Add images for overview tab and images tab badge
-            'attributes', // Add attributes for attributes tab badge
-            'syncStatuses.syncAccount',
+            'variants.barcode',  // For variants tab (ProductVariantsTab needs variants.barcode)
+            'images',            // For overview tab and images tab  
+            'attributes',        // For attributes tab
+            'syncStatuses.syncAccount', // For marketplace tab
             'syncLogs' => function ($query) {
-                $query->with('syncAccount')->latest()->limit(10);
+                // Load enough sync logs for both marketplace (10) and history (50) tabs
+                $query->with('syncAccount')->latest()->limit(50);
             },
         ]);
     }

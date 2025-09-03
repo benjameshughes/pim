@@ -19,7 +19,8 @@ class ProductImages extends Component
         // Authorize viewing images
         $this->authorize('view-images');
 
-        $this->product = $product->load(['images']);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded images
+        $this->product = $product;
     }
     
     /**

@@ -17,11 +17,8 @@ class ProductHistory extends Component
     {
         $this->authorize('view-product-history');
 
-        $this->product = $product->load([
-            'syncLogs' => function ($query) {
-                $query->with('syncAccount')->latest()->limit(50);
-            },
-        ]);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded syncLogs with 50 limit
+        $this->product = $product;
     }
 
     public function setActiveTab(string $tab): void

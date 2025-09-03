@@ -79,7 +79,8 @@ class ProductPricing extends Component
         // Authorize viewing pricing
         $this->authorize('view-pricing');
 
-        $this->product = $product->load(['variants']);
+        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded variants.barcode
+        $this->product = $product;
         $this->variants = $this->product->variants;
         $this->channels = SalesChannel::active()->get();
     }
