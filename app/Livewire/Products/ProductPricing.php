@@ -70,8 +70,8 @@ class ProductPricing extends Component
     public bool $showOnlyOverrides = false;
 
     protected $listeners = [
-        'channel-price-updated' => '$refresh',
-        'refresh-pricing' => '$refresh',
+        'channel-price-updated' => 'handlePriceUpdate',
+        'refresh-pricing' => 'handlePriceUpdate',
     ];
 
     public function mount(Product $product)
@@ -373,64 +373,98 @@ class ProductPricing extends Component
 
     public function getPricingTableData(): array
     {
-        $variants = $this->getFilteredVariants();
-        $tableData = [];
+        // 🚀 CACHE: Pricing table data calculation is expensive - cache for 5 minutes
+        $cacheKey = "product_pricing_table_{$this->product->id}_{$this->product->updated_at->timestamp}_{$this->searchVariants}_{$this->showOnlyOverrides}";
+        
+        return cache()->remember($cacheKey, now()->addMinutes(5), function () {
+            $variants = $this->getFilteredVariants();
+            $tableData = [];
 
-        foreach ($variants as $variant) {
-            $channelPrices = $variant->getAllChannelPrices();
+            foreach ($variants as $variant) {
+                $channelPrices = $variant->getAllChannelPrices();
 
-            $variantData = [
-                'variant' => $variant,
-                'default_price' => $variant->price,
-                'channels' => [],
-                'has_any_override' => false,
-            ];
-
-            foreach ($this->channels as $channel) {
-                $channelData = $channelPrices[$channel->code] ?? null;
-
-                $variantData['channels'][$channel->code] = [
-                    'price' => $channelData ? $channelData['effective_price'] : $variant->price,
-                    'has_override' => $channelData ? $channelData['has_override'] : false,
-                    'markup_percentage' => $variant->price > 0 && $channelData
-                        ? round((($channelData['effective_price'] - $variant->price) / $variant->price) * 100, 1)
-                        : 0,
+                $variantData = [
+                    'variant' => $variant,
+                    'default_price' => $variant->price,
+                    'channels' => [],
+                    'has_any_override' => false,
                 ];
 
-                if ($channelData && $channelData['has_override']) {
-                    $variantData['has_any_override'] = true;
+                foreach ($this->channels as $channel) {
+                    $channelData = $channelPrices[$channel->code] ?? null;
+
+                    $variantData['channels'][$channel->code] = [
+                        'price' => $channelData ? $channelData['effective_price'] : $variant->price,
+                        'has_override' => $channelData ? $channelData['has_override'] : false,
+                        'markup_percentage' => $variant->price > 0 && $channelData
+                            ? round((($channelData['effective_price'] - $variant->price) / $variant->price) * 100, 1)
+                            : 0,
+                    ];
+
+                    if ($channelData && $channelData['has_override']) {
+                        $variantData['has_any_override'] = true;
+                    }
                 }
+
+                $tableData[] = $variantData;
             }
 
-            $tableData[] = $variantData;
-        }
-
-        return $tableData;
+            return $tableData;
+        });
     }
 
     public function getChannelSummary(): array
     {
-        $summary = [];
+        // 🚀 CACHE: Channel summary calculation loops through all variants - cache for 5 minutes
+        $cacheKey = "product_channel_summary_{$this->product->id}_{$this->product->updated_at->timestamp}";
+        
+        return cache()->remember($cacheKey, now()->addMinutes(5), function () {
+            $summary = [];
 
-        foreach ($this->channels as $channel) {
-            $overrideCount = 0;
-            $totalVariants = $this->variants->count();
+            foreach ($this->channels as $channel) {
+                $overrideCount = 0;
+                $totalVariants = $this->variants->count();
 
-            foreach ($this->variants as $variant) {
-                if ($variant->hasChannelOverride($channel->code)) {
-                    $overrideCount++;
+                foreach ($this->variants as $variant) {
+                    if ($variant->hasChannelOverride($channel->code)) {
+                        $overrideCount++;
+                    }
                 }
+
+                $summary[$channel->code] = [
+                    'channel' => $channel,
+                    'overrides_count' => $overrideCount,
+                    'using_default_count' => $totalVariants - $overrideCount,
+                    'percentage_with_overrides' => $totalVariants > 0 ? round(($overrideCount / $totalVariants) * 100, 1) : 0,
+                ];
             }
 
-            $summary[$channel->code] = [
-                'channel' => $channel,
-                'overrides_count' => $overrideCount,
-                'using_default_count' => $totalVariants - $overrideCount,
-                'percentage_with_overrides' => $totalVariants > 0 ? round(($overrideCount / $totalVariants) * 100, 1) : 0,
-            ];
-        }
+            return $summary;
+        });
+    }
 
-        return $summary;
+    /**
+     * 🚀 CACHE INVALIDATION - Clear pricing caches when data changes
+     */
+    public function handlePriceUpdate()
+    {
+        $this->clearPricingCaches();
+        $this->product = $this->product->fresh();
+        $this->variants = $this->product->variants;
+    }
+
+    private function clearPricingCaches(): void
+    {
+        $baseKeys = [
+            "product_pricing_table_{$this->product->id}",
+            "product_channel_summary_{$this->product->id}",
+        ];
+        
+        // Clear all variations of cache keys
+        foreach ($baseKeys as $baseKey) {
+            // Use wildcard pattern to clear all variations
+            cache()->forget($baseKey . '*');
+        }
     }
 
     public function render()

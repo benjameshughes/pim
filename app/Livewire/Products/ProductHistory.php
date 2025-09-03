@@ -28,8 +28,13 @@ class ProductHistory extends Component
 
     public function getActivityLogsProperty(): Collection
     {
-        return Activity::forSubject($this->product)
-            ->take(50);
+        // 🚀 CACHE: Activity logs are expensive to query - cache for 2 minutes
+        $cacheKey = "product_activity_logs_{$this->product->id}";
+        
+        return cache()->remember($cacheKey, now()->addMinutes(2), function () {
+            return Activity::forSubject($this->product)
+                ->take(50);
+        });
     }
 
     public function getSyncLogsProperty(): Collection
@@ -39,34 +44,39 @@ class ProductHistory extends Component
 
     public function getCombinedHistoryProperty(): Collection
     {
-        $activityLogs = $this->activityLogs->map(function ($log) {
-            return (object) [
-                'type' => 'activity',
-                'timestamp' => $log->occurred_at,
-                'user_name' => $log->user_name,
-                'event' => $log->event,
-                'description' => $log->description,
-                'details' => $log->getContextData(),
-                'changes' => $log->changes,
-            ];
-        });
+        // 🚀 CACHE: Combined history processing is expensive - cache for 2 minutes
+        $cacheKey = "product_combined_history_{$this->product->id}_{$this->product->updated_at->timestamp}";
+        
+        return cache()->remember($cacheKey, now()->addMinutes(2), function () {
+            $activityLogs = $this->activityLogs->map(function ($log) {
+                return (object) [
+                    'type' => 'activity',
+                    'timestamp' => $log->occurred_at,
+                    'user_name' => $log->user_name,
+                    'event' => $log->event,
+                    'description' => $log->description,
+                    'details' => $log->getContextData(),
+                    'changes' => $log->changes,
+                ];
+            });
 
-        $syncLogs = $this->syncLogs->map(function ($log) {
-            return (object) [
-                'type' => 'sync',
-                'timestamp' => $log->created_at,
-                'user_name' => 'System',
-                'event' => 'sync.'.$log->action,
-                'description' => $log->message,
-                'details' => collect($log->details ?? []),
-                'channel' => $log->syncAccount?->channel,
-                'status' => $log->status,
-            ];
-        });
+            $syncLogs = $this->syncLogs->map(function ($log) {
+                return (object) [
+                    'type' => 'sync',
+                    'timestamp' => $log->created_at,
+                    'user_name' => 'System',
+                    'event' => 'sync.'.$log->action,
+                    'description' => $log->message,
+                    'details' => collect($log->details ?? []),
+                    'channel' => $log->syncAccount?->channel,
+                    'status' => $log->status,
+                ];
+            });
 
-        return $activityLogs->concat($syncLogs)
-            ->sortByDesc('timestamp')
-            ->take(100);
+            return $activityLogs->concat($syncLogs)
+                ->sortByDesc('timestamp')
+                ->take(100);
+        });
     }
 
     public function render()
