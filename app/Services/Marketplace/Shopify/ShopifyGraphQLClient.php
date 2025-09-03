@@ -134,7 +134,7 @@ class ShopifyGraphQLClient
     }
     
     /**
-     * Create product with explicit variants (separate the variants from productInput)
+     * Create product with explicit variants using proper Shopify workflow
      */
     protected function createProductWithExplicitVariants(array $productData): array
     {
@@ -142,8 +142,37 @@ class ShopifyGraphQLClient
         $variants = $productData['variants'];
         unset($productData['variants']);
         
-        // 🎯 Don't create productOptions - let variants create them automatically
+        // Step 1: Create unique width and drop values for productOptions
+        $widthValues = [];
+        $dropValues = [];
         
+        foreach ($variants as $variant) {
+            $width = $variant['width'] ?? 45;
+            $drop = $variant['drop'] ?? 150;
+            
+            $widthCm = $width . 'cm';
+            $dropCm = $drop . 'cm';
+            
+            if (!in_array($widthCm, $widthValues)) {
+                $widthValues[] = $widthCm;
+            }
+            if (!in_array($dropCm, $dropValues)) {
+                $dropValues[] = $dropCm;
+            }
+        }
+        
+        // Create productOptions for Width and Drop
+        $productData['productOptions'] = [
+            [
+                'name' => 'Width',
+                'values' => array_map(fn($width) => ['name' => $width], $widthValues)
+            ],
+            [
+                'name' => 'Drop', 
+                'values' => array_map(fn($drop) => ['name' => $drop], $dropValues)
+            ]
+        ];
+
         $mutation = '
             mutation productCreate($input: ProductInput!) {
                 productCreate(input: $input) {
@@ -155,6 +184,23 @@ class ShopifyGraphQLClient
                         options {
                             id
                             name
+                            position
+                            values
+                            optionValues {
+                                id
+                                name
+                                hasVariants
+                            }
+                        }
+                        variants(first: 1) {
+                            nodes {
+                                id
+                                title
+                                selectedOptions {
+                                    name
+                                    value
+                                }
+                            }
                         }
                     }
                     userErrors {
@@ -166,32 +212,34 @@ class ShopifyGraphQLClient
         ';
 
         // Debug logging
-        \Illuminate\Support\Facades\Log::info('🚀 Creating product with two-step approach', [
+        \Illuminate\Support\Facades\Log::info('🚀 Creating product with productOptions', [
             'product_title' => $productData['title'] ?? 'unknown',
-            'has_product_options' => isset($productData['productOptions']),
+            'width_values' => $widthValues,
+            'drop_values' => $dropValues,
             'variant_count' => count($variants),
-            'product_data_keys' => array_keys($productData)
+            'will_create_variants_count' => count($widthValues) * count($dropValues)
         ]);
         
-        // First create the product (with Size option but no variants yet)
+        // Create the product with productOptions (this creates the first variant automatically)
         $result = $this->mutate($mutation, ['input' => $productData]);
         
         \Illuminate\Support\Facades\Log::info('🎯 Product creation result', [
             'has_errors' => !empty($result['productCreate']['userErrors']),
             'errors' => $result['productCreate']['userErrors'] ?? [],
             'has_product' => isset($result['productCreate']['product']),
-            'product_id' => $result['productCreate']['product']['id'] ?? null
+            'product_id' => $result['productCreate']['product']['id'] ?? null,
+            'options_created' => count($result['productCreate']['product']['options'] ?? [])
         ]);
         
-        // If successful, add variants using productVariantsBulkCreate
+        // If successful, create remaining variants using productVariantsBulkCreate
         if (empty($result['productCreate']['userErrors']) && isset($result['productCreate']['product']['id'])) {
             $productId = $result['productCreate']['product']['id'];
             $product = $result['productCreate']['product'];
             
-            // Add variants - they'll create Width/Drop options automatically
-            $this->addVariantsToProduct($productId, $variants);
+            // Create all the variants for this product using bulk create
+            $this->createAllVariantsForProduct($productId, $variants, $product['options'] ?? []);
             
-            // Fetch the complete product with variants for return
+            // Fetch the complete product with all variants for return
             return $this->getProductWithVariants($productId);
         }
         
@@ -199,7 +247,126 @@ class ShopifyGraphQLClient
     }
     
     /**
-     * Add variants to an existing product using the correct Shopify GraphQL format
+     * Create all variants for a product using productVariantsBulkCreate with proper option mapping
+     */
+    protected function createAllVariantsForProduct(string $productId, array $variants, array $productOptions): array
+    {
+        // Map option names to their IDs for proper variant creation
+        $optionMap = [];
+        foreach ($productOptions as $option) {
+            $optionMap[$option['name']] = [
+                'id' => $option['id'],
+                'values' => []
+            ];
+            
+            // Map option values to their IDs  
+            foreach ($option['optionValues'] as $optionValue) {
+                $optionMap[$option['name']]['values'][$optionValue['name']] = $optionValue['id'];
+            }
+        }
+
+        \Illuminate\Support\Facades\Log::info('🎯 Option mapping created', [
+            'option_map' => $optionMap,
+            'product_options_count' => count($productOptions)
+        ]);
+
+        // Convert variants to Shopify format with proper option IDs
+        $shopifyVariants = [];
+        foreach ($variants as $variant) {
+            $width = $variant['width'] ?? 45;
+            $drop = $variant['drop'] ?? 150;
+            
+            $widthCm = $width . 'cm';
+            $dropCm = $drop . 'cm';
+            
+            // Use optionValues with proper IDs for this variant
+            $optionValues = [];
+            
+            if (isset($optionMap['Width']['values'][$widthCm])) {
+                $optionValues[] = [
+                    'optionId' => $optionMap['Width']['id'],
+                    'name' => $widthCm
+                ];
+            }
+            
+            if (isset($optionMap['Drop']['values'][$dropCm])) {
+                $optionValues[] = [
+                    'optionId' => $optionMap['Drop']['id'],
+                    'name' => $dropCm
+                ];
+            }
+            
+            $variantData = [
+                'price' => (string) ($variant['price'] ?? '29.99'),
+                'inventoryPolicy' => 'DENY',
+                'optionValues' => $optionValues
+            ];
+            
+            // Add barcode if available
+            if (!empty($variant['barcode'])) {
+                $variantData['barcode'] = $variant['barcode'];
+            }
+            
+            // Add compareAtPrice if available
+            if (!empty($variant['compareAtPrice'])) {
+                $variantData['compareAtPrice'] = $variant['compareAtPrice'];
+            }
+            
+            $shopifyVariants[] = $variantData;
+        }
+
+        // Use REMOVE_STANDALONE_VARIANT strategy to replace the auto-created variant
+        $mutation = '
+            mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!, $strategy: ProductVariantsBulkCreateStrategy!) {
+                productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: $strategy) {
+                    productVariants {
+                        id
+                        sku
+                        price
+                        inventoryQuantity
+                        selectedOptions {
+                            name
+                            value
+                        }
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+        
+        \Illuminate\Support\Facades\Log::info('🔧 Creating all variants via bulk create', [
+            'product_id' => $productId,
+            'variant_count' => count($shopifyVariants),
+            'strategy' => 'REMOVE_STANDALONE_VARIANT',
+            'sample_variant' => $shopifyVariants[0] ?? null
+        ]);
+        
+        $result = $this->mutate($mutation, [
+            'productId' => $productId,
+            'variants' => $shopifyVariants,
+            'strategy' => 'REMOVE_STANDALONE_VARIANT'
+        ]);
+        
+        \Illuminate\Support\Facades\Log::info('💥 Bulk variant creation result', [
+            'has_errors' => !empty($result['productVariantsBulkCreate']['userErrors']),
+            'errors' => $result['productVariantsBulkCreate']['userErrors'] ?? [],
+            'created_variant_count' => count($result['productVariantsBulkCreate']['productVariants'] ?? [])
+        ]);
+        
+        // Update SKUs and other details after variant creation
+        if (empty($result['productVariantsBulkCreate']['userErrors'])) {
+            $createdVariants = $result['productVariantsBulkCreate']['productVariants'] ?? [];
+            $this->updateVariantDetails($createdVariants, $variants);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Add variants to an existing product using the correct Shopify GraphQL format (legacy method)
      */
     protected function addVariantsToProduct(string $productId, array $variants): array
     {
@@ -212,16 +379,37 @@ class ShopifyGraphQLClient
                 'inventoryPolicy' => $variant['inventoryPolicy'] ?? 'DENY',
             ];
             
-            // Extract width and drop from combined size like "45cm x 150cm"
-            $sizeParts = explode(' x ', $variant['options'][0]);
-            $width = $sizeParts[0] ?? '45cm';
-            $drop = $sizeParts[1] ?? '150cm';
-            
-            // Use optionName - Shopify will create Width/Drop options automatically
-            $variantData['optionValues'] = [
-                ['optionName' => 'Width', 'name' => $width],
-                ['optionName' => 'Drop', 'name' => $drop]
-            ];
+            // 🔧 Handle different variant option formats
+            if (isset($variant['options']) && is_array($variant['options'])) {
+                // Format: ['45cm x 150cm'] - combined size
+                if (count($variant['options']) === 1) {
+                    $sizeParts = explode(' x ', $variant['options'][0]);
+                    $width = trim($sizeParts[0] ?? '45cm');
+                    $drop = trim($sizeParts[1] ?? '150cm');
+                    
+                    $variantData['optionValues'] = [
+                        ['optionName' => 'Width', 'name' => $width],
+                        ['optionName' => 'Drop', 'name' => $drop]
+                    ];
+                }
+                // Format: ['45cm', '150cm'] - separate width/drop
+                elseif (count($variant['options']) === 2) {
+                    $variantData['optionValues'] = [
+                        ['optionName' => 'Width', 'name' => trim($variant['options'][0])],
+                        ['optionName' => 'Drop', 'name' => trim($variant['options'][1])]
+                    ];
+                }
+            }
+            // Fallback to individual width/drop fields if no options array
+            elseif (isset($variant['width']) && isset($variant['drop'])) {
+                $width = $variant['width'] . (str_contains($variant['width'], 'cm') ? '' : 'cm');
+                $drop = $variant['drop'] . (str_contains($variant['drop'], 'cm') ? '' : 'cm');
+                
+                $variantData['optionValues'] = [
+                    ['optionName' => 'Width', 'name' => $width],
+                    ['optionName' => 'Drop', 'name' => $drop]
+                ];
+            }
             
             // Add barcode if available (this field is valid)
             if (!empty($variant['barcode'])) {
@@ -317,8 +505,27 @@ class ShopifyGraphQLClient
                 $updateData['requiresShipping'] = $originalVariant['requiresShipping'];
             }
             
+            // Add inventory quantity if specified
+            if (isset($originalVariant['inventoryQuantity'])) {
+                $updateData['inventoryQuantity'] = max(0, (int) $originalVariant['inventoryQuantity']);
+            }
+            
             if (!empty($updateData)) {
-                $this->updateSingleVariant($variantId, $updateData);
+                \Illuminate\Support\Facades\Log::info('📝 Updating variant details', [
+                    'variant_id' => $variantId,
+                    'sku' => $updateData['sku'] ?? 'none',
+                    'update_fields' => array_keys($updateData)
+                ]);
+                
+                try {
+                    $this->updateSingleVariantViaRest($variantId, $updateData);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('❌ Failed to update variant details', [
+                        'variant_id' => $variantId,
+                        'error' => $e->getMessage(),
+                        'update_data' => $updateData
+                    ]);
+                }
             }
         }
     }
@@ -683,34 +890,58 @@ class ShopifyGraphQLClient
     }
 
     /**
-     * Update variant via REST API (for SKU, barcode, etc.)
+     * Update variant via REST API (for SKU, barcode, etc.) - Direct method for variant details
      */
-    protected function updateVariantViaRest(string $variantId, array $updateData): void
+    protected function updateSingleVariantViaRest(string $variantId, array $updateData): void
     {
         try {
             // Extract numeric ID from GraphQL ID (gid://shopify/ProductVariant/123 -> 123)
             $numericId = basename($variantId);
 
-            $url = "https://{$this->syncAccount->shop_domain}/admin/api/2024-10/variants/{$numericId}.json";
+            $url = "https://{$this->shopDomain}/admin/api/{$this->apiVersion}/variants/{$numericId}.json";
 
             $data = [
                 'variant' => $updateData,
             ];
 
             $response = Http::withHeaders([
-                'X-Shopify-Access-Token' => $this->syncAccount->access_token,
+                'X-Shopify-Access-Token' => $this->accessToken,
                 'Content-Type' => 'application/json',
             ])->put($url, $data);
 
-            if (! $response->successful()) {
-                error_log("REST API variant update failed for {$variantId}: ".$response->body());
+            if (!$response->successful()) {
+                \Illuminate\Support\Facades\Log::error("❌ REST API variant update failed", [
+                    'variant_id' => $variantId,
+                    'numeric_id' => $numericId,
+                    'status' => $response->status(),
+                    'error' => $response->body(),
+                    'update_data' => $updateData
+                ]);
+                throw new \Exception("REST API update failed: {$response->status()} - {$response->body()}");
             } else {
-                error_log("✅ Updated variant {$variantId} via REST API: ".json_encode($updateData));
+                \Illuminate\Support\Facades\Log::info("✅ Updated variant via REST API", [
+                    'variant_id' => $variantId,
+                    'numeric_id' => $numericId,
+                    'updated_fields' => array_keys($updateData)
+                ]);
             }
 
         } catch (\Exception $e) {
-            error_log("Exception updating variant {$variantId} via REST: ".$e->getMessage());
+            \Illuminate\Support\Facades\Log::error("❌ Exception updating variant via REST", [
+                'variant_id' => $variantId,
+                'error' => $e->getMessage(),
+                'update_data' => $updateData
+            ]);
+            throw $e;
         }
+    }
+
+    /**
+     * Update variant via REST API (for SKU, barcode, etc.) - Legacy method for compatibility
+     */
+    protected function updateVariantViaRest(string $variantId, array $updateData): void
+    {
+        $this->updateSingleVariantViaRest($variantId, $updateData);
     }
 
     /**

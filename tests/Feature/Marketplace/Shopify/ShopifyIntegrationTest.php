@@ -13,10 +13,13 @@ beforeEach(function () {
     // Create test sync account
     $this->syncAccount = SyncAccount::factory()->create([
         'name' => 'Test Shopify Integration',
-        'marketplace' => 'shopify',
-        'shop_domain' => 'integration-test.myshopify.com',
-        'access_token' => 'integration-test-token',
-        'status' => 'active',
+        'channel' => 'shopify',
+        'display_name' => 'Test Shopify Store',
+        'credentials' => [
+            'shop_domain' => 'integration-test.myshopify.com',
+            'access_token' => 'integration-test-token',
+        ],
+        'is_active' => true,
     ]);
 
     // Create test product with multiple variants

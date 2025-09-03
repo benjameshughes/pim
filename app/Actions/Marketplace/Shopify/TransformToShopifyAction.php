@@ -88,24 +88,39 @@ class TransformToShopifyAction
         $shopifyVariants = [];
 
         foreach ($variants as $variant) {
-            $shopifyVariants[] = [
-                'title' => $variant->title,
+            $shopifyVariant = [
+                'title' => $variant->title ?? 'Default Title',
                 'sku' => $variant->sku,
                 'barcode' => $this->getVariantBarcode($variant),
                 'price' => (string) $this->getVariantPriceForAccount($variant),
-                'compareAtPrice' => $this->getCompareAtPrice($variant),
                 'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
                 'inventoryPolicy' => $this->getInventoryPolicy($variant),
-                'inventoryManagement' => 'SHOPIFY',
                 'requiresShipping' => true,
                 'weight' => $this->calculateVariantWeight($variant),
                 'weightUnit' => 'KILOGRAMS',
-                'metafields' => $this->createVariantMetafields($variant),
-                // 🎯 SINGLE OPTION VALUE - Size combining width and drop
-                'options' => [
-                    $variant->width.'cm x '.$variant->drop.'cm',
-                ],
             ];
+            
+            // Add compare at price if available
+            $compareAtPrice = $this->getCompareAtPrice($variant);
+            if ($compareAtPrice) {
+                $shopifyVariant['compareAtPrice'] = $compareAtPrice;
+            }
+            
+            // 🎯 Provide both width and drop separately for flexibility
+            $width = $variant->width ?? 45;
+            $drop = $variant->drop ?? 150;
+            
+            // Multiple format support for GraphQL client
+            $shopifyVariant['width'] = $width;
+            $shopifyVariant['drop'] = $drop;
+            $shopifyVariant['options'] = [
+                $width.'cm x '.$drop.'cm', // Combined format
+            ];
+            
+            // Add metafields (note: not supported in bulk create, added for reference)
+            $shopifyVariant['metafields'] = $this->createVariantMetafields($variant);
+
+            $shopifyVariants[] = $shopifyVariant;
         }
 
         return $shopifyVariants;
@@ -297,9 +312,14 @@ class TransformToShopifyAction
      */
     protected function getVariantBarcode(\App\Models\ProductVariant $variant): ?string
     {
-        $barcode = $variant->barcode; // HasOne relationship
+        $barcode = $variant->barcode; // HasOne relationship (note: not barcodes)
 
-        return ($barcode && $barcode->is_assigned) ? $barcode->barcode : null;
+        // Check if barcode exists and has a value
+        if ($barcode && !empty($barcode->barcode)) {
+            return $barcode->barcode;
+        }
+
+        return null;
     }
 
     /**

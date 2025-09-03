@@ -176,9 +176,9 @@ class BuildShopifyProductData
                 $optionIndex++;
             }
 
-            // Add barcode if available
-            $barcode = $variant->barcodes()->where('is_primary', true)->first();
-            if ($barcode) {
+            // Add barcode if available (using HasOne barcode relationship)
+            $barcode = $variant->barcode;
+            if ($barcode && !empty($barcode->barcode)) {
                 $shopifyVariant['barcode'] = $barcode->barcode;
             }
 
