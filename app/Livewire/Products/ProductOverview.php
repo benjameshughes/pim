@@ -216,6 +216,27 @@ class ProductOverview extends Component
         return $image->url;
     }
 
+    /**
+     * Get price range using proper pricing system
+     */
+    public function getPriceRange(): array
+    {
+        $prices = $this->product->variants->map(function ($variant) {
+            return $variant->getRetailPrice();
+        })->filter(function ($price) {
+            return $price > 0; // Filter out 0 prices
+        });
+
+        if ($prices->isEmpty()) {
+            return ['min' => 0, 'max' => 0];
+        }
+
+        return [
+            'min' => $prices->min(),
+            'max' => $prices->max(),
+        ];
+    }
+
     public function toggleImageSelection(int $imageId)
     {
         if (in_array($imageId, $this->selectedImages)) {

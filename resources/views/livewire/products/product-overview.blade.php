@@ -352,9 +352,18 @@
                     <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->min('drop') }}cm - {{ $product->variants->max('drop') }}cm</span>
                 </div>
                 
+                @php
+                    $priceRange = $this->getPriceRange();
+                @endphp
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600 dark:text-gray-400">Price Range</span>
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">£{{ number_format($product->variants->min('price'), 2) }} - £{{ number_format($product->variants->max('price'), 2) }}</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">
+                        @if($priceRange['min'] > 0 && $priceRange['max'] > 0)
+                            £{{ number_format($priceRange['min'], 2) }} - £{{ number_format($priceRange['max'], 2) }}
+                        @else
+                            No pricing data
+                        @endif
+                    </span>
                 </div>
                 
                 <div class="flex justify-between">
