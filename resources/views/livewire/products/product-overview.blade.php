@@ -152,6 +152,71 @@
                 @endforeach
             </div>
         </div>
+
+        {{-- 📐 SIZES SHOWCASE --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sizes</h3>
+            
+            <div class="space-y-6">
+                {{-- Width Section --}}
+                <div>
+                    <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">Width</h4>
+                    <div class="flex flex-wrap gap-3">
+                        @php
+                            $uniqueWidths = $product->variants
+                                ->groupBy('width')
+                                ->map(fn($variants, $width) => [
+                                    'width' => $width,
+                                    'variant_count' => $variants->count()
+                                ])
+                                ->sortBy('width')
+                                ->values();
+                        @endphp
+                        
+                        @foreach ($uniqueWidths as $widthData)
+                            <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+                                <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-300 dark:border-blue-600 rounded flex items-center justify-center">
+                                    <flux:icon name="arrow-left-right" class="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $widthData['width'] }}cm</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $widthData['variant_count'] }} variant{{ $widthData['variant_count'] > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- Drop Section --}}
+                <div>
+                    <h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-3">Drop</h4>
+                    <div class="flex flex-wrap gap-3">
+                        @php
+                            $uniqueDrops = $product->variants
+                                ->groupBy('drop')
+                                ->map(fn($variants, $drop) => [
+                                    'drop' => $drop,
+                                    'variant_count' => $variants->count()
+                                ])
+                                ->sortBy('drop')
+                                ->values();
+                        @endphp
+                        
+                        @foreach ($uniqueDrops as $dropData)
+                            <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+                                <div class="w-6 h-6 bg-green-100 dark:bg-green-900/50 border-2 border-green-300 dark:border-green-600 rounded flex items-center justify-center">
+                                    <flux:icon name="arrow-up-down" class="w-3 h-3 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $dropData['drop'] }}cm</div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $dropData['variant_count'] }} variant{{ $dropData['variant_count'] > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- 🖼️ PRODUCT IMAGE & STATS --}}
@@ -269,10 +334,15 @@
                     <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->count() }}</span>
                 </div>
                 
-                <div class="flex justify-between">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Active Variants</span>
-                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->where('status', 'active')->count() }}</span>
-                </div>
+                @php
+                    $inactiveCount = $product->variants->where('status', '!=', 'active')->count();
+                @endphp
+                @if($inactiveCount > 0)
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Inactive Variants</span>
+                        <span class="text-sm font-medium text-red-600 dark:text-red-400">{{ $inactiveCount }}</span>
+                    </div>
+                @endif
                 
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600 dark:text-gray-400">Unique Colors</span>
@@ -280,8 +350,13 @@
                 </div>
                 
                 <div class="flex justify-between">
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Size Range</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Width Range</span>
                     <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->min('width') }}cm - {{ $product->variants->max('width') }}cm</span>
+                </div>
+                
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Drop Range</span>
+                    <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->variants->min('drop') }}cm - {{ $product->variants->max('drop') }}cm</span>
                 </div>
                 
                 <div class="flex justify-between">
