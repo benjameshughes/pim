@@ -314,27 +314,30 @@ class ProductOverview extends Component
         try {
             // 🎯 KISS API - Use create() or fullUpdate() based on current status
             $shopifyStatus = $this->product->getSmartAttributeValue('shopify_status');
+            $operationType = $shopifyStatus === 'synced' ? 'fullUpdate' : 'create';
+            $actionMessage = $shopifyStatus === 'synced' ? 'update' : 'creation';
 
+            // 🚀 Set status to "processing" immediately so status shows right away
+            $this->product->setAttributeValue('shopify_status', 'processing');
+
+            // Dispatch the job
             if ($shopifyStatus === 'synced') {
-                // Products already exist - perform full update (preserves Shopify IDs)
                 Sync::marketplace('shopify')
                     ->fullUpdate($this->product->id)
                     ->dispatch();
-
-                $actionMessage = 'update job dispatched';
             } else {
-                // No existing products - create new ones
                 Sync::marketplace('shopify')
                     ->create($this->product->id)
                     ->dispatch();
-
-                $actionMessage = 'creation job dispatched';
             }
 
             $this->dispatch('toast', [
                 'type' => 'success',
-                'message' => "Shopify sync {$actionMessage}! Check logs for progress.",
+                'message' => "Shopify sync {$actionMessage} job dispatched! Status will update shortly.",
             ]);
+
+            // Refresh product to trigger status update
+            $this->product->refresh();
 
         } catch (\Exception $e) {
             $this->dispatch('toast', [

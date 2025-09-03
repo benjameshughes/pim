@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Product;
 use App\Models\SyncAccount;
-use App\Models\SyncLog;
 use App\Services\Marketplace\Facades\Sync;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -68,47 +67,39 @@ class SyncProductToMarketplaceJob implements ShouldQueue
         ]);
 
         try {
-            // Create sync log entry
-            $syncLog = SyncLog::create([
-                'product_id' => $this->product->id,
-                'sync_account_id' => $this->syncAccount->id,
-                'channel' => $this->syncAccount->channel,
-                'operation' => $this->operationType,
-                'sync_type' => 'job',
-                'status' => 'processing',
-                'metadata' => [
-                    'job_id' => $this->job->getJobId(),
-                    'operation_data' => $this->operationData,
-                    'started_at' => now()->toISOString(),
-                ],
-            ]);
+            // Job is starting - status should already be 'processing' from button click
 
             // Route to the appropriate Action based on marketplace
             $result = $this->routeToMarketplaceAction();
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            // Update sync log with results
-            $syncLog->update([
-                'status' => $result['success'] ? 'success' : 'failed',
-                'duration_ms' => (int) $duration,
-                'response_data' => json_encode($result['data'] ?? []),
-                'error_message' => $result['success'] ? null : ($result['message'] ?? 'Unknown error'),
-                'metadata' => array_merge($syncLog->metadata ?? [], [
-                    'result' => $result,
-                    'duration_ms' => $duration,
-                    'completed_at' => now()->toISOString(),
-                ]),
-            ]);
-
+            // Update product attributes based on result
             if ($result['success']) {
+                $this->product->setAttributeValue($this->syncAccount->channel . '_status', 'synced');
+                $this->product->setAttributeValue($this->syncAccount->channel . '_synced_at', now()->toISOString());
+                
+                // Update product IDs if provided in result
+                if (isset($result['data']['created_products'])) {
+                    $productIds = [];
+                    foreach ($result['data']['created_products'] as $createdProduct) {
+                        if (isset($createdProduct['color_group'], $createdProduct['id'])) {
+                            $productIds[$createdProduct['color_group']] = $createdProduct['id'];
+                        }
+                    }
+                    if (!empty($productIds)) {
+                        $this->product->setAttributeValue($this->syncAccount->channel . '_product_ids', json_encode($productIds));
+                    }
+                }
+                
                 Log::info('✅ Marketplace sync job completed successfully', [
                     'product_id' => $this->product->id,
                     'channel' => $this->syncAccount->channel,
                     'duration_ms' => $duration,
-                    'external_id' => $result['data']['shopify_product_id'] ?? null,
                 ]);
             } else {
+                $this->product->setAttributeValue($this->syncAccount->channel . '_status', 'failed');
+                
                 Log::warning('⚠️ Marketplace sync job completed with errors', [
                     'product_id' => $this->product->id,
                     'channel' => $this->syncAccount->channel,
@@ -120,24 +111,9 @@ class SyncProductToMarketplaceJob implements ShouldQueue
         } catch (\Exception $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
-            // Update sync log with failure
-            if (isset($syncLog)) {
-                $syncLog->update([
-                    'status' => 'failed',
-                    'error_message' => 'Job failed: '.$e->getMessage(),
-                    'duration_ms' => (int) $duration,
-                    'metadata' => array_merge($syncLog->metadata ?? [], [
-                        'error' => [
-                            'type' => get_class($e),
-                            'message' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString(),
-                        ],
-                        'duration_ms' => $duration,
-                        'completed_at' => now()->toISOString(),
-                    ]),
-                ]);
-            }
-
+            // Update product status to failed on exception
+            $this->product->setAttributeValue($this->syncAccount->channel . '_status', 'failed');
+            
             Log::error('❌ Marketplace sync job failed', [
                 'product_id' => $this->product->id,
                 'channel' => $this->syncAccount->channel,

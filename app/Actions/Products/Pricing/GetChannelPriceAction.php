@@ -28,23 +28,22 @@ class GetChannelPriceAction extends BaseAction
     {
         $variant = $params[0] ?? null;
         $channelCode = $params[1] ?? null;
-        $options = $params[2] ?? [];
 
         // Validation
         if (! $variant instanceof ProductVariant) {
             return $this->failure('Invalid variant provided - must be ProductVariant instance');
         }
 
-        // If no channel specified, return default price
+        // If no channel specified, return variant default price
         if (! $channelCode) {
-            $defaultPrice = $this->getDefaultPriceForVariant($variant);
             return $this->success('Default price retrieved', [
-                'price' => $defaultPrice,
-                'source' => $defaultPrice !== $variant->price ? 'pricing_table_fallback' : 'default',
+                'price' => $variant->price,
+                'source' => 'default',
                 'channel_code' => null,
                 'channel_name' => 'Default',
                 'variant_id' => $variant->id,
                 'variant_sku' => $variant->sku,
+                'has_override' => false,
             ]);
         }
 
@@ -54,37 +53,41 @@ class GetChannelPriceAction extends BaseAction
             return $this->failure("Invalid or inactive sales channel: {$channelCode}");
         }
 
-        $attributeKey = $channelCode.'_price';
-
         Log::info('🔍 Getting channel price', [
             'variant_id' => $variant->id,
             'variant_sku' => $variant->sku,
             'channel_code' => $channelCode,
-            'attribute_key' => $attributeKey,
         ]);
 
         $startTime = microtime(true);
 
         try {
-            // Try to get channel-specific price from attributes
-            $channelPrice = $variant->getSmartAttributeValue($attributeKey);
-            $defaultPrice = $this->getDefaultPriceForVariant($variant);
+            // Check pricing table for channel override
+            $pricingRecord = $variant->pricingRecords()
+                ->where('sales_channel_id', $channel->id)
+                ->first();
 
-            // Determine which price to use and why
-            if ($channelPrice !== null) {
-                $effectivePrice = (float) $channelPrice;
-                $source = 'channel_override';
+            if ($pricingRecord && $pricingRecord->price > 0) {
+                $effectivePrice = (float) $pricingRecord->price;
+                $source = 'pricing_table_override';
                 $message = "Retrieved {$channel->name} override price for variant {$variant->sku}: £{$effectivePrice}";
+                $hasOverride = true;
+
+                Log::info('🎯 Using pricing table override', [
+                    'variant_id' => $variant->id,
+                    'variant_sku' => $variant->sku,
+                    'channel_code' => $channelCode,
+                    'override_price' => $effectivePrice,
+                    'variant_default_price' => $variant->price,
+                ]);
             } else {
-                $effectivePrice = $defaultPrice;
-                $source = $defaultPrice !== $variant->price ? 'pricing_table_fallback' : 'default_fallback';
-                $message = "No {$channel->name} override found for variant {$variant->sku}, using default price: £{$effectivePrice}";
+                $effectivePrice = (float) $variant->price;
+                $source = 'variant_default';
+                $message = "No {$channel->name} override found for variant {$variant->sku}, using variant default: £{$effectivePrice}";
+                $hasOverride = false;
             }
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
-
-            // Get all channel prices for context (useful for UI)
-            $allChannelPrices = $this->getAllChannelPrices($variant);
 
             Log::info('✅ Channel price retrieved successfully', [
                 'variant_id' => $variant->id,
@@ -101,10 +104,8 @@ class GetChannelPriceAction extends BaseAction
                 'channel_name' => $channel->name,
                 'variant_id' => $variant->id,
                 'variant_sku' => $variant->sku,
-                'default_price' => $defaultPrice,
-                'channel_override' => $channelPrice,
-                'has_override' => $channelPrice !== null,
-                'all_channel_prices' => $allChannelPrices,
+                'default_price' => $variant->price,
+                'has_override' => $hasOverride,
                 'duration_ms' => $duration,
             ]);
 
@@ -131,20 +132,21 @@ class GetChannelPriceAction extends BaseAction
     protected function getAllChannelPrices(ProductVariant $variant): array
     {
         $channelPrices = [];
-        $defaultPrice = $this->getDefaultPriceForVariant($variant);
-
         $activeChannels = SalesChannel::active()->get();
 
         foreach ($activeChannels as $channel) {
-            $attributeKey = $channel->code.'_price';
-            $channelPrice = $variant->getSmartAttributeValue($attributeKey);
+            $pricingRecord = $variant->pricingRecords()
+                ->where('sales_channel_id', $channel->id)
+                ->first();
+
+            $channelPrice = $pricingRecord ? $pricingRecord->price : null;
+            $effectivePrice = $channelPrice ?? $variant->price;
 
             $channelPrices[$channel->code] = [
                 'name' => $channel->name,
                 'price' => $channelPrice,
-                'effective_price' => $channelPrice ?? $defaultPrice,
+                'effective_price' => $effectivePrice,
                 'has_override' => $channelPrice !== null,
-                'attribute_key' => $attributeKey,
             ];
         }
 
@@ -172,9 +174,8 @@ class GetChannelPriceAction extends BaseAction
             return $result['data']['price'];
         }
 
-        // Fallback to pricing table if variant price is 0
-        $action = new static;
-        return $action->getDefaultPriceForVariant($variant);
+        // Fallback to variant price
+        return $variant->price;
     }
 
     /**
@@ -197,36 +198,4 @@ class GetChannelPriceAction extends BaseAction
         return $action->getAllChannelPrices($variant);
     }
 
-    /**
-     * Get default price for variant with pricing table fallback
-     * 
-     * If product_variants.price is 0, check the pricing table for the actual price
-     */
-    protected function getDefaultPriceForVariant(ProductVariant $variant): float
-    {
-        // If variant has a price > 0, use it
-        if ($variant->price > 0) {
-            return $variant->price;
-        }
-
-        // Fallback to pricing table - get the first active pricing record
-        $pricingRecord = $variant->pricingRecords()
-            ->where('price', '>', 0)
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        if ($pricingRecord) {
-            Log::info('🔄 Using pricing table fallback', [
-                'variant_id' => $variant->id,
-                'variant_sku' => $variant->sku,
-                'variant_price' => $variant->price,
-                'pricing_table_price' => $pricingRecord->price,
-            ]);
-            
-            return $pricingRecord->price;
-        }
-
-        // Final fallback to variant price (even if 0)
-        return $variant->price;
-    }
 }

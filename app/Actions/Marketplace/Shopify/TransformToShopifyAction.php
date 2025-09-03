@@ -88,16 +88,16 @@ class TransformToShopifyAction
         $shopifyVariants = [];
 
         foreach ($variants as $variant) {
+            // 🎯 ONLY VALID ProductVariantsBulkInput fields - others cause GraphQL errors!
             $shopifyVariant = [
-                'title' => $variant->title ?? 'Default Title',
-                'sku' => $variant->sku,
-                'barcode' => $this->getVariantBarcode($variant),
                 'price' => (string) $this->getVariantPriceForAccount($variant),
-                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
                 'inventoryPolicy' => $this->getInventoryPolicy($variant),
-                'requiresShipping' => true,
-                'weight' => $this->calculateVariantWeight($variant),
-                'weightUnit' => 'KILOGRAMS',
+                'optionValues' => [
+                    [
+                        'optionName' => 'Size',
+                        'name' => ($variant->width ?? 45).'cm x '.($variant->drop ?? 150).'cm',
+                    ]
+                ],
             ];
             
             // Add compare at price if available
@@ -106,19 +106,17 @@ class TransformToShopifyAction
                 $shopifyVariant['compareAtPrice'] = $compareAtPrice;
             }
             
-            // 🎯 Provide both width and drop separately for flexibility
-            $width = $variant->width ?? 45;
-            $drop = $variant->drop ?? 150;
-            
-            // Multiple format support for GraphQL client
-            $shopifyVariant['width'] = $width;
-            $shopifyVariant['drop'] = $drop;
-            $shopifyVariant['options'] = [
-                $width.'cm x '.$drop.'cm', // Combined format
+            // 🚫 INVALID FIELDS for ProductVariantsBulkInput (stored for later REST API update):
+            $shopifyVariant['_unsupported_fields'] = [
+                'sku' => $variant->sku,
+                'barcode' => $this->getVariantBarcode($variant),
+                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
+                'requiresShipping' => true,
+                'weight' => $this->calculateVariantWeight($variant),
+                'weightUnit' => 'KILOGRAMS',
+                'title' => $variant->title ?? 'Default Title',
+                'metafields' => $this->createVariantMetafields($variant),
             ];
-            
-            // Add metafields (note: not supported in bulk create, added for reference)
-            $shopifyVariant['metafields'] = $this->createVariantMetafields($variant);
 
             $shopifyVariants[] = $shopifyVariant;
         }

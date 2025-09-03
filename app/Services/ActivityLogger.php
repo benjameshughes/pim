@@ -175,11 +175,26 @@ class ActivityLogger
 
     protected function addContext(): void
     {
-        $this->data = array_merge($this->data, [
-            'ip' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-            'route' => request()?->route()?->getName(),
-        ]);
+        // Only add request context if we have an actual HTTP request (not in queue jobs)
+        $request = request();
+        $context = [];
+        
+        if ($request && app()->runningInConsole() === false) {
+            $context = [
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'route' => $request->route()?->getName(),
+            ];
+        } else {
+            // Running in console (queue job, artisan command, etc.)
+            $context = [
+                'ip' => null,
+                'user_agent' => 'console/queue',
+                'route' => 'console',
+            ];
+        }
+        
+        $this->data = array_merge($this->data, $context);
     }
 
     public static function search(array $filters = []): Collection

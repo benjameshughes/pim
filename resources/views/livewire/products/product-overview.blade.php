@@ -393,40 +393,50 @@
                 if ($shopifyMeta) {
                     $metadata = is_string($shopifyMeta) ? json_decode($shopifyMeta, true) : $shopifyMeta;
                 }
+                
+                // Show status if we have shopify status or recent sync data
+                $shouldShowStatus = $shopifyStatus || $shopifyIds || $shopifyMeta;
             @endphp
             
-            @if($shopifyStatus)
+            @if($shouldShowStatus)
                 <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Shopify Sync</h4>
                     
-                    <div class="mb-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <flux:badge color="green" size="sm">
-                                @if($shopifyStatus === 'synced' && is_array($productIds))
-                                    {{ count($productIds) }} products synced
-                                @else
-                                    {{ ucfirst($shopifyStatus) }}
-                                @endif
-                            </flux:badge>
+                    {{-- Marketplace Status Section --}}
+                    <div class="mb-6 space-y-4">
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">Status:</span>
+                            <livewire:marketplace-status :product="$product" channel="shopify" />
                         </div>
                         
-                        @if(is_array($productIds) && !empty($productIds))
-                            <div class="mt-2 space-y-1">
+                        @if($shopifyStatus === 'synced' && is_array($productIds))
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">Products:</span>
+                                <flux:badge color="green" size="sm">
+                                    {{ count($productIds) }} synced
+                                </flux:badge>
+                            </div>
+                        @endif
+                        
+                    @if(is_array($productIds) && !empty($productIds))
+                        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                            <div class="space-y-2">
                                 @foreach($productIds as $color => $shopifyId)
                                     @php
                                         $numericId = str_replace('gid://shopify/Product/', '', $shopifyId);
                                     @endphp
-                                    <div class="flex items-center justify-between text-xs">
-                                        <span class="text-gray-600 dark:text-gray-400">{{ $color }}: {{ $numericId }}</span>
-                                        <a href="https://admin.shopify.com/store/your-store/products/{{ $numericId }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                    <div class="flex items-center justify-between py-1">
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">{{ $color }}: <span class="font-mono">{{ $numericId }}</span></span>
+                                        <a href="https://admin.shopify.com/store/your-store/products/{{ $numericId }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
                                             View →
                                         </a>
                                     </div>
                                 @endforeach
                             </div>
-                        @endif
+                        </div>
+                    @endif
                     </div>
-                </div>
+                    </div>
             @endif
 
             {{-- 🛍️ MARKETPLACE ACTIONS --}}

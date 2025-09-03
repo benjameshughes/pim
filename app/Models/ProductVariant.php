@@ -149,7 +149,8 @@ class ProductVariant extends Model
         }
 
         // Use the new ChannelPricingService instead of old PricingService
-        return $this->getChannelPrice();
+        return app(\App\Services\Pricing\ChannelPricingService::class)
+            ->getPriceForChannel($this, $channelId);
     }
 
     /**
