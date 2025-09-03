@@ -163,9 +163,7 @@ class TransformToShopifyAction
             ];
         }
 
-        // Add variant-specific images for this color
-        $variantImages = $this->getVariantSpecificImages($variants, $color);
-        $shopifyImages = array_merge($shopifyImages, $variantImages);
+        // Note: Variant-specific images are handled separately in the variant transformation
 
         return $shopifyImages;
     }

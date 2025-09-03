@@ -20,25 +20,23 @@ class SyncLog extends Model
 
     protected $fillable = [
         'product_id',
+        'product_variant_id',
         'sync_account_id',
-        'sync_status_id',
-        'action',
+        'channel',
+        'operation',
+        'sync_type',
         'status',
-        'message',
-        'details',
-        'started_at',
-        'completed_at',
+        'external_id',
+        'request_data',
+        'response_data',
+        'error_message',
         'duration_ms',
-        'batch_id',
-        'items_processed',
-        'items_successful',
-        'items_failed',
+        'retry_count',
+        'metadata',
     ];
 
     protected $casts = [
-        'details' => 'array',
-        'started_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

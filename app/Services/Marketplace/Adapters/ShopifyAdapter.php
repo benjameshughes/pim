@@ -293,4 +293,12 @@ class ShopifyAdapter extends AbstractAdapter
             return SyncResult::failure('Pull operation failed: '.$e->getMessage());
         }
     }
+
+    /**
+     * Get the current operation type (override to use ShopifyAdapter's operationType)
+     */
+    protected function getOperationType(): string
+    {
+        return $this->operationType;
+    }
 }

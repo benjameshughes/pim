@@ -317,50 +317,29 @@ class ProductOverview extends Component
 
             if ($shopifyStatus === 'synced') {
                 // Products already exist - perform full update (preserves Shopify IDs)
-                $result = Sync::marketplace('shopify')
+                Sync::marketplace('shopify')
                     ->fullUpdate($this->product->id)
-                    ->push();
+                    ->dispatch();
 
-                $actionMessage = 'fully updated';
+                $actionMessage = 'update job dispatched';
             } else {
                 // No existing products - create new ones
-                $result = Sync::marketplace('shopify')
+                Sync::marketplace('shopify')
                     ->create($this->product->id)
-                    ->push();
+                    ->dispatch();
 
-                $actionMessage = 'created';
+                $actionMessage = 'creation job dispatched';
             }
-
-            $this->shopifyPushResult = [
-                'success' => $result->isSuccess(),
-                'message' => $result->getMessage(),
-                'data' => $result->getData(),
-            ];
-
-            if ($result->isSuccess()) {
-                $this->dispatch('toast', [
-                    'type' => 'success',
-                    'message' => "Successfully {$actionMessage} in Shopify! ".$result->getMessage(),
-                ]);
-
-                // Refresh the product to show updated attributes
-                $this->product->refresh();
-            } else {
-                $this->dispatch('toast', [
-                    'type' => 'error',
-                    'message' => "Failed to {$actionMessage} in Shopify: ".$result->getMessage(),
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            $this->shopifyPushResult = [
-                'success' => false,
-                'message' => 'Error: '.$e->getMessage(),
-            ];
 
             $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => "Shopify sync {$actionMessage}! Check logs for progress.",
+            ]);
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => 'Push failed: '.$e->getMessage(),
+                'message' => 'Failed to dispatch job: '.$e->getMessage(),
             ]);
         }
     }

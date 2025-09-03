@@ -227,4 +227,39 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     {
         return $this->fieldsToUpdate;
     }
+
+    /**
+     * Dispatch this operation as a background job
+     */
+    public function dispatch(): void
+    {
+        if (!$this->currentProductId) {
+            throw new \RuntimeException('No product ID set. Call create(), update(), or other operation methods first.');
+        }
+
+        $job = new \App\Jobs\SyncProductToMarketplaceJob(
+            product: $this->loadProduct($this->currentProductId),
+            syncAccount: $this->requireSyncAccount(),
+            operationType: $this->getOperationType(),
+            operationData: $this->getOperationData()
+        );
+
+        dispatch($job);
+    }
+
+    /**
+     * Get the current operation type
+     */
+    protected function getOperationType(): string
+    {
+        return $this->mode ?? 'create';
+    }
+
+    /**
+     * Get operation-specific data for the job
+     */
+    protected function getOperationData(): array
+    {
+        return $this->fieldsToUpdate;
+    }
 }

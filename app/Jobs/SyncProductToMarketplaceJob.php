@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Actions\Shopify\Sync\SimplifiedSyncProductToShopifyAction;
 use App\Models\Product;
 use App\Models\SyncAccount;
 use App\Models\SyncLog;
+use App\Services\Marketplace\Facades\Sync;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -27,7 +27,9 @@ class SyncProductToMarketplaceJob implements ShouldQueue
 
     public SyncAccount $syncAccount;
 
-    public array $options;
+    public string $operationType;
+
+    public array $operationData;
 
     /**
      * Job timeout in seconds
@@ -39,11 +41,12 @@ class SyncProductToMarketplaceJob implements ShouldQueue
      */
     public int $tries = 3;
 
-    public function __construct(Product $product, SyncAccount $syncAccount, array $options = [])
+    public function __construct(Product $product, SyncAccount $syncAccount, string $operationType, array $operationData = [])
     {
         $this->product = $product;
         $this->syncAccount = $syncAccount;
-        $this->options = $options;
+        $this->operationType = $operationType;
+        $this->operationData = $operationData;
 
         // Set queue based on channel for better organization
         $this->onQueue("sync-{$syncAccount->channel}");
@@ -69,13 +72,14 @@ class SyncProductToMarketplaceJob implements ShouldQueue
             $syncLog = SyncLog::create([
                 'product_id' => $this->product->id,
                 'sync_account_id' => $this->syncAccount->id,
-                'action' => 'sync_to_marketplace',
-                'status' => 'started',
-                'started_at' => now(),
-                'message' => "Starting sync to {$this->syncAccount->channel}",
-                'details' => [
+                'channel' => $this->syncAccount->channel,
+                'operation' => $this->operationType,
+                'sync_type' => 'job',
+                'status' => 'processing',
+                'metadata' => [
                     'job_id' => $this->job->getJobId(),
-                    'options' => $this->options,
+                    'operation_data' => $this->operationData,
+                    'started_at' => now()->toISOString(),
                 ],
             ]);
 
@@ -87,12 +91,13 @@ class SyncProductToMarketplaceJob implements ShouldQueue
             // Update sync log with results
             $syncLog->update([
                 'status' => $result['success'] ? 'success' : 'failed',
-                'completed_at' => now(),
                 'duration_ms' => (int) $duration,
-                'message' => $result['message'] ?? ($result['success'] ? 'Sync completed successfully' : 'Sync failed'),
-                'details' => array_merge($syncLog->details ?? [], [
+                'response_data' => json_encode($result['data'] ?? []),
+                'error_message' => $result['success'] ? null : ($result['message'] ?? 'Unknown error'),
+                'metadata' => array_merge($syncLog->metadata ?? [], [
                     'result' => $result,
                     'duration_ms' => $duration,
+                    'completed_at' => now()->toISOString(),
                 ]),
             ]);
 
@@ -119,16 +124,16 @@ class SyncProductToMarketplaceJob implements ShouldQueue
             if (isset($syncLog)) {
                 $syncLog->update([
                     'status' => 'failed',
-                    'completed_at' => now(),
+                    'error_message' => 'Job failed: '.$e->getMessage(),
                     'duration_ms' => (int) $duration,
-                    'message' => 'Job failed: '.$e->getMessage(),
-                    'details' => array_merge($syncLog->details ?? [], [
+                    'metadata' => array_merge($syncLog->metadata ?? [], [
                         'error' => [
                             'type' => get_class($e),
                             'message' => $e->getMessage(),
                             'trace' => $e->getTraceAsString(),
                         ],
                         'duration_ms' => $duration,
+                        'completed_at' => now()->toISOString(),
                     ]),
                 ]);
             }
@@ -145,72 +150,71 @@ class SyncProductToMarketplaceJob implements ShouldQueue
     }
 
     /**
-     * Route to the appropriate marketplace Action
+     * Route to the appropriate marketplace using Sync facade
      */
     protected function routeToMarketplaceAction(): array
     {
-        return match ($this->syncAccount->channel) {
-            'shopify' => $this->syncToShopify(),
-            'ebay' => $this->syncToEbay(),
-            'amazon' => $this->syncToAmazon(),
-            'mirakl' => $this->syncToMirakl(),
-            default => [
+        try {
+            // Get the marketplace adapter
+            $adapter = Sync::marketplace($this->syncAccount->channel, $this->syncAccount->name);
+            
+            // Configure the operation based on type and data
+            $adapter = $this->configureAdapter($adapter);
+            
+            // Execute the operation
+            $result = $adapter->push();
+            
+            return [
+                'success' => $result->isSuccess(),
+                'message' => $result->getMessage(),
+                'data' => $result->getData(),
+                'errors' => $result->getErrors(),
+            ];
+            
+        } catch (\Exception $e) {
+            return [
                 'success' => false,
-                'message' => "Unsupported marketplace channel: {$this->syncAccount->channel}",
-            ]
+                'message' => 'Sync operation failed: ' . $e->getMessage(),
+                'errors' => [$e->getMessage()],
+            ];
+        }
+    }
+    
+    /**
+     * Configure the adapter with the operation type and data
+     */
+    protected function configureAdapter($adapter)
+    {
+        return match ($this->operationType) {
+            'create' => $adapter->create($this->product->id),
+            'update' => $this->configureUpdateOperation($adapter),
+            'fullUpdate' => $adapter->fullUpdate($this->product->id),
+            'delete' => $adapter->delete($this->product->id),
+            'link' => $adapter->link($this->product->id),
+            default => throw new \InvalidArgumentException("Unsupported operation type: {$this->operationType}")
         };
     }
-
+    
     /**
-     * Sync to Shopify using your existing Action
+     * Configure update operation with specific fields
      */
-    protected function syncToShopify(): array
+    protected function configureUpdateOperation($adapter)
     {
-        $action = app(SimplifiedSyncProductToShopifyAction::class);
-
-        $actionOptions = array_merge($this->options, [
-            'method' => 'job', // Indicate this came from a job
-            'sync_account_id' => $this->syncAccount->id,
-        ]);
-
-        return $action->execute($this->product, $actionOptions);
+        $adapter = $adapter->update($this->product->id);
+        
+        // Apply specific update fields if provided
+        foreach ($this->operationData as $field => $value) {
+            match ($field) {
+                'pricing' => $adapter = $adapter->pricing($value),
+                'title' => $adapter = $adapter->title($value),
+                'images' => $adapter = $adapter->images($value),
+                default => null // Ignore unknown fields
+            };
+        }
+        
+        return $adapter;
     }
 
-    /**
-     * Sync to eBay (placeholder for future implementation)
-     */
-    protected function syncToEbay(): array
-    {
-        // TODO: Implement when eBay sync Action is created
-        return [
-            'success' => false,
-            'message' => 'eBay sync not yet implemented',
-        ];
-    }
-
-    /**
-     * Sync to Amazon (placeholder for future implementation)
-     */
-    protected function syncToAmazon(): array
-    {
-        // TODO: Implement when Amazon sync Action is created
-        return [
-            'success' => false,
-            'message' => 'Amazon sync not yet implemented',
-        ];
-    }
-
-    /**
-     * Sync to Mirakl (placeholder for future implementation)
-     */
-    protected function syncToMirakl(): array
-    {
-        // TODO: Implement when Mirakl sync Action is created
-        return [
-            'success' => false,
-            'message' => 'Mirakl sync not yet implemented',
-        ];
-    }
 
     /**
      * Handle job failure
@@ -229,17 +233,18 @@ class SyncProductToMarketplaceJob implements ShouldQueue
         SyncLog::create([
             'product_id' => $this->product->id,
             'sync_account_id' => $this->syncAccount->id,
-            'action' => 'sync_to_marketplace',
+            'channel' => $this->syncAccount->channel,
+            'operation' => $this->operationType,
+            'sync_type' => 'job',
             'status' => 'failed',
-            'started_at' => now(),
-            'completed_at' => now(),
-            'message' => 'Job permanently failed after '.$this->attempts().' attempts',
-            'details' => [
+            'error_message' => 'Job permanently failed after '.$this->attempts().' attempts',
+            'metadata' => [
                 'final_error' => [
                     'type' => get_class($exception),
                     'message' => $exception->getMessage(),
                 ],
                 'attempts' => $this->attempts(),
+                'permanently_failed' => true,
             ],
         ]);
     }
