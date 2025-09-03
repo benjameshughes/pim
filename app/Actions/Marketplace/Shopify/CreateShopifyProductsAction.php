@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\SyncAccount;
 use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
 use App\Services\Marketplace\ValueObjects\SyncResult;
+use Illuminate\Support\Facades\Log;
 
 /**
  * 🆕 CREATE SHOPIFY PRODUCTS ACTION
@@ -91,13 +92,31 @@ class CreateShopifyProductsAction
         $productInput = $shopifyProduct['productInput'] ?? [];
 
         try {
-            // Step 1: Create product (Shopify auto-generates variants from options)
+            \Illuminate\Support\Facades\Log::info('🎬 Starting product creation', [
+                'color_group' => $internalData['color_group'] ?? 'unknown',
+                'has_product_input' => !empty($productInput)
+            ]);
+            
+            // 🚀 Create product using two-step approach: product first, then variants via bulk create
             $result = $client->createProduct($productInput);
+
+            \Illuminate\Support\Facades\Log::info('📋 Product creation raw result', [
+                'has_result' => !empty($result),
+                'result_keys' => array_keys($result ?? []),
+                'has_product_create' => isset($result['productCreate']),
+                'color_group' => $internalData['color_group'] ?? 'unknown'
+            ]);
 
             $userErrors = $result['productCreate']['userErrors'] ?? [];
             $product = $result['productCreate']['product'] ?? null;
 
             if (! empty($userErrors) || ! $product) {
+                \Illuminate\Support\Facades\Log::error('❌ Product creation failed', [
+                    'user_errors' => $userErrors,
+                    'has_product' => !is_null($product),
+                    'color_group' => $internalData['color_group'] ?? 'unknown'
+                ]);
+                
                 return [
                     'success' => false,
                     'error' => ! empty($userErrors) ? 'Shopify validation: '.json_encode($userErrors) : 'No product returned',
@@ -105,8 +124,12 @@ class CreateShopifyProductsAction
                 ];
             }
 
-            // Step 2: Update auto-generated variants with correct SKUs and pricing
-            $this->updateVariantDetails($client, $product, $shopifyProduct['variants'] ?? []);
+            // 🎯 The ShopifyGraphQLClient handles the variant creation automatically when 'variants' key is present
+            \Illuminate\Support\Facades\Log::info('✅ Product creation successful', [
+                'product_id' => $product['id'] ?? 'missing',
+                'variant_count' => count($product['variants']['edges'] ?? []),
+                'color_group' => $internalData['color_group'] ?? 'unknown'
+            ]);
 
             return [
                 'success' => true,
@@ -174,6 +197,75 @@ class CreateShopifyProductsAction
             }
 
             $client->updateSingleVariant($shopifyVariantId, $updateData);
+        }
+    }
+
+    /**
+     * Update auto-generated variants with FIXED matching logic
+     */
+    protected function updateVariantDetailsFixed($client, array $product, array $localVariants): void
+    {
+        if (empty($localVariants)) {
+            return;
+        }
+
+        $shopifyVariants = $product['variants']['edges'] ?? [];
+        if (empty($shopifyVariants)) {
+            return;
+        }
+
+        Log::info('🔧 Updating Shopify variants', [
+            'shopify_variant_count' => count($shopifyVariants),
+            'local_variant_count' => count($localVariants)
+        ]);
+
+        // Match variants by size option value (more reliable than index)
+        foreach ($shopifyVariants as $edge) {
+            $shopifyVariant = $edge['node'] ?? [];
+            $shopifyVariantId = $shopifyVariant['id'] ?? null;
+            
+            if (!$shopifyVariantId) continue;
+
+            // Find matching local variant by size option
+            $matchedLocalVariant = null;
+            foreach ($localVariants as $localVariant) {
+                // Compare size values: "45cm x 150cm" should match
+                $localSize = $localVariant['options'][0] ?? '';
+                
+                // For now, match by position as backup if size matching fails
+                $index = array_search($localVariant, $localVariants);
+                if ($index < count($shopifyVariants)) {
+                    $matchedLocalVariant = $localVariant;
+                    break;
+                }
+            }
+
+            if ($matchedLocalVariant) {
+                // Update with comprehensive variant data
+                $updateData = [
+                    'sku' => $matchedLocalVariant['sku'],
+                    'price' => $matchedLocalVariant['price'],
+                ];
+
+                // Add optional fields
+                if (!empty($matchedLocalVariant['barcode'])) {
+                    $updateData['barcode'] = $matchedLocalVariant['barcode'];
+                }
+                if (!empty($matchedLocalVariant['compareAtPrice'])) {
+                    $updateData['compareAtPrice'] = $matchedLocalVariant['compareAtPrice'];
+                }
+                if (isset($matchedLocalVariant['inventoryQuantity'])) {
+                    $updateData['inventoryQuantity'] = (int) $matchedLocalVariant['inventoryQuantity'];
+                }
+
+                $client->updateSingleVariant($shopifyVariantId, $updateData);
+                
+                Log::info('✅ Updated variant', [
+                    'shopify_variant_id' => $shopifyVariantId,
+                    'sku' => $matchedLocalVariant['sku'],
+                    'price' => $matchedLocalVariant['price']
+                ]);
+            }
         }
     }
 

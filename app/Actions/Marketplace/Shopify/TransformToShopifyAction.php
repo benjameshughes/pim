@@ -41,7 +41,7 @@ class TransformToShopifyAction
      */
     protected function createShopifyProduct(string $color, array $variants, Product $originalProduct): array
     {
-        // Build ProductInput with optional category
+        // Build ProductInput with single Size option (fixed approach)
         $productInput = [
             'title' => $originalProduct->name.' - '.$color,
             'descriptionHtml' => $originalProduct->description ?? '',
@@ -49,7 +49,7 @@ class TransformToShopifyAction
             'productType' => 'Window Blinds',
             'status' => 'ACTIVE',
             'metafields' => $this->createMetafields($originalProduct, $color),
-            'productOptions' => $this->createProductOptions($variants),
+            'productOptions' => $this->createSingleSizeOption($variants), // ✅ Back to working Size option
         ];
 
         // Add category only if we have a valid taxonomy ID
@@ -59,10 +59,17 @@ class TransformToShopifyAction
         }
 
         return [
-            // Main product data for ProductInput
-            'productInput' => $productInput,
-            // Additional data for subsequent operations (variants, images handled separately)
-            'variants' => $this->transformVariants($variants),
+            // Main product data for ProductInput (NO productOptions - clean approach)
+            'productInput' => [
+                'title' => $originalProduct->name.' - '.$color,
+                'descriptionHtml' => $originalProduct->description ?? '',
+                'vendor' => 'Blinds Outlet',
+                'productType' => 'Window Blinds',
+                'status' => 'ACTIVE',
+                'metafields' => $this->createMetafields($originalProduct, $color),
+                // 🚀 USE EXPLICIT VARIANTS - no productOptions!
+                'variants' => $this->transformVariants($variants),
+            ],
             'images' => $this->getColorImages($originalProduct, $color),
             // Internal tracking
             '_internal' => [
@@ -74,7 +81,7 @@ class TransformToShopifyAction
     }
 
     /**
-     * Transform variants to Shopify format
+     * Transform variants to Shopify explicit variant format (for two-step creation)
      */
     protected function transformVariants(array $variants): array
     {
@@ -94,9 +101,9 @@ class TransformToShopifyAction
                 'weight' => $this->calculateVariantWeight($variant),
                 'weightUnit' => 'KILOGRAMS',
                 'metafields' => $this->createVariantMetafields($variant),
+                // 🎯 SINGLE OPTION VALUE - Size combining width and drop
                 'options' => [
-                    $variant->width.'cm',
-                    $variant->drop.'cm',
+                    $variant->width.'cm x '.$variant->drop.'cm',
                 ],
             ];
         }
@@ -200,6 +207,66 @@ class TransformToShopifyAction
             [
                 'name' => 'Drop',
                 'values' => array_map(fn ($drop) => ['name' => $drop], $drops),
+            ],
+        ];
+    }
+
+    /**
+     * Create explicit variants for Shopify productInput
+     * 
+     * This creates complete variant data upfront instead of using productOptions
+     * which would cause Shopify to auto-generate variants we don't want
+     */
+    protected function createExplicitVariants(array $variants): array
+    {
+        if (empty($variants)) {
+            return [];
+        }
+
+        $shopifyVariants = [];
+        
+        foreach ($variants as $variant) {
+            $shopifyVariants[] = [
+                'title' => $variant->title,
+                'sku' => $variant->sku,
+                'barcode' => $this->getVariantBarcode($variant),
+                'price' => (string) $this->getVariantPriceForAccount($variant),
+                'compareAtPrice' => $this->getCompareAtPrice($variant),
+                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
+                'inventoryPolicy' => $this->getInventoryPolicy($variant),
+                'inventoryManagement' => 'SHOPIFY',
+                'requiresShipping' => true,
+                'weight' => $this->calculateVariantWeight($variant),
+                'weightUnit' => 'KILOGRAMS',
+                'metafields' => $this->createVariantMetafields($variant),
+                // Single option combining width and drop - no auto-generation!
+                'options' => [$variant->width.'cm x '.$variant->drop.'cm'],
+            ];
+        }
+
+        return $shopifyVariants;
+    }
+
+    /**
+     * Create single "Size" option with exact variant combinations
+     * 
+     * This avoids the Width×Drop matrix that creates extra variants
+     */
+    protected function createSingleSizeOption(array $variants): array
+    {
+        if (empty($variants)) {
+            return [];
+        }
+
+        $sizeValues = [];
+        foreach ($variants as $variant) {
+            $sizeValues[] = ['name' => $variant->width.'cm x '.$variant->drop.'cm'];
+        }
+
+        return [
+            [
+                'name' => 'Size',
+                'values' => $sizeValues,
             ],
         ];
     }

@@ -95,7 +95,7 @@ class ExtractParentInfo
     {
         $commonColors = [
             // Compound colors first (longer matches take priority)
-            'burnt orange', 'dark grey', 'light grey', 'dark gray', 'light gray',
+            'dark oak', 'burnt orange', 'dark grey', 'light grey', 'dark gray', 'light gray',
             'dark blue', 'light blue', 'navy blue', 'royal blue', 'sky blue',
             'dark green', 'light green', 'forest green', 'lime green',
             'dark red', 'light red', 'bright red', 'deep red',
@@ -104,7 +104,7 @@ class ExtractParentInfo
             // Single word colors
             'white', 'black', 'grey', 'gray', 'brown', 'beige', 'cream', 'ivory',
             'blue', 'navy', 'red', 'green', 'yellow', 'orange', 'pink', 'purple',
-            'aubergine', 'charcoal', 'taupe', 'linen', 'natural',
+            'aubergine', 'charcoal', 'taupe', 'linen', 'natural', 'teak', 'oak',
         ];
 
         // Sort by length descending so longer color names are matched first
@@ -113,14 +113,16 @@ class ExtractParentInfo
         });
 
         foreach ($commonColors as $color) {
-            // Use word boundaries to avoid partial matches (e.g., "black" in "blackout")
-            if (preg_match('/\b'.preg_quote($color, '/').'\b/i', $title)) {
+            // Enhanced regex to handle missing spaces before dimensions
+            // Matches: "Dark Oak 150cm", "Dark Oak150cm", "Teak 45cm", "Teak45cm"
+            $pattern = '/\b'.preg_quote($color, '/').'(?:\s*\d+cm|\s+\d+cm|\s+Width)/i';
+            if (preg_match($pattern, $title)) {
                 return ucwords($color);  // Use ucwords for multi-word colors
             }
         }
 
-        // Fallback: try to find any color-like word
-        if (preg_match('/\b([A-Za-z]+)\s+\d+cm/', $title, $matches)) {
+        // Fallback: try to find any color-like word before dimensions
+        if (preg_match('/\b([A-Za-z]+)\s*\d+cm/', $title, $matches)) {
             return ucfirst($matches[1]);
         }
 

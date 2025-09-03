@@ -13,8 +13,10 @@ class ExtractDimensions
     /**
      * Extract width and drop dimensions from product title
      *
-     * Supports patterns:
-     * - "60cm x 160cm" (standard format)
+     * Supports ALL patterns:
+     * - "45cm Width x 150cm Drop" (with keywords)
+     * - "45cm x 150cm" (standard format) 
+     * - "45 x 150" (no units)
      * - "60cm 210cm drop" (with drop keyword)
      * - "60cm 210cm" (space separated)
      * - "60cm" (width only)
@@ -27,18 +29,23 @@ class ExtractDimensions
         $width = null;
         $drop = null;
 
-        // Pattern 1: "60cm x 160cm" (most common format)
-        if (preg_match('/(\d+)cm\s*x\s*(\d+)cm/', $title, $matches)) {
+        // Pattern 1: "45cm Width x 150cm Drop" (with Width/Drop keywords)
+        if (preg_match('/(\d+)(?:cm)?\s*Width\s*x\s*(\d+)(?:cm)?\s*Drop/i', $title, $matches)) {
             $width = (int) $matches[1];
             $drop = (int) $matches[2];
         }
-        // Pattern 2: "60cm 210cm drop" or "60cm 210cm" (space separated with optional drop keyword)
-        elseif (preg_match('/(\d+)cm\s+(\d+)cm(?:\s+drop)?/', $title, $matches)) {
+        // Pattern 2: "45cm x 150cm" or "45 x 150" (standard x format with/without units)
+        elseif (preg_match('/(\d+)(?:cm)?\s*x\s*(\d+)(?:cm)?/i', $title, $matches)) {
             $width = (int) $matches[1];
             $drop = (int) $matches[2];
         }
-        // Pattern 3: Single dimension - just width (fallback)
-        elseif (preg_match('/(\d+)cm/', $title, $matches)) {
+        // Pattern 3: "60cm 210cm drop" or "60cm 210cm" (space separated with optional drop keyword)
+        elseif (preg_match('/(\d+)(?:cm)?\s+(\d+)(?:cm)?(?:\s+drop)?/i', $title, $matches)) {
+            $width = (int) $matches[1];
+            $drop = (int) $matches[2];
+        }
+        // Pattern 4: Single dimension - just width (fallback)
+        elseif (preg_match('/(\d+)(?:cm)?/i', $title, $matches)) {
             $width = (int) $matches[1];
             // Drop remains null when not found in title
         }
@@ -62,13 +69,15 @@ class ExtractDimensions
      */
     public function getPatternUsed(string $title): string
     {
-        if (preg_match('/(\d+)cm\s*x\s*(\d+)cm/', $title)) {
-            return 'width x drop (60cm x 160cm)';
-        } elseif (preg_match('/(\d+)cm\s+(\d+)cm\s+drop/', $title)) {
+        if (preg_match('/(\d+)(?:cm)?\s*Width\s*x\s*(\d+)(?:cm)?\s*Drop/i', $title)) {
+            return 'width-keyword x drop-keyword (45cm Width x 150cm Drop)';
+        } elseif (preg_match('/(\d+)(?:cm)?\s*x\s*(\d+)(?:cm)?/i', $title)) {
+            return 'width x drop (60cm x 160cm or 45 x 150)';
+        } elseif (preg_match('/(\d+)(?:cm)?\s+(\d+)(?:cm)?\s+drop/i', $title)) {
             return 'width drop-keyword (60cm 210cm drop)';
-        } elseif (preg_match('/(\d+)cm\s+(\d+)cm/', $title)) {
+        } elseif (preg_match('/(\d+)(?:cm)?\s+(\d+)(?:cm)?/i', $title)) {
             return 'width space drop (60cm 210cm)';
-        } elseif (preg_match('/(\d+)cm/', $title)) {
+        } elseif (preg_match('/(\d+)(?:cm)?/i', $title)) {
             return 'width only (60cm)';
         }
 

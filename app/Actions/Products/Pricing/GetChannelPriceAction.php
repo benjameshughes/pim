@@ -37,9 +37,10 @@ class GetChannelPriceAction extends BaseAction
 
         // If no channel specified, return default price
         if (! $channelCode) {
+            $defaultPrice = $this->getDefaultPriceForVariant($variant);
             return $this->success('Default price retrieved', [
-                'price' => $variant->price,
-                'source' => 'default',
+                'price' => $defaultPrice,
+                'source' => $defaultPrice !== $variant->price ? 'pricing_table_fallback' : 'default',
                 'channel_code' => null,
                 'channel_name' => 'Default',
                 'variant_id' => $variant->id,
@@ -67,7 +68,7 @@ class GetChannelPriceAction extends BaseAction
         try {
             // Try to get channel-specific price from attributes
             $channelPrice = $variant->getSmartAttributeValue($attributeKey);
-            $defaultPrice = $variant->price;
+            $defaultPrice = $this->getDefaultPriceForVariant($variant);
 
             // Determine which price to use and why
             if ($channelPrice !== null) {
@@ -76,7 +77,7 @@ class GetChannelPriceAction extends BaseAction
                 $message = "Retrieved {$channel->name} override price for variant {$variant->sku}: £{$effectivePrice}";
             } else {
                 $effectivePrice = $defaultPrice;
-                $source = 'default_fallback';
+                $source = $defaultPrice !== $variant->price ? 'pricing_table_fallback' : 'default_fallback';
                 $message = "No {$channel->name} override found for variant {$variant->sku}, using default price: £{$effectivePrice}";
             }
 
@@ -130,6 +131,7 @@ class GetChannelPriceAction extends BaseAction
     protected function getAllChannelPrices(ProductVariant $variant): array
     {
         $channelPrices = [];
+        $defaultPrice = $this->getDefaultPriceForVariant($variant);
 
         $activeChannels = SalesChannel::active()->get();
 
@@ -140,7 +142,7 @@ class GetChannelPriceAction extends BaseAction
             $channelPrices[$channel->code] = [
                 'name' => $channel->name,
                 'price' => $channelPrice,
-                'effective_price' => $channelPrice ?? $variant->price,
+                'effective_price' => $channelPrice ?? $defaultPrice,
                 'has_override' => $channelPrice !== null,
                 'attribute_key' => $attributeKey,
             ];
@@ -166,7 +168,13 @@ class GetChannelPriceAction extends BaseAction
     {
         $result = static::run($variant, $channelCode);
 
-        return $result['success'] ? $result['data']['price'] : $variant->price;
+        if ($result['success']) {
+            return $result['data']['price'];
+        }
+
+        // Fallback to pricing table if variant price is 0
+        $action = new static;
+        return $action->getDefaultPriceForVariant($variant);
     }
 
     /**
@@ -187,5 +195,38 @@ class GetChannelPriceAction extends BaseAction
         $action = new static;
 
         return $action->getAllChannelPrices($variant);
+    }
+
+    /**
+     * Get default price for variant with pricing table fallback
+     * 
+     * If product_variants.price is 0, check the pricing table for the actual price
+     */
+    protected function getDefaultPriceForVariant(ProductVariant $variant): float
+    {
+        // If variant has a price > 0, use it
+        if ($variant->price > 0) {
+            return $variant->price;
+        }
+
+        // Fallback to pricing table - get the first active pricing record
+        $pricingRecord = $variant->pricingRecords()
+            ->where('price', '>', 0)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if ($pricingRecord) {
+            Log::info('🔄 Using pricing table fallback', [
+                'variant_id' => $variant->id,
+                'variant_sku' => $variant->sku,
+                'variant_price' => $variant->price,
+                'pricing_table_price' => $pricingRecord->price,
+            ]);
+            
+            return $pricingRecord->price;
+        }
+
+        // Final fallback to variant price (even if 0)
+        return $variant->price;
     }
 }

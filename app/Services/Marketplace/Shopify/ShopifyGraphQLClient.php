@@ -57,6 +57,10 @@ class ShopifyGraphQLClient
         $body = $response->json();
 
         if (isset($body['errors'])) {
+            \Illuminate\Support\Facades\Log::error('🚨 Shopify GraphQL Error', [
+                'errors' => $body['errors'],
+                'query_preview' => substr($query, 0, 200).'...'
+            ]);
             throw new \Exception('GraphQL errors: '.json_encode($body['errors']));
         }
 
@@ -89,9 +93,17 @@ class ShopifyGraphQLClient
 
     /**
      * Create a product using productCreate mutation
+     * 
+     * Handles both productOptions (auto-generate) and explicit variants approaches
      */
     public function createProduct(array $productInput): array
     {
+        // Check if explicit variants are provided
+        if (isset($productInput['variants'])) {
+            return $this->createProductWithExplicitVariants($productInput);
+        }
+        
+        // Original approach with productOptions
         $mutation = '
             mutation productCreate($input: ProductInput!) {
                 productCreate(input: $input) {
@@ -119,6 +131,240 @@ class ShopifyGraphQLClient
         ';
 
         return $this->mutate($mutation, ['input' => $productInput]);
+    }
+    
+    /**
+     * Create product with explicit variants (separate the variants from productInput)
+     */
+    protected function createProductWithExplicitVariants(array $productData): array
+    {
+        // Extract variants and create clean productInput
+        $variants = $productData['variants'];
+        unset($productData['variants']);
+        
+        // 🎯 Don't create productOptions - let variants create them automatically
+        
+        $mutation = '
+            mutation productCreate($input: ProductInput!) {
+                productCreate(input: $input) {
+                    product {
+                        id
+                        title
+                        handle
+                        status
+                        options {
+                            id
+                            name
+                        }
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        // Debug logging
+        \Illuminate\Support\Facades\Log::info('🚀 Creating product with two-step approach', [
+            'product_title' => $productData['title'] ?? 'unknown',
+            'has_product_options' => isset($productData['productOptions']),
+            'variant_count' => count($variants),
+            'product_data_keys' => array_keys($productData)
+        ]);
+        
+        // First create the product (with Size option but no variants yet)
+        $result = $this->mutate($mutation, ['input' => $productData]);
+        
+        \Illuminate\Support\Facades\Log::info('🎯 Product creation result', [
+            'has_errors' => !empty($result['productCreate']['userErrors']),
+            'errors' => $result['productCreate']['userErrors'] ?? [],
+            'has_product' => isset($result['productCreate']['product']),
+            'product_id' => $result['productCreate']['product']['id'] ?? null
+        ]);
+        
+        // If successful, add variants using productVariantsBulkCreate
+        if (empty($result['productCreate']['userErrors']) && isset($result['productCreate']['product']['id'])) {
+            $productId = $result['productCreate']['product']['id'];
+            $product = $result['productCreate']['product'];
+            
+            // Add variants - they'll create Width/Drop options automatically
+            $this->addVariantsToProduct($productId, $variants);
+            
+            // Fetch the complete product with variants for return
+            return $this->getProductWithVariants($productId);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Add variants to an existing product using the correct Shopify GraphQL format
+     */
+    protected function addVariantsToProduct(string $productId, array $variants): array
+    {
+        // Convert our variant format to Shopify's ProductVariantsBulkInput format
+        $shopifyVariants = [];
+        foreach ($variants as $variant) {
+            // 🎯 Only use VALID ProductVariantsBulkInput fields
+            $variantData = [
+                'price' => $variant['price'],
+                'inventoryPolicy' => $variant['inventoryPolicy'] ?? 'DENY',
+            ];
+            
+            // Extract width and drop from combined size like "45cm x 150cm"
+            $sizeParts = explode(' x ', $variant['options'][0]);
+            $width = $sizeParts[0] ?? '45cm';
+            $drop = $sizeParts[1] ?? '150cm';
+            
+            // Use optionName - Shopify will create Width/Drop options automatically
+            $variantData['optionValues'] = [
+                ['optionName' => 'Width', 'name' => $width],
+                ['optionName' => 'Drop', 'name' => $drop]
+            ];
+            
+            // Add barcode if available (this field is valid)
+            if (!empty($variant['barcode'])) {
+                $variantData['barcode'] = $variant['barcode'];
+            }
+            
+            // Add compareAtPrice if available (this field is valid)
+            if (!empty($variant['compareAtPrice'])) {
+                $variantData['compareAtPrice'] = $variant['compareAtPrice'];
+            }
+            
+            // 📝 Note: sku, requiresShipping, weight, weightUnit are NOT valid for ProductVariantsBulkInput
+            // These must be set after variant creation using productVariantUpdate
+            
+            $shopifyVariants[] = $variantData;
+        }
+
+        $mutation = '
+            mutation productVariantsBulkCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                productVariantsBulkCreate(productId: $productId, variants: $variants) {
+                    productVariants {
+                        id
+                        sku
+                        price
+                        inventoryQuantity
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+        
+        \Illuminate\Support\Facades\Log::info('🔧 Creating variants via bulk create', [
+            'product_id' => $productId,
+            'variant_count' => count($shopifyVariants),
+            'first_variant_sample' => $shopifyVariants[0] ?? null
+        ]);
+        
+        $result = $this->mutate($mutation, [
+            'productId' => $productId,
+            'variants' => $shopifyVariants
+        ]);
+        
+        \Illuminate\Support\Facades\Log::info('💥 Variant creation result', [
+            'has_errors' => !empty($result['productVariantsBulkCreate']['userErrors']),
+            'errors' => $result['productVariantsBulkCreate']['userErrors'] ?? [],
+            'created_variant_count' => count($result['productVariantsBulkCreate']['productVariants'] ?? [])
+        ]);
+        
+        // 🔧 Update SKUs and other details after variant creation
+        if (empty($result['productVariantsBulkCreate']['userErrors'])) {
+            $createdVariants = $result['productVariantsBulkCreate']['productVariants'] ?? [];
+            $this->updateVariantDetails($createdVariants, $variants);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Update variant SKUs and other details after creation
+     */
+    protected function updateVariantDetails(array $createdVariants, array $originalVariants): void
+    {
+        \Illuminate\Support\Facades\Log::info('🔧 Updating variant SKUs and details', [
+            'created_count' => count($createdVariants),
+            'original_count' => count($originalVariants)
+        ]);
+        
+        // Match created variants with original variants by position
+        foreach ($createdVariants as $index => $createdVariant) {
+            if (!isset($originalVariants[$index])) {
+                continue;
+            }
+            
+            $originalVariant = $originalVariants[$index];
+            $variantId = $createdVariant['id'];
+            
+            // Build update data for fields not allowed in bulk create
+            $updateData = [];
+            
+            if (!empty($originalVariant['sku'])) {
+                $updateData['sku'] = $originalVariant['sku'];
+            }
+            
+            if (isset($originalVariant['weight'])) {
+                $updateData['weight'] = (float) $originalVariant['weight'];
+                $updateData['weightUnit'] = $originalVariant['weightUnit'] ?? 'KILOGRAMS';
+            }
+            
+            if (isset($originalVariant['requiresShipping'])) {
+                $updateData['requiresShipping'] = $originalVariant['requiresShipping'];
+            }
+            
+            if (!empty($updateData)) {
+                $this->updateSingleVariant($variantId, $updateData);
+            }
+        }
+    }
+
+    /**
+     * Get product with variants for return structure
+     */
+    protected function getProductWithVariants(string $productId): array
+    {
+        $query = '
+            query getProduct($id: ID!) {
+                product(id: $id) {
+                    id
+                    title
+                    handle
+                    status
+                    variants(first: 100) {
+                        edges {
+                            node {
+                                id
+                                sku
+                                price
+                            }
+                        }
+                    }
+                }
+            }
+        ';
+        
+        $result = $this->query($query, ['id' => $productId]);
+        
+        $productData = $result['product'] ?? null;
+        
+        \Illuminate\Support\Facades\Log::info('📦 Final product structure', [
+            'has_product' => !is_null($productData),
+            'product_id' => $productData['id'] ?? 'missing',
+            'variant_count' => count($productData['variants']['edges'] ?? []),
+            'product_keys' => $productData ? array_keys($productData) : []
+        ]);
+        
+        return [
+            'productCreate' => [
+                'product' => $productData,
+                'userErrors' => []
+            ]
+        ];
     }
 
     /**

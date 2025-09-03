@@ -5,6 +5,7 @@ namespace App\Livewire\Products;
 use App\Facades\Activity;
 use App\Livewire\Traits\TracksUserInteractions;
 use App\Models\Product;
+use App\Services\Marketplace\Facades\Sync;
 use App\UI\Components\Tab;
 use App\UI\Components\TabSet;
 use Livewire\Component;
@@ -140,30 +141,40 @@ class ProductShow extends Component
             return;
         }
 
-        // Dispatch the pricing update job
-        \App\Jobs\UpdateShopifyPricingJob::dispatch($this->product, $syncAccount, $options);
+        try {
+            // Use Sync facade to update pricing properly
+            $result = Sync::shopify($syncAccount->name)->update($this->product->id)->pricing($options)->push();
 
-        // 📝 Log Shopify pricing sync activity with gorgeous detail
-        $userName = auth()->user()?->name ?? 'System';
-        $description = "{$this->product->name} Shopify pricing sync initiated by {$userName} for {$linkedColorsCount} linked colors on {$syncAccount->name}";
+            // 📝 Log Shopify pricing sync activity with gorgeous detail
+            $userName = auth()->user()?->name ?? 'System';
+            $description = "{$this->product->name} Shopify pricing sync completed by {$userName} for {$linkedColorsCount} linked colors on {$syncAccount->name}";
 
-        Activity::log()
-            ->by(auth()->id())
-            ->customEvent('sync.shopify_pricing_update_initiated', $this->product)
-            ->description($description)
-            ->with([
-                'sync_account_id' => $syncAccount->id,
-                'sync_account_name' => $syncAccount->name,
-                'channel' => 'shopify',
-                'linked_colors_count' => $linkedColorsCount,
-                'options' => $options,
-                'product_sku' => $this->product->parent_sku,
-                'product_name' => $this->product->name,
-                'user_name' => $userName,
-            ])
-            ->save();
+            Activity::log()
+                ->by(auth()->id())
+                ->customEvent('sync.shopify_pricing_update_completed', $this->product)
+                ->description($description)
+                ->with([
+                    'sync_account_id' => $syncAccount->id,
+                    'sync_account_name' => $syncAccount->name,
+                    'channel' => 'shopify',
+                    'linked_colors_count' => $linkedColorsCount,
+                    'options' => $options,
+                    'product_sku' => $this->product->parent_sku,
+                    'product_name' => $this->product->name,
+                    'user_name' => $userName,
+                    'result' => $result->toArray(),
+                ])
+                ->save();
 
-        $this->dispatch('success', "Shopify pricing update initiated! 💰 Updating pricing for {$linkedColorsCount} linked colors.");
+            if ($result->success) {
+                $this->dispatch('success', "Shopify pricing updated successfully! 💰 Updated pricing for {$linkedColorsCount} linked colors.");
+            } else {
+                $this->dispatch('error', "Shopify pricing update failed: {$result->message}");
+            }
+
+        } catch (\Exception $e) {
+            $this->dispatch('error', "Shopify pricing update failed: {$e->getMessage()}");
+        }
 
         // Refresh the product data to show updated sync logs
         $this->mount($this->product->fresh());
