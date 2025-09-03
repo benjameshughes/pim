@@ -153,7 +153,7 @@ class MarketplaceStatus extends Component
         return match($status['status']) {
             'processing' => 'Processing...',
             'failed' => 'Sync Failed',
-            'synced' => 'Active',
+            'active' => 'Active',  // Fix: Match 'active' not 'synced'
             default => 'Not Synced',
         };
     }
@@ -163,7 +163,7 @@ class MarketplaceStatus extends Component
      */
     public function shouldShowSyncDetails(): bool
     {
-        return $this->status['status'] === 'synced' && $this->getLastSyncTime();
+        return $this->status['status'] === 'active' && $this->getLastSyncTime();  // Fix: Check 'active' not 'synced'
     }
     
     /**
