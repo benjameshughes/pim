@@ -3,10 +3,7 @@
         {{-- Email Input Form --}}
         <div class="space-y-6">
             <div class="text-center">
-                <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    Welcome
-                </h2>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                <p class="text-sm text-gray-600 dark:text-gray-400">
                     Enter your email address to receive a magic link
                 </p>
             </div>
@@ -32,17 +29,9 @@
                     type="submit"
                     variant="primary"
                     class="w-full"
-                    :disabled="$isLoading || empty($email)"
-                    wire:loading.attr="disabled"
+                    icon="paper-airplane"
                 >
-                    <span wire:loading.remove>
-                        <flux:icon.paper-airplane class="w-4 h-4 mr-2" />
-                        Send Magic Link
-                    </span>
-                    <span wire:loading>
-                        <flux:icon.arrow-path class="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
-                    </span>
+                    Send Magic Link
                 </flux:button>
             </form>
 
@@ -97,17 +86,9 @@
                     variant="outline"
                     size="sm"
                     class="w-full"
-                    :disabled="$isLoading"
-                    wire:loading.attr="disabled"
+                    icon="arrow-path"
                 >
-                    <span wire:loading.remove wire:target="requestNewLink">
-                        <flux:icon.arrow-path class="w-4 h-4 mr-2" />
-                        Send another link
-                    </span>
-                    <span wire:loading wire:target="requestNewLink">
-                        <flux:icon.arrow-path class="w-4 h-4 mr-2 animate-spin" />
-                        Sending...
-                    </span>
+                    Send another link
                 </flux:button>
 
                 <flux:button
@@ -115,8 +96,8 @@
                     variant="ghost"
                     size="sm"
                     class="w-full"
+                    icon="arrow-left"
                 >
-                    <flux:icon.arrow-left class="w-4 h-4 mr-2" />
                     Use different email
                 </flux:button>
             </div>

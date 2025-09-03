@@ -6,12 +6,9 @@
     <body class="min-h-screen bg-gray-50 dark:bg-zinc-900">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
             <!-- Logo -->
-            <div class="mb-8">
-                <a href="/" class="flex items-center space-x-2">
-                    <x-app-logo class="w-12 h-12" />
-                    <span class="text-xl font-bold text-gray-900 dark:text-white">
-                        Products
-                    </span>
+            <div class="mb-8 text-center">
+                <a href="/" class="block">
+                    <x-app-logo size="lg" class="mx-auto" />
                 </a>
             </div>
 

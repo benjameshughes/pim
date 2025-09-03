@@ -32,8 +32,8 @@
                 variant="primary"
                 size="lg"
                 class="w-full"
+                icon="home"
             >
-                <flux:icon.home class="w-4 h-4 mr-2" />
                 Continue to Dashboard
             </flux:button>
         </div>
