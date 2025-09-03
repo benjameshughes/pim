@@ -22,6 +22,8 @@ class ProductShow extends Component
 
         $this->product = $product->load([
             'variants',  // Remove .barcodes since it's not a proper relationship
+            'images',    // Add images for overview tab and images tab badge
+            'attributes', // Add attributes for attributes tab badge
             'syncStatuses.syncAccount',
             'syncLogs' => function ($query) {
                 $query->with('syncAccount')->latest()->limit(10);
@@ -170,19 +172,24 @@ class ProductShow extends Component
      */
     public function getChannelPricingOverridesCount(): int
     {
-        $overrideCount = 0;
+        // Cache the expensive calculation for 5 minutes
+        $cacheKey = "product_channel_pricing_overrides_count_{$this->product->id}_{$this->product->updated_at->timestamp}";
+        
+        return cache()->remember($cacheKey, now()->addMinutes(5), function () {
+            $overrideCount = 0;
 
-        foreach ($this->product->variants as $variant) {
-            $channelPrices = $variant->getAllChannelPrices();
-            foreach ($channelPrices as $channelData) {
-                if ($channelData['has_override']) {
-                    $overrideCount++;
-                    break; // Count each variant only once
+            foreach ($this->product->variants as $variant) {
+                $channelPrices = $variant->getAllChannelPrices();
+                foreach ($channelPrices as $channelData) {
+                    if ($channelData['has_override']) {
+                        $overrideCount++;
+                        break; // Count each variant only once
+                    }
                 }
             }
-        }
 
-        return $overrideCount;
+            return $overrideCount;
+        });
     }
 
     /**
@@ -225,8 +232,8 @@ class ProductShow extends Component
                 Tab::make('variants')
                     ->label('Variants')
                     ->icon('squares-2x2')
-                    ->badge($this->product->variants()->count())
-                    ->badgeColor($this->product->variants()->count() > 0 ? 'blue' : 'gray'),
+                    ->badge($this->product->variants->count())
+                    ->badgeColor($this->product->variants->count() > 0 ? 'blue' : 'gray'),
 
                 Tab::make('pricing')
                     ->label('Pricing')
@@ -243,14 +250,14 @@ class ProductShow extends Component
                 Tab::make('attributes')
                     ->label('Attributes')
                     ->icon('tag')
-                    ->badge($this->getAttributesCount())
-                    ->badgeColor($this->getAttributesCount() > 0 ? 'blue' : 'gray'),
+                    ->badge($this->product->attributes->count())
+                    ->badgeColor($this->product->attributes->count() > 0 ? 'blue' : 'gray'),
 
                 Tab::make('images')
                     ->label('Images')
                     ->icon('photo')
-                    ->badge($this->getImagesCount())
-                    ->hidden($this->getImagesCount() === 0),
+                    ->badge($this->product->images->count())
+                    ->hidden($this->product->images->count() === 0),
 
                 Tab::make('history')
                     ->label('History')
@@ -263,7 +270,7 @@ class ProductShow extends Component
     private function getLinkedAccountsCount(): int
     {
         return $this->product->syncStatuses
-            ->where('external_product_id', '!=', null)
+            ->whereNotNull('external_product_id')
             ->count();
     }
 
@@ -282,26 +289,17 @@ class ProductShow extends Component
         return 'gray';
     }
 
-    private function getAttributesCount(): int
-    {
-        return $this->product->attributes()->count();
-    }
-
-    private function getImagesCount(): int
-    {
-        return $this->product->images()->count();
-    }
 
     private function getRecentActivityCount(): int
     {
-        return $this->product->syncLogs()
+        return $this->product->syncLogs
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
     }
 
     private function getActivityBadgeColor(): string
     {
-        $recentFailures = $this->product->syncLogs()
+        $recentFailures = $this->product->syncLogs
             ->where('created_at', '>=', now()->subDays(7))
             ->where('status', 'failed')
             ->count();
