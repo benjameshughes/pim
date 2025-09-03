@@ -244,7 +244,7 @@
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-600 dark:text-gray-400">Default Price:</span>
                             <span class="font-mono text-sm font-semibold text-gray-900 dark:text-white">
-                                £{{ number_format($selectedVariant->price, 2) }}
+                                £{{ number_format($selectedVariant->getRetailPrice(), 2) }}
                             </span>
                         </div>
                     </div>
@@ -269,7 +269,8 @@
                 @if($modalPrice && $selectedVariant)
                     <div class="mb-6 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                         @php
-                            $markup = $selectedVariant->price > 0 ? (($modalPrice - $selectedVariant->price) / $selectedVariant->price) * 100 : 0;
+                            $retailPrice = $selectedVariant->getRetailPrice();
+                            $markup = $retailPrice > 0 ? (($modalPrice - $retailPrice) / $retailPrice) * 100 : 0;
                         @endphp
                         <div class="flex items-center justify-between text-sm">
                             <span class="text-blue-700 dark:text-blue-300">Markup/Discount:</span>
@@ -530,7 +531,7 @@
                         <div class="flex items-center justify-between">
                             <span class="text-sm text-gray-600 dark:text-gray-400">Current Retail Price:</span>
                             <span class="font-mono text-sm font-semibold text-gray-900 dark:text-white">
-                                £{{ number_format($selectedBaseVariant->price, 2) }}
+                                £{{ number_format($selectedBaseVariant->getRetailPrice(), 2) }}
                             </span>
                         </div>
                     </div>
@@ -552,12 +553,12 @@
                     </div>
                 </div>
 
-                @if($basePriceValue && $selectedBaseVariant && $basePriceValue != $selectedBaseVariant->price)
+                @if($basePriceValue && $selectedBaseVariant && $basePriceValue != $selectedBaseVariant->getRetailPrice())
                     <div class="mb-6 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                         <div class="flex items-center justify-between text-sm">
                             <span class="text-blue-700 dark:text-blue-300">Price Change:</span>
                             <span class="font-semibold">
-                                £{{ number_format($selectedBaseVariant->price, 2) }} → £{{ number_format($basePriceValue, 2) }}
+                                £{{ number_format($selectedBaseVariant->getRetailPrice(), 2) }} → £{{ number_format($basePriceValue, 2) }}
                             </span>
                         </div>
                     </div>

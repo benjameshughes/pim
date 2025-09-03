@@ -102,7 +102,7 @@ class ProductPricing extends Component
         $this->modalPrice = $variant->getChannelPrice($channelCode);
 
         // If the price equals default price, it's not an override
-        if ($this->modalPrice == $variant->price && ! $variant->hasChannelOverride($channelCode)) {
+        if ($this->modalPrice == $variant->getRetailPrice() && ! $variant->hasChannelOverride($channelCode)) {
             $this->modalPrice = null;
         }
 
@@ -168,7 +168,7 @@ class ProductPricing extends Component
         }
 
         $this->selectedBaseVariant = $variant;
-        $this->basePriceValue = $variant->price;
+        $this->basePriceValue = $variant->getRetailPrice();
         $this->showBasePriceModal = true;
     }
 
@@ -385,19 +385,21 @@ class ProductPricing extends Component
 
                 $variantData = [
                     'variant' => $variant,
-                    'default_price' => $variant->price,
+                    'default_price' => $variant->getRetailPrice(),
                     'channels' => [],
                     'has_any_override' => false,
                 ];
 
+                $retailPrice = $variant->getRetailPrice();
+                
                 foreach ($this->channels as $channel) {
                     $channelData = $channelPrices[$channel->code] ?? null;
 
                     $variantData['channels'][$channel->code] = [
-                        'price' => $channelData ? $channelData['effective_price'] : $variant->price,
+                        'price' => $channelData ? $channelData['effective_price'] : $retailPrice,
                         'has_override' => $channelData ? $channelData['has_override'] : false,
-                        'markup_percentage' => $variant->price > 0 && $channelData
-                            ? round((($channelData['effective_price'] - $variant->price) / $variant->price) * 100, 1)
+                        'markup_percentage' => $retailPrice > 0 && $channelData
+                            ? round((($channelData['effective_price'] - $retailPrice) / $retailPrice) * 100, 1)
                             : 0,
                     ];
 

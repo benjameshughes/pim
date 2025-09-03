@@ -82,7 +82,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm font-medium text-gray-900 dark:text-white">
-                                    £{{ number_format($variant->price, 2) }}
+                                    £{{ number_format($variant->getRetailPrice(), 2) }}
                                 </div>
                             </td>
                             <td class="px-6 py-4">
