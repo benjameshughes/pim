@@ -56,7 +56,12 @@
         </div>
     @else
         {{-- Email Sent Confirmation --}}
-        <div class="space-y-6 text-center">
+        <div class="space-y-6 text-center" 
+             x-data="{ countdown: 15 }" 
+             x-init="setInterval(() => { 
+                 countdown--; 
+                 if (countdown === 0) window.close(); 
+             }, 1000)">
             <div class="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
                 <flux:icon.envelope class="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
@@ -67,6 +72,9 @@
                 </h2>
                 <p class="text-gray-600 dark:text-gray-400 mb-1">
                     We've sent a magic link to:
+                </p>
+                <p class="text-xs text-gray-500 mt-2">
+                    This tab will close in <span x-text="countdown" class="font-mono font-bold text-blue-600"></span> seconds
                 </p>
                 <p class="font-medium text-gray-900 dark:text-white">
                     {{ $email }}
