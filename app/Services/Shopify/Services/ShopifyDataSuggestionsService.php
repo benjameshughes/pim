@@ -162,14 +162,14 @@ class ShopifyDataSuggestionsService
 
             $pricingData[] = [
                 'sku' => $variant->sku,
-                'retail_price' => $pricing->retail_price,
+                'retail_price' => $pricing->price,
                 'cost_price' => $pricing->cost_price ?? 0,
                 'margin' => $pricing->cost_price ?
-                    round((($pricing->retail_price - $pricing->cost_price) / $pricing->retail_price) * 100, 1) : null,
+                    round((($pricing->price - $pricing->cost_price) / $pricing->price) * 100, 1) : null,
             ];
 
-            if ($pricing->retail_price < 10) {
-                $warnings[] = "Variant {$variant->sku} has very low retail price (£{$pricing->retail_price}) - verify pricing is correct";
+            if ($pricing->price < 10) {
+                $warnings[] = "Variant {$variant->sku} has very low retail price (£{$pricing->price}) - verify pricing is correct";
             }
         }
 

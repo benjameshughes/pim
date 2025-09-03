@@ -30,13 +30,13 @@ class ShopifyPricingSyncService
     public function getPricingStrategy(): string
     {
         // Check account metadata for pricing strategy
-        $strategy = $this->syncAccount->metadata['pricing_strategy'] ?? 'base_price';
+        $strategy = $this->syncAccount->metadata['pricing_strategy'] ?? 'price';
 
         return match ($strategy) {
             'channel_specific' => 'channel_price',
             'sale_price' => 'sale_price',
             'cost_plus_margin' => 'calculated_price',
-            default => 'base_price',
+            default => 'price',
         };
     }
 
@@ -65,11 +65,11 @@ class ShopifyPricingSyncService
         }
 
         return match ($strategy) {
-            'base_price' => $pricing->base_price,
-            'channel_price' => $pricing->channel_price ?? $pricing->base_price,
+            'price' => $pricing->price,
+            'channel_price' => $pricing->channel_price ?? $pricing->price,
             'sale_price' => $this->calculateSalePrice($pricing),
             'calculated_price' => $this->calculateMarginPrice($pricing),
-            default => $pricing->base_price,
+            default => $pricing->price,
         };
     }
 
@@ -78,7 +78,7 @@ class ShopifyPricingSyncService
      */
     protected function calculateSalePrice($pricing): float
     {
-        $basePrice = $pricing->sale_price ?? $pricing->base_price;
+        $basePrice = $pricing->sale_price ?? $pricing->price;
 
         // If sale period is active, use sale price
         if ($pricing->sale_starts_at && $pricing->sale_ends_at) {
@@ -89,7 +89,7 @@ class ShopifyPricingSyncService
         }
 
         // Otherwise use base price
-        return $pricing->base_price;
+        return $pricing->price;
     }
 
     /**
@@ -101,7 +101,7 @@ class ShopifyPricingSyncService
             return $pricing->cost_price * (1 + ($pricing->markup_percentage / 100));
         }
 
-        return $pricing->base_price;
+        return $pricing->price;
     }
 
     /**

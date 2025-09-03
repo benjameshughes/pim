@@ -39,7 +39,7 @@ class UpdateShopifyPricingAction extends BaseAction
         }
 
         $syncAccountId = $options['sync_account_id'] ?? null;
-        $pricingSource = $options['pricing_source'] ?? 'base_price'; // base_price, channel_price, etc.
+        $pricingSource = $options['pricing_source'] ?? 'price'; // price, channel_price, etc.
 
         if (! $syncAccountId) {
             return $this->failure('Sync account ID is required');
@@ -281,10 +281,10 @@ class UpdateShopifyPricingAction extends BaseAction
 
         if ($pricing) {
             $basePrice = match ($pricingSource) {
-                'base_price' => $pricing->base_price,
-                'channel_price' => $pricing->channel_price ?? $pricing->base_price,
-                'sale_price' => $pricing->sale_price ?? $pricing->base_price,
-                default => $pricing->base_price,
+                'price' => $pricing->price,
+                'channel_price' => $pricing->channel_price ?? $pricing->price,
+                'sale_price' => $pricing->sale_price ?? $pricing->price,
+                default => $pricing->price,
             };
 
             // Apply attribute-based pricing modifications if available

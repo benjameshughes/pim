@@ -213,8 +213,8 @@ class PushProductToShopify
 
         foreach ($variants as $variant) {
             $pricing = $variant->pricing()->first();
-            if ($pricing && $pricing->retail_price > 0) {
-                $prices[] = (float) $pricing->retail_price;
+            if ($pricing && $pricing->price > 0) {
+                $prices[] = (float) $pricing->price;
             }
         }
 

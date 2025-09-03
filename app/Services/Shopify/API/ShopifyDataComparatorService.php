@@ -220,7 +220,7 @@ class ShopifyDataComparatorService
             return [];
         }
 
-        $localPrice = (float) $localPricing->retail_price;
+        $localPrice = (float) $localPricing->price;
         $shopifyPrice = (float) ($shopifyVariant['price'] ?? 0);
 
         if (abs($localPrice - $shopifyPrice) > 0.01) { // Account for floating point precision

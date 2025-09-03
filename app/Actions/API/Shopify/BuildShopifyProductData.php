@@ -232,9 +232,9 @@ class BuildShopifyProductData
     {
         $pricing = $variant->pricing()->first();
 
-        if ($pricing && $pricing->retail_price > 0) {
+        if ($pricing && $pricing->price > 0) {
             return [
-                'amount' => (float) $pricing->retail_price,
+                'amount' => (float) $pricing->price,
                 'currency' => $pricing->currency ?? 'GBP',
             ];
         }

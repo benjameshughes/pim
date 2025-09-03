@@ -289,11 +289,8 @@ class ImportShopifyProduct
             Pricing::create([
                 'product_variant_id' => $variant->id,
                 'sales_channel_id' => null, // Default channel
-                'retail_price' => $price,
+                'price' => $price,
                 'currency' => 'GBP',
-                'vat_rate' => 20.0, // UK VAT
-                'vat_inclusive' => true,
-                'source' => 'shopify_import',
             ]);
         }
     }

@@ -458,10 +458,8 @@ class ShopifyProductRepository
                 'product_id' => $product->id,
                 'sku' => $variantData['sku'],
                 'color' => $variantData['option1'],
-                'size' => $variantData['option2'],
-                'retail_price' => $variantData['price'],
+                'price' => $variantData['price'],
                 'stock_level' => $variantData['inventory_quantity'] ?? 0,
-                'shopify_variant_id' => $variantData['id'],
             ]);
         }
 
@@ -485,13 +483,11 @@ class ShopifyProductRepository
         // Update or create variants
         foreach ($shopifyData['variants'] ?? [] as $variantData) {
             ProductVariant::updateOrCreate(
-                ['shopify_variant_id' => $variantData['id']],
+                ['sku' => $variantData['sku']], // Use SKU since shopify_variant_id doesn't exist in schema
                 [
                     'product_id' => $product->id,
-                    'sku' => $variantData['sku'],
                     'color' => $variantData['option1'],
-                    'size' => $variantData['option2'],
-                    'retail_price' => $variantData['price'],
+                    'price' => $variantData['price'],
                     'stock_level' => $variantData['inventory_quantity'] ?? 0,
                 ]
             );
