@@ -259,98 +259,8 @@ class ShopifyGraphQLClient
         return $this->query($query, $variables);
     }
 
-    /**
-     * Bulk create products (for multiple color variants)
-     */
-    public function bulkCreateProducts(array $productInputs): array
-    {
-        $results = [];
 
-        foreach ($productInputs as $productInput) {
-            $result = $this->createProduct($productInput);
-            $results[] = [
-                'success' => empty($result['productCreate']['userErrors']),
-                'product' => $result['productCreate']['product'] ?? null,
-                'errors' => $result['productCreate']['userErrors'] ?? [],
-                'input' => $productInput,
-            ];
 
-            // Rate limiting: Shopify allows 40 requests per minute
-            usleep(1500000); // 1.5 second delay between requests
-        }
-
-        return $results;
-    }
-
-    /**
-     * Update product title using GraphQL
-     */
-    public function updateProductTitle(string $productId, string $title): array
-    {
-        $mutation = '
-            mutation productUpdate($input: ProductInput!) {
-                productUpdate(input: $input) {
-                    product {
-                        id
-                        title
-                        handle
-                        updatedAt
-                    }
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }
-        ';
-
-        $input = [
-            'id' => $productId,
-            'title' => $title,
-        ];
-
-        return $this->mutate($mutation, ['input' => $input]);
-    }
-
-    /**
-     * Update product images using GraphQL
-     */
-    public function updateProductImages(string $productId, array $images): array
-    {
-        // Note: Images in Shopify need to be handled via separate productImageUpdate mutations
-        // This is a placeholder for the concept
-        $mutation = '
-            mutation productUpdate($input: ProductInput!) {
-                productUpdate(input: $input) {
-                    product {
-                        id
-                        title
-                        updatedAt
-                        images(first: 10) {
-                            edges {
-                                node {
-                                    id
-                                    src
-                                    altText
-                                }
-                            }
-                        }
-                    }
-                    userErrors {
-                        field
-                        message
-                    }
-                }
-            }
-        ';
-
-        $input = [
-            'id' => $productId,
-            // Images need to be handled differently in Shopify GraphQL
-        ];
-
-        return $this->mutate($mutation, ['input' => $input]);
-    }
 
     /**
      * Search for products by title/handle to find existing products
@@ -386,22 +296,18 @@ class ShopifyGraphQLClient
     }
 
     /**
-     * Update variants for a product (for pricing fixes)
+     * Update variant prices (simplified for common use case)
      */
-    public function updateProductVariants(string $productId, array $variants): array
+    public function updateVariantPrices(string $productId, array $variants): array
     {
         $mutation = '
             mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
                 productVariantsBulkUpdate(productId: $productId, variants: $variants) {
                     productVariants {
                         id
-                        sku
-                        barcode
                         price
                         compareAtPrice
-                        inventoryQuantity
                         updatedAt
-                        title
                     }
                     userErrors {
                         field
@@ -411,170 +317,61 @@ class ShopifyGraphQLClient
             }
         ';
 
-        // Transform variants to Shopify bulk update format with IDs
+        // Clean variant data with only supported fields
         $bulkVariants = [];
         foreach ($variants as $variant) {
             $bulkVariant = [
-                'id' => $variant['id'], // CRITICAL: Shopify needs the variant ID
-                'price' => $variant['price'], // The price to update
+                'id' => $variant['id'],
+                'price' => $variant['price'],
             ];
 
-            // Add compareAtPrice if provided (supported field)
             if (isset($variant['compareAtPrice'])) {
                 $bulkVariant['compareAtPrice'] = $variant['compareAtPrice'];
             }
 
-            // Add metafields if provided (supported field)
-            if (isset($variant['metafields'])) {
-                $bulkVariant['metafields'] = $variant['metafields'];
-            }
-
-            // NOTE: SKU, barcode, and inventoryQuantity are NOT supported in ProductVariantsBulkInput
-            // These need to be handled via separate API calls or different mutations
-
             $bulkVariants[] = $bulkVariant;
         }
 
-        $result = $this->mutate($mutation, [
+        return $this->mutate($mutation, [
             'productId' => $productId,
             'variants' => $bulkVariants,
         ]);
-
-        // Handle unsupported fields (SKU, barcode, inventoryQuantity) via separate calls
-        $this->updateUnsupportedVariantFields($productId, $variants, $result);
-
-        return $result;
     }
 
-    /**
-     * Update fields not supported by ProductVariantsBulkInput
-     * Uses REST API for SKU updates since GraphQL doesn't support it
-     */
-    protected function updateUnsupportedVariantFields(string $productId, array $variants, array $bulkResult): void
-    {
-        $updatedVariants = $bulkResult['productVariantsBulkUpdate']['productVariants'] ?? [];
-
-        foreach ($variants as $index => $requestedVariant) {
-            $updatedVariant = $updatedVariants[$index] ?? null;
-            if (! $updatedVariant) {
-                continue;
-            }
-
-            $variantId = $updatedVariant['id'];
-            $needsUpdate = false;
-            $updateData = [];
-
-            // Check if SKU needs updating
-            if (isset($requestedVariant['sku']) && $requestedVariant['sku'] !== ($updatedVariant['sku'] ?? '')) {
-                $updateData['sku'] = $requestedVariant['sku'];
-                $needsUpdate = true;
-            }
-
-            // Check if barcode needs updating
-            if (isset($requestedVariant['barcode']) && $requestedVariant['barcode'] !== ($updatedVariant['barcode'] ?? '')) {
-                $updateData['barcode'] = $requestedVariant['barcode'];
-                $needsUpdate = true;
-            }
-
-            // Update via REST API if needed
-            if ($needsUpdate) {
-                $this->updateVariantViaRest($variantId, $updateData);
-            }
-        }
-    }
 
     /**
-     * Update variant via REST API (for SKU, barcode, etc.) - Direct method for variant details
+     * Update variant SKU/barcode via REST API (GraphQL doesn't support these fields)
      */
-    protected function updateSingleVariantViaRest(string $variantId, array $updateData): void
+    public function updateVariantDetails(string $variantId, array $updateData): array
     {
         try {
-            // Extract numeric ID from GraphQL ID (gid://shopify/ProductVariant/123 -> 123)
             $numericId = basename($variantId);
-
             $url = "https://{$this->shopDomain}/admin/api/{$this->apiVersion}/variants/{$numericId}.json";
-
-            $data = [
-                'variant' => $updateData,
-            ];
 
             $response = Http::withHeaders([
                 'X-Shopify-Access-Token' => $this->accessToken,
                 'Content-Type' => 'application/json',
-            ])->put($url, $data);
+            ])->put($url, ['variant' => $updateData]);
 
             if (!$response->successful()) {
-                \Illuminate\Support\Facades\Log::error("❌ REST API variant update failed", [
-                    'variant_id' => $variantId,
-                    'numeric_id' => $numericId,
-                    'status' => $response->status(),
-                    'error' => $response->body(),
-                    'update_data' => $updateData
-                ]);
-                throw new \Exception("REST API update failed: {$response->status()} - {$response->body()}");
-            } else {
-                \Illuminate\Support\Facades\Log::info("✅ Updated variant via REST API", [
-                    'variant_id' => $variantId,
-                    'numeric_id' => $numericId,
-                    'updated_fields' => array_keys($updateData)
-                ]);
+                throw new \Exception("REST API update failed: {$response->status()}");
             }
 
+            return $response->json();
+
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("❌ Exception updating variant via REST", [
+            \Illuminate\Support\Facades\Log::error('❌ Variant REST update failed', [
                 'variant_id' => $variantId,
-                'error' => $e->getMessage(),
-                'update_data' => $updateData
+                'error' => $e->getMessage()
             ]);
             throw $e;
         }
     }
 
-    /**
-     * Update variant via REST API (for SKU, barcode, etc.) - Legacy method for compatibility
-     */
-    protected function updateVariantViaRest(string $variantId, array $updateData): void
-    {
-        $this->updateSingleVariantViaRest($variantId, $updateData);
-    }
+
 
     /**
-     * 🎯 KISS - Update a single variant using bulk mutation
-     */
-    public function updateSingleVariant(string $variantId, array $updates): array
-    {
-        // Extract product ID from variant ID (gid://shopify/ProductVariant/123 -> we need product ID)
-        // We'll need to get this from the calling code or make a separate query
-
-        // For now, let's use the bulk update with the variant ID and updates
-        $variantData = array_merge(['id' => $variantId], $updates);
-
-        // We need the product ID for productVariantsBulkUpdate
-        // Let's get it by querying the variant first
-        $variantQuery = '
-            query getVariant($id: ID!) {
-                productVariant(id: $id) {
-                    id
-                    product {
-                        id
-                    }
-                }
-            }
-        ';
-
-        $variantResult = $this->query($variantQuery, ['id' => $variantId]);
-        $productId = $variantResult['productVariant']['product']['id'] ?? null;
-
-        if (! $productId) {
-            return ['error' => 'Could not find product ID for variant'];
-        }
-
-        // Now use bulk update with one variant
-        return $this->updateProductVariants($productId, [$variantData]);
-    }
-
-    /**
-     * 🎯 KISS - Get a single product with variants (for updates)
+     * Get a single product with variants
      */
     public function getProduct(string $productId): array
     {
@@ -604,7 +401,7 @@ class ShopifyGraphQLClient
     }
 
     /**
-     * 🗑️ Delete a product from Shopify
+     * Delete a product from Shopify
      */
     public function deleteProduct(string $productId): array
     {
@@ -621,14 +418,12 @@ class ShopifyGraphQLClient
         ';
 
         return $this->mutate($mutation, [
-            'input' => [
-                'id' => $productId,
-            ],
+            'input' => ['id' => $productId]
         ]);
     }
 
     /**
-     * 🔍 Search for products by SKUs to link existing Shopify products
+     * Search for products by SKUs
      */
     public function searchProductsBySku(array $skus): array
     {
@@ -636,7 +431,6 @@ class ShopifyGraphQLClient
             return [];
         }
 
-        // Build SKU search query - Shopify supports searching by variant SKU
         $skuQueries = array_map(fn ($sku) => "sku:{$sku}", $skus);
         $searchQuery = implode(' OR ', $skuQueries);
 
@@ -649,16 +443,12 @@ class ShopifyGraphQLClient
                             title
                             handle
                             status
-                            createdAt
-                            updatedAt
                             variants(first: 100) {
                                 edges {
                                     node {
                                         id
                                         sku
                                         price
-                                        inventoryQuantity
-                                        title
                                         selectedOptions {
                                             name
                                             value
@@ -672,18 +462,11 @@ class ShopifyGraphQLClient
             }
         ';
 
-        $variables = [
-            'query' => $searchQuery,
-            'first' => 50, // Should be enough for most scenarios
-        ];
+        $result = $this->query($query, ['query' => $searchQuery, 'first' => 50]);
 
-        $result = $this->query($query, $variables);
-
-        // Transform GraphQL response to simpler format
+        // Transform to simpler format
         $products = [];
-        $productEdges = $result['products']['edges'] ?? [];
-
-        foreach ($productEdges as $edge) {
+        foreach ($result['products']['edges'] ?? [] as $edge) {
             $product = $edge['node'];
             $variants = [];
 
@@ -693,8 +476,6 @@ class ShopifyGraphQLClient
                     'id' => $variant['id'],
                     'sku' => $variant['sku'],
                     'price' => $variant['price'],
-                    'title' => $variant['title'],
-                    'inventoryQuantity' => $variant['inventoryQuantity'],
                     'selectedOptions' => $variant['selectedOptions'],
                 ];
             }
@@ -704,8 +485,6 @@ class ShopifyGraphQLClient
                 'title' => $product['title'],
                 'handle' => $product['handle'],
                 'status' => $product['status'],
-                'createdAt' => $product['createdAt'],
-                'updatedAt' => $product['updatedAt'],
                 'variants' => $variants,
             ];
         }
