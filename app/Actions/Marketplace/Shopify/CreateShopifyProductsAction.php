@@ -91,6 +91,7 @@ class CreateShopifyProductsAction
         $metadata = $shopifyProduct['metadata'] ?? [];
         $productInput = $shopifyProduct['productInput'] ?? [];
         $variantInputs = $shopifyProduct['variantInputs'] ?? [];
+        $skuMappings = $shopifyProduct['skuMappings'] ?? [];
 
         try {
             \Illuminate\Support\Facades\Log::info('🎬 Starting two-step product creation', [
@@ -146,6 +147,20 @@ class CreateShopifyProductsAction
                     'variant_count' => count($variants),
                     'color_group' => $metadata['color_group'] ?? 'unknown'
                 ]);
+
+                // STEP 3: Update variant SKUs (GraphQL variants don't support SKU in bulk create)
+                $variantSKUMappings = $this->buildSKUMappings($variants, $skuMappings);
+                if (!empty($variantSKUMappings)) {
+                    $skuResult = $client->batchUpdateVariantSKUs($variantSKUMappings);
+                    
+                    \Illuminate\Support\Facades\Log::info('✅ Step 3 completed - SKU updates', [
+                        'product_id' => $productId,
+                        'sku_updates_success' => $skuResult['success'],
+                        'successful_count' => count($skuResult['successful'] ?? []),
+                        'failed_count' => count($skuResult['failed'] ?? []),
+                        'color_group' => $metadata['color_group'] ?? 'unknown'
+                    ]);
+                }
             }
 
             return [
@@ -170,6 +185,28 @@ class CreateShopifyProductsAction
                 'color_group' => $metadata['color_group'] ?? 'unknown',
             ];
         }
+    }
+
+    /**
+     * Build SKU mapping from created Shopify variants and original SKU mappings
+     */
+    protected function buildSKUMappings(array $createdVariants, array $skuMappings): array
+    {
+        $variantSKUMappings = [];
+        
+        // Match created variants with original SKU mappings by index
+        foreach ($createdVariants as $index => $createdVariant) {
+            if (isset($skuMappings[$index])) {
+                $skuData = $skuMappings[$index];
+                
+                $variantSKUMappings[] = [
+                    'variantId' => $createdVariant['id'],
+                    'sku' => $skuData['sku']
+                ];
+            }
+        }
+        
+        return $variantSKUMappings;
     }
 
 

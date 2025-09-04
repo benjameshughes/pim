@@ -368,6 +368,56 @@ class ShopifyGraphQLClient
         }
     }
 
+    /**
+     * Batch update variant SKUs using REST API (GraphQL productVariantUpdate is deprecated)
+     */
+    public function batchUpdateVariantSKUs(array $variantSKUMappings): array
+    {
+        if (empty($variantSKUMappings)) {
+            return ['success' => true, 'updated' => []];
+        }
+
+        \Illuminate\Support\Facades\Log::info('🔧 Batch updating variant SKUs via REST API', [
+            'variant_count' => count($variantSKUMappings)
+        ]);
+
+        $successful = [];
+        $failed = [];
+
+        // Update each variant via REST API (GraphQL productVariantUpdate is deprecated)
+        foreach ($variantSKUMappings as $index => $mapping) {
+            try {
+                $result = $this->updateVariantDetails($mapping['variantId'], [
+                    'sku' => $mapping['sku']
+                ]);
+                
+                $successful[] = [
+                    'id' => $mapping['variantId'],
+                    'sku' => $mapping['sku']
+                ];
+                
+            } catch (\Exception $e) {
+                $failed[] = [
+                    'variantId' => $mapping['variantId'],
+                    'sku' => $mapping['sku'],
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        \Illuminate\Support\Facades\Log::info('✅ SKU batch update completed', [
+            'successful_count' => count($successful),
+            'failed_count' => count($failed)
+        ]);
+
+        return [
+            'success' => empty($failed),
+            'successful' => $successful,
+            'failed' => $failed,
+            'total_processed' => count($variantSKUMappings)
+        ];
+    }
+
 
 
     /**

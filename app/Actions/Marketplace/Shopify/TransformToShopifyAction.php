@@ -44,6 +44,7 @@ class TransformToShopifyAction
         return [
             'productInput' => $this->createProductInput($color, $variants, $originalProduct),
             'variantInputs' => $this->createVariantInputs($variants),
+            'skuMappings' => $this->createSKUMappings($variants),
             'images' => $this->getColorImages($originalProduct, $color, $variants),
             'metadata' => [
                 'original_product_id' => $originalProduct->id,
@@ -118,6 +119,25 @@ class TransformToShopifyAction
         }
 
         return $variantInputs;
+    }
+
+    /**
+     * Create SKU mappings for later batch updates (indexed to match variant order)
+     */
+    protected function createSKUMappings(array $variants): array
+    {
+        $skuMappings = [];
+        
+        foreach ($variants as $index => $variant) {
+            $skuMappings[$index] = [
+                'sku' => $variant->sku,
+                'width' => $variant->width,
+                'drop' => $variant->drop,
+                'color' => $variant->color
+            ];
+        }
+        
+        return $skuMappings;
     }
 
 
