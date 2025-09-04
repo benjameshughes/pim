@@ -24,6 +24,11 @@ class ProductOverview extends Component
     // Image modal states
     public bool $showImageModal = false;
     public array $availableImages = [];
+    public string $searchTerm = '';
+    public int $currentPage = 1;
+    public int $perPage = 20;
+    public int $totalImages = 0;
+    public int $totalPages = 0;
     public array $selectedImages = [];
     
     // Upload functionality (imitating ImageLibrary)
@@ -131,7 +136,41 @@ class ProductOverview extends Component
         $this->showImageModal = false;
         $this->selectedImages = [];
         $this->activeTab = 'select';
+        $this->searchTerm = '';
+        $this->currentPage = 1;
         $this->reset(['newImages', 'uploadMetadata']);
+    }
+
+    // 🔍 Search functionality
+    public function updatedSearchTerm()
+    {
+        $this->currentPage = 1; // Reset to first page when searching
+        $this->loadAvailableImages();
+    }
+
+    // 📄 Pagination methods
+    public function nextPage()
+    {
+        if ($this->currentPage < $this->totalPages) {
+            $this->currentPage++;
+            $this->loadAvailableImages();
+        }
+    }
+
+    public function previousPage()
+    {
+        if ($this->currentPage > 1) {
+            $this->currentPage--;
+            $this->loadAvailableImages();
+        }
+    }
+
+    public function goToPage(int $page)
+    {
+        if ($page >= 1 && $page <= $this->totalPages) {
+            $this->currentPage = $page;
+            $this->loadAvailableImages();
+        }
     }
     
     /**
@@ -178,15 +217,31 @@ class ProductOverview extends Component
 
     public function loadAvailableImages()
     {
-        // 🌟 Enhanced with Images facade for better performance
+        // 🌟 Get current attached images for visual indication
         $currentImageIds = Images::product($this->product)->get()->pluck('id')->toArray();
         
-        $availableImages = \App\Models\Image::query()
+        // 🌟 Build query with search and pagination - SHOW ALL IMAGES
+        $query = \App\Models\Image::query()
             ->originals() // Only show original images, not variants
-            ->whereNotIn('id', $currentImageIds)
-            ->orderBy('created_at', 'desc')
-            ->limit(50)
-            ->get();
+            ->orderBy('created_at', 'desc');
+        
+        // Apply search if provided
+        if (!empty($this->searchTerm)) {
+            $query->where(function ($q) {
+                $q->where('filename', 'like', '%' . $this->searchTerm . '%')
+                  ->orWhere('display_title', 'like', '%' . $this->searchTerm . '%')
+                  ->orWhere('alt_text', 'like', '%' . $this->searchTerm . '%');
+            });
+        }
+        
+        // Get total count for pagination
+        $total = $query->count();
+        $this->totalImages = $total;
+        $this->totalPages = ceil($total / $this->perPage);
+        
+        // Apply pagination
+        $offset = ($this->currentPage - 1) * $this->perPage;
+        $availableImages = $query->skip($offset)->take($this->perPage)->get();
             
         $this->availableImages = [];
         
@@ -203,6 +258,7 @@ class ProductOverview extends Component
                 'display_title' => $image->display_title,
                 'alt_text' => $image->alt_text,
                 'family_size' => $family->count(),
+                'is_attached' => in_array($image->id, $currentImageIds), // Show attachment status
             ];
         }
     }

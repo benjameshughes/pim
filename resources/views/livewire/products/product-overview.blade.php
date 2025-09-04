@@ -628,7 +628,7 @@
                                     >
                                         <flux:icon name="photo" class="w-4 h-4" />
                                         <span>Select Existing</span>
-                                        <flux:badge color="gray" size="sm">{{ count($availableImages) }}</flux:badge>
+                                        <flux:badge color="gray" size="sm">{{ $totalImages }}</flux:badge>
                                     </button>
                                     
                                     <button
@@ -649,12 +649,47 @@
                                 {{-- 📷 SELECT EXISTING IMAGES TAB --}}
                                 <div>
 
+                                {{-- 🔍 SEARCH BAR --}}
+                                <div class="mb-4">
+                                    <flux:input 
+                                        wire:model.live="searchTerm" 
+                                        placeholder="Search images by filename, title, or alt text..." 
+                                        icon="magnifying-glass"
+                                        class="w-full"
+                                    />
+                                </div>
+
+                                {{-- 📊 RESULTS SUMMARY --}}
+                                @if($totalImages > 0)
+                                    <div class="mb-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                                        <span>
+                                            Showing {{ count($availableImages) }} of {{ $totalImages }} images
+                                            @if(!empty($searchTerm))
+                                                for "{{ $searchTerm }}"
+                                            @endif
+                                        </span>
+                                        @if($totalPages > 1)
+                                            <span>Page {{ $currentPage }} of {{ $totalPages }}</span>
+                                        @endif
+                                    </div>
+                                @endif
+
                             @if(empty($availableImages))
                                 <div class="text-center py-8">
                                     <flux:icon name="photo" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                                    <p class="text-gray-500 dark:text-gray-400">No available images to attach</p>
+                                    <p class="text-gray-500 dark:text-gray-400">
+                                        @if(!empty($searchTerm))
+                                            No images found for "{{ $searchTerm }}"
+                                        @else
+                                            No images found
+                                        @endif
+                                    </p>
                                     <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                                        All images from the library are already attached to this product.
+                                        @if(!empty($searchTerm))
+                                            Try adjusting your search terms
+                                        @else
+                                            Upload some images to get started
+                                        @endif
                                     </p>
                                 </div>
                             @else
@@ -681,6 +716,16 @@
                                              wire:click="toggleImageSelection({{ $image['id'] }})">
                                             <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
                                             
+                                            {{-- 🎯 ATTACHMENT STATUS BADGE --}}
+                                            <div class="absolute top-2 left-2">
+                                                @if($image['is_attached'])
+                                                    <flux:badge color="green" size="sm" class="shadow-sm">
+                                                        <flux:icon name="link" class="w-3 h-3" />
+                                                        Attached
+                                                    </flux:badge>
+                                                @endif
+                                            </div>
+
                                             {{-- 🎯 CLEAN SELECTION STATE --}}
                                             <div class="absolute top-2 right-2">
                                                 @if(in_array($image['id'], $selectedImages))
@@ -712,6 +757,68 @@
                                         </div>
                                     @endforeach
                                 </div>
+
+                                {{-- 📄 PAGINATION CONTROLS --}}
+                                @if($totalPages > 1)
+                                    <div class="mt-6 flex justify-between items-center">
+                                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                                            Showing {{ count($availableImages) }} of {{ $totalImages }} images
+                                        </div>
+                                        
+                                        <div class="flex items-center space-x-2">
+                                            <flux:button 
+                                                wire:click="previousPage" 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                icon="chevron-left"
+                                                :disabled="$currentPage <= 1"
+                                            >
+                                                Previous
+                                            </flux:button>
+                                            
+                                            <div class="flex items-center space-x-1">
+                                                @php
+                                                    $start = max(1, $currentPage - 2);
+                                                    $end = min($totalPages, $currentPage + 2);
+                                                @endphp
+                                                
+                                                @if($start > 1)
+                                                    <flux:button wire:click="goToPage(1)" variant="ghost" size="sm">1</flux:button>
+                                                    @if($start > 2)
+                                                        <span class="text-gray-400">...</span>
+                                                    @endif
+                                                @endif
+                                                
+                                                @for($i = $start; $i <= $end; $i++)
+                                                    <flux:button 
+                                                        wire:click="goToPage({{ $i }})" 
+                                                        variant="{{ $i === $currentPage ? 'primary' : 'ghost' }}" 
+                                                        size="sm"
+                                                    >
+                                                        {{ $i }}
+                                                    </flux:button>
+                                                @endfor
+                                                
+                                                @if($end < $totalPages)
+                                                    @if($end < $totalPages - 1)
+                                                        <span class="text-gray-400">...</span>
+                                                    @endif
+                                                    <flux:button wire:click="goToPage({{ $totalPages }})" variant="ghost" size="sm">{{ $totalPages }}</flux:button>
+                                                @endif
+                                            </div>
+                                            
+                                            <flux:button 
+                                                wire:click="nextPage" 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                icon="chevron-right"
+                                                :disabled="$currentPage >= $totalPages"
+                                            >
+                                                Next
+                                            </flux:button>
+                                        </div>
+                                    </div>
+                                @endif
                             @endif
                                 </div>
                             @elseif($activeTab === 'upload')
