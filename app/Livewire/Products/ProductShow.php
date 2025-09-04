@@ -270,7 +270,7 @@ class ProductShow extends Component
                     ->label('Images')
                     ->icon('photo')
                     ->badge($this->product->images->count())
-                    ->hidden($this->product->images->count() === 0),
+                    ->badgeColor($this->product->images->count() > 0 ? 'blue' : 'gray'),
 
                 Tab::make('history')
                     ->label('History')
