@@ -352,38 +352,24 @@ class ProductOverview extends Component
         $this->authorize('manage-products');
 
         try {
-            // KISS fluent API for partial update
-            $result = Sync::marketplace('shopify')
+            // 🚀 Set status to "processing" immediately so status shows right away
+            $this->product->setAttributeValue('shopify_status', 'processing');
+
+            // KISS fluent API using queue system for consistency
+            Sync::marketplace('shopify')
                 ->update($this->product->id)
-                ->title($this->product->name.' - UPDATED')
-                ->push();
+                ->title($this->product->name)
+                ->dispatch();
 
-            $this->shopifyPushResult = [
-                'success' => $result->isSuccess(),
-                'message' => $result->getMessage(),
-            ];
-
-            if ($result->isSuccess()) {
-                $this->dispatch('toast', [
-                    'type' => 'success',
-                    'message' => 'Title updated in Shopify! '.$result->getMessage(),
-                ]);
-
-                // Refresh to show any status changes
-                $this->product->refresh();
-            } else {
-                $this->dispatch('toast', [
-                    'type' => 'error',
-                    'message' => 'Title update failed: '.$result->getMessage(),
-                ]);
-            }
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Shopify title update job dispatched! Status will update shortly.',
+            ]);
+            
+            // Refresh product to trigger status update
+            $this->product->refresh();
 
         } catch (\Exception $e) {
-            $this->shopifyPushResult = [
-                'success' => false,
-                'message' => 'Error: '.$e->getMessage(),
-            ];
-
             $this->dispatch('toast', [
                 'type' => 'error',
                 'message' => 'Title update failed: '.$e->getMessage(),
@@ -396,41 +382,57 @@ class ProductOverview extends Component
         $this->authorize('manage-products');
 
         try {
-            // KISS fluent API for pricing update
-            $result = Sync::marketplace('shopify')
+            // 🚀 Set status to "processing" immediately so status shows right away
+            $this->product->setAttributeValue('shopify_status', 'processing');
+
+            // KISS fluent API using queue system for consistency
+            Sync::marketplace('shopify')
                 ->update($this->product->id)
                 ->pricing()
-                ->push();
+                ->dispatch();
 
-            $this->shopifyPushResult = [
-                'success' => $result->isSuccess(),
-                'message' => $result->getMessage(),
-            ];
-
-            if ($result->isSuccess()) {
-                $this->dispatch('toast', [
-                    'type' => 'success',
-                    'message' => 'Pricing updated in Shopify! '.$result->getMessage(),
-                ]);
-
-                // Refresh to show any status changes
-                $this->product->refresh();
-            } else {
-                $this->dispatch('toast', [
-                    'type' => 'error',
-                    'message' => 'Pricing update failed: '.$result->getMessage(),
-                ]);
-            }
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Shopify pricing update job dispatched! Status will update shortly.',
+            ]);
+            
+            // Refresh product to trigger status update
+            $this->product->refresh();
 
         } catch (\Exception $e) {
-            $this->shopifyPushResult = [
-                'success' => false,
-                'message' => 'Error: '.$e->getMessage(),
-            ];
-
             $this->dispatch('toast', [
                 'type' => 'error',
                 'message' => 'Pricing update failed: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    public function updateShopifyImages()
+    {
+        $this->authorize('manage-products');
+
+        try {
+            // 🚀 Set status to "processing" immediately so status shows right away
+            $this->product->setAttributeValue('shopify_status', 'processing');
+
+            // KISS fluent API using queue system for consistency
+            Sync::marketplace('shopify')
+                ->update($this->product->id)
+                ->images([]) // Images will be queried from decoupled system by Action
+                ->dispatch();
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Shopify images update job dispatched! Status will update shortly.',
+            ]);
+            
+            // Refresh product to trigger status update
+            $this->product->refresh();
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Images update failed: '.$e->getMessage(),
             ]);
         }
     }

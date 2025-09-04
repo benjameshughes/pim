@@ -680,18 +680,102 @@ class ShopifyGraphQLClient
     }
 
     /**
-     * Update product media/images (placeholder for future implementation)
+     * Update product media/images using modern productUpdate mutation
      */
-    public function updateProductMedia(string $productId, array $mediaData): array
+    public function updateProductMedia(string $productId, array $images): array
     {
-        // TODO: Implement productCreateMedia mutation for adding/updating images
-        // This would use the productCreateMedia mutation to add new images
-        // and potentially productDeleteImages to remove old ones
-        
-        return [
-            'success' => false,
-            'message' => 'Media updates not yet implemented',
-            'data' => []
-        ];
+        if (empty($images)) {
+            return [
+                'success' => true,
+                'message' => 'No images to update',
+                'data' => []
+            ];
+        }
+
+        try {
+            $mutation = '
+                mutation productUpdate($product: ProductUpdateInput!, $media: [CreateMediaInput!]!) {
+                    productUpdate(product: $product, media: $media) {
+                        product {
+                            id
+                            media(first: 20) {
+                                nodes {
+                                    id
+                                    alt
+                                    mediaContentType
+                                    status
+                                    ... on MediaImage {
+                                        image {
+                                            url
+                                            altText
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        userErrors {
+                            field
+                            message
+                        }
+                    }
+                }
+            ';
+
+            // Convert image URLs to Shopify media input format
+            $mediaInputs = [];
+            foreach ($images as $image) {
+                $mediaInputs[] = [
+                    'originalSource' => $image['src'],
+                    'alt' => $image['altText'] ?? '',
+                    'mediaContentType' => 'IMAGE'
+                ];
+            }
+
+            $result = $this->mutate($mutation, [
+                'product' => ['id' => $productId],
+                'media' => $mediaInputs
+            ]);
+
+            $userErrors = $result['productUpdate']['userErrors'] ?? [];
+
+            if (!empty($userErrors)) {
+                \Illuminate\Support\Facades\Log::error('Shopify media update errors', [
+                    'product_id' => $productId,
+                    'errors' => $userErrors
+                ]);
+                
+                return [
+                    'success' => false,
+                    'message' => 'Image update failed: ' . json_encode($userErrors),
+                    'data' => $userErrors
+                ];
+            }
+
+            $updatedMedia = $result['productUpdate']['product']['media']['nodes'] ?? [];
+            
+            \Illuminate\Support\Facades\Log::info('✅ Successfully updated product images', [
+                'product_id' => $productId,
+                'media_count' => count($updatedMedia),
+                'images_added' => count($images)
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Successfully added ' . count($images) . ' images to product',
+                'data' => $updatedMedia
+            ];
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Exception during Shopify media update', [
+                'product_id' => $productId,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Image update exception: ' . $e->getMessage(),
+                'data' => []
+            ];
+        }
     }
 }

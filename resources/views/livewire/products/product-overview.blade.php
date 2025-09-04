@@ -488,6 +488,16 @@
                         </flux:button>
 
                         <flux:button 
+                            wire:click="updateShopifyImages" 
+                            variant="outline" 
+                            size="sm"
+                            class="w-full"
+                            icon="photo"
+                        >
+                            Update Images
+                        </flux:button>
+
+                        <flux:button 
                             wire:click="deleteFromShopify" 
                             variant="outline" 
                             size="sm"

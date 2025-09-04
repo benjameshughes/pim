@@ -94,7 +94,8 @@ class UpdateShopifyProductsAction
         $status = $product->getSmartAttributeValue('shopify_status');
 
         // Verify this product is synced with the correct account
-        if (! $shopifyProductIds || ! $syncAccountId || $syncAccountId != $syncAccount->id || $status !== 'synced') {
+        // Allow updates as long as we have product IDs and correct sync account (regardless of status)
+        if (! $shopifyProductIds || ! $syncAccountId || $syncAccountId != $syncAccount->id) {
             return [];
         }
 
@@ -148,10 +149,12 @@ class UpdateShopifyProductsAction
                 }
             }
 
-            // Handle image updates (placeholder)
+            // Handle image updates
             if (isset($fieldsToUpdate['images'])) {
-                // TODO: Implement image updates
-                $updatedFields[] = 'images';
+                $imageUpdateResult = $this->updateProductImages($client, $product, $shopifyProductId, $colorGroup);
+                if ($imageUpdateResult) {
+                    $updatedFields[] = 'images';
+                }
             }
 
             return [
@@ -249,5 +252,75 @@ class UpdateShopifyProductsAction
 
         // Fallback: match by position
         return $colorVariants->values()->get($index);
+    }
+
+    /**
+     * Update product images using decoupled image system
+     */
+    protected function updateProductImages($client, Product $product, string $shopifyProductId, string $colorGroup): bool
+    {
+        try {
+            // Query images from decoupled system with proper ordering
+            $images = $product->images()
+                ->orderBy('is_primary', 'desc')  // Primary images first
+                ->orderBy('sort_order')          // Then by sort order
+                ->orderBy('created_at')          // Finally by creation time
+                ->get();
+
+            if ($images->isEmpty()) {
+                \Illuminate\Support\Facades\Log::info('No images found for product', [
+                    'product_id' => $product->id,
+                    'shopify_product_id' => $shopifyProductId,
+                    'color_group' => $colorGroup
+                ]);
+                return true; // Success - no images to update
+            }
+
+            // Transform to Shopify format
+            $shopifyImages = [];
+            foreach ($images as $image) {
+                $shopifyImages[] = [
+                    'src' => $image->url,
+                    'altText' => $image->alt_text ?: $product->name . ' - ' . $colorGroup,
+                ];
+            }
+
+            \Illuminate\Support\Facades\Log::info('Updating Shopify product images', [
+                'product_id' => $product->id,
+                'shopify_product_id' => $shopifyProductId,
+                'color_group' => $colorGroup,
+                'image_count' => count($shopifyImages)
+            ]);
+
+            // Send to Shopify
+            $result = $client->updateProductMedia($shopifyProductId, $shopifyImages);
+
+            if ($result['success']) {
+                \Illuminate\Support\Facades\Log::info('✅ Images updated successfully', [
+                    'product_id' => $product->id,
+                    'shopify_product_id' => $shopifyProductId,
+                    'color_group' => $colorGroup,
+                    'message' => $result['message']
+                ]);
+                return true;
+            } else {
+                \Illuminate\Support\Facades\Log::error('❌ Image update failed', [
+                    'product_id' => $product->id,
+                    'shopify_product_id' => $shopifyProductId,
+                    'color_group' => $colorGroup,
+                    'error' => $result['message']
+                ]);
+                return false;
+            }
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Exception during image update', [
+                'product_id' => $product->id,
+                'shopify_product_id' => $shopifyProductId,
+                'color_group' => $colorGroup,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 }
