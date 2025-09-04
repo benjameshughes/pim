@@ -549,7 +549,7 @@
     </div>
 
     {{-- 🖼️ IMAGE MANAGEMENT MODAL --}}
-    <flux:modal wire:model="showImageModal" class="max-w-4xl">
+    <flux:modal wire:model="showImageModal" class="!max-w-[80vw] !w-[80vw]">
         <div class="space-y-6">
             {{-- Modal Header --}}
             <div>
@@ -558,7 +558,7 @@
             </div>
 
             {{-- Modal Body --}}
-            <div class="max-h-[70vh] overflow-y-auto">
+            <div class="min-h-[60vh] max-h-[70vh] overflow-y-auto">
                         {{-- 🌟 Enhanced Current Images --}}
                         @if(count($enhancedImages) > 0)
                             <div class="mb-8">
@@ -948,7 +948,7 @@
     </flux:modal>
 
     {{-- 🎨 COLOR GROUP IMAGE MODAL --}}
-    <flux:modal wire:model="showColorImageModal" class="max-w-4xl">
+    <flux:modal wire:model="showColorImageModal" class="!max-w-[80vw] !w-[80vw]">
         <div class="space-y-6">
             {{-- Modal Header --}}
             <div>
@@ -979,7 +979,7 @@
             </div>
 
             {{-- Modal Body --}}
-            <div class="max-h-[70vh] overflow-y-auto">
+            <div class="min-h-[60vh] max-h-[70vh] overflow-y-auto">
                         {{-- 🔍 SEARCH BAR --}}
                         <div class="mb-4">
                             <flux:input 
