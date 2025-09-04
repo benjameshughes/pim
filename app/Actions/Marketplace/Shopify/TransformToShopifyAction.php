@@ -41,38 +41,11 @@ class TransformToShopifyAction
      */
     protected function createShopifyProduct(string $color, array $variants, Product $originalProduct): array
     {
-        // Build ProductInput with single Size option (fixed approach)
-        $productInput = [
-            'title' => $originalProduct->name.' - '.$color,
-            'descriptionHtml' => $originalProduct->description ?? '',
-            'vendor' => 'Blinds Outlet',
-            'productType' => 'Window Blinds',
-            'status' => 'ACTIVE',
-            'metafields' => $this->createMetafields($originalProduct, $color),
-            'productOptions' => $this->createSingleSizeOption($variants), // ✅ Back to working Size option
-        ];
-
-        // Add category only if we have a valid taxonomy ID
-        $detectedCategory = $this->detectProductCategory($originalProduct, $color);
-        if ($detectedCategory && $this->isValidTaxonomyId($detectedCategory)) {
-            $productInput['category'] = $detectedCategory;
-        }
-
         return [
-            // Main product data for ProductInput (NO productOptions - clean approach)
-            'productInput' => [
-                'title' => $originalProduct->name.' - '.$color,
-                'descriptionHtml' => $originalProduct->description ?? '',
-                'vendor' => 'Blinds Outlet',
-                'productType' => 'Window Blinds',
-                'status' => 'ACTIVE',
-                'metafields' => $this->createMetafields($originalProduct, $color),
-                // 🚀 USE EXPLICIT VARIANTS - no productOptions!
-                'variants' => $this->transformVariants($variants),
-            ],
-            'images' => $this->getColorImages($originalProduct, $color),
-            // Internal tracking
-            '_internal' => [
+            'productInput' => $this->createProductInput($color, $variants, $originalProduct),
+            'variantInputs' => $this->createVariantInputs($variants),
+            'images' => $this->getColorImages($originalProduct, $color, $variants),
+            'metadata' => [
                 'original_product_id' => $originalProduct->id,
                 'color_group' => $color,
                 'variant_count' => count($variants),
@@ -81,53 +54,77 @@ class TransformToShopifyAction
     }
 
     /**
-     * Transform variants to Shopify explicit variant format (for two-step creation)
+     * Create clean ProductInput for Step 1: Product + Options creation
      */
-    protected function transformVariants(array $variants): array
+    protected function createProductInput(string $color, array $variants, Product $originalProduct): array
     {
-        $shopifyVariants = [];
+        $productInput = [
+            'title' => $originalProduct->name.' - '.$color,
+            'descriptionHtml' => $originalProduct->description ?? '',
+            'vendor' => 'Blinds Outlet',
+            'productType' => 'Window Blinds',
+            'status' => 'ACTIVE',
+            'metafields' => $this->createMetafields($originalProduct, $color),
+            'productOptions' => $this->createProductOptions($variants),
+        ];
 
-        foreach ($variants as $variant) {
-            // 🎯 ONLY VALID ProductVariantsBulkInput fields - others cause GraphQL errors!
-            $shopifyVariant = [
-                'price' => (string) $this->getVariantPriceForAccount($variant),
-                'inventoryPolicy' => $this->getInventoryPolicy($variant),
-                'optionValues' => [
-                    [
-                        'optionName' => 'Size',
-                        'name' => ($variant->width ?? 45).'cm x '.($variant->drop ?? 150).'cm',
-                    ]
-                ],
-            ];
-            
-            // Add compare at price if available
-            $compareAtPrice = $this->getCompareAtPrice($variant);
-            if ($compareAtPrice) {
-                $shopifyVariant['compareAtPrice'] = $compareAtPrice;
-            }
-            
-            // 🚫 INVALID FIELDS for ProductVariantsBulkInput (stored for later REST API update):
-            $shopifyVariant['_unsupported_fields'] = [
-                'sku' => $variant->sku,
-                'barcode' => $this->getVariantBarcode($variant),
-                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
-                'requiresShipping' => true,
-                'weight' => $this->calculateVariantWeight($variant),
-                'weightUnit' => 'KILOGRAMS',
-                'title' => $variant->title ?? 'Default Title',
-                'metafields' => $this->createVariantMetafields($variant),
-            ];
-
-            $shopifyVariants[] = $shopifyVariant;
+        // Add category if valid
+        $detectedCategory = $this->detectProductCategory($originalProduct, $color);
+        if ($detectedCategory && $this->isValidTaxonomyId($detectedCategory)) {
+            $productInput['category'] = $detectedCategory;
         }
 
-        return $shopifyVariants;
+        return $productInput;
     }
+
+    /**
+     * Create clean VariantInputs for Step 2: Variant creation (only allowed fields)
+     */
+    protected function createVariantInputs(array $variants): array
+    {
+        $variantInputs = [];
+
+        foreach ($variants as $variant) {
+            $variantData = [
+                'price' => (string) $this->getVariantPriceForAccount($variant),
+                'optionValues' => [
+                    [
+                        'name' => $variant->width.'cm',
+                        'optionName' => 'Width'
+                    ],
+                    [
+                        'name' => $variant->drop.'cm', 
+                        'optionName' => 'Drop'
+                    ]
+                ]
+            ];
+
+            // Add barcode if available (allowed field)
+            $barcode = $this->getVariantBarcode($variant);
+            if ($barcode) {
+                $variantData['barcode'] = $barcode;
+            }
+
+            // Add compareAtPrice if available (allowed field)
+            $compareAtPrice = $this->getCompareAtPrice($variant);
+            if ($compareAtPrice) {
+                $variantData['compareAtPrice'] = $compareAtPrice;
+            }
+
+            // Add inventory policy (allowed field)
+            $variantData['inventoryPolicy'] = $this->getInventoryPolicy($variant);
+
+            $variantInputs[] = $variantData;
+        }
+
+        return $variantInputs;
+    }
+
 
     /**
      * Get images for specific color using decoupled images system
      */
-    protected function getColorImages(Product $product, string $color): array
+    protected function getColorImages(Product $product, string $color, array $variants = []): array
     {
         // Use decoupled images() relationship with proper ordering
         $images = $product->images()
@@ -161,7 +158,9 @@ class TransformToShopifyAction
             ];
         }
 
-        // Note: Variant-specific images are handled separately in the variant transformation
+        // Add variant-specific images for this color
+        $variantImages = $this->getVariantSpecificImages($variants, $color);
+        $shopifyImages = array_merge($shopifyImages, $variantImages);
 
         return $shopifyImages;
     }
@@ -222,65 +221,7 @@ class TransformToShopifyAction
         ];
     }
 
-    /**
-     * Create explicit variants for Shopify productInput
-     * 
-     * This creates complete variant data upfront instead of using productOptions
-     * which would cause Shopify to auto-generate variants we don't want
-     */
-    protected function createExplicitVariants(array $variants): array
-    {
-        if (empty($variants)) {
-            return [];
-        }
 
-        $shopifyVariants = [];
-        
-        foreach ($variants as $variant) {
-            $shopifyVariants[] = [
-                'title' => $variant->title,
-                'sku' => $variant->sku,
-                'barcode' => $this->getVariantBarcode($variant),
-                'price' => (string) $this->getVariantPriceForAccount($variant),
-                'compareAtPrice' => $this->getCompareAtPrice($variant),
-                'inventoryQuantity' => max(0, $variant->stock_level ?? 0),
-                'inventoryPolicy' => $this->getInventoryPolicy($variant),
-                'inventoryManagement' => 'SHOPIFY',
-                'requiresShipping' => true,
-                'weight' => $this->calculateVariantWeight($variant),
-                'weightUnit' => 'KILOGRAMS',
-                'metafields' => $this->createVariantMetafields($variant),
-                // Single option combining width and drop - no auto-generation!
-                'options' => [$variant->width.'cm x '.$variant->drop.'cm'],
-            ];
-        }
-
-        return $shopifyVariants;
-    }
-
-    /**
-     * Create single "Size" option with exact variant combinations
-     * 
-     * This avoids the Width×Drop matrix that creates extra variants
-     */
-    protected function createSingleSizeOption(array $variants): array
-    {
-        if (empty($variants)) {
-            return [];
-        }
-
-        $sizeValues = [];
-        foreach ($variants as $variant) {
-            $sizeValues[] = ['name' => $variant->width.'cm x '.$variant->drop.'cm'];
-        }
-
-        return [
-            [
-                'name' => 'Size',
-                'values' => $sizeValues,
-            ],
-        ];
-    }
 
     /**
      * Create Shopify metafields
@@ -308,14 +249,9 @@ class TransformToShopifyAction
      */
     protected function getVariantBarcode(\App\Models\ProductVariant $variant): ?string
     {
-        $barcode = $variant->barcode; // HasOne relationship (note: not barcodes)
+        $barcode = $variant->barcode; // HasOne relationship
 
-        // Check if barcode exists and has a value
-        if ($barcode && !empty($barcode->barcode)) {
-            return $barcode->barcode;
-        }
-
-        return null;
+        return ($barcode && $barcode->is_assigned) ? $barcode->barcode : null;
     }
 
     /**

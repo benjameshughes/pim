@@ -84,190 +84,94 @@ class CreateShopifyProductsAction
     }
 
     /**
-     * Create a single Shopify product with correct SKUs and pricing
+     * Create a single Shopify product using clean two-step approach
      */
     protected function createSingleProduct($client, array $shopifyProduct, SyncAccount $syncAccount): array
     {
-        $internalData = $shopifyProduct['_internal'] ?? [];
+        $metadata = $shopifyProduct['metadata'] ?? [];
         $productInput = $shopifyProduct['productInput'] ?? [];
+        $variantInputs = $shopifyProduct['variantInputs'] ?? [];
 
         try {
-            \Illuminate\Support\Facades\Log::info('🎬 Starting product creation', [
-                'color_group' => $internalData['color_group'] ?? 'unknown',
-                'has_product_input' => !empty($productInput)
+            \Illuminate\Support\Facades\Log::info('🎬 Starting two-step product creation', [
+                'color_group' => $metadata['color_group'] ?? 'unknown',
+                'variant_count' => count($variantInputs)
             ]);
             
-            // 🚀 Create product using two-step approach: product first, then variants via bulk create
-            $result = $client->createProduct($productInput);
+            // STEP 1: Create product with options
+            $step1Result = $client->createProductWithOptions($productInput);
+            $userErrors = $step1Result['productCreate']['userErrors'] ?? [];
+            $product = $step1Result['productCreate']['product'] ?? null;
 
-            \Illuminate\Support\Facades\Log::info('📋 Product creation raw result', [
-                'has_result' => !empty($result),
-                'result_keys' => array_keys($result ?? []),
-                'has_product_create' => isset($result['productCreate']),
-                'color_group' => $internalData['color_group'] ?? 'unknown'
-            ]);
-
-            $userErrors = $result['productCreate']['userErrors'] ?? [];
-            $product = $result['productCreate']['product'] ?? null;
-
-            if (! empty($userErrors) || ! $product) {
-                \Illuminate\Support\Facades\Log::error('❌ Product creation failed', [
+            if (!empty($userErrors) || !$product) {
+                \Illuminate\Support\Facades\Log::error('❌ Step 1 failed - Product creation', [
                     'user_errors' => $userErrors,
-                    'has_product' => !is_null($product),
-                    'color_group' => $internalData['color_group'] ?? 'unknown'
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
                 ]);
                 
                 return [
                     'success' => false,
-                    'error' => ! empty($userErrors) ? 'Shopify validation: '.json_encode($userErrors) : 'No product returned',
-                    'color_group' => $internalData['color_group'] ?? 'unknown',
+                    'error' => !empty($userErrors) ? 'Step 1 - Product creation: '.json_encode($userErrors) : 'No product returned',
+                    'color_group' => $metadata['color_group'] ?? 'unknown',
                 ];
             }
 
-            // 🎯 The ShopifyGraphQLClient handles the variant creation automatically when 'variants' key is present
-            \Illuminate\Support\Facades\Log::info('✅ Product creation successful', [
-                'product_id' => $product['id'] ?? 'missing',
-                'variant_count' => count($product['variants']['edges'] ?? []),
-                'color_group' => $internalData['color_group'] ?? 'unknown'
+            $productId = $product['id'];
+            \Illuminate\Support\Facades\Log::info('✅ Step 1 successful - Product created', [
+                'product_id' => $productId,
+                'color_group' => $metadata['color_group'] ?? 'unknown'
             ]);
+
+            // STEP 2: Create variants
+            if (!empty($variantInputs)) {
+                $step2Result = $client->createVariantsBulk($productId, $variantInputs);
+                $variantErrors = $step2Result['productVariantsBulkCreate']['userErrors'] ?? [];
+                $variants = $step2Result['productVariantsBulkCreate']['productVariants'] ?? [];
+
+                if (!empty($variantErrors)) {
+                    \Illuminate\Support\Facades\Log::error('❌ Step 2 failed - Variant creation', [
+                        'variant_errors' => $variantErrors,
+                        'color_group' => $metadata['color_group'] ?? 'unknown'
+                    ]);
+                    
+                    return [
+                        'success' => false,
+                        'error' => 'Step 2 - Variant creation: '.json_encode($variantErrors),
+                        'color_group' => $metadata['color_group'] ?? 'unknown',
+                    ];
+                }
+
+                \Illuminate\Support\Facades\Log::info('✅ Step 2 successful - Variants created', [
+                    'product_id' => $productId,
+                    'variant_count' => count($variants),
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
+                ]);
+            }
 
             return [
                 'success' => true,
-                'id' => $product['id'],
+                'id' => $productId,
                 'title' => $product['title'],
                 'handle' => $product['handle'],
-                'color_group' => $internalData['color_group'] ?? 'unknown',
-                'original_product_id' => $internalData['original_product_id'] ?? null,
-                'variant_count' => count($product['variants']['edges'] ?? []),
+                'color_group' => $metadata['color_group'] ?? 'unknown',
+                'original_product_id' => $metadata['original_product_id'] ?? null,
+                'variant_count' => count($variantInputs),
             ];
 
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('❌ Exception during product creation', [
+                'error' => $e->getMessage(),
+                'color_group' => $metadata['color_group'] ?? 'unknown'
+            ]);
+            
             return [
                 'success' => false,
                 'error' => 'Create failed: '.$e->getMessage(),
-                'color_group' => $internalData['color_group'] ?? 'unknown',
+                'color_group' => $metadata['color_group'] ?? 'unknown',
             ];
         }
     }
 
-    /**
-     * Update auto-generated variants with correct SKUs and pricing
-     */
-    protected function updateVariantDetails($client, array $product, array $localVariants): void
-    {
-        if (empty($localVariants)) {
-            return;
-        }
-
-        $shopifyVariants = $product['variants']['edges'] ?? [];
-        if (empty($shopifyVariants)) {
-            return;
-        }
-
-        // Match by position (first shopify variant = first local variant)
-        foreach ($shopifyVariants as $index => $edge) {
-            $shopifyVariant = $edge['node'] ?? [];
-            $shopifyVariantId = $shopifyVariant['id'] ?? null;
-
-            if (! $shopifyVariantId || ! isset($localVariants[$index])) {
-                continue;
-            }
-
-            $localVariant = $localVariants[$index];
-
-            // Update with comprehensive variant data (SKU, pricing, barcode, etc.)
-            $updateData = [
-                'sku' => $localVariant['sku'],
-                'price' => $localVariant['price'],
-            ];
-
-            // Add barcode if available
-            if (! empty($localVariant['barcode'])) {
-                $updateData['barcode'] = $localVariant['barcode'];
-            }
-
-            // Add compareAtPrice if available
-            if (! empty($localVariant['compareAtPrice'])) {
-                $updateData['compareAtPrice'] = $localVariant['compareAtPrice'];
-            }
-
-            // Add inventory quantity if available
-            if (isset($localVariant['inventoryQuantity'])) {
-                $updateData['inventoryQuantity'] = (int) $localVariant['inventoryQuantity'];
-            }
-
-            $client->updateSingleVariant($shopifyVariantId, $updateData);
-        }
-    }
-
-    /**
-     * Update auto-generated variants with FIXED matching logic
-     */
-    protected function updateVariantDetailsFixed($client, array $product, array $localVariants): void
-    {
-        if (empty($localVariants)) {
-            return;
-        }
-
-        $shopifyVariants = $product['variants']['edges'] ?? [];
-        if (empty($shopifyVariants)) {
-            return;
-        }
-
-        Log::info('🔧 Updating Shopify variants', [
-            'shopify_variant_count' => count($shopifyVariants),
-            'local_variant_count' => count($localVariants)
-        ]);
-
-        // Match variants by size option value (more reliable than index)
-        foreach ($shopifyVariants as $edge) {
-            $shopifyVariant = $edge['node'] ?? [];
-            $shopifyVariantId = $shopifyVariant['id'] ?? null;
-            
-            if (!$shopifyVariantId) continue;
-
-            // Find matching local variant by size option
-            $matchedLocalVariant = null;
-            foreach ($localVariants as $localVariant) {
-                // Compare size values: "45cm x 150cm" should match
-                $localSize = $localVariant['options'][0] ?? '';
-                
-                // For now, match by position as backup if size matching fails
-                $index = array_search($localVariant, $localVariants);
-                if ($index < count($shopifyVariants)) {
-                    $matchedLocalVariant = $localVariant;
-                    break;
-                }
-            }
-
-            if ($matchedLocalVariant) {
-                // Update with comprehensive variant data
-                $updateData = [
-                    'sku' => $matchedLocalVariant['sku'],
-                    'price' => $matchedLocalVariant['price'],
-                ];
-
-                // Add optional fields
-                if (!empty($matchedLocalVariant['barcode'])) {
-                    $updateData['barcode'] = $matchedLocalVariant['barcode'];
-                }
-                if (!empty($matchedLocalVariant['compareAtPrice'])) {
-                    $updateData['compareAtPrice'] = $matchedLocalVariant['compareAtPrice'];
-                }
-                if (isset($matchedLocalVariant['inventoryQuantity'])) {
-                    $updateData['inventoryQuantity'] = (int) $matchedLocalVariant['inventoryQuantity'];
-                }
-
-                $client->updateSingleVariant($shopifyVariantId, $updateData);
-                
-                Log::info('✅ Updated variant', [
-                    'shopify_variant_id' => $shopifyVariantId,
-                    'sku' => $matchedLocalVariant['sku'],
-                    'price' => $matchedLocalVariant['price']
-                ]);
-            }
-        }
-    }
 
     /**
      * Check if products already exist (duplicate prevention)
