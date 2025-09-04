@@ -270,6 +270,22 @@ class ProductImageContext
     {
         return $this->product->images()->count();
     }
+
+    /**
+     * 🎨 Switch to color group context (CONTEXT SWITCH)
+     */
+    public function color(string $color): ColorImageContext
+    {
+        return new ColorImageContext($this->product, $color);
+    }
+
+    /**
+     * 💎 Switch to variant context (CONTEXT SWITCH)
+     */
+    public function variant(ProductVariant $variant): VariantImageContext
+    {
+        return new VariantImageContext($variant);
+    }
 }
 
 /**
@@ -324,6 +340,19 @@ class VariantImageContext
     public function count(): int
     {
         return $this->variant->images()->count();
+    }
+
+    /**
+     * ⭐ Set specific image as primary for variant
+     */
+    public function setPrimary(int $imageId): self
+    {
+        $image = \App\Models\Image::find($imageId);
+        if ($image) {
+            // Use the Image model's variant-specific primary logic
+            $image->setPrimaryFor($this->variant);
+        }
+        return $this;  // ✅ Return $this for chaining!
     }
 }
 
@@ -381,6 +410,19 @@ class ColorImageContext
     public function count(): int
     {
         return $this->product->getImagesForColor($this->color)->count();
+    }
+
+    /**
+     * ⭐ Set specific image as primary for color group
+     */
+    public function setPrimary(int $imageId): self
+    {
+        $image = \App\Models\Image::find($imageId);
+        if ($image) {
+            // Use the Image model's color-specific primary logic
+            $image->setPrimaryForColor($this->product, $this->color);
+        }
+        return $this;  // ✅ Return $this for chaining!
     }
 }
 

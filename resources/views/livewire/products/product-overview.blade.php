@@ -122,7 +122,9 @@
             
             <div class="flex flex-wrap gap-3">
                 @foreach ($product->variants->groupBy('color') as $color => $colorVariants)
-                    <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+                    <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
+                         wire:click="openColorImageModal('{{ $color }}')"
+                         title="Manage images for {{ $color }}">
                         <div class="w-6 h-6 rounded-full border-2 border-white shadow-sm
                             @if(strtolower($color) === 'black') bg-gray-900
                             @elseif(strtolower($color) === 'white') bg-white border-gray-300
@@ -144,9 +146,12 @@
                             @endif"
                             title="{{ $color }}">
                         </div>
-                        <div>
+                        <div class="flex-1">
                             <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $color }}</div>
                             <div class="text-xs text-gray-500 dark:text-gray-400">{{ $colorVariants->count() }} sizes</div>
+                        </div>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                            <flux:icon name="camera" class="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
                         </div>
                     </div>
                 @endforeach
@@ -924,6 +929,264 @@
                             @if(!empty($selectedImages))
                                 <flux:button wire:click="attachSelectedImages" variant="primary" icon="link">
                                     Attach {{ count($selectedImages) }} Image{{ count($selectedImages) > 1 ? 's' : '' }}
+                                </flux:button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- 🎨 COLOR GROUP IMAGE MODAL - Beautiful mimic of product modal --}}
+    @if($showColorImageModal)
+        <div class="fixed inset-0 z-50 overflow-y-auto" x-data="{ show: @entangle('showColorImageModal') }" x-show="show" x-transition>
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="fixed inset-0 bg-black bg-opacity-50" wire:click="closeColorImageModal"></div>
+                
+                <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                    {{-- Modal Header --}}
+                    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                                <div class="w-4 h-4 rounded-full border border-gray-300
+                                    @if(strtolower($currentColor) === 'black') bg-gray-900
+                                    @elseif(strtolower($currentColor) === 'white') bg-white border-gray-400
+                                    @elseif(strtolower($currentColor) === 'red') bg-red-500
+                                    @elseif(strtolower($currentColor) === 'blue') bg-blue-500
+                                    @elseif(strtolower($currentColor) === 'green') bg-green-500
+                                    @elseif(str_contains(strtolower($currentColor), 'grey') || str_contains(strtolower($currentColor), 'gray')) bg-gray-500
+                                    @elseif(str_contains(strtolower($currentColor), 'orange')) bg-orange-500
+                                    @elseif(str_contains(strtolower($currentColor), 'yellow') || str_contains(strtolower($currentColor), 'lemon')) bg-yellow-500
+                                    @elseif(str_contains(strtolower($currentColor), 'purple') || str_contains(strtolower($currentColor), 'lavender')) bg-purple-500
+                                    @elseif(str_contains(strtolower($currentColor), 'pink')) bg-pink-500
+                                    @elseif(str_contains(strtolower($currentColor), 'brown') || str_contains(strtolower($currentColor), 'cappuccino')) bg-amber-700
+                                    @elseif(str_contains(strtolower($currentColor), 'navy')) bg-blue-900
+                                    @elseif(str_contains(strtolower($currentColor), 'natural')) bg-amber-200
+                                    @elseif(str_contains(strtolower($currentColor), 'lime')) bg-lime-500
+                                    @elseif(str_contains(strtolower($currentColor), 'aubergine')) bg-purple-900
+                                    @elseif(str_contains(strtolower($currentColor), 'ochre')) bg-yellow-700
+                                    @else bg-gradient-to-br from-orange-400 to-red-500
+                                    @endif">
+                                </div>
+                                Manage {{ $currentColor }} Images
+                            </h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {{ $product->name }} - {{ $currentColor }} Color Group
+                            </p>
+                        </div>
+                        <flux:button wire:click="closeColorImageModal" variant="ghost" icon="x-mark" size="sm" />
+                    </div>
+
+                    {{-- Modal Body --}}
+                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+                        {{-- 🔍 SEARCH BAR --}}
+                        <div class="mb-4">
+                            <flux:input 
+                                wire:model.live="colorSearchTerm" 
+                                placeholder="Search images by filename, title, or alt text..." 
+                                icon="magnifying-glass"
+                                class="w-full"
+                            />
+                        </div>
+
+                        {{-- 📊 RESULTS SUMMARY --}}
+                        @if($colorTotalImages > 0)
+                            <div class="mb-4 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
+                                <span>
+                                    Showing {{ count($colorImages) }} of {{ $colorTotalImages }} images
+                                    @if(!empty($colorSearchTerm))
+                                        for "{{ $colorSearchTerm }}"
+                                    @endif
+                                </span>
+                                @if($colorTotalPages > 1)
+                                    <span>Page {{ $colorCurrentPage }} of {{ $colorTotalPages }}</span>
+                                @endif
+                            </div>
+                        @endif
+
+                        @if(empty($colorImages))
+                            <div class="text-center py-8">
+                                <flux:icon name="photo" class="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                                <p class="text-gray-500 dark:text-gray-400">
+                                    @if(!empty($colorSearchTerm))
+                                        No images found for "{{ $colorSearchTerm }}"
+                                    @else
+                                        No images found
+                                    @endif
+                                </p>
+                                <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                                    @if(!empty($colorSearchTerm))
+                                        Try adjusting your search terms
+                                    @else
+                                        Upload some images to get started
+                                    @endif
+                                </p>
+                            </div>
+                        @else
+                            {{-- Selected Images Summary --}}
+                            @if(!empty($selectedColorImages))
+                                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-700/50">
+                                    <p class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                                        {{ count($selectedColorImages) }} image{{ count($selectedColorImages) > 1 ? 's' : '' }} selected for {{ $currentColor }}
+                                    </p>
+                                    <flux:button 
+                                        wire:click="attachSelectedColorImages" 
+                                        variant="primary" 
+                                        size="sm"
+                                        icon="link"
+                                    >
+                                        Attach Selected to {{ $currentColor }}
+                                    </flux:button>
+                                </div>
+                            @endif
+
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                @foreach($colorImages as $image)
+                                    <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group hover:shadow-lg transition-all duration-200 {{ in_array($image['id'], $selectedColorImages) ? 'ring-2 ring-blue-500 ring-offset-2' : '' }}"
+                                         wire:click="toggleColorImageSelection({{ $image['id'] }})">
+                                        <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
+                                        
+                                        {{-- 🎯 ATTACHMENT STATUS BADGE --}}
+                                        <div class="absolute top-2 left-2">
+                                            @if($image['is_attached'])
+                                                <flux:badge color="green" size="sm" class="shadow-sm">
+                                                    <flux:icon name="link" class="w-3 h-3" />
+                                                    Attached
+                                                </flux:badge>
+                                            @endif
+                                        </div>
+
+                                        {{-- 🎯 CLEAN SELECTION STATE --}}
+                                        <div class="absolute top-2 right-2">
+                                            @if(in_array($image['id'], $selectedColorImages))
+                                                <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                                                    <flux:icon name="check" class="w-4 h-4 text-white" />
+                                                </div>
+                                            @else
+                                                <div class="w-7 h-7 bg-black bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <flux:icon name="plus" class="w-4 h-4 text-white" />
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        {{-- Quick Actions for Attached Images --}}
+                                        @if($image['is_attached'])
+                                            <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <flux:button 
+                                                    wire:click.stop="setPrimaryColorImage({{ $image['id'] }})" 
+                                                    size="xs" 
+                                                    variant="ghost" 
+                                                    icon="star"
+                                                    class="w-6 h-6 bg-black bg-opacity-20 text-yellow-300 hover:bg-yellow-500 hover:text-white backdrop-blur-sm"
+                                                    title="Set as primary for {{ $currentColor }}"
+                                                />
+                                                <flux:button 
+                                                    wire:click.stop="detachColorImage({{ $image['id'] }})" 
+                                                    size="xs" 
+                                                    variant="ghost" 
+                                                    icon="x-mark"
+                                                    class="w-6 h-6 bg-black bg-opacity-20 text-red-300 hover:bg-red-500 hover:text-white backdrop-blur-sm"
+                                                    title="Detach from {{ $currentColor }}"
+                                                />
+                                            </div>
+                                        @endif
+
+                                        {{-- 📝 CLEAN INFO (Only on Hover for Non-Selected) --}}
+                                        @if(!in_array($image['id'], $selectedColorImages))
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
+                                                <p class="text-gray-300 text-xs">Click to select</p>
+                                            </div>
+                                        @else
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 via-blue-500/50 to-transparent p-2">
+                                                <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
+                                                <p class="text-blue-100 text-xs">Selected</p>
+                                            </div>
+                                        @endif
+
+                                        {{-- Hover Ring Effect --}}
+                                        <div class="absolute inset-0 rounded-lg ring-2 ring-transparent group-hover:ring-blue-300 transition-all pointer-events-none"></div>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            {{-- 📄 PAGINATION CONTROLS --}}
+                            @if($colorTotalPages > 1)
+                                <div class="mt-6 flex justify-between items-center">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                                        Showing {{ count($colorImages) }} of {{ $colorTotalImages }} images
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-2">
+                                        <flux:button 
+                                            wire:click="colorPreviousPage" 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            icon="chevron-left"
+                                            :disabled="$colorCurrentPage <= 1"
+                                        >
+                                            Previous
+                                        </flux:button>
+                                        
+                                        <div class="flex items-center space-x-1">
+                                            @php
+                                                $start = max(1, $colorCurrentPage - 2);
+                                                $end = min($colorTotalPages, $colorCurrentPage + 2);
+                                            @endphp
+                                            
+                                            @if($start > 1)
+                                                <flux:button wire:click="colorGoToPage(1)" variant="ghost" size="sm">1</flux:button>
+                                                @if($start > 2)
+                                                    <span class="text-gray-400">...</span>
+                                                @endif
+                                            @endif
+                                            
+                                            @for($i = $start; $i <= $end; $i++)
+                                                <flux:button 
+                                                    wire:click="colorGoToPage({{ $i }})" 
+                                                    variant="{{ $i === $colorCurrentPage ? 'primary' : 'ghost' }}" 
+                                                    size="sm"
+                                                >
+                                                    {{ $i }}
+                                                </flux:button>
+                                            @endfor
+                                            
+                                            @if($end < $colorTotalPages)
+                                                @if($end < $colorTotalPages - 1)
+                                                    <span class="text-gray-400">...</span>
+                                                @endif
+                                                <flux:button wire:click="colorGoToPage({{ $colorTotalPages }})" variant="ghost" size="sm">{{ $colorTotalPages }}</flux:button>
+                                            @endif
+                                        </div>
+                                        
+                                        <flux:button 
+                                            wire:click="colorNextPage" 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            icon="chevron-right"
+                                            :disabled="$colorCurrentPage >= $colorTotalPages"
+                                        >
+                                            Next
+                                        </flux:button>
+                                    </div>
+                                </div>
+                            @endif
+                        @endif
+                    </div>
+
+                    {{-- Modal Footer --}}
+                    <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Click images to select, then attach to {{ $currentColor }} color group
+                        </div>
+                        <div class="flex gap-3">
+                            <flux:button wire:click="closeColorImageModal" variant="ghost">
+                                Close
+                            </flux:button>
+                            @if(!empty($selectedColorImages))
+                                <flux:button wire:click="attachSelectedColorImages" variant="primary" icon="link">
+                                    Attach {{ count($selectedColorImages) }} to {{ $currentColor }}
                                 </flux:button>
                             @endif
                         </div>

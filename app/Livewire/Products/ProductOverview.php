@@ -31,6 +31,17 @@ class ProductOverview extends Component
     public int $totalPages = 0;
     public array $selectedImages = [];
     
+    // Color image modal states
+    public bool $showColorImageModal = false;
+    public string $currentColor = '';
+    public array $colorImages = [];
+    public array $selectedColorImages = [];
+    public string $colorSearchTerm = '';
+    public int $colorCurrentPage = 1;
+    public int $colorPerPage = 20;
+    public int $colorTotalImages = 0;
+    public int $colorTotalPages = 0;
+    
     // Upload functionality (imitating ImageLibrary)
     /** @var \Illuminate\Http\UploadedFile[] */
     public $newImages = [];
@@ -171,6 +182,212 @@ class ProductOverview extends Component
             $this->currentPage = $page;
             $this->loadAvailableImages();
         }
+    }
+
+    // 🎨 COLOR IMAGE MODAL METHODS
+    public function openColorImageModal(string $color)
+    {
+        $this->authorize('edit-products');
+        $this->currentColor = $color;
+        $this->showColorImageModal = true;
+        $this->loadColorImages();
+    }
+
+    public function closeColorImageModal()
+    {
+        $this->showColorImageModal = false;
+        $this->currentColor = '';
+        $this->selectedColorImages = [];
+        $this->colorSearchTerm = '';
+        $this->colorCurrentPage = 1;
+        $this->colorImages = [];
+    }
+
+    // 🔍 Color search functionality
+    public function updatedColorSearchTerm()
+    {
+        $this->colorCurrentPage = 1; // Reset to first page when searching
+        $this->loadColorImages();
+    }
+
+    // 📄 Color pagination methods
+    public function colorNextPage()
+    {
+        if ($this->colorCurrentPage < $this->colorTotalPages) {
+            $this->colorCurrentPage++;
+            $this->loadColorImages();
+        }
+    }
+
+    public function colorPreviousPage()
+    {
+        if ($this->colorCurrentPage > 1) {
+            $this->colorCurrentPage--;
+            $this->loadColorImages();
+        }
+    }
+
+    public function colorGoToPage(int $page)
+    {
+        if ($page >= 1 && $page <= $this->colorTotalPages) {
+            $this->colorCurrentPage = $page;
+            $this->loadColorImages();
+        }
+    }
+
+    /**
+     * 🎨 Load ALL images with pagination and search for color group context
+     */
+    protected function loadColorImages()
+    {
+        if (empty($this->currentColor)) return;
+        
+        // 🌟 Get current attached images for this color group
+        $currentColorImageIds = Images::product($this->product)->color($this->currentColor)->get()->pluck('id')->toArray();
+        
+        // 🌟 Build query with search and pagination - SHOW ALL IMAGES
+        $query = \App\Models\Image::query()
+            ->originals() // Only show original images, not variants
+            ->orderBy('created_at', 'desc');
+        
+        // Apply search if provided
+        if (!empty($this->colorSearchTerm)) {
+            $query->where(function ($q) {
+                $q->where('filename', 'like', '%' . $this->colorSearchTerm . '%')
+                  ->orWhere('display_title', 'like', '%' . $this->colorSearchTerm . '%')
+                  ->orWhere('alt_text', 'like', '%' . $this->colorSearchTerm . '%');
+            });
+        }
+        
+        // Get total count for pagination
+        $total = $query->count();
+        $this->colorTotalImages = $total;
+        $this->colorTotalPages = ceil($total / $this->colorPerPage);
+        
+        // Apply pagination
+        $offset = ($this->colorCurrentPage - 1) * $this->colorPerPage;
+        $availableImages = $query->skip($offset)->take($this->colorPerPage)->get();
+            
+        $this->colorImages = [];
+        
+        foreach ($availableImages as $image) {
+            // 🌟 Use Images facade for family data and thumbnails
+            $family = Images::find($image)->family()->all();
+            $thumbnail = $family->firstWhere('folder', 'variants') ?? $image;
+
+            $this->colorImages[] = [
+                'id' => $image->id,
+                'url' => $image->url,
+                'thumb_url' => $thumbnail->url,
+                'filename' => $image->filename,
+                'display_title' => $image->display_title,
+                'alt_text' => $image->alt_text,
+                'family_size' => $family->count(),
+                'is_attached' => in_array($image->id, $currentColorImageIds), // Show attachment status
+            ];
+        }
+    }
+
+    // 🎨 Color image selection and management
+    public function toggleColorImageSelection(int $imageId)
+    {
+        if (in_array($imageId, $this->selectedColorImages)) {
+            $this->selectedColorImages = array_diff($this->selectedColorImages, [$imageId]);
+        } else {
+            $this->selectedColorImages[] = $imageId;
+        }
+    }
+
+    public function attachSelectedColorImages()
+    {
+        $this->authorize('edit-products');
+
+        if (empty($this->selectedColorImages)) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Please select at least one image to attach.'
+            ]);
+            return;
+        }
+
+        // 🌟 Use Images facade for color attachment
+        try {
+            $images = \App\Models\Image::whereIn('id', $this->selectedColorImages)->get();
+            foreach ($images as $image) {
+                Images::product($this->product)->color($this->currentColor)->attach($image);
+            }
+            
+            $count = count($this->selectedColorImages);
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => "Successfully attached {$count} image" . ($count > 1 ? 's' : '') . " to {$this->currentColor} color group! 🎨✨"
+            ]);
+
+            // Refresh data and reset selection
+            $this->product->refresh();
+            $this->loadEnhancedImageData();
+            $this->selectedColorImages = []; // Clear selection but keep modal open
+            $this->loadColorImages(); // Refresh color images
+            
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to attach images: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function setPrimaryColorImage(int $imageId)
+    {
+        $this->authorize('edit-products');
+        
+        // 🌟 Use Images facade setPrimary method for color group
+        try {
+            Images::product($this->product)->color($this->currentColor)->setPrimary($imageId);
+            
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => "Primary image updated for {$this->currentColor} color group! ⭐"
+            ]);
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to set primary image: ' . $e->getMessage()
+            ]);
+        }
+
+        // Refresh data
+        $this->product->refresh();
+        $this->loadEnhancedImageData();
+        $this->loadColorImages();
+    }
+
+    public function detachColorImage(int $imageId)
+    {
+        $this->authorize('edit-products');
+        
+        // 🌟 Use Images facade for detachment
+        try {
+            $image = \App\Models\Image::find($imageId);
+            if ($image) {
+                Images::product($this->product)->color($this->currentColor)->detach($image);
+                
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Image detached from ' . $this->currentColor . ' color group! 🎨'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to detach image: ' . $e->getMessage()
+            ]);
+        }
+
+        // Refresh data
+        $this->product->refresh();
+        $this->loadEnhancedImageData();
+        $this->loadColorImages();
     }
     
     /**
