@@ -498,6 +498,123 @@ class ProductVariant extends Model
     }
 
     /**
+     * 🎨 SMART IMAGE RESOLUTION - THREE-TIER FALLBACK SYSTEM
+     */
+
+    /**
+     * 🎯 GET DISPLAY IMAGE
+     *
+     * Smart image resolution with three-tier fallback hierarchy:
+     * 1. Variant-specific images (highest priority)
+     * 2. Color group images (fallback for same color)
+     * 3. Product-level images (final fallback)
+     */
+    public function getDisplayImage(): ?Image
+    {
+        // 1. Try variant-specific image first (highest priority)
+        if ($variantImage = $this->primaryImage()) {
+            return $variantImage;
+        }
+
+        // 2. Try color group image for this variant's color
+        if ($this->color && $colorImage = $this->product->getPrimaryImageForColor($this->color)) {
+            return $colorImage;
+        }
+
+        // 3. Final fallback to product primary image
+        return $this->product->primaryImage();
+    }
+
+    /**
+     * 🎯 GET ALL DISPLAY IMAGES
+     *
+     * Get all images for this variant with smart fallback ordering
+     */
+    public function getDisplayImages(): \Illuminate\Support\Collection
+    {
+        $images = collect();
+
+        // 1. Add variant-specific images first
+        $variantImages = $this->images()->ordered()->get();
+        if ($variantImages->isNotEmpty()) {
+            $images = $images->concat($variantImages->map(function ($image) {
+                $image->image_source = 'variant';
+                return $image;
+            }));
+        }
+
+        // 2. Add color group images if no variant images
+        if ($images->isEmpty() && $this->color) {
+            $colorImages = $this->product->getImagesForColor($this->color)->ordered()->get();
+            if ($colorImages->isNotEmpty()) {
+                $images = $images->concat($colorImages->map(function ($image) {
+                    $image->image_source = 'color_group';
+                    return $image;
+                }));
+            }
+        }
+
+        // 3. Final fallback to product images
+        if ($images->isEmpty()) {
+            $productImages = $this->product->images()->ordered()->get();
+            $images = $images->concat($productImages->map(function ($image) {
+                $image->image_source = 'product';
+                return $image;
+            }));
+        }
+
+        return $images;
+    }
+
+    /**
+     * 🎯 HAS SPECIFIC IMAGES
+     *
+     * Check what type of images this variant has access to
+     */
+    public function getImageAvailability(): array
+    {
+        return [
+            'variant_images' => $this->images()->count(),
+            'color_group_images' => $this->color ? $this->product->getImagesForColor($this->color)->count() : 0,
+            'product_images' => $this->product->images()->count(),
+            'display_image_source' => $this->getDisplayImageSource(),
+            'has_any_images' => $this->hasAnyImages(),
+        ];
+    }
+
+    /**
+     * 🎯 GET DISPLAY IMAGE SOURCE
+     *
+     * Determine where the display image comes from
+     */
+    public function getDisplayImageSource(): string
+    {
+        if ($this->images()->count() > 0) {
+            return 'variant';
+        }
+        
+        if ($this->color && $this->product->getImagesForColor($this->color)->count() > 0) {
+            return 'color_group';
+        }
+        
+        if ($this->product->images()->count() > 0) {
+            return 'product';
+        }
+        
+        return 'none';
+    }
+
+    /**
+     * 🎯 HAS ANY IMAGES
+     *
+     * Check if variant has access to any images through the hierarchy
+     */
+    public function hasAnyImages(): bool
+    {
+        return $this->getDisplayImageSource() !== 'none';
+    }
+
+    /**
      * 🏗️ BUILDER PATTERN FACTORY
      *
      * Create a new VariantBuilder for fluent variant creation

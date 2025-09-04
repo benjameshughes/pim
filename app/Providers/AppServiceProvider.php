@@ -15,6 +15,11 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register MarketplaceManager as singleton
         $this->app->singleton(\App\Services\Marketplace\MarketplaceManager::class);
+        
+        // Register ImageManager for Images facade
+        $this->app->singleton('image.manager', function ($app) {
+            return new \App\Services\ImageManager();
+        });
     }
 
     /**

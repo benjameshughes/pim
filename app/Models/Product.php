@@ -67,6 +67,20 @@ class Product extends Model
     }
 
     /**
+     * 🎨 COLOR GROUP IMAGES - Many-to-many relationship with Image model for color grouping
+     *
+     * Images that represent specific colors across all variants of that color
+     */
+    public function colorGroupImages(): BelongsToMany
+    {
+        return $this->belongsToMany(Image::class, 'image_color_group')
+            ->withPivot('color', 'is_primary', 'sort_order')
+            ->withTimestamps()
+            ->orderBy('image_color_group.sort_order')
+            ->orderBy('images.created_at');
+    }
+
+    /**
      * 📊 SYNC STATUSES
      *
      * Unified sync statuses across all marketplaces
@@ -334,5 +348,63 @@ class Product extends Model
                 'with_variants' => $products->has('variants')->count(),
             ]),
         ]);
+    }
+
+    /**
+     * 🎨 COLOR GROUP IMAGE HELPER METHODS
+     */
+
+    /**
+     * 🎨 GET IMAGES FOR COLOR
+     *
+     * Get all images for a specific color group
+     */
+    public function getImagesForColor(string $color): BelongsToMany
+    {
+        return $this->colorGroupImages()->wherePivot('color', $color);
+    }
+
+    /**
+     * ⭐ GET PRIMARY IMAGE FOR COLOR
+     *
+     * Get the primary image for a specific color group
+     */
+    public function getPrimaryImageForColor(string $color): ?Image
+    {
+        return $this->getImagesForColor($color)->wherePivot('is_primary', true)->first();
+    }
+
+    /**
+     * 🎨 GET ALL COLOR IMAGES
+     *
+     * Get images grouped by color
+     */
+    public function getColorImages(): \Illuminate\Support\Collection
+    {
+        return $this->colorGroupImages()
+            ->get()
+            ->groupBy('pivot.color')
+            ->map(function ($images, $color) {
+                return [
+                    'color' => $color,
+                    'images' => $images,
+                    'primary_image' => $images->where('pivot.is_primary', true)->first(),
+                    'count' => $images->count(),
+                ];
+            });
+    }
+
+    /**
+     * 🎯 GET AVAILABLE COLORS WITH IMAGES
+     *
+     * Get colors that have images assigned
+     */
+    public function getColorsWithImages(): \Illuminate\Support\Collection
+    {
+        return $this->colorGroupImages()
+            ->get()
+            ->pluck('pivot.color')
+            ->unique()
+            ->values();
     }
 }

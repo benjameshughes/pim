@@ -100,6 +100,20 @@ class Image extends Model
     }
 
     /**
+     * 🎨 COLOR GROUPS RELATIONSHIP
+     *
+     * Many-to-many relationship with products for color grouping
+     */
+    public function colorGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Product::class, 'image_color_group')
+            ->withPivot('color', 'is_primary', 'sort_order')
+            ->withTimestamps()
+            ->orderBy('image_color_group.sort_order')
+            ->orderBy('images.created_at');
+    }
+
+    /**
      * 🎯 DAM SCOPES
      */
 
@@ -376,6 +390,100 @@ class Image extends Model
         }
 
         return false;
+    }
+
+    /**
+     * 🎨 COLOR GROUP HELPER METHODS
+     */
+
+    /**
+     * 🎨 ATTACH TO COLOR GROUP
+     *
+     * Attach this image to a product color group
+     */
+    public function attachToColorGroup(\App\Models\Product $product, string $color, array $pivotData = []): void
+    {
+        $defaultPivotData = [
+            'is_primary' => false,
+            'sort_order' => $this->getNextColorGroupSortOrder($product, $color),
+        ];
+
+        $mergedPivotData = array_merge($defaultPivotData, $pivotData);
+
+        // Check if already attached to this color group to avoid duplicates
+        if (!$product->colorGroupImages()->where('image_id', $this->id)->wherePivot('color', $color)->exists()) {
+            $product->colorGroupImages()->attach($this->id, array_merge($mergedPivotData, ['color' => $color]));
+        }
+    }
+
+    /**
+     * 🎨 DETACH FROM COLOR GROUP
+     *
+     * Detach this image from a product color group
+     */
+    public function detachFromColorGroup(\App\Models\Product $product, string $color): void
+    {
+        $product->colorGroupImages()->wherePivot('color', $color)->detach($this->id);
+    }
+
+    /**
+     * ⭐ SET PRIMARY FOR COLOR
+     *
+     * Set this image as primary for a specific color group
+     */
+    public function setPrimaryForColor(\App\Models\Product $product, string $color): void
+    {
+        // Remove primary flag from other images in this color group
+        $product->colorGroupImages()
+            ->wherePivot('color', $color)
+            ->get()
+            ->each(function ($image) use ($product, $color) {
+                $product->colorGroupImages()->updateExistingPivot(
+                    $image->id,
+                    ['is_primary' => false]
+                );
+            });
+
+        // Set this image as primary for the color group
+        $product->colorGroupImages()->updateExistingPivot($this->id, ['is_primary' => true]);
+    }
+
+    /**
+     * 📊 CHECK IF ATTACHED TO COLOR GROUP
+     *
+     * Check if image is attached to a specific product color group
+     */
+    public function isAttachedToColorGroup(\App\Models\Product $product, string $color): bool
+    {
+        return $product->colorGroupImages()->where('image_id', $this->id)->wherePivot('color', $color)->exists();
+    }
+
+    /**
+     * ⭐ CHECK IF PRIMARY FOR COLOR
+     *
+     * Check if image is primary for a specific color group
+     */
+    public function isPrimaryForColor(\App\Models\Product $product, string $color): bool
+    {
+        return $product->colorGroupImages()
+            ->where('image_id', $this->id)
+            ->wherePivot('color', $color)
+            ->wherePivot('is_primary', true)
+            ->exists();
+    }
+
+    /**
+     * 📊 GET NEXT COLOR GROUP SORT ORDER
+     *
+     * Get the next sort order for a color group
+     */
+    protected function getNextColorGroupSortOrder(\App\Models\Product $product, string $color): int
+    {
+        $maxOrder = $product->colorGroupImages()
+            ->wherePivot('color', $color)
+            ->max('image_color_group.sort_order');
+
+        return ($maxOrder ?? 0) + 1;
     }
 
     /**
