@@ -556,40 +556,35 @@
                                 
                                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     @foreach($enhancedImages as $image)
-                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square group">
-                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover"
-                                                 title="Original: {{ $image['display_title'] }} | Family: {{ $image['family_stats']['family_size'] ?? 0 }} images">
+                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square group hover:shadow-lg transition-all duration-200">
+                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
                                             
-                                            {{-- Primary Badge --}}
-                                            @if($image['is_primary'])
-                                                <div class="absolute top-2 left-2">
-                                                    <flux:badge color="yellow" size="sm">
-                                                        <flux:icon name="star" class="w-3 h-3" />
-                                                        Primary
-                                                    </flux:badge>
+                                            {{-- 🎯 SIMPLIFIED TOP STATUS BAR --}}
+                                            <div class="absolute top-2 left-2 right-2 flex justify-between items-start">
+                                                {{-- Combined Status Badge --}}
+                                                <div class="flex items-center gap-1">
+                                                    @if($image['is_primary'])
+                                                        <flux:badge color="yellow" size="sm" class="shadow-sm">
+                                                            <flux:icon name="star" class="w-3 h-3" />
+                                                        </flux:badge>
+                                                    @endif
+                                                    @if(isset($image['family_stats']['family_size']) && $image['family_stats']['family_size'] > 1)
+                                                        <flux:badge color="blue" size="sm" class="shadow-sm">
+                                                            {{ $image['family_stats']['family_size'] }}
+                                                        </flux:badge>
+                                                    @endif
                                                 </div>
-                                            @endif
 
-                                            {{-- Family Size Badge --}}
-                                            @if(isset($image['family_stats']['family_size']) && $image['family_stats']['family_size'] > 1)
-                                                <div class="absolute top-2 right-2">
-                                                    <flux:badge color="green" size="sm">
-                                                        {{ $image['family_stats']['family_size'] }} variants
-                                                    </flux:badge>
-                                                </div>
-                                            @endif
-
-                                            {{-- Action Buttons --}}
-                                            <div class="absolute inset-0">
-                                                <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white bg-opacity-10 rounded backdrop-blur-sm p-1">
+                                                {{-- Quick Actions (Always Visible but Subtle) --}}
+                                                <div class="flex gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                                                     @if(!$image['is_primary'])
                                                         <flux:button 
                                                             wire:click="setPrimaryImage({{ $image['id'] }})" 
                                                             size="xs" 
                                                             variant="ghost" 
                                                             icon="star"
-                                                            class="bg-white bg-opacity-90 text-yellow-600 hover:bg-yellow-50"
-                                                            title="Set as primary (using Images facade)"
+                                                            class="w-6 h-6 bg-black bg-opacity-20 text-yellow-300 hover:bg-yellow-500 hover:text-white backdrop-blur-sm"
+                                                            title="Set as primary"
                                                         />
                                                     @endif
                                                     <flux:button 
@@ -597,19 +592,22 @@
                                                         size="xs" 
                                                         variant="ghost" 
                                                         icon="x"
-                                                        class="bg-white bg-opacity-90 text-red-600 hover:bg-red-50"
-                                                        title="Remove image (using Images facade)"
+                                                        class="w-6 h-6 bg-black bg-opacity-20 text-red-300 hover:bg-red-500 hover:text-white backdrop-blur-sm"
+                                                        title="Remove image"
                                                     />
                                                 </div>
                                             </div>
 
-                                            {{-- Enhanced Image Info --}}
-                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
-                                                <p class="text-white text-xs truncate">{{ $image['display_title'] }}</p>
-                                                @if(isset($image['family_stats']['family_size']) && $image['family_stats']['family_size'] > 1)
-                                                    <p class="text-blue-200 text-xs">{{ $image['family_stats']['family_size'] }} in family</p>
-                                                @endif
+                                            {{-- 📝 CLEAN BOTTOM INFO (Only on Hover) --}}
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
+                                                <p class="text-gray-300 text-xs truncate">
+                                                    {{ $image['family_stats']['family_size'] ?? 1 }} variant{{ ($image['family_stats']['family_size'] ?? 1) > 1 ? 's' : '' }}
+                                                </p>
                                             </div>
+
+                                            {{-- Hover Ring Effect --}}
+                                            <div class="absolute inset-0 rounded-lg ring-2 ring-transparent group-hover:ring-blue-300 transition-all pointer-events-none"></div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -679,33 +677,38 @@
 
                                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     @foreach($availableImages as $image)
-                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group {{ in_array($image['id'], $selectedImages) ? 'ring-2 ring-blue-500 ring-offset-2' : '' }}"
+                                        <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group hover:shadow-lg transition-all duration-200 {{ in_array($image['id'], $selectedImages) ? 'ring-2 ring-blue-500 ring-offset-2' : '' }}"
                                              wire:click="toggleImageSelection({{ $image['id'] }})">
-                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover"
-                                                 title="Original: {{ $image['display_title'] }}">
+                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
                                             
-                                            {{-- Selection Indicator --}}
-                                            @if(in_array($image['id'], $selectedImages))
-                                                <div class="absolute top-2 right-2">
-                                                    <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                                            {{-- 🎯 CLEAN SELECTION STATE --}}
+                                            <div class="absolute top-2 right-2">
+                                                @if(in_array($image['id'], $selectedImages))
+                                                    <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
                                                         <flux:icon name="check" class="w-4 h-4 text-white" />
                                                     </div>
-                                                </div>
-                                            @endif
-
-                                            {{-- Hover Overlay --}}
-                                            <div class="absolute inset-0 flex items-center justify-center">
-                                                @if(!in_array($image['id'], $selectedImages))
-                                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
-                                                        <flux:icon name="plus" class="w-6 h-6 text-white" />
+                                                @else
+                                                    <div class="w-7 h-7 bg-black bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <flux:icon name="plus" class="w-4 h-4 text-white" />
                                                     </div>
                                                 @endif
                                             </div>
 
-                                            {{-- Image Info --}}
-                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
-                                                <p class="text-white text-xs truncate">{{ $image['display_title'] }}</p>
-                                            </div>
+                                            {{-- 📝 CLEAN INFO (Only on Hover for Non-Selected) --}}
+                                            @if(!in_array($image['id'], $selectedImages))
+                                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
+                                                    <p class="text-gray-300 text-xs">Click to select</p>
+                                                </div>
+                                            @else
+                                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 via-blue-500/50 to-transparent p-2">
+                                                    <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
+                                                    <p class="text-blue-100 text-xs">Selected</p>
+                                                </div>
+                                            @endif
+
+                                            {{-- Hover Ring Effect --}}
+                                            <div class="absolute inset-0 rounded-lg ring-2 ring-transparent group-hover:ring-blue-300 transition-all pointer-events-none"></div>
                                         </div>
                                     @endforeach
                                 </div>

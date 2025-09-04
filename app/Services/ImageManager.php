@@ -228,8 +228,21 @@ class ProductImageContext
     public function asPrimary(): self
     {
         if ($this->pendingImage) {
-            $action = new SetPrimaryImageAction();
-            $action->fluent()->execute($this->pendingImage, $this->product);
+            $action = new AttachImageAction();
+            $action->fluent()->execute([$this->pendingImage], $this->product, null, ['is_primary' => true]);
+        }
+        return $this;  // ✅ Return $this for chaining!
+    }
+
+    /**
+     * ⭐ Set specific image as primary (DIRECT - no attach needed)
+     */
+    public function setPrimary(int $imageId): self
+    {
+        $image = \App\Models\Image::find($imageId);
+        if ($image) {
+            // Use the Image model's exclusive primary logic
+            $image->setPrimaryFor($this->product);
         }
         return $this;  // ✅ Return $this for chaining!
     }

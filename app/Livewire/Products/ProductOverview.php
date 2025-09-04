@@ -274,10 +274,10 @@ class ProductOverview extends Component
                 'message' => "Successfully attached {$count} image" . ($count > 1 ? 's' : '') . " using Images facade! ✨"
             ]);
 
-            // Refresh enhanced image data
+            // Refresh enhanced image data and reset selection
             $this->product->refresh();
             $this->loadEnhancedImageData();
-            $this->closeImageModal();
+            $this->selectedImages = []; // Clear selection but keep modal open
             
         } catch (\Exception $e) {
             $this->dispatch('toast', [
@@ -318,17 +318,14 @@ class ProductOverview extends Component
     {
         $this->authorize('edit-products');
         
-        // 🌟 Use Images facade for setting primary image
+        // 🌟 Use Images facade setPrimary method (exclusive primary logic)
         try {
-            $image = \App\Models\Image::find($imageId);
-            if ($image) {
-                Images::product($this->product)->attach($image)->asPrimary();
-                
-                $this->dispatch('toast', [
-                    'type' => 'success',
-                    'message' => 'Primary image updated using Images facade! ⭐'
-                ]);
-            }
+            Images::product($this->product)->setPrimary($imageId);
+            
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Primary image updated! ⭐'
+            ]);
         } catch (\Exception $e) {
             $this->dispatch('toast', [
                 'type' => 'error',
@@ -384,11 +381,10 @@ class ProductOverview extends Component
                     'message' => "{$uploadCount} images uploaded and attached to product! ✨"
                 ]);
 
-                // Refresh data and close modal
+                // Refresh data and reset upload form but keep modal open
                 $this->reset(['newImages', 'uploadMetadata']);
                 $this->product->refresh();
                 $this->loadEnhancedImageData();
-                $this->closeImageModal();
 
             } else {
                 $this->dispatch('toast', [
