@@ -14,13 +14,11 @@
                             </p>
                         </div>
                         <div>
-                            <flux:button 
-                                x-data 
-                                x-on:click="$dispatch('show-upload-modal')" 
-                                variant="primary" 
-                                icon="plus">
-                                Upload Images
-                            </flux:button>
+                            <flux:modal.trigger name="upload-modal">
+                                <flux:button variant="primary" icon="plus">
+                                    Upload Images
+                                </flux:button>
+                            </flux:modal.trigger>
                         </div>
                     </div>
                 </div>

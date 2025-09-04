@@ -363,7 +363,7 @@
     @endif
 
     {{-- Upload Modal --}}
-    <flux:modal wire:model="showUploadModal" class="w-full max-w-7xl mx-auto">
+    <flux:modal name="upload-modal" class="w-full max-w-7xl mx-auto" x-on:close-modal.window="if ($event.detail === 'upload-modal') $modal.close()">
         <div class="p-6">
             <div class="mb-6">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">Upload Images</h2>
@@ -439,9 +439,10 @@
                         variant="primary"
                         wire:loading.attr="disabled"
                         wire:loading.class="opacity-75"
+                        wire:target="uploadImages"
                     >
-                        <span wire:loading.remove>Upload Images</span>
-                        <span wire:loading>
+                        <span wire:loading.remove wire:target="uploadImages">Upload Images</span>
+                        <span wire:loading wire:target="uploadImages">
                             <flux:icon.arrow-path class="w-4 h-4 mr-2 animate-spin"/>
                             Uploading...
                         </span>
@@ -461,7 +462,7 @@
                 </p>
             </div>
 
-            <form wire:submit="executeBulkMove" class="space-y-4">
+            <form wire:submit.prevent="executeBulkMove" class="space-y-4">
                 <div>
                     <flux:input
                         label="Target Folder"
@@ -504,7 +505,7 @@
                 </p>
             </div>
 
-            <form wire:submit="executeBulkTag" class="space-y-4">
+            <form wire:submit.prevent="executeBulkTag" class="space-y-4">
                 <div>
                     <flux:select
                         label="Operation"

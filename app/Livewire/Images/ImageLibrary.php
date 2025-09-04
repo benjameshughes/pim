@@ -117,7 +117,7 @@ class ImageLibrary extends Component
                 $this->dispatch('success', "{$uploadCount} images uploaded! Processing in background... 📤");
 
                 $this->reset(['newImages', 'uploadMetadata']);
-                $this->showUploadModal = false;
+                $this->dispatch('close-modal', 'upload-modal');
                 $this->resetPage();
             } else {
                 $this->dispatch('error', 'Upload failed: ' . $result['message']);

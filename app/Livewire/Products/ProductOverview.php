@@ -648,9 +648,9 @@ class ProductOverview extends Component
                 $uploadCount = $result['data']['upload_count'];
                 $uploadedImages = $result['data']['uploaded_images'] ?? [];
                 
-                // 🚀 Auto-attach uploaded images to this product using Images facade
-                foreach ($uploadedImages as $uploadedImage) {
-                    Images::product($this->product)->attach($uploadedImage);
+                // 🚀 Auto-attach uploaded images to this product using Images facade (BULK)
+                if (!empty($uploadedImages)) {
+                    Images::product($this->product)->attach($uploadedImages);
                 }
 
                 $this->dispatch('toast', [

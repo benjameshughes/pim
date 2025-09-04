@@ -249,16 +249,16 @@
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Product Images</h3>
                 <div class="flex items-center gap-2">
                     <flux:badge color="blue" size="sm">
-                        {{ $imageStats['total_images'] }}
+                        {{ \App\Facades\Images::product($product)->count() }}
                     </flux:badge>
-                    @if($imageStats['has_primary'])
+                    @if(\App\Facades\Images::product($product)->primary())
                         <flux:badge color="green" size="sm">Has Primary</flux:badge>
                     @endif
                 </div>
             </div>
             
             @php
-                $primaryImage = $imageStats['primary_image'];
+                $primaryImage = \App\Facades\Images::product($product)->primary();
             @endphp
             
             {{-- Primary Image Display --}}
@@ -342,7 +342,7 @@
                     icon="photo" 
                     class="w-full"
                 >
-                    {{ $imageStats['total_images'] > 0 ? 'Manage Images (Enhanced)' : 'Add Images' }}
+                    {{ \App\Facades\Images::product($product)->count() > 0 ? 'Manage Images (Enhanced)' : 'Add Images' }}
                 </flux:button>
             </div>
         </div>
@@ -916,9 +916,10 @@
                                                 variant="primary"
                                                 wire:loading.attr="disabled"
                                                 wire:loading.class="opacity-75"
+                                                wire:target="uploadImages"
                                             >
-                                                <span wire:loading.remove>Upload & Attach to Product</span>
-                                                <span wire:loading>
+                                                <span wire:loading.remove wire:target="uploadImages">Upload & Attach to Product</span>
+                                                <span wire:loading wire:target="uploadImages">
                                                     <flux:icon.arrow-path class="w-4 h-4 mr-2 animate-spin"/>
                                                     Uploading...
                                                 </span>
