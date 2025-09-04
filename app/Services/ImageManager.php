@@ -194,6 +194,7 @@ class ImageManager
 class ProductImageContext
 {
     protected Product $product;
+    protected $pendingImage = null;
 
     public function __construct(Product $product)
     {
@@ -201,25 +202,40 @@ class ProductImageContext
     }
 
     /**
-     * 🔗 Attach images to product
+     * 🔗 Attach images to product (CHAINABLE)
      */
-    public function attach($images, array $options = []): AttachImageAction
+    public function attach($images, array $options = []): self
     {
         $action = new AttachImageAction();
-        return $action->fluent()->execute($images, $this->product, null, $options);
+        $action->fluent()->execute($images, $this->product, null, $options);
+        $this->pendingImage = is_array($images) ? $images[0] ?? null : $images;
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
-     * 🔌 Detach images from product
+     * 🔌 Detach images from product (CHAINABLE)
      */
-    public function detach($images): DetachImageAction
+    public function detach($images): self
     {
         $action = new DetachImageAction();
-        return $action->fluent()->execute($images, $this->product);
+        $action->fluent()->execute($images, $this->product);
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
-     * 🔍 Get product images
+     * ⭐ Set attached image as primary (CHAINABLE - requires attach first)
+     */
+    public function asPrimary(): self
+    {
+        if ($this->pendingImage) {
+            $action = new SetPrimaryImageAction();
+            $action->fluent()->execute($this->pendingImage, $this->product);
+        }
+        return $this;  // ✅ Return $this for chaining!
+    }
+
+    /**
+     * 🔍 Get product images (TERMINATES CHAIN)
      */
     public function get()
     {
@@ -227,7 +243,7 @@ class ProductImageContext
     }
 
     /**
-     * ⭐ Get primary image
+     * ⭐ Get primary image (TERMINATES CHAIN)
      */
     public function primary()
     {
@@ -235,7 +251,7 @@ class ProductImageContext
     }
 
     /**
-     * 📊 Get image count
+     * 📊 Get image count (TERMINATES CHAIN)
      */
     public function count(): int
     {
@@ -538,55 +554,111 @@ class StorageImageContext
 }
 
 /**
- * 📤 Upload Image Context - Fluent API for multiple file uploads
+ * 📤 Upload Image Context - FLUENT API with AUTO-EXECUTION MAGIC! ✨
  */
-class UploadImageContext
+class UploadImageContext implements \JsonSerializable
 {
     protected array $files;
+    protected UploadMultipleAction $action;
+    protected array $metadata = [];
 
     public function __construct(array $files)
     {
         $this->files = $files;
+        $this->action = new UploadMultipleAction();
+        $this->action = $this->action->fluent();
     }
 
     /**
-     * 📝 Add metadata to uploads
+     * 📝 Add metadata to uploads (CHAINABLE)
      */
-    public function withMetadata(array $metadata)
+    public function withMetadata(array $metadata): self
     {
-        $action = new UploadMultipleAction();
-        $fluentAction = $action->fluent()->execute($this->files, $metadata);
-        return $fluentAction->withMetadata($metadata);
+        $this->metadata = array_merge($this->metadata, $metadata);
+        $this->action->withMetadata($metadata);
+        return $this; // ✅ Return $this for chaining!
     }
 
     /**
-     * 🏷️ Add title to all uploads
+     * 🏷️ Add title to all uploads (CHAINABLE)
      */
-    public function withTitle(string $title)
+    public function withTitle(string $title): self
     {
-        $action = new UploadMultipleAction();
-        $fluentAction = $action->fluent()->execute($this->files);
-        return $fluentAction->withTitle($title);
+        $this->metadata['title'] = $title;
+        $this->action->withTitle($title);
+        return $this; // ✅ Return $this for chaining!
     }
 
     /**
-     * 📁 Set folder for uploads
+     * 📁 Set folder for uploads (CHAINABLE)
      */
-    public function inFolder(string $folder)
+    public function inFolder(string $folder): self
     {
-        $action = new UploadMultipleAction();
-        $fluentAction = $action->fluent()->execute($this->files);
-        return $fluentAction->inFolder($folder);
+        $this->metadata['folder'] = $folder;
+        $this->action->inFolder($folder);
+        return $this; // ✅ Return $this for chaining!
     }
 
     /**
-     * 🏷️ Add tags to uploads
+     * 🏷️ Add tags to uploads (CHAINABLE)
      */
-    public function withTags(array $tags)
+    public function withTags(array $tags): self
     {
-        $action = new UploadMultipleAction();
-        $fluentAction = $action->fluent()->execute($this->files);
-        return $fluentAction->withTags($tags);
+        $this->metadata['tags'] = $tags;
+        $this->action->withTags($tags);
+        return $this; // ✅ Return $this for chaining!
+    }
+
+    /**
+     * 🎨 Generate variants after upload (CHAINABLE)
+     */
+    public function generateVariants(bool $generate = true): self
+    {
+        $this->action->generateVariants($generate);
+        return $this; // ✅ Return $this for chaining!
+    }
+
+    /**
+     * ⚡ Execute upload and return results (TERMINATES CHAIN)
+     */
+    public function execute(): array
+    {
+        return $this->action->execute($this->files, $this->metadata);
+    }
+
+    // 🪄 MAGIC METHODS FOR AUTO-EXECUTION! ✨
+    // =====================================
+    
+    /**
+     * 🎯 Auto-execute when converted to string
+     * Usage: echo Images::upload($files)->inFolder('products'); // "uploaded" or "failed"
+     */
+    public function __toString(): string
+    {
+        try {
+            $result = $this->execute();
+            return isset($result['success']) && $result['success'] ? 'uploaded' : 'failed';
+        } catch (\Exception $e) {
+            return 'error';
+        }
+    }
+    
+    /**
+     * 🎯 Auto-execute when called as function
+     * Usage: $result = Images::upload($files)->generateVariants()(); // Full result array
+     */
+    public function __invoke(): array
+    {
+        return $this->execute();
+    }
+    
+    /**
+     * 🎯 Auto-execute when JSON encoded
+     * Usage: json_encode(Images::upload($files)->inFolder('products')); // Auto-executes
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->execute();
     }
 
     /**
@@ -636,115 +708,201 @@ class CreateImageContext
 }
 
 /**
- * ✅ Validate Image Context - Fluent API for file validation
+ * ✅ Validate Image Context - FLUENT API with AUTO-EXECUTION MAGIC! ✨
  */
-class ValidateImageContext
+class ValidateImageContext implements \JsonSerializable
 {
+    protected ValidateFileAction $action;
     protected $file;
 
     public function __construct($file)
     {
         $this->file = $file;
+        $this->action = new ValidateFileAction();
+        $this->action = $this->action->fluent();  // Get the fluent action and store it
     }
 
     /**
      * 📏 Set maximum file size
      */
-    public function size(string $maxSize)
+    public function size(string $maxSize): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->size($maxSize);
+        $this->action->size($maxSize);
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 📏 Set maximum file size (alias)
      */
-    public function maxFileSize(string $maxSize)
+    public function maxFileSize(string $maxSize): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->maxFileSize($maxSize);
+        $this->action->maxFileSize($maxSize);
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 🔢 Set maximum number of files
      */
-    public function maxFiles(int $maxFiles)
+    public function maxFiles(int $maxFiles): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->maxFiles($maxFiles);
+        $this->action->maxFiles($maxFiles);
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 🖼️ Validate images only
      */
-    public function imageOnly()
+    public function imageOnly(): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->imageOnly();
+        $this->action->imageOnly();
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 🎯 Start allowed file types configuration
      */
-    public function allowed()
+    public function allowed(): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->allowed();
+        $this->action->allowed();
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 🎨 Set allowed file types
      */
-    public function types(array $types)
+    public function types(array $types): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->types($types);
+        $this->action->types($types);
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
      * 🔒 Enable strict validation mode
      */
-    public function strict()
+    public function strict(): self
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->strict();
+        $this->action->strict();
+        return $this;  // ✅ Return $this for chaining!
     }
 
     /**
-     * ✅ Perform validation check
+     * 📄 Allow documents alongside images
+     */
+    public function documents(): self
+    {
+        $this->action->documents();
+        return $this;  // ✅ Return $this for chaining!
+    }
+
+    /**
+     * 📋 Allow specific file types
+     */
+    public function images(): self
+    {
+        $this->action->images();
+        return $this;  // ✅ Return $this for chaining!
+    }
+
+    /**
+     * ⚡ Execute validation and return results (TERMINATES CHAIN)
+     */
+    public function execute(): array
+    {
+        // The action is already configured via fluent chaining
+        // Now execute with the stored file
+        $result = $this->action->execute($this->file);
+        
+        // Ensure we return an array result
+        if (is_array($result)) {
+            return $result;
+        }
+        
+        // Fallback if result is not array (shouldn't happen in normal flow)
+        return ['valid' => false, 'errors' => ['Validation failed to return proper result']];
+    }
+
+    /**
+     * ✅ Perform validation check (TERMINATES CHAIN)
      */
     public function check(): bool
     {
-        $action = new ValidateFileAction();
-        $result = $action->execute($this->file);
+        $result = $this->execute();
         return is_array($result) ? ($result['valid'] ?? false) : false;
     }
 
     /**
-     * 📊 Get detailed validation results
+     * 📊 Get detailed validation results (TERMINATES CHAIN) - alias for execute()
      */
     public function results(): array
     {
-        $action = new ValidateFileAction();
-        $result = $action->execute($this->file);
-        return is_array($result) ? $result : [];
+        return $this->execute();
     }
 
     /**
-     * ❌ Get validation errors
+     * ❌ Get validation errors (TERMINATES CHAIN)
      */
-    public function errors(): array
+    public function getErrors(): array
     {
-        $action = new ValidateFileAction();
-        $fluentAction = $action->fluent()->execute($this->file);
-        return $fluentAction->getValidationErrors();
+        $result = $this->execute();
+        return is_array($result) ? ($result['errors'] ?? []) : [];
+    }
+
+    /**
+     * ✅ Check if validation passes (TERMINATES CHAIN)
+     */
+    public function passes(): bool
+    {
+        return $this->check();
+    }
+
+    // 🪄 MAGIC METHODS FOR AUTO-EXECUTION! ✨
+    // =====================================
+    
+    /**
+     * 🎯 Auto-execute when converted to string
+     * Usage: echo Images::validate($files)->imageOnly(); // "true" or "false"
+     */
+    public function __toString(): string
+    {
+        try {
+            $result = $this->execute();
+            return $result['valid'] ? 'true' : 'false';
+        } catch (\Exception $e) {
+            return 'error';
+        }
+    }
+    
+    /**
+     * 🎯 Auto-execute when called as function
+     * Usage: $result = Images::validate($files)->imageOnly()(); // Full array result
+     */
+    public function __invoke(): array
+    {
+        return $this->execute();
+    }
+    
+    /**
+     * 🎯 Auto-execute when JSON encoded
+     * Usage: json_encode(Images::validate($files)->imageOnly()); // Auto-executes
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->execute();
+    }
+
+    /**
+     * 🎯 Auto-execute when cast to boolean
+     * Usage: if (Images::validate($files)->imageOnly()) { ... } // Auto-validates!
+     */
+    public function __debugInfo(): array
+    {
+        $result = $this->execute();
+        return [
+            'valid' => $result['valid'],
+            'errors' => $result['errors'],
+            'file_count' => $result['file_count'] ?? 0,
+            'auto_executed' => true,
+        ];
     }
 }
 

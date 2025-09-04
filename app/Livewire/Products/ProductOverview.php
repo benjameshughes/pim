@@ -348,10 +348,23 @@ class ProductOverview extends Component
     {
         $this->authorize('upload-images');
 
-        // 🌟 Standard validation (Images facade used for attachment & management)
-        $this->validate([
-            'newImages.*' => 'required|image|max:5120', // 5MB
-        ]);
+        // 🪄 Use our MAGIC Images facade validation - auto-executes with ()!
+        if (!empty($this->newImages)) {
+            $validationResult = Images::validate($this->newImages)
+                ->imageOnly()
+                ->maxFiles(10)
+                ->maxFileSize('5MB')(); // ✨ Magic __invoke() auto-execution!
+                
+            if (!$validationResult['valid']) {
+                foreach ($validationResult['errors'] as $error) {
+                    $this->dispatch('toast', [
+                        'type' => 'error',
+                        'message' => $error
+                    ]);
+                }
+                return;
+            }
+        }
 
         try {
             // Use existing UploadImagesAction
