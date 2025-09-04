@@ -269,8 +269,8 @@ class ProductShow extends Component
                 Tab::make('images')
                     ->label('Images')
                     ->icon('photo')
-                    ->badge($this->product->images->count())
-                    ->badgeColor($this->product->images->count() > 0 ? 'blue' : 'gray'),
+                    ->badge(\App\Facades\Images::product($this->product)->count())
+                    ->badgeColor(\App\Facades\Images::product($this->product)->count() > 0 ? 'blue' : 'gray'),
 
                 Tab::make('history')
                     ->label('History')

@@ -574,9 +574,9 @@ class ProductVariant extends Model
     public function getImageAvailability(): array
     {
         return [
-            'variant_images' => $this->images()->count(),
-            'color_group_images' => $this->color ? $this->product->getImagesForColor($this->color)->count() : 0,
-            'product_images' => $this->product->images()->count(),
+            'variant_images' => \App\Facades\Images::variant($this)->count(),
+            'color_group_images' => $this->color ? \App\Facades\Images::product($this->product)->color($this->color)->count() : 0,
+            'product_images' => \App\Facades\Images::product($this->product)->count(),
             'display_image_source' => $this->getDisplayImageSource(),
             'has_any_images' => $this->hasAnyImages(),
         ];
@@ -589,15 +589,15 @@ class ProductVariant extends Model
      */
     public function getDisplayImageSource(): string
     {
-        if ($this->images()->count() > 0) {
+        if (\App\Facades\Images::variant($this)->count() > 0) {
             return 'variant';
         }
         
-        if ($this->color && $this->product->getImagesForColor($this->color)->count() > 0) {
+        if ($this->color && \App\Facades\Images::product($this->product)->color($this->color)->count() > 0) {
             return 'color_group';
         }
         
-        if ($this->product->images()->count() > 0) {
+        if (\App\Facades\Images::product($this->product)->count() > 0) {
             return 'product';
         }
         

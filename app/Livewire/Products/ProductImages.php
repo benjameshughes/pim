@@ -115,7 +115,7 @@ class ProductImages extends Component
      */
     public function getImageFamily($imageId)
     {
-        $image = $this->product->images()->find($imageId);
+        $image = Images::product($this->product)->get()->find($imageId);
         if (!$image) return null;
 
         return Images::find($image)->family()->stats();
