@@ -549,25 +549,16 @@
     </div>
 
     {{-- 🖼️ IMAGE MANAGEMENT MODAL --}}
-    @if($showImageModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto" x-data="{ show: @entangle('showImageModal') }" x-show="show" x-transition>
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div class="fixed inset-0 bg-black bg-opacity-50" wire:click="closeImageModal"></div>
-                
-                <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                    {{-- Modal Header --}}
-                    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Manage Product Images</h3>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {{ $product->name }}
-                            </p>
-                        </div>
-                        <flux:button wire:click="closeImageModal" variant="ghost" icon="x-mark" size="sm" />
-                    </div>
+    <flux:modal wire:model="showImageModal" class="max-w-4xl">
+        <div class="space-y-6">
+            {{-- Modal Header --}}
+            <div>
+                <flux:heading size="lg">Manage Product Images</flux:heading>
+                <flux:text class="mt-2">{{ $product->name }}</flux:text>
+            </div>
 
-                    {{-- Modal Body --}}
-                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+            {{-- Modal Body --}}
+            <div class="max-h-[70vh] overflow-y-auto">
                         {{-- 🌟 Enhanced Current Images --}}
                         @if(count($enhancedImages) > 0)
                             <div class="mb-8">
@@ -929,75 +920,66 @@
                                 </div>
                             @endif
                         </div>
-                    </div>
+            </div>
 
-                    {{-- Modal Footer --}}
-                    <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                            @if($activeTab === 'select')
-                                Click images to select, then attach to product
-                            @else
-                                Upload new images and they'll be automatically attached
-                            @endif
-                        </div>
-                        <div class="flex gap-3">
-                            <flux:button wire:click="closeImageModal" variant="ghost">
-                                Close
-                            </flux:button>
-                            @if(!empty($selectedImages))
-                                <flux:button wire:click="attachSelectedImages" variant="primary" icon="link">
-                                    Attach {{ count($selectedImages) }} Image{{ count($selectedImages) > 1 ? 's' : '' }}
-                                </flux:button>
-                            @endif
-                        </div>
-                    </div>
+            {{-- Modal Footer --}}
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400">
+                    @if($activeTab === 'select')
+                        Click images to select, then attach to product
+                    @else
+                        Upload new images and they'll be automatically attached
+                    @endif
+                </flux:text>
+                <div class="flex gap-3">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">
+                            Close
+                        </flux:button>
+                    </flux:modal.close>
+                    @if(!empty($selectedImages))
+                        <flux:button wire:click="attachSelectedImages" variant="primary" icon="link">
+                            Attach {{ count($selectedImages) }} Image{{ count($selectedImages) > 1 ? 's' : '' }}
+                        </flux:button>
+                    @endif
                 </div>
             </div>
         </div>
-    @endif
+    </flux:modal>
 
-    {{-- 🎨 COLOR GROUP IMAGE MODAL - Beautiful mimic of product modal --}}
-    @if($showColorImageModal)
-        <div class="fixed inset-0 z-50 overflow-y-auto" x-data="{ show: @entangle('showColorImageModal') }" x-show="show" x-transition>
-            <div class="flex items-center justify-center min-h-screen p-4">
-                <div class="fixed inset-0 bg-black bg-opacity-50" wire:click="closeColorImageModal"></div>
-                
-                <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                    {{-- Modal Header --}}
-                    <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-                        <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                                <div class="w-4 h-4 rounded-full border border-gray-300
-                                    @if(strtolower($currentColor) === 'black') bg-gray-900
-                                    @elseif(strtolower($currentColor) === 'white') bg-white border-gray-400
-                                    @elseif(strtolower($currentColor) === 'red') bg-red-500
-                                    @elseif(strtolower($currentColor) === 'blue') bg-blue-500
-                                    @elseif(strtolower($currentColor) === 'green') bg-green-500
-                                    @elseif(str_contains(strtolower($currentColor), 'grey') || str_contains(strtolower($currentColor), 'gray')) bg-gray-500
-                                    @elseif(str_contains(strtolower($currentColor), 'orange')) bg-orange-500
-                                    @elseif(str_contains(strtolower($currentColor), 'yellow') || str_contains(strtolower($currentColor), 'lemon')) bg-yellow-500
-                                    @elseif(str_contains(strtolower($currentColor), 'purple') || str_contains(strtolower($currentColor), 'lavender')) bg-purple-500
-                                    @elseif(str_contains(strtolower($currentColor), 'pink')) bg-pink-500
-                                    @elseif(str_contains(strtolower($currentColor), 'brown') || str_contains(strtolower($currentColor), 'cappuccino')) bg-amber-700
-                                    @elseif(str_contains(strtolower($currentColor), 'navy')) bg-blue-900
-                                    @elseif(str_contains(strtolower($currentColor), 'natural')) bg-amber-200
-                                    @elseif(str_contains(strtolower($currentColor), 'lime')) bg-lime-500
-                                    @elseif(str_contains(strtolower($currentColor), 'aubergine')) bg-purple-900
-                                    @elseif(str_contains(strtolower($currentColor), 'ochre')) bg-yellow-700
-                                    @else bg-gradient-to-br from-orange-400 to-red-500
-                                    @endif">
-                                </div>
-                                Manage {{ $currentColor }} Images
-                            </h3>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {{ $product->name }} - {{ $currentColor }} Color Group
-                            </p>
-                        </div>
-                        <flux:button wire:click="closeColorImageModal" variant="ghost" icon="x-mark" size="sm" />
+    {{-- 🎨 COLOR GROUP IMAGE MODAL --}}
+    <flux:modal wire:model="showColorImageModal" class="max-w-4xl">
+        <div class="space-y-6">
+            {{-- Modal Header --}}
+            <div>
+                <flux:heading size="lg" class="flex items-center gap-2">
+                    <div class="w-4 h-4 rounded-full border border-gray-300
+                        @if(strtolower($currentColor) === 'black') bg-gray-900
+                        @elseif(strtolower($currentColor) === 'white') bg-white border-gray-400
+                        @elseif(strtolower($currentColor) === 'red') bg-red-500
+                        @elseif(strtolower($currentColor) === 'blue') bg-blue-500
+                        @elseif(strtolower($currentColor) === 'green') bg-green-500
+                        @elseif(str_contains(strtolower($currentColor), 'grey') || str_contains(strtolower($currentColor), 'gray')) bg-gray-500
+                        @elseif(str_contains(strtolower($currentColor), 'orange')) bg-orange-500
+                        @elseif(str_contains(strtolower($currentColor), 'yellow') || str_contains(strtolower($currentColor), 'lemon')) bg-yellow-500
+                        @elseif(str_contains(strtolower($currentColor), 'purple') || str_contains(strtolower($currentColor), 'lavender')) bg-purple-500
+                        @elseif(str_contains(strtolower($currentColor), 'pink')) bg-pink-500
+                        @elseif(str_contains(strtolower($currentColor), 'brown') || str_contains(strtolower($currentColor), 'cappuccino')) bg-amber-700
+                        @elseif(str_contains(strtolower($currentColor), 'navy')) bg-blue-900
+                        @elseif(str_contains(strtolower($currentColor), 'natural')) bg-amber-200
+                        @elseif(str_contains(strtolower($currentColor), 'lime')) bg-lime-500
+                        @elseif(str_contains(strtolower($currentColor), 'aubergine')) bg-purple-900
+                        @elseif(str_contains(strtolower($currentColor), 'ochre')) bg-yellow-700
+                        @else bg-gradient-to-br from-orange-400 to-red-500
+                        @endif">
                     </div>
+                    Manage {{ $currentColor }} Images
+                </flux:heading>
+                <flux:text class="mt-2">{{ $product->name }} - {{ $currentColor }} Color Group</flux:text>
+            </div>
 
-                    {{-- Modal Body --}}
-                    <div class="p-6 overflow-y-auto max-h-[70vh]">
+            {{-- Modal Body --}}
+            <div class="max-h-[70vh] overflow-y-auto">
                         {{-- 🔍 SEARCH BAR --}}
                         <div class="mb-4">
                             <flux:input 
@@ -1153,21 +1135,21 @@
                                 </div>
                             @endif
                         @endif
-                    </div>
+            </div>
 
-                    {{-- Modal Footer --}}
-                    <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                        <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Click images to attach/detach to {{ $currentColor }} color group
-                        </div>
-                        <div class="flex gap-3">
-                            <flux:button wire:click="closeColorImageModal" variant="ghost">
-                                Close
-                            </flux:button>
-                        </div>
-                    </div>
+            {{-- Modal Footer --}}
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+                <flux:text class="text-sm text-gray-600 dark:text-gray-400">
+                    Click images to attach/detach to {{ $currentColor }} color group
+                </flux:text>
+                <div class="flex gap-3">
+                    <flux:modal.close>
+                        <flux:button variant="ghost">
+                            Close
+                        </flux:button>
+                    </flux:modal.close>
                 </div>
             </div>
         </div>
-    @endif
+    </flux:modal>
 </div>
