@@ -221,17 +221,22 @@
 
     {{-- 🖼️ PRODUCT IMAGE & STATS --}}
     <div class="space-y-6">
-        {{-- Product Image --}}
+        {{-- 🌟 Enhanced Product Images with Images Facade --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white">Product Images</h3>
-                <flux:badge color="blue" size="sm">
-                    {{ $product->images->count() }}
-                </flux:badge>
+                <div class="flex items-center gap-2">
+                    <flux:badge color="blue" size="sm">
+                        {{ $imageStats['total_images'] }}
+                    </flux:badge>
+                    @if($imageStats['has_primary'])
+                        <flux:badge color="green" size="sm">Has Primary</flux:badge>
+                    @endif
+                </div>
             </div>
             
             @php
-                $primaryImage = $product->primaryImage();
+                $primaryImage = $imageStats['primary_image'];
             @endphp
             
             {{-- Primary Image Display --}}
@@ -246,13 +251,13 @@
                         </div>
                     </div>
                 </div>
-            @elseif ($product->images->count() > 0)
-                {{-- Fallback to first image if no primary image is set --}}
-                @php $firstImage = $product->images->first(); @endphp
+            @elseif (count($enhancedImages) > 0)
+                {{-- Fallback to first enhanced image if no primary image is set --}}
+                @php $firstImage = reset($enhancedImages); @endphp
                 <div class="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity group relative"
                      wire:click="openImageModal"
                      title="Click to manage images">
-                    <img src="{{ $firstImage->url }}" alt="{{ $firstImage->alt_text ?? $product->name }}" class="w-full h-full object-cover">
+                    <img src="{{ $firstImage['url'] }}" alt="{{ $firstImage['alt_text'] ?? $product->name }}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 flex items-center justify-center">
                         <div class="opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 rounded-full p-2">
                             <flux:icon name="pencil" class="w-4 h-4 text-white" />
@@ -284,20 +289,23 @@
                 </div>
             @endif
 
-            {{-- Image Thumbnails --}}
-            @if($product->images->count() > 1)
+            {{-- 🌟 Enhanced Image Thumbnails --}}
+            @if(count($enhancedImages) > 1)
                 <div class="mt-4">
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">All Images</p>
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">All Images (Enhanced)</p>
                     <div class="flex gap-2 overflow-x-auto pb-2">
-                        @foreach($product->images->take(5) as $image)
-                            <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden border-2 {{ $image->pivot->is_primary ? 'border-blue-500' : 'border-transparent' }}"
-                                 title="{{ $image->display_title }}">
-                                <img src="{{ $thumbnails[$image->id]->url ?? $image->url }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover">
+                        @foreach(array_slice($enhancedImages, 0, 5) as $image)
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden border-2 {{ $image['is_primary'] ? 'border-blue-500' : 'border-transparent' }} relative group"
+                                 title="{{ $image['display_title'] }} (Family: {{ $image['family_stats']['family_size'] ?? 0 }} images)">
+                                <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
+                                @if($image['is_primary'])
+                                    <div class="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-bl"></div>
+                                @endif
                             </div>
                         @endforeach
-                        @if($product->images->count() > 5)
+                        @if(count($enhancedImages) > 5)
                             <div class="flex-shrink-0 w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center text-xs text-gray-500">
-                                +{{ $product->images->count() - 5 }}
+                                +{{ count($enhancedImages) - 5 }}
                             </div>
                         @endif
                     </div>
@@ -312,7 +320,7 @@
                     icon="photo" 
                     class="w-full"
                 >
-                    {{ $product->images->count() > 0 ? 'Manage Images' : 'Add Images' }}
+                    {{ $imageStats['total_images'] > 0 ? 'Manage Images (Enhanced)' : 'Add Images' }}
                 </flux:button>
             </div>
         </div>
@@ -538,22 +546,22 @@
 
                     {{-- Modal Body --}}
                     <div class="p-6 overflow-y-auto max-h-[70vh]">
-                        {{-- Current Images --}}
-                        @if($product->images->count() > 0)
+                        {{-- 🌟 Enhanced Current Images --}}
+                        @if(count($enhancedImages) > 0)
                             <div class="mb-8">
                                 <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                     <flux:icon name="photo" class="w-5 h-5 text-blue-600" />
-                                    Current Images ({{ $product->images->count() }})
+                                    Current Images ({{ count($enhancedImages) }}) - Enhanced
                                 </h4>
                                 
                                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    @foreach($product->images as $image)
+                                    @foreach($enhancedImages as $image)
                                         <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square group">
-                                            <img src="{{ $thumbnails[$image->id]->url ?? $image->url }}" alt="{{ $image->alt_text }}" class="w-full h-full object-cover"
-                                                 title="Original: {{ $image->display_title }}">
+                                            <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover"
+                                                 title="Original: {{ $image['display_title'] }} | Family: {{ $image['family_stats']['family_size'] ?? 0 }} images">
                                             
                                             {{-- Primary Badge --}}
-                                            @if($image->pivot->is_primary)
+                                            @if($image['is_primary'])
                                                 <div class="absolute top-2 left-2">
                                                     <flux:badge color="yellow" size="sm">
                                                         <flux:icon name="star" class="w-3 h-3" />
@@ -562,33 +570,45 @@
                                                 </div>
                                             @endif
 
+                                            {{-- Family Size Badge --}}
+                                            @if(isset($image['family_stats']['family_size']) && $image['family_stats']['family_size'] > 1)
+                                                <div class="absolute top-2 right-2">
+                                                    <flux:badge color="green" size="sm">
+                                                        {{ $image['family_stats']['family_size'] }} variants
+                                                    </flux:badge>
+                                                </div>
+                                            @endif
+
                                             {{-- Action Buttons --}}
                                             <div class="absolute inset-0">
-                                                <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white bg-opacity-10 rounded backdrop-blur-sm p-1">
-                                                    @if(!$image->pivot->is_primary)
+                                                <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white bg-opacity-10 rounded backdrop-blur-sm p-1">
+                                                    @if(!$image['is_primary'])
                                                         <flux:button 
-                                                            wire:click="setPrimaryImage({{ $image->id }})" 
+                                                            wire:click="setPrimaryImage({{ $image['id'] }})" 
                                                             size="xs" 
                                                             variant="ghost" 
                                                             icon="star"
                                                             class="bg-white bg-opacity-90 text-yellow-600 hover:bg-yellow-50"
-                                                            title="Set as primary"
+                                                            title="Set as primary (using Images facade)"
                                                         />
                                                     @endif
                                                     <flux:button 
-                                                        wire:click="detachImage({{ $image->id }})" 
+                                                        wire:click="detachImage({{ $image['id'] }})" 
                                                         size="xs" 
                                                         variant="ghost" 
                                                         icon="x"
                                                         class="bg-white bg-opacity-90 text-red-600 hover:bg-red-50"
-                                                        title="Remove image"
+                                                        title="Remove image (using Images facade)"
                                                     />
                                                 </div>
                                             </div>
 
-                                            {{-- Image Info --}}
+                                            {{-- Enhanced Image Info --}}
                                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2">
-                                                <p class="text-white text-xs truncate">{{ $image->display_title }}</p>
+                                                <p class="text-white text-xs truncate">{{ $image['display_title'] }}</p>
+                                                @if(isset($image['family_stats']['family_size']) && $image['family_stats']['family_size'] > 1)
+                                                    <p class="text-blue-200 text-xs">{{ $image['family_stats']['family_size'] }} in family</p>
+                                                @endif
                                             </div>
                                         </div>
                                     @endforeach
@@ -596,12 +616,40 @@
                             </div>
                         @endif
 
-                        {{-- Available Images --}}
+                        {{-- 📑 TABBED INTERFACE - Select Existing | Upload New --}}
                         <div>
-                            <h4 class="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                <flux:icon name="plus" class="w-5 h-5 text-green-600" />
-                                Available Images ({{ count($availableImages) }})
-                            </h4>
+                            {{-- Tab Headers --}}
+                            <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
+                                <nav class="-mb-px flex space-x-8">
+                                    <button
+                                        wire:click="setActiveTab('select')"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center space-x-2 transition-colors
+                                               {{ $activeTab === 'select' 
+                                                  ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600' }}"
+                                    >
+                                        <flux:icon name="photo" class="w-4 h-4" />
+                                        <span>Select Existing</span>
+                                        <flux:badge color="gray" size="sm">{{ count($availableImages) }}</flux:badge>
+                                    </button>
+                                    
+                                    <button
+                                        wire:click="setActiveTab('upload')"
+                                        class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap flex items-center space-x-2 transition-colors
+                                               {{ $activeTab === 'upload' 
+                                                  ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600' }}"
+                                    >
+                                        <flux:icon name="upload" class="w-4 h-4" />
+                                        <span>Upload New</span>
+                                    </button>
+                                </nav>
+                            </div>
+
+                            {{-- Tab Content --}}
+                            @if($activeTab === 'select')
+                                {{-- 📷 SELECT EXISTING IMAGES TAB --}}
+                                <div>
 
                             @if(empty($availableImages))
                                 <div class="text-center py-8">
@@ -662,13 +710,102 @@
                                     @endforeach
                                 </div>
                             @endif
+                                </div>
+                            @elseif($activeTab === 'upload')
+                                {{-- 📤 UPLOAD NEW IMAGES TAB --}}
+                                <div>
+                                    <form wire:submit="uploadImages" class="space-y-4">
+                                        {{-- File Upload --}}
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                                Select Images (max 10)
+                                            </label>
+                                            <input
+                                                type="file"
+                                                wire:model="newImages"
+                                                multiple
+                                                accept="image/*"
+                                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/20 dark:file:text-blue-400"
+                                            />
+                                            @error('newImages.*') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                                        </div>
+
+                                        {{-- Upload Metadata --}}
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <flux:input
+                                                    label="Title (optional)"
+                                                    wire:model="uploadMetadata.title"
+                                                    placeholder="Enter image title..."
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <flux:input
+                                                    label="Alt Text (optional)"
+                                                    wire:model="uploadMetadata.alt_text"
+                                                    placeholder="Describe the image..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <flux:textarea
+                                                label="Description (optional)"
+                                                wire:model="uploadMetadata.description"
+                                                placeholder="Enter image description..."
+                                                rows="3"
+                                            />
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <flux:input
+                                                    label="Folder"
+                                                    wire:model="uploadMetadata.folder"
+                                                    placeholder="uncategorized"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <flux:input
+                                                    label="Tags (comma-separated)"
+                                                    wire:model="uploadMetadata.tags"
+                                                    placeholder="product, hero, banner..."
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {{-- Upload Actions --}}
+                                        <div class="flex justify-end pt-4">
+                                            <flux:button
+                                                icon="upload"
+                                                type="submit"
+                                                variant="primary"
+                                                wire:loading.attr="disabled"
+                                                wire:loading.class="opacity-75"
+                                            >
+                                                <span wire:loading.remove>Upload & Attach to Product</span>
+                                                <span wire:loading>
+                                                    <flux:icon.arrow-path class="w-4 h-4 mr-2 animate-spin"/>
+                                                    Uploading...
+                                                </span>
+                                            </flux:button>
+                                        </div>
+                                    </form>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
                     {{-- Modal Footer --}}
                     <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                         <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Click images to select, then attach to product
+                            @if($activeTab === 'select')
+                                Click images to select, then attach to product
+                            @else
+                                Upload new images and they'll be automatically attached
+                            @endif
                         </div>
                         <div class="flex gap-3">
                             <flux:button wire:click="closeImageModal" variant="ghost">

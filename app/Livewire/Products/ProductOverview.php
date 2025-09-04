@@ -2,12 +2,15 @@
 
 namespace App\Livewire\Products;
 
+use App\Facades\Images;
 use App\Models\Product;
 use App\Services\Marketplace\Facades\Sync;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class ProductOverview extends Component
 {
+    use WithFileUploads;
     public Product $product;
 
     public ?array $shopifyPushResult = null;
@@ -22,19 +25,33 @@ class ProductOverview extends Component
     public bool $showImageModal = false;
     public array $availableImages = [];
     public array $selectedImages = [];
+    
+    // Upload functionality (imitating ImageLibrary)
+    /** @var \Illuminate\Http\UploadedFile[] */
+    public $newImages = [];
+    public string $activeTab = 'select'; // 'select' or 'upload'
+    
+    // Upload metadata (same as ImageLibrary)
+    public array $uploadMetadata = [
+        'title' => '',
+        'alt_text' => '',
+        'description' => '',
+        'folder' => '',
+        'tags' => '',
+    ];
 
-    // Thumbnail cache
-    public \Illuminate\Support\Collection $thumbnails;
+    // 🌟 Enhanced image data using Images facade
+    public array $imageStats = [];
+    public array $enhancedImages = [];
 
     public function mount(Product $product)
     {
         $this->authorize('view-product-details');
 
-        // 🚀 NO RELATIONSHIP LOADING - ProductShow already loaded all needed data
         $this->product = $product;
         
-        // Load all thumbnails in a single query for performance
-        $this->loadThumbnails();
+        // 🌟 Load enhanced image data using Images facade
+        $this->loadEnhancedImageData();
     }
 
     // Inline editing methods for Name
@@ -113,12 +130,56 @@ class ProductOverview extends Component
     {
         $this->showImageModal = false;
         $this->selectedImages = [];
+        $this->activeTab = 'select';
+        $this->reset(['newImages', 'uploadMetadata']);
+    }
+    
+    /**
+     * 📑 Switch active tab in modal
+     */
+    public function setActiveTab(string $tab)
+    {
+        $this->activeTab = $tab;
+    }
+
+    /**
+     * 🌟 Load enhanced image data using Images facade
+     */
+    public function loadEnhancedImageData()
+    {
+        // Get enhanced image statistics using Images facade
+        $this->imageStats = [
+            'total_images' => Images::product($this->product)->count(),
+            'has_primary' => Images::product($this->product)->primary() !== null,
+            'primary_image' => Images::product($this->product)->primary(),
+        ];
+
+        // Get enhanced image data with thumbnails using Images facade
+        $productImages = Images::product($this->product)->get();
+        $this->enhancedImages = [];
+
+        foreach ($productImages as $image) {
+            // Use Images facade to get image family data (includes thumbnails)
+            $family = Images::find($image)->family()->all();
+            $thumbnail = $family->firstWhere('folder', 'variants') ?? $image;
+
+            $this->enhancedImages[] = [
+                'id' => $image->id,
+                'url' => $image->url,
+                'thumb_url' => $thumbnail->url,
+                'filename' => $image->filename,
+                'display_title' => $image->display_title,
+                'alt_text' => $image->alt_text,
+                'is_primary' => $image->id === $this->imageStats['primary_image']?->id,
+                'family_stats' => Images::find($image)->family()->stats(),
+            ];
+        }
     }
 
     public function loadAvailableImages()
     {
-        // Get all ORIGINAL images not already attached to this product (exclude variants)
-        $currentImageIds = $this->product->images()->pluck('images.id')->toArray();
+        // 🌟 Enhanced with Images facade for better performance
+        $currentImageIds = Images::product($this->product)->get()->pluck('id')->toArray();
         
         $availableImages = \App\Models\Image::query()
             ->originals() // Only show original images, not variants
@@ -127,93 +188,35 @@ class ProductOverview extends Component
             ->limit(50)
             ->get();
             
-        // Get thumbnails for all available images in a single query for performance
-        $availableImageIds = $availableImages->pluck('id');
-        $availableThumbnails = \App\Models\Image::where('folder', 'variants')
-            ->whereJsonContains('tags', 'thumb')
-            ->get()
-            ->filter(function($thumbnail) use ($availableImageIds) {
-                foreach ($thumbnail->tags ?? [] as $tag) {
-                    if (str_starts_with($tag, 'original-')) {
-                        $originalId = (int) str_replace('original-', '', $tag);
-                        return $availableImageIds->contains($originalId);
-                    }
-                }
-                return false;
-            })
-            ->keyBy(function($thumbnail) {
-                foreach ($thumbnail->tags ?? [] as $tag) {
-                    if (str_starts_with($tag, 'original-')) {
-                        return (int) str_replace('original-', '', $tag);
-                    }
-                }
-                return null;
-            })
-            ->filter();
+        $this->availableImages = [];
         
-        $this->availableImages = $availableImages->map(function ($image) use ($availableThumbnails) {
-            return [
+        foreach ($availableImages as $image) {
+            // 🌟 Use Images facade for family data and thumbnails
+            $family = Images::find($image)->family()->all();
+            $thumbnail = $family->firstWhere('folder', 'variants') ?? $image;
+
+            $this->availableImages[] = [
                 'id' => $image->id,
                 'url' => $image->url,
-                'thumb_url' => $availableThumbnails[$image->id]->url ?? $image->url,
+                'thumb_url' => $thumbnail->url,
                 'filename' => $image->filename,
                 'display_title' => $image->display_title,
                 'alt_text' => $image->alt_text,
+                'family_size' => $family->count(),
             ];
-        })->toArray();
-    }
-
-    /**
-     * Load all thumbnails for product images in a single query
-     */
-    public function loadThumbnails(): void
-    {
-        if ($this->product->images->isEmpty()) {
-            $this->thumbnails = collect();
-            return;
         }
-        
-        $imageIds = $this->product->images->pluck('id');
-        
-        // Single query to get all relevant thumbnails
-        $thumbnails = \App\Models\Image::where('folder', 'variants')
-            ->whereJsonContains('tags', 'thumb')
-            ->get()
-            ->filter(function($thumbnail) use ($imageIds) {
-                // Filter thumbnails that belong to our product images
-                foreach ($thumbnail->tags ?? [] as $tag) {
-                    if (str_starts_with($tag, 'original-')) {
-                        $originalId = (int) str_replace('original-', '', $tag);
-                        return $imageIds->contains($originalId);
-                    }
-                }
-                return false;
-            })
-            ->keyBy(function($thumbnail) {
-                // Key by original image ID for easy lookup
-                foreach ($thumbnail->tags ?? [] as $tag) {
-                    if (str_starts_with($tag, 'original-')) {
-                        return (int) str_replace('original-', '', $tag);
-                    }
-                }
-                return null;
-            })
-            ->filter(); // Remove null keys
-            
-        $this->thumbnails = $thumbnails;
     }
 
     /**
-     * Get thumbnail URL for an image (with fallback to original)
+     * 🌟 Get enhanced thumbnail URL using Images facade
      */
     private function getThumbnailUrl(\App\Models\Image $image): string
     {
-        // Use cached thumbnail if available
-        if (isset($this->thumbnails[$image->id])) {
-            return $this->thumbnails[$image->id]->url;
-        }
-
-        return $image->url;
+        // Use Images facade to get thumbnail from family
+        $family = Images::find($image)->family()->all();
+        $thumbnail = $family->firstWhere('folder', 'variants');
+        
+        return $thumbnail ? $thumbnail->url : $image->url;
     }
 
     /**
@@ -258,53 +261,135 @@ class ProductOverview extends Component
             return;
         }
 
-        // Attach selected ORIGINAL images to the product 
-        // (selectedImages contains original image IDs, thumbnails are just for display)
-        $this->product->images()->attach($this->selectedImages);
-        
-        $count = count($this->selectedImages);
-        $this->dispatch('toast', [
-            'type' => 'success',
-            'message' => "Successfully attached {$count} image" . ($count > 1 ? 's' : '') . "! ✨"
-        ]);
+        // 🌟 Use Images facade for attachment
+        try {
+            $images = \App\Models\Image::whereIn('id', $this->selectedImages)->get();
+            foreach ($images as $image) {
+                Images::product($this->product)->attach($image);
+            }
+            
+            $count = count($this->selectedImages);
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => "Successfully attached {$count} image" . ($count > 1 ? 's' : '') . " using Images facade! ✨"
+            ]);
 
-        // Refresh product data and close modal
-        $this->product->refresh();
-        $this->closeImageModal();
+            // Refresh enhanced image data
+            $this->product->refresh();
+            $this->loadEnhancedImageData();
+            $this->closeImageModal();
+            
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to attach images: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function detachImage(int $imageId)
     {
         $this->authorize('edit-products');
         
-        $this->product->images()->detach($imageId);
-        
-        $this->dispatch('toast', [
-            'type' => 'success',
-            'message' => 'Image detached successfully! 🗑️'
-        ]);
+        // 🌟 Use Images facade for detachment
+        try {
+            $image = \App\Models\Image::find($imageId);
+            if ($image) {
+                Images::product($this->product)->detach($image);
+                
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Image detached using Images facade! 🗑️'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to detach image: ' . $e->getMessage()
+            ]);
+        }
 
-        // Refresh product data
+        // Refresh enhanced image data
         $this->product->refresh();
+        $this->loadEnhancedImageData();
     }
 
     public function setPrimaryImage(int $imageId)
     {
         $this->authorize('edit-products');
         
-        // Remove primary flag from all current images
-        $this->product->images()->updateExistingPivot($this->product->images()->pluck('images.id'), ['is_primary' => false]);
-        
-        // Set the selected image as primary
-        $this->product->images()->updateExistingPivot($imageId, ['is_primary' => true]);
-        
-        $this->dispatch('toast', [
-            'type' => 'success',
-            'message' => 'Primary image updated successfully! ⭐'
+        // 🌟 Use Images facade for setting primary image
+        try {
+            $image = \App\Models\Image::find($imageId);
+            if ($image) {
+                Images::product($this->product)->attach($image)->asPrimary();
+                
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Primary image updated using Images facade! ⭐'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to set primary image: ' . $e->getMessage()
+            ]);
+        }
+
+        // Refresh enhanced image data  
+        $this->product->refresh();
+        $this->loadEnhancedImageData();
+    }
+
+    /**
+     * 📤 UPLOAD IMAGES - Using same pattern as ImageLibrary
+     */
+    public function uploadImages(\App\Actions\Images\UploadImagesAction $uploadAction)
+    {
+        $this->authorize('upload-images');
+
+        // 🌟 Standard validation (Images facade used for attachment & management)
+        $this->validate([
+            'newImages.*' => 'required|image|max:5120', // 5MB
         ]);
 
-        // Refresh product data
-        $this->product->refresh();
+        try {
+            // Use existing UploadImagesAction
+            $result = $uploadAction->execute($this->newImages, $this->uploadMetadata);
+
+            if ($result['success']) {
+                $uploadCount = $result['data']['upload_count'];
+                $uploadedImages = $result['data']['uploaded_images'] ?? [];
+                
+                // 🚀 Auto-attach uploaded images to this product using Images facade
+                foreach ($uploadedImages as $uploadedImage) {
+                    Images::product($this->product)->attach($uploadedImage);
+                }
+
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => "{$uploadCount} images uploaded and attached to product! ✨"
+                ]);
+
+                // Refresh data and close modal
+                $this->reset(['newImages', 'uploadMetadata']);
+                $this->product->refresh();
+                $this->loadEnhancedImageData();
+                $this->closeImageModal();
+
+            } else {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Upload failed: ' . $result['message']
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Upload failed: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function pushToShopify()
