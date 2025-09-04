@@ -1024,27 +1024,11 @@
                                 </p>
                             </div>
                         @else
-                            {{-- Selected Images Summary --}}
-                            @if(!empty($selectedColorImages))
-                                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4 border border-blue-200 dark:border-blue-700/50">
-                                    <p class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
-                                        {{ count($selectedColorImages) }} image{{ count($selectedColorImages) > 1 ? 's' : '' }} selected for {{ $currentColor }}
-                                    </p>
-                                    <flux:button 
-                                        wire:click="attachSelectedColorImages" 
-                                        variant="primary" 
-                                        size="sm"
-                                        icon="link"
-                                    >
-                                        Attach Selected to {{ $currentColor }}
-                                    </flux:button>
-                                </div>
-                            @endif
 
                             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 @foreach($colorImages as $image)
-                                    <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group hover:shadow-lg transition-all duration-200 {{ in_array($image['id'], $selectedColorImages) ? 'ring-2 ring-blue-500 ring-offset-2' : '' }}"
-                                         wire:click="toggleColorImageSelection({{ $image['id'] }})">
+                                    <div class="relative bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden aspect-square cursor-pointer group hover:shadow-lg transition-all duration-200 {{ $image['is_attached'] ? 'ring-2 ring-green-500 ring-offset-2' : '' }}"
+                                         wire:click="{{ $image['is_attached'] ? 'detachColorImage(' . $image['id'] . ')' : 'attachColorImage(' . $image['id'] . ')' }}">
                                         <img src="{{ $image['thumb_url'] }}" alt="{{ $image['alt_text'] }}" class="w-full h-full object-cover">
                                         
                                         {{-- 🎯 ATTACHMENT STATUS BADGE --}}
@@ -1057,51 +1041,29 @@
                                             @endif
                                         </div>
 
-                                        {{-- 🎯 CLEAN SELECTION STATE --}}
+                                        {{-- 🎯 ACTION STATE INDICATOR --}}
                                         <div class="absolute top-2 right-2">
-                                            @if(in_array($image['id'], $selectedColorImages))
-                                                <div class="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                                                    <flux:icon name="check" class="w-4 h-4 text-white" />
+                                            @if($image['is_attached'])
+                                                <div class="w-7 h-7 bg-red-600 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <flux:icon name="x-mark" class="w-4 h-4 text-white" />
                                                 </div>
                                             @else
-                                                <div class="w-7 h-7 bg-black bg-opacity-20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div class="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <flux:icon name="plus" class="w-4 h-4 text-white" />
                                                 </div>
                                             @endif
                                         </div>
 
-                                        {{-- Quick Actions for Attached Images --}}
+                                        {{-- 📝 ACTION INFO --}}
                                         @if($image['is_attached'])
-                                            <div class="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <flux:button 
-                                                    wire:click.stop="setPrimaryColorImage({{ $image['id'] }})" 
-                                                    size="xs" 
-                                                    variant="ghost" 
-                                                    icon="star"
-                                                    class="w-6 h-6 bg-black bg-opacity-20 text-yellow-300 hover:bg-yellow-500 hover:text-white backdrop-blur-sm"
-                                                    title="Set as primary for {{ $currentColor }}"
-                                                />
-                                                <flux:button 
-                                                    wire:click.stop="detachColorImage({{ $image['id'] }})" 
-                                                    size="xs" 
-                                                    variant="ghost" 
-                                                    icon="x-mark"
-                                                    class="w-6 h-6 bg-black bg-opacity-20 text-red-300 hover:bg-red-500 hover:text-white backdrop-blur-sm"
-                                                    title="Detach from {{ $currentColor }}"
-                                                />
-                                            </div>
-                                        @endif
-
-                                        {{-- 📝 CLEAN INFO (Only on Hover for Non-Selected) --}}
-                                        @if(!in_array($image['id'], $selectedColorImages))
-                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-600 via-green-500/50 to-transparent p-2">
                                                 <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
-                                                <p class="text-gray-300 text-xs">Click to select</p>
+                                                <p class="text-green-100 text-xs">Attached - Click to detach</p>
                                             </div>
                                         @else
-                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 via-blue-500/50 to-transparent p-2">
+                                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <p class="text-white text-xs font-medium truncate">{{ $image['display_title'] }}</p>
-                                                <p class="text-blue-100 text-xs">Selected</p>
+                                                <p class="text-gray-300 text-xs">Click to attach</p>
                                             </div>
                                         @endif
 
@@ -1178,17 +1140,12 @@
                     {{-- Modal Footer --}}
                     <div class="flex items-center justify-between p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
                         <div class="text-sm text-gray-600 dark:text-gray-400">
-                            Click images to select, then attach to {{ $currentColor }} color group
+                            Click images to attach/detach to {{ $currentColor }} color group
                         </div>
                         <div class="flex gap-3">
                             <flux:button wire:click="closeColorImageModal" variant="ghost">
                                 Close
                             </flux:button>
-                            @if(!empty($selectedColorImages))
-                                <flux:button wire:click="attachSelectedColorImages" variant="primary" icon="link">
-                                    Attach {{ count($selectedColorImages) }} to {{ $currentColor }}
-                                </flux:button>
-                            @endif
                         </div>
                     </div>
                 </div>

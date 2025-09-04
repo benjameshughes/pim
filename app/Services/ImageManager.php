@@ -412,18 +412,6 @@ class ColorImageContext
         return $this->product->getImagesForColor($this->color)->count();
     }
 
-    /**
-     * ⭐ Set specific image as primary for color group
-     */
-    public function setPrimary(int $imageId): self
-    {
-        $image = \App\Models\Image::find($imageId);
-        if ($image) {
-            // Use the Image model's color-specific primary logic
-            $image->setPrimaryForColor($this->product, $this->color);
-        }
-        return $this;  // ✅ Return $this for chaining!
-    }
 }
 
 /**

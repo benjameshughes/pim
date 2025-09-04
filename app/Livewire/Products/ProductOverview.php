@@ -337,30 +337,6 @@ class ProductOverview extends Component
         }
     }
 
-    public function setPrimaryColorImage(int $imageId)
-    {
-        $this->authorize('edit-products');
-        
-        // 🌟 Use Images facade setPrimary method for color group
-        try {
-            Images::product($this->product)->color($this->currentColor)->setPrimary($imageId);
-            
-            $this->dispatch('toast', [
-                'type' => 'success',
-                'message' => "Primary image updated for {$this->currentColor} color group! ⭐"
-            ]);
-        } catch (\Exception $e) {
-            $this->dispatch('toast', [
-                'type' => 'error',
-                'message' => 'Failed to set primary image: ' . $e->getMessage()
-            ]);
-        }
-
-        // Refresh data
-        $this->product->refresh();
-        $this->loadEnhancedImageData();
-        $this->loadColorImages();
-    }
 
     public function detachColorImage(int $imageId)
     {
@@ -381,6 +357,34 @@ class ProductOverview extends Component
             $this->dispatch('toast', [
                 'type' => 'error',
                 'message' => 'Failed to detach image: ' . $e->getMessage()
+            ]);
+        }
+
+        // Refresh data
+        $this->product->refresh();
+        $this->loadEnhancedImageData();
+        $this->loadColorImages();
+    }
+
+    public function attachColorImage(int $imageId)
+    {
+        $this->authorize('edit-products');
+        
+        // 🌟 Use Images facade for attachment
+        try {
+            $image = \App\Models\Image::find($imageId);
+            if ($image) {
+                Images::product($this->product)->color($this->currentColor)->attach($image);
+                
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Image attached to ' . $this->currentColor . ' color group! 🎨✨'
+                ]);
+            }
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to attach image: ' . $e->getMessage()
             ]);
         }
 
