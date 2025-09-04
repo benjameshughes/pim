@@ -122,10 +122,11 @@
             
             <div class="flex flex-wrap gap-3">
                 @foreach ($product->variants->groupBy('color') as $color => $colorVariants)
+                    @php $hasColorImages = $product->getImagesForColor($color)->count() > 0; @endphp
                     <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
                          wire:click="openColorImageModal('{{ $color }}')"
-                         title="Manage images for {{ $color }}">
-                        <div class="w-6 h-6 rounded-full border-2 border-white shadow-sm
+                         title="Manage images for {{ $color }}{{ $hasColorImages ? ' (' . $product->getImagesForColor($color)->count() . ' images)' : '' }}">
+                        <div class="relative w-6 h-6 rounded-full border-2 border-white shadow-sm
                             @if(strtolower($color) === 'black') bg-gray-900
                             @elseif(strtolower($color) === 'white') bg-white border-gray-300
                             @elseif(strtolower($color) === 'red') bg-red-500
@@ -145,13 +146,29 @@
                             @else bg-gradient-to-br from-orange-400 to-red-500
                             @endif"
                             title="{{ $color }}">
+                            {{-- 📷 Subtle image indicator --}}
+                            @if($hasColorImages)
+                                <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full flex items-center justify-center">
+                                    <flux:icon name="camera" class="w-1.5 h-1.5 text-white" />
+                                </div>
+                            @endif
                         </div>
                         <div class="flex-1">
-                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $color }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $colorVariants->count() }} sizes</div>
+                            <div class="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1">
+                                {{ $color }}
+                                @if($hasColorImages)
+                                    <flux:icon name="camera" class="w-3 h-3 text-green-500" />
+                                @endif
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $colorVariants->count() }} sizes
+                                @if($hasColorImages)
+                                    • {{ $product->getImagesForColor($color)->count() }} images
+                                @endif
+                            </div>
                         </div>
                         <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-                            <flux:icon name="camera" class="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                            <flux:icon name="camera" class="w-4 h-4 {{ $hasColorImages ? 'text-green-500 group-hover:text-green-600' : 'text-gray-400 group-hover:text-blue-500' }}" />
                         </div>
                     </div>
                 @endforeach
