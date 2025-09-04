@@ -28,68 +28,67 @@ class FullUpdateShopifyProductsAction
     public function execute(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): SyncResult
     {
         try {
-            $metadata = $marketplaceProduct->getMetadata();
-            $originalProductId = $metadata['original_product_id'] ?? null;
+            $shopifyProducts = $marketplaceProduct->getData();
 
-            if (! $originalProductId) {
-                return SyncResult::failure('No original product ID found for full update');
+            if (empty($shopifyProducts)) {
+                return SyncResult::failure('No Shopify products to update');
             }
 
-            // Get existing Shopify product IDs
-            $shopifyProductIds = $this->getExistingShopifyProductIds($originalProductId, $syncAccount);
+            // Get existing Shopify product IDs from the first product's metadata
+            $existingIds = $this->getExistingShopifyProductIds($marketplaceProduct, $syncAccount);
+            
+            if (empty($existingIds)) {
+                return SyncResult::failure('No existing Shopify products found. Use create() instead of fullUpdate().');
+            }
 
-            if (empty($shopifyProductIds)) {
-                // Fallback: No existing products found, create them instead
-                $createAction = new CreateShopifyProductsAction;
-                $createResult = $createAction->execute($marketplaceProduct, $syncAccount, true);
+            $client = new \App\Services\Marketplace\Shopify\ShopifyGraphQLClient($syncAccount);
+            $results = [];
+            $errors = [];
 
-                if ($createResult->isSuccess()) {
-                    return new SyncResult(
-                        success: true,
-                        message: 'No existing products found - created new products instead: '.$createResult->getMessage(),
-                        data: array_merge($createResult->getData(), ['operation' => 'create_fallback']),
-                        errors: $createResult->getErrors()
-                    );
+            // Update each Shopify product with full data push
+            foreach ($shopifyProducts as $shopifyProduct) {
+                $colorGroup = $shopifyProduct['metadata']['color_group'] ?? 'unknown';
+                $existingProductId = $existingIds[$colorGroup] ?? null;
+
+                if (!$existingProductId) {
+                    $errors[] = [
+                        'color_group' => $colorGroup,
+                        'error' => 'No existing Shopify product ID found for color group'
+                    ];
+                    continue;
+                }
+
+                $result = $this->performFullDataPush($client, $shopifyProduct, $existingProductId, $syncAccount);
+
+                if ($result['success']) {
+                    $results[] = $result;
                 } else {
-                    return SyncResult::failure(
-                        'Full update failed: No existing products and create fallback failed: '.$createResult->getMessage(),
-                        $createResult->getErrors()
-                    );
+                    $errors[] = $result;
                 }
             }
 
-            // Perform comprehensive update of all existing products
-            $updateResults = $this->performComprehensiveUpdate($shopifyProductIds, $marketplaceProduct, $syncAccount);
+            $success = empty($errors);
+            $message = $success
+                ? sprintf('Full update successful! Updated all %d products with comprehensive data.', count($results))
+                : sprintf('Partial success: %d products updated, %d failed', count($results), count($errors));
 
-            $successCount = count(array_filter($updateResults, fn ($r) => $r['success']));
-            $totalCount = count($updateResults);
-
-            if ($successCount === $totalCount) {
-                return new SyncResult(
-                    success: true,
-                    message: "Full update successful! Updated all {$successCount} products with comprehensive data.",
-                    data: [
-                        'operation' => 'full_update',
-                        'updated_products' => $updateResults,
-                        'success_count' => $successCount,
-                        'total_count' => $totalCount,
-                    ]
-                );
-            } else {
-                $failedCount = $totalCount - $successCount;
-
-                return new SyncResult(
-                    success: $successCount > 0,
-                    message: "Partial success: {$successCount}/{$totalCount} products updated. {$failedCount} failed.",
-                    data: [
-                        'operation' => 'full_update_partial',
-                        'updated_products' => $updateResults,
-                        'success_count' => $successCount,
-                        'failed_count' => $failedCount,
-                    ],
-                    errors: $this->extractErrors($updateResults)
-                );
+            // Update sync timestamp
+            if (!empty($results)) {
+                $this->updateSyncTimestamp($marketplaceProduct, $syncAccount);
             }
+
+            return new SyncResult(
+                success: $success,
+                message: $message,
+                data: [
+                    'operation' => 'full_update',
+                    'updated_products' => $results,
+                    'failed_products' => $errors,
+                    'success_count' => count($results),
+                    'total_count' => count($results) + count($errors),
+                ],
+                errors: array_column($errors, 'error')
+            );
 
         } catch (\Exception $e) {
             return SyncResult::failure(
@@ -100,233 +99,308 @@ class FullUpdateShopifyProductsAction
     }
 
     /**
-     * Get existing Shopify product IDs for update
+     * Get existing Shopify product IDs from local product attributes
      */
-    protected function getExistingShopifyProductIds(int $originalProductId, SyncAccount $syncAccount): array
+    protected function getExistingShopifyProductIds(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): array
     {
+        $metadata = $marketplaceProduct->getMetadata();
+        $originalProductId = $metadata['original_product_id'] ?? null;
+
+        if (!$originalProductId) {
+            return [];
+        }
+
         $localProduct = Product::find($originalProductId);
-        if (! $localProduct) {
+        if (!$localProduct) {
             return [];
         }
 
         $shopifyProductIds = $localProduct->getSmartAttributeValue('shopify_product_ids');
         $syncAccountId = $localProduct->getSmartAttributeValue('shopify_sync_account_id');
 
-        // Only return IDs if synced with this account
-        if (! $shopifyProductIds || $syncAccountId != $syncAccount->id) {
+        // Verify this is for the correct sync account
+        if ($syncAccountId != $syncAccount->id) {
             return [];
         }
 
-        // Parse product IDs
+        // Handle both string and array cases (your attribute system might return either)
         if (is_string($shopifyProductIds)) {
             return json_decode($shopifyProductIds, true) ?: [];
-        } elseif (is_array($shopifyProductIds)) {
-            return $shopifyProductIds;
         }
-
-        return [];
+        
+        return is_array($shopifyProductIds) ? $shopifyProductIds : [];
     }
 
     /**
-     * Perform comprehensive update on all existing Shopify products
+     * Perform full data push for a single Shopify product using four-step approach
      */
-    protected function performComprehensiveUpdate(array $shopifyProductIds, MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): array
+    protected function performFullDataPush($client, array $shopifyProduct, string $productId, SyncAccount $syncAccount): array
     {
-        $client = new \App\Services\Marketplace\Shopify\ShopifyGraphQLClient($syncAccount);
-        $shopifyProducts = $marketplaceProduct->getData();
-        $updateResults = [];
-
-        foreach ($shopifyProductIds as $colorGroup => $shopifyProductId) {
-            // Find matching local product data by color group
-            $localProductData = $this->findProductDataByColorGroup($shopifyProducts, $colorGroup);
-
-            if (! $localProductData) {
-                $updateResults[] = [
-                    'success' => false,
-                    'color_group' => $colorGroup,
-                    'shopify_product_id' => $shopifyProductId,
-                    'error' => 'No local data found for color group: '.$colorGroup,
-                ];
-
-                continue;
-            }
-
-            try {
-                error_log("🔄 Starting full update for color group: {$colorGroup}, ID: {$shopifyProductId}");
-
-                // Step 1: Update product metadata (title, description, etc.)
-                $productUpdateResult = $this->updateProductMetadata($client, $shopifyProductId, $localProductData);
-                error_log('📝 Product metadata update result: '.($productUpdateResult ? 'success' : 'failed'));
-
-                // Step 2: Update all variant data comprehensively
-                $variantUpdateResult = $this->updateAllVariantData($client, $shopifyProductId, $localProductData['variants'] ?? []);
-                error_log('🔧 Variant data update result: '.($variantUpdateResult ? 'success' : 'failed'));
-
-                // Step 3: Update images if needed
-                // TODO: Implement image updates in future enhancement
-
-                $updateResults[] = [
-                    'success' => $productUpdateResult && $variantUpdateResult,
-                    'color_group' => $colorGroup,
-                    'shopify_product_id' => $shopifyProductId,
-                    'product_update' => $productUpdateResult,
-                    'variant_update' => $variantUpdateResult,
-                ];
-
-            } catch (\Exception $e) {
-                error_log("❌ Full update exception for {$colorGroup}: ".$e->getMessage());
-                $updateResults[] = [
-                    'success' => false,
-                    'color_group' => $colorGroup,
-                    'shopify_product_id' => $shopifyProductId,
-                    'error' => 'Update failed: '.$e->getMessage(),
-                ];
-            }
-        }
-
-        return $updateResults;
-    }
-
-    /**
-     * Find product data by color group
-     */
-    protected function findProductDataByColorGroup(array $shopifyProducts, string $colorGroup): ?array
-    {
-        foreach ($shopifyProducts as $product) {
-            $internal = $product['_internal'] ?? [];
-            if (($internal['color_group'] ?? '') === $colorGroup) {
-                return $product;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Update product metadata (title, description, category, etc.)
-     */
-    protected function updateProductMetadata($client, string $shopifyProductId, array $productData): bool
-    {
-        $productInput = $productData['productInput'] ?? [];
-
-        // Remove fields that cannot be updated via GraphQL
-        unset($productInput['productOptions']); // Cannot be specified during update
-
-        // Add the product ID to the input for update
-        $productInput['id'] = $shopifyProductId;
+        $metadata = $shopifyProduct['metadata'] ?? [];
+        $productInput = $shopifyProduct['productInput'] ?? [];
+        $variantInputs = $shopifyProduct['variantInputs'] ?? [];
+        $skuMappings = $shopifyProduct['skuMappings'] ?? [];
+        $images = $shopifyProduct['images'] ?? [];
 
         try {
-            $result = $client->updateProduct($shopifyProductId, $productInput);
-            $userErrors = $result['productUpdate']['userErrors'] ?? [];
-            $updatedProduct = $result['productUpdate']['product'] ?? null;
+            \Illuminate\Support\Facades\Log::info('🔄 Starting full data push', [
+                'product_id' => $productId,
+                'color_group' => $metadata['color_group'] ?? 'unknown',
+                'variant_count' => count($variantInputs)
+            ]);
 
-            if (! empty($userErrors)) {
-                error_log("Product metadata update errors for {$shopifyProductId}: ".json_encode($userErrors));
+            // STEP 1: Update product content with all current data
+            $contentChanges = $this->prepareContentChanges($productInput);
+            
+            if (!empty($contentChanges)) {
+                $updateResult = $client->updateProductContent($productId, $contentChanges);
+                $userErrors = $updateResult['productUpdate']['userErrors'] ?? [];
 
-                return false;
+                if (!empty($userErrors)) {
+                    \Illuminate\Support\Facades\Log::error('❌ Step 1 failed - Content update', [
+                        'product_id' => $productId,
+                        'user_errors' => $userErrors,
+                        'color_group' => $metadata['color_group'] ?? 'unknown'
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'error' => 'Step 1 - Content update: '.json_encode($userErrors),
+                        'color_group' => $metadata['color_group'] ?? 'unknown',
+                    ];
+                }
+
+                \Illuminate\Support\Facades\Log::info('✅ Step 1 successful - Content updated', [
+                    'product_id' => $productId,
+                    'changes' => array_keys($contentChanges),
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
+                ]);
             }
 
-            // Log successful updates for verification
-            if ($updatedProduct) {
-                $categoryUpdated = ! empty($updatedProduct['category']['id']);
-                $metafieldsCount = count($updatedProduct['metafields']['edges'] ?? []);
+            // STEP 2: Update variant prices using current data
+            $priceChanges = $this->preparePriceChanges($client, $productId, $variantInputs);
+            
+            if (!empty($priceChanges)) {
+                $priceResult = $client->updateVariantPrices($productId, $priceChanges);
+                $priceErrors = $priceResult['productVariantsBulkUpdate']['userErrors'] ?? [];
 
-                error_log("✅ Product metadata updated for {$shopifyProductId}: ".
-                    "Title='{$updatedProduct['title']}', ".
-                    'Category='.($categoryUpdated ? 'Yes' : 'None').', '.
-                    "Metafields={$metafieldsCount}");
+                if (!empty($priceErrors)) {
+                    \Illuminate\Support\Facades\Log::error('❌ Step 2 failed - Price update', [
+                        'product_id' => $productId,
+                        'price_errors' => $priceErrors,
+                        'color_group' => $metadata['color_group'] ?? 'unknown'
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'error' => 'Step 2 - Price update: '.json_encode($priceErrors),
+                        'color_group' => $metadata['color_group'] ?? 'unknown',
+                    ];
+                }
+
+                \Illuminate\Support\Facades\Log::info('✅ Step 2 successful - Prices updated', [
+                    'product_id' => $productId,
+                    'price_updates' => count($priceChanges),
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
+                ]);
             }
 
-            return true;
+            // STEP 3: Update variant SKUs using current data
+            $skuChanges = $this->prepareSKUChanges($client, $productId, $skuMappings);
+            
+            if (!empty($skuChanges)) {
+                $skuResult = $client->batchUpdateVariantSKUs($skuChanges);
+                
+                \Illuminate\Support\Facades\Log::info('✅ Step 3 completed - SKU updates', [
+                    'product_id' => $productId,
+                    'sku_updates_success' => $skuResult['success'],
+                    'successful_count' => count($skuResult['successful'] ?? []),
+                    'failed_count' => count($skuResult['failed'] ?? []),
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
+                ]);
+            }
+
+            // STEP 4: Update images if provided
+            if (!empty($images)) {
+                $imageResult = $this->updateProductImages($client, $productId, $images);
+                
+                \Illuminate\Support\Facades\Log::info('✅ Step 4 completed - Image updates', [
+                    'product_id' => $productId,
+                    'image_updates' => $imageResult['updated_count'] ?? 0,
+                    'color_group' => $metadata['color_group'] ?? 'unknown'
+                ]);
+            }
+
+            return [
+                'success' => true,
+                'id' => $productId,
+                'color_group' => $metadata['color_group'] ?? 'unknown',
+                'original_product_id' => $metadata['original_product_id'] ?? null,
+                'full_data_push' => [
+                    'content' => !empty($contentChanges),
+                    'prices' => !empty($priceChanges),
+                    'skus' => !empty($skuChanges),
+                    'images' => !empty($images),
+                ],
+            ];
+
         } catch (\Exception $e) {
-            error_log("Product metadata update failed for {$shopifyProductId}: ".$e->getMessage());
+            \Illuminate\Support\Facades\Log::error('❌ Exception during full data push', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+                'color_group' => $metadata['color_group'] ?? 'unknown'
+            ]);
 
-            return false;
+            return [
+                'success' => false,
+                'error' => 'Full data push failed: '.$e->getMessage(),
+                'color_group' => $metadata['color_group'] ?? 'unknown',
+            ];
         }
     }
 
     /**
-     * Update all variant data comprehensively (SKU, pricing, inventory, etc.)
+     * Prepare content changes for full update (push all content)
      */
-    protected function updateAllVariantData($client, string $shopifyProductId, array $localVariants): bool
+    protected function prepareContentChanges(array $productInput): array
     {
-        if (empty($localVariants)) {
-            return true;
+        // For full update, push all content regardless of current state
+        $changes = [];
+
+        foreach (['title', 'descriptionHtml', 'vendor', 'productType', 'status', 'metafields'] as $field) {
+            if (isset($productInput[$field])) {
+                $changes[$field] = $productInput[$field];
+            }
         }
 
+        return $changes;
+    }
+
+    /**
+     * Prepare price changes for full update (push all prices)
+     */
+    protected function preparePriceChanges($client, string $productId, array $newVariantInputs): array
+    {
         try {
-            // Get current Shopify variants
-            $product = $client->getProduct($shopifyProductId);
-            $shopifyVariants = $product['product']['variants']['edges'] ?? [];
-
-            if (empty($shopifyVariants)) {
-                return false;
-            }
-
-            // Match by position and update all data
-            $updateData = [];
-            foreach ($shopifyVariants as $index => $edge) {
-                $shopifyVariant = $edge['node'] ?? [];
-                $shopifyVariantId = $shopifyVariant['id'] ?? null;
-
-                if (! $shopifyVariantId || ! isset($localVariants[$index])) {
-                    continue;
-                }
-
-                $localVariant = $localVariants[$index];
-
-                // Build comprehensive update data
-                $variantUpdateData = [
-                    'id' => $shopifyVariantId,
-                    'sku' => $localVariant['sku'],
-                    'price' => $localVariant['price'],
+            // Get current variants from Shopify
+            $currentData = $client->getProduct($productId);
+            $currentVariants = [];
+            
+            foreach ($currentData['product']['variants']['edges'] ?? [] as $edge) {
+                $variant = $edge['node'];
+                $currentVariants[] = [
+                    'id' => $variant['id'],
+                    'price' => $variant['price'],
                 ];
-
-                // Add all optional fields that are available
-                if (! empty($localVariant['barcode'])) {
-                    $variantUpdateData['barcode'] = $localVariant['barcode'];
-                }
-
-                if (! empty($localVariant['compareAtPrice'])) {
-                    $variantUpdateData['compareAtPrice'] = $localVariant['compareAtPrice'];
-                }
-
-                if (isset($localVariant['inventoryQuantity'])) {
-                    $variantUpdateData['inventoryQuantity'] = (int) $localVariant['inventoryQuantity'];
-                }
-
-                $updateData[] = $variantUpdateData;
             }
 
-            // Perform bulk update of all variants
-            if (! empty($updateData)) {
-                $result = $client->updateProductVariants($shopifyProductId, $updateData);
-                $userErrors = $result['productVariantsBulkUpdate']['userErrors'] ?? [];
+            $priceChanges = [];
+            
+            // Push all prices for full update
+            foreach ($newVariantInputs as $index => $newVariant) {
+                if (isset($currentVariants[$index])) {
+                    $currentVariant = $currentVariants[$index];
+                    $newPrice = $newVariant['price'] ?? null;
+                    
+                    if ($newPrice) {
+                        $priceChanges[] = [
+                            'id' => $currentVariant['id'],
+                            'price' => $newPrice,
+                        ];
 
-                return empty($userErrors);
+                        // Add compareAtPrice if available
+                        if (isset($newVariant['compareAtPrice'])) {
+                            $priceChanges[count($priceChanges) - 1]['compareAtPrice'] = $newVariant['compareAtPrice'];
+                        }
+                    }
+                }
             }
 
-            return true;
+            return $priceChanges;
 
         } catch (\Exception $e) {
-            error_log("Variant data update failed for {$shopifyProductId}: ".$e->getMessage());
-
-            return false;
+            \Illuminate\Support\Facades\Log::warning('Could not prepare price changes for full update', [
+                'product_id' => $productId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [];
         }
     }
 
     /**
-     * Extract errors from update results
+     * Prepare SKU changes for full update (push all SKUs)
      */
-    protected function extractErrors(array $updateResults): array
+    protected function prepareSKUChanges($client, string $productId, array $skuMappings): array
     {
-        $errors = [];
-        foreach ($updateResults as $result) {
-            if (! $result['success'] && isset($result['error'])) {
-                $errors[] = $result['error'];
+        try {
+            // Get current variants from Shopify
+            $currentData = $client->getProduct($productId);
+            $currentVariants = [];
+            
+            foreach ($currentData['product']['variants']['edges'] ?? [] as $edge) {
+                $variant = $edge['node'];
+                $currentVariants[] = [
+                    'id' => $variant['id'],
+                    'sku' => $variant['sku'] ?? '',
+                ];
             }
+
+            $skuChanges = [];
+            
+            // Push all SKUs for full update
+            foreach ($skuMappings as $index => $skuData) {
+                if (isset($currentVariants[$index])) {
+                    $currentVariant = $currentVariants[$index];
+                    $newSku = $skuData['sku'] ?? '';
+                    
+                    if ($newSku) {
+                        $skuChanges[] = [
+                            'variantId' => $currentVariant['id'],
+                            'sku' => $newSku,
+                        ];
+                    }
+                }
+            }
+
+            return $skuChanges;
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not prepare SKU changes for full update', [
+                'product_id' => $productId,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Update product images (placeholder for future implementation)
+     */
+    protected function updateProductImages($client, string $productId, array $images): array
+    {
+        // TODO: Implement image updates using productCreateMedia mutation
+        return ['updated_count' => 0];
+    }
+
+    /**
+     * Update sync timestamp after successful updates
+     */
+    protected function updateSyncTimestamp(MarketplaceProduct $marketplaceProduct, SyncAccount $syncAccount): void
+    {
+        $metadata = $marketplaceProduct->getMetadata();
+        $originalProductId = $metadata['original_product_id'] ?? null;
+
+        if (!$originalProductId) {
+            return;
         }
 
-        return $errors;
+        $localProduct = Product::find($originalProductId);
+        if (!$localProduct) {
+            return;
+        }
+
+        $localProduct->setAttributeValue('shopify_synced_at', now()->toISOString());
     }
 }

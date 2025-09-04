@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Product;
 use App\Models\SyncAccount;
+use App\Models\SyncLog;
 use App\Services\Marketplace\Facades\Sync;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

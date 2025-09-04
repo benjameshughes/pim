@@ -541,4 +541,157 @@ class ShopifyGraphQLClient
 
         return $products;
     }
+
+    /**
+     * Update single variant (for pricing/inventory updates)
+     */
+    public function updateSingleVariant(string $variantId, array $variantData): array
+    {
+        $mutation = '
+            mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                    productVariants {
+                        id
+                        price
+                        compareAtPrice
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        // Extract product ID from variant ID (gid://shopify/Product/123/ProductVariant/456)
+        $productId = 'gid://shopify/Product/' . explode('/', $variantId)[4];
+
+        $bulkVariant = [
+            'id' => $variantId,
+        ];
+
+        if (isset($variantData['price'])) {
+            $bulkVariant['price'] = $variantData['price'];
+        }
+
+        if (isset($variantData['compareAtPrice'])) {
+            $bulkVariant['compareAtPrice'] = $variantData['compareAtPrice'];
+        }
+
+        return $this->mutate($mutation, [
+            'productId' => $productId,
+            'variants' => [$bulkVariant],
+        ]);
+    }
+
+    /**
+     * Update product title via productUpdate
+     */
+    public function updateProductTitle(string $productId, string $title): array
+    {
+        $mutation = '
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        title
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        return $this->mutate($mutation, [
+            'input' => [
+                'id' => $productId,
+                'title' => $title,
+            ]
+        ]);
+    }
+
+    /**
+     * Update product content (title, description, vendor, etc.)
+     */
+    public function updateProductContent(string $productId, array $contentData): array
+    {
+        $mutation = '
+            mutation productUpdate($input: ProductInput!) {
+                productUpdate(input: $input) {
+                    product {
+                        id
+                        title
+                        descriptionHtml
+                        vendor
+                        productType
+                        status
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        $input = ['id' => $productId];
+
+        // Add fields that are being updated
+        foreach (['title', 'descriptionHtml', 'vendor', 'productType', 'status', 'metafields'] as $field) {
+            if (isset($contentData[$field])) {
+                $input[$field] = $contentData[$field];
+            }
+        }
+
+        return $this->mutate($mutation, ['input' => $input]);
+    }
+
+    /**
+     * Bulk update variants for a product (prices, compareAtPrice, etc.)
+     */
+    public function bulkUpdateVariants(string $productId, array $variants): array
+    {
+        $mutation = '
+            mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+                productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                    productVariants {
+                        id
+                        price
+                        compareAtPrice
+                        updatedAt
+                    }
+                    userErrors {
+                        field
+                        message
+                    }
+                }
+            }
+        ';
+
+        return $this->mutate($mutation, [
+            'productId' => $productId,
+            'variants' => $variants,
+        ]);
+    }
+
+    /**
+     * Update product media/images (placeholder for future implementation)
+     */
+    public function updateProductMedia(string $productId, array $mediaData): array
+    {
+        // TODO: Implement productCreateMedia mutation for adding/updating images
+        // This would use the productCreateMedia mutation to add new images
+        // and potentially productDeleteImages to remove old ones
+        
+        return [
+            'success' => false,
+            'message' => 'Media updates not yet implemented',
+            'data' => []
+        ];
+    }
 }
