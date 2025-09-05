@@ -112,18 +112,18 @@
                                 </td>
                                 
                                 <td class="px-6 py-4">
-                                    <div class="flex items-center">
-                                        @if($syncAccount->is_active)
-                                            <div class="flex items-center">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="flex items-center">
+                                            @if($syncAccount->is_active)
                                                 <div class="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
                                                 <span class="text-sm text-green-800">Active</span>
-                                            </div>
-                                        @else
-                                            <div class="flex items-center">
+                                            @else
                                                 <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
                                                 <span class="text-sm text-gray-500">Inactive</span>
-                                            </div>
-                                        @endif
+                                            @endif
+                                        </div>
+                                        <!-- Health badge (clickable to show history modal) -->
+                                        <livewire:sync-accounts.health-badge :sync-account-id="$syncAccount->id" :wire:key="'health-'.$syncAccount->id" />
                                     </div>
                                 </td>
                                 

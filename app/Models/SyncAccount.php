@@ -45,6 +45,172 @@ class SyncAccount extends Model
         'updated_at' => 'datetime',
     ];
 
+    // ---- Lightweight helpers backed by JSON `settings` attribute ----
+
+    /**
+     * Get settings as array
+     */
+    protected function getSettings(): array
+    {
+        return $this->settings ?? [];
+    }
+
+    /**
+     * Merge and persist settings
+     */
+    protected function mergeSettings(array $patch): bool
+    {
+        $current = $this->getSettings();
+        $updated = array_replace_recursive($current, $patch);
+
+        return $this->update(['settings' => $updated]);
+    }
+
+    /**
+     * Build a credentials value object for adapters
+     */
+    public function toCredentialsVO(): \App\ValueObjects\MarketplaceCredentials
+    {
+        return new \App\ValueObjects\MarketplaceCredentials(
+            type: $this->marketplace_type ?: $this->channel,
+            credentials: $this->credentials ?? [],
+            settings: $this->settings ?? [],
+            operator: $this->marketplace_subtype
+        );
+    }
+
+    /**
+     * Current health status data stored in settings
+     */
+    public function getHealth(): array
+    {
+        $settings = $this->getSettings();
+
+        return $settings['health']['current'] ?? [
+            'status' => 'unknown',
+            'tested_at' => null,
+            'message' => null,
+            'response_time_ms' => null,
+        ];
+    }
+
+    /**
+     * Health history (bounded list)
+     *
+     * @return array<int, array<string,mixed>>
+     */
+    public function getHealthHistory(int $limit = 20): array
+    {
+        $settings = $this->getSettings();
+        $history = $settings['health']['history'] ?? [];
+
+        return array_slice($history, -$limit);
+    }
+
+    /**
+     * Record a connection test result into settings (and trim history)
+     */
+    public function recordHealthCheck(\App\ValueObjects\ConnectionTestResult $result, int $maxHistory = 20): bool
+    {
+        $entry = [
+            'status' => $result->success ? 'healthy' : 'failing',
+            'success' => $result->success,
+            'message' => $result->message,
+            'response_time_ms' => $result->responseTime,
+            'endpoint' => $result->endpoint,
+            'status_code' => $result->statusCode,
+            'tested_at' => now()->toISOString(),
+        ];
+
+        $settings = $this->getSettings();
+        $history = $settings['health']['history'] ?? [];
+        $history[] = $entry;
+        if (count($history) > $maxHistory) {
+            $history = array_slice($history, -$maxHistory);
+        }
+
+        return $this->mergeSettings([
+            'health' => [
+                'current' => $entry,
+                'history' => $history,
+            ],
+        ]);
+    }
+
+    /**
+     * Return a compact badge descriptor for UI
+     */
+    public function getHealthBadge(): array
+    {
+        $current = $this->getHealth();
+        $status = $current['status'] ?? 'unknown';
+
+        return [
+            'status' => $status,
+            'color' => match ($status) {
+                'healthy' => 'green',
+                'failing' => 'red',
+                default => 'gray',
+            },
+            'icon' => match ($status) {
+                'healthy' => 'check-circle',
+                'failing' => 'x-circle',
+                default => 'question-mark-circle',
+            },
+            'tested_at' => $current['tested_at'] ?? null,
+            'message' => $current['message'] ?? null,
+        ];
+    }
+
+    /**
+     * Determine if the last health check is older than provided hours
+     */
+    public function isHealthCheckStale(int $maxAgeHours = 24): bool
+    {
+        $testedAt = $this->getHealth()['tested_at'] ?? null;
+        if (! $testedAt) {
+            return true;
+        }
+
+        try {
+            return now()->diffInHours(\Carbon\Carbon::parse($testedAt)) >= $maxAgeHours;
+        } catch (\Exception) {
+            return true;
+        }
+    }
+
+    /**
+     * Capabilities helpers backed by settings
+     */
+    public function capabilities(): array
+    {
+        $settings = $this->getSettings();
+
+        return $settings['capabilities'] ?? [];
+    }
+
+    public function hasCapability(string $key): bool
+    {
+        return (bool) ($this->capabilities()[$key] ?? false);
+    }
+
+    /**
+     * Rate limit snapshot helpers
+     */
+    public function rateLimit(): ?array
+    {
+        $settings = $this->getSettings();
+
+        return $settings['rate_limit'] ?? null;
+    }
+
+    public function updateRateLimit(array $meta): bool
+    {
+        return $this->mergeSettings([
+            'rate_limit' => array_merge($this->rateLimit() ?? [], $meta),
+        ]);
+    }
+
     /**
      * 🏷️ ACCOUNT NAME ACCESSOR
      *

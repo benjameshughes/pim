@@ -20,6 +20,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton('image.manager', function ($app) {
             return new \App\Services\ImageManager();
         });
+
+        // Register PricingManager for Pricing facade
+        $this->app->singleton(\App\Services\Pricing\PricingManager::class);
     }
 
     /**

@@ -190,14 +190,12 @@
                                 
                                 @if ($displayInfo['setup_complete'])
                                     <flux:button color="blue" size="sm" icon="waves"
-                                                wire:click="refreshIdentifiers({{ $account->id }})"
-                                                wire:loading.attr="disabled">
+                                                wire:click="refreshIdentifiers({{ $account->id }})">
                                         Refresh
                                     </flux:button>
                                 @else
                                     <flux:button color="green" size="sm" 
-                                                wire:click="setupIdentifiers({{ $account->id }})"
-                                                wire:loading.attr="disabled">
+                                                wire:click="setupIdentifiers({{ $account->id }})">
                                         <flux:icon.sparkles class="h-4 w-4" />
                                         Setup Identifiers
                                     </flux:button>
@@ -372,8 +370,7 @@
                             </p>
                             <div class="mt-6">
                                 <flux:button color="green" 
-                                            wire:click="setupIdentifiers({{ $account->id }})"
-                                            wire:loading.attr="disabled">
+                                            wire:click="setupIdentifiers({{ $account->id }})">
                                     <flux:icon.sparkles class="h-4 w-4" />
                                     Setup Identifiers Now
                                 </flux:button>

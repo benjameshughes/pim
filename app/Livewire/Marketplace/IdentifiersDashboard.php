@@ -3,7 +3,7 @@
 namespace App\Livewire\Marketplace;
 
 use App\Models\SyncAccount;
-use App\Services\Marketplace\MarketplaceIdentifierService;
+use App\Services\Marketplace\Facades\Sync;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -19,12 +19,7 @@ class IdentifiersDashboard extends Component
 {
     public ?int $selectedAccount = null;
 
-    protected MarketplaceIdentifierService $identifierService;
-
-    public function boot(MarketplaceIdentifierService $identifierService): void
-    {
-        $this->identifierService = $identifierService;
-    }
+    // No service/actions injection needed; we use the fluent Sync API for clarity
 
     /**
      * 📊 DASHBOARD STATS
@@ -113,7 +108,9 @@ class IdentifiersDashboard extends Component
         }
 
         try {
-            $result = $this->identifierService->setupMarketplaceIdentifiers($account);
+            $result = Sync::marketplace($account->channel)
+                ->account($account->name)
+                ->setupIdentifiers();
 
             if ($result['success']) {
                 $this->dispatch('success', $result['summary'] ?? 'Identifiers setup successfully! ✅');
@@ -142,7 +139,9 @@ class IdentifiersDashboard extends Component
         }
 
         try {
-            $result = $this->identifierService->refreshMarketplaceIdentifiers($account);
+            $result = Sync::marketplace($account->channel)
+                ->account($account->name)
+                ->refreshIdentifiers();
 
             if ($result['success']) {
                 $this->dispatch('success', 'Identifiers refreshed successfully! 🔄');

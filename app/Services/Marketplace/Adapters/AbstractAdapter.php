@@ -262,4 +262,23 @@ abstract class AbstractAdapter implements MarketplaceAdapter
     {
         return $this->fieldsToUpdate;
     }
+
+    /**
+     * Access account-level operations (info, identifiers, etc.)
+     */
+    public function account(?string $name = null): \App\Services\Marketplace\AccountOperations
+    {
+        if ($name) {
+            $resolved = \App\Models\SyncAccount::findByChannelAndName($this->getMarketplaceName(), $name);
+            if (! $resolved) {
+                throw new \RuntimeException("Sync account '{$name}' not found for {$this->getMarketplaceName()}");
+            }
+            $this->syncAccount = $resolved;
+        }
+
+        return new \App\Services\Marketplace\AccountOperations(
+            syncAccount: $this->requireSyncAccount(),
+            marketplace: $this->getMarketplaceName()
+        );
+    }
 }
