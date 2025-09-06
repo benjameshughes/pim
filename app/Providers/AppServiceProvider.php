@@ -23,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Register PricingManager for Pricing facade
         $this->app->singleton(\App\Services\Pricing\PricingManager::class);
+
+        // Register AttributesManager for Attributes facade
+        $this->app->singleton(\App\Services\Attributes\AttributesManager::class);
     }
 
     /**

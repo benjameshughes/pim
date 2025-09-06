@@ -80,7 +80,7 @@
 - ❌ `Marketplace/MarketplaceSyncCards.php` - `authorize('view-sync-status')`
 - ❌ `Marketplace/IdentifiersDashboard.php` - `authorize('view-marketplace-listings')`
 - ❌ `SyncAccounts/SyncAccountsIndex.php` - `authorize('view-sync-accounts')`
-- ❌ `SyncAccounts/CreateSyncAccount.php` - `authorize('create-sync-accounts')`
+- ✅ Wizard: `Livewire/Marketplace/AddIntegrationWizard` handles creation and validation
 
 **Shopify Components:**
 - ❌ `Shopify/ShopifyDashboard.php` - `authorize('view-sync-accounts')`

@@ -14,37 +14,50 @@ class AttributeDefinitionFactory extends Factory
 
     public function definition(): array
     {
-        $name = fake()->randomElement(['brand', 'material', 'color', 'size', 'weight', 'style']);
+        $key = fake()->randomElement(['brand', 'material', 'color', 'size', 'weight', 'style']);
 
         return [
-            'name' => $name,
-            'label' => ucfirst($name),
-            'type' => fake()->randomElement(['text', 'number', 'select', 'boolean']),
+            'key' => $key,
+            'name' => ucfirst($key),
             'description' => fake()->sentence(),
-            'is_required' => fake()->boolean(20), // 20% chance of being required
-            'is_unique' => false,
+            'data_type' => fake()->randomElement(['string', 'numeric', 'boolean', 'enum', 'json']),
             'validation_rules' => null,
-            'options' => null,
-            'group' => fake()->randomElement(['basic', 'advanced', 'marketplace']),
-            'sort_order' => fake()->numberBetween(0, 100),
-            'is_active' => true,
+            'enum_values' => null,
+            'default_value' => null,
             'is_inheritable' => fake()->boolean(80), // 80% chance of being inheritable
+            'inheritance_strategy' => fake()->randomElement(['fallback', 'always', 'never']),
+            'is_required_for_products' => fake()->boolean(20), // 20% chance of being required
+            'is_required_for_variants' => fake()->boolean(20),
+            'is_unique_per_product' => false,
+            'is_system_attribute' => fake()->boolean(30),
             'marketplace_mappings' => null,
+            'sync_to_shopify' => fake()->boolean(),
+            'sync_to_ebay' => fake()->boolean(),
+            'sync_to_mirakl' => fake()->boolean(),
+            'input_type' => fake()->randomElement(['text', 'number', 'select', 'checkbox', 'textarea']),
+            'ui_options' => null,
+            'sort_order' => fake()->numberBetween(0, 100),
+            'group' => fake()->randomElement(['general', 'appearance', 'dimensions', 'marketplace']),
+            'icon' => null,
+            'is_active' => true,
+            'deprecated_at' => null,
+            'replaced_by' => null,
         ];
     }
 
-    public function select(): static
+    public function enum(): static
     {
         return $this->state([
-            'type' => 'select',
-            'options' => ['Option 1', 'Option 2', 'Option 3'],
+            'data_type' => 'enum',
+            'enum_values' => ['Option 1', 'Option 2', 'Option 3'],
         ]);
     }
 
     public function required(): static
     {
         return $this->state([
-            'is_required' => true,
+            'is_required_for_products' => true,
+            'is_required_for_variants' => true,
         ]);
     }
 }

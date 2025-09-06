@@ -165,7 +165,13 @@
                                             
                                         @case('textarea')
                                             <flux:textarea wire:model="editingAttribute.{{ $key }}.value" 
-                                                          placeholder="Enter {{ $definition->name }}" />
+                                                          placeholder="Enter {{ $definition->name }}" 
+                                                          rows="6" />
+                                            @if($definition->data_type === 'json')
+                                                <div class="text-xs text-gray-500 mt-1">
+                                                    💡 Enter valid JSON format, e.g.: {"key": "value"}
+                                                </div>
+                                            @endif
                                             @break
                                             
                                         @case('number')

@@ -7,7 +7,7 @@
                 <p class="mt-2 text-gray-600">Manage your marketplace and sales channel integrations</p>
             </div>
             
-            <a href="{{ route('sync-accounts.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <a href="{{ route('marketplace.add-integration') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <flux:icon name="plus" class="w-5 h-5 mr-2" />
                 Add Integration
             </a>
@@ -188,7 +188,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No sync accounts found</h3>
                 <p class="text-gray-600 mb-6">Get started by connecting your first marketplace or sales channel.</p>
                 <a 
-                    href="{{ route('sync-accounts.create') }}"
+                    href="{{ route('marketplace.add-integration') }}"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <flux:icon name="plus" class="w-5 h-5 mr-2" />

@@ -29,7 +29,7 @@ abstract class BaseMarketplaceAction
      */
     protected function logActivity(string $action, array $data = [], string $level = 'info'): void
     {
-        Log::channel('marketplace')->{$level}("Marketplace Action: {$action}", [
+        Log::{$level}("Marketplace Action: {$action}", [
             'action' => $action,
             'data' => $this->sanitizeLogData($data),
             'timestamp' => now()->toISOString(),

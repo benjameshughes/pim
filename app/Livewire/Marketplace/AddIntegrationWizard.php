@@ -7,6 +7,7 @@ use App\Services\Marketplace\MarketplaceRegistry;
 use App\Services\Mirakl\MiraklOperatorDetectionService;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
 
@@ -18,7 +19,7 @@ class AddIntegrationWizard extends Component
      */
     public int $currentStep = 1;
 
-    public const TOTAL_STEPS = 3;
+    public const TOTAL_STEPS = 2;
 
     /**
      * 📋 FORM DATA
@@ -59,6 +60,13 @@ class AddIntegrationWizard extends Component
 
     protected MarketplaceRegistry $marketplaceRegistry;
 
+    // Use Livewire v3 event attributes for child → parent events
+    #[On('marketplaceSelected')]
+    public function onMarketplaceSelected(string $type): void
+    {
+        $this->selectMarketplace($type);
+    }
+
     /**
      * 🚀 COMPONENT INITIALIZATION
      */
@@ -82,6 +90,42 @@ class AddIntegrationWizard extends Component
                 'logo_url' => $template->logoUrl,
             ])
             ->toArray();
+    }
+
+    // --- Livewire v3 child event handlers ---
+
+    #[On('configurationUpdated')]
+    public function onConfigurationUpdated(string $displayName, array $credentials): void
+    {
+        $this->displayName = $displayName;
+        $this->credentials = $credentials;
+        $this->nextStep();
+    }
+
+    #[On('configurationPatched')]
+    public function onConfigurationPatched(string $displayName, array $credentials, array $settings): void
+    {
+        $this->displayName = $displayName;
+        $this->credentials = $credentials;
+        $this->settings = $settings;
+    }
+
+    #[On('previousStep')]
+    public function onPreviousStep(): void
+    {
+        $this->previousStep();
+    }
+
+    #[On('testConnectionRequested')]
+    public function onTestConnectionRequested(): void
+    {
+        $this->testConnection();
+    }
+
+    #[On('createIntegrationRequested')]
+    public function onCreateIntegrationRequested(): void
+    {
+        $this->completeWizard();
     }
 
     /**
@@ -145,25 +189,21 @@ class AddIntegrationWizard extends Component
      */
     public function updateConfiguration(): void
     {
-        $this->validate([
+        // Build attribute-based rules using the registry so Livewire
+        // can attach errors to the correct credential inputs.
+        $rules = [
             'displayName' => 'required|string|max:255',
-            'credentials' => 'required|array',
-        ]);
+        ];
 
-        // Validate required credentials based on marketplace template
-        $requiredFields = $this->getMarketplaceRegistry()->getRequiredFields(
-            $this->selectedMarketplace,
-            $this->selectedOperator ?: null
-        );
-
-        foreach ($requiredFields as $field) {
-            if (empty($this->credentials[$field])) {
-                $this->addError("credentials.{$field}", "The {$field} field is required.");
-
-                return;
-            }
+        $fieldRules = $this->validationRules;
+        foreach ($fieldRules as $field => $ruleSet) {
+            $rules["credentials.{$field}"] = $ruleSet;
         }
 
+        // Validate; if it fails, Livewire surfaces inline errors next to inputs
+        $this->validate($rules);
+
+        // All good, advance to next step
         $this->nextStep();
     }
 
@@ -314,8 +354,38 @@ class AddIntegrationWizard extends Component
             $this->connectionTestPassed = $connectionResult->success;
 
             if ($this->connectionTestPassed) {
+                // Enrich credentials/settings with store info when available
+                if ($this->selectedMarketplace === 'shopify') {
+                    $details = $this->connectionTestResult['details'] ?? [];
+                    if (!empty($details)) {
+                        $this->credentials['store_url'] = $details['store_url'] ?? ($this->credentials['store_url'] ?? '');
+                        $this->credentials['shop_name'] = $details['shop_name'] ?? ($this->credentials['shop_name'] ?? '');
+                        $this->credentials['shop_id'] = (string) ($details['shop_id'] ?? ($this->credentials['shop_id'] ?? ''));
+                        $this->credentials['domain'] = $details['domain'] ?? ($this->credentials['domain'] ?? '');
+
+                        $this->settings['auto_fetched_data'] = [
+                            'shop_name' => $this->credentials['shop_name'],
+                            'shop_id' => $this->credentials['shop_id'],
+                            'domain' => $this->credentials['domain'],
+                            'currency' => $details['currency'] ?? '',
+                            'timezone' => $details['timezone'] ?? '',
+                            'plan_name' => $details['plan_name'] ?? '',
+                            'api_version' => $details['api_version'] ?? ($this->credentials['api_version'] ?? ''),
+                            'fetched_at' => now()->toISOString(),
+                        ];
+
+                        // If display name was generic, upgrade it to the shop name
+                        if (empty($this->displayName) || str_contains(strtolower($this->displayName), 'integration')) {
+                            $this->displayName = $this->credentials['shop_name'].' (Shopify)';
+                        }
+                    }
+                }
+
                 $shopInfo = '';
                 if ($this->selectedMarketplace === 'mirakl' && ! empty($this->credentials['shop_name'])) {
+                    $shopInfo = " for {$this->credentials['shop_name']} (ID: {$this->credentials['shop_id']})";
+                }
+                if ($this->selectedMarketplace === 'shopify' && ! empty($this->credentials['shop_name'])) {
                     $shopInfo = " for {$this->credentials['shop_name']} (ID: {$this->credentials['shop_id']})";
                 }
                 session()->flash('success', "Connection test successful{$shopInfo}! Integration is ready to be created.");
@@ -341,12 +411,6 @@ class AddIntegrationWizard extends Component
      */
     public function completeWizard(): mixed
     {
-        if (! $this->connectionTestPassed) {
-            session()->flash('error', 'Please complete the connection test before proceeding.');
-
-            return null;
-        }
-
         $this->isLoading = true;
 
         try {
@@ -360,6 +424,11 @@ class AddIntegrationWizard extends Component
 
             $createAction = new CreateMarketplaceIntegrationAction($this->getMarketplaceRegistry());
             $account = $createAction->execute($integrationData);
+
+            // Setup identifiers via fluent Sync chain for readability
+            \App\Services\Marketplace\Facades\Sync::marketplace($account->channel)
+                ->account($account->name)
+                ->setupIdentifiers();
 
             session()->flash('success', "Successfully created {$this->displayName} integration!");
 
@@ -423,8 +492,7 @@ class AddIntegrationWizard extends Component
     {
         return match ($this->currentStep) {
             1 => 'Select Marketplace',
-            2 => 'Enter Configuration',
-            3 => 'Test Connection',
+            2 => 'Configure & Fetch Store Info',
             default => 'Unknown Step',
         };
     }
