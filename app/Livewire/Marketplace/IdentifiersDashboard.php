@@ -96,9 +96,9 @@ class IdentifiersDashboard extends Component
     }
 
     /**
-     * 🚀 SETUP IDENTIFIERS FOR ACCOUNT
+     * 🚀 GET ACCOUNT INFO FOR ACCOUNT
      */
-    public function setupIdentifiers(int $accountId): void
+    public function getAccountInfo(int $accountId): void
     {
         $account = SyncAccount::find($accountId);
         if (! $account) {
@@ -110,19 +110,22 @@ class IdentifiersDashboard extends Component
         try {
             $result = Sync::marketplace($account->channel)
                 ->account($account->name)
-                ->setupIdentifiers();
+                ->info();
 
             if ($result['success']) {
-                $this->dispatch('success', $result['summary'] ?? 'Identifiers setup successfully! ✅');
+                // Persist identifier details using existing helper to keep UI consistent
+                $account->updateMarketplaceIdentifiers($result['marketplace_details'] ?? []);
+
+                $this->dispatch('success', $result['summary'] ?? 'Account info fetched! ✅');
 
                 // Refresh the selected account data
                 $this->dispatch('$refresh');
             } else {
-                $this->dispatch('error', $result['error'] ?? 'Setup failed');
+                $this->dispatch('error', $result['error'] ?? 'Fetch failed');
             }
 
         } catch (\Exception $e) {
-            $this->dispatch('error', "Setup failed: {$e->getMessage()}");
+            $this->dispatch('error', "Fetch failed: {$e->getMessage()}");
         }
     }
 

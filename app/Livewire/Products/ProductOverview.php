@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Services\Marketplace\Facades\Sync;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\Attributes\On;
 
 class ProductOverview extends Component
 {
@@ -59,6 +60,9 @@ class ProductOverview extends Component
     // 🌟 Enhanced image data using Images facade
     public array $imageStats = [];
     public array $enhancedImages = [];
+
+    // Marketplace sync progress cache (by channel)
+    public array $syncProgress = [];
 
     public function mount(Product $product)
     {
@@ -808,6 +812,138 @@ class ProductOverview extends Component
         }
     }
 
+    // ===== FREEMANS ACTIONS =====
+
+    public function pushToFreemans()
+    {
+        $this->authorize('manage-products');
+
+        try {
+            $freemansStatus = $this->product->getSmartAttributeValue('freemans_status');
+
+            // Set status to processing for immediate UI feedback
+            $this->product->setAttributeValue('freemans_status', 'processing');
+
+            if ($freemansStatus === 'synced') {
+                // General update: title + pricing
+                \App\Services\Marketplace\Facades\Sync::freemans()
+                    ->update($this->product->id)
+                    ->title($this->product->name)
+                    ->pricing()
+                    ->dispatch();
+
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Freemans update job dispatched! Status will update shortly.',
+                ]);
+            } else {
+                // Initial push
+                \App\Services\Marketplace\Facades\Sync::freemans()
+                    ->create($this->product->id)
+                    ->dispatch();
+
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => 'Freemans push job dispatched! Status will update shortly.',
+                ]);
+            }
+
+            $this->product->refresh();
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Failed to dispatch Freemans job: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    public function updateFreemansTitle()
+    {
+        $this->authorize('manage-products');
+
+        try {
+            $this->product->setAttributeValue('freemans_status', 'processing');
+
+            \App\Services\Marketplace\Facades\Sync::freemans()
+                ->update($this->product->id)
+                ->title($this->product->name)
+                ->dispatch();
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Freemans title update job dispatched!',
+            ]);
+            $this->product->refresh();
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Title update failed: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    public function updateFreemansPricing()
+    {
+        $this->authorize('manage-products');
+
+        try {
+            $this->product->setAttributeValue('freemans_status', 'processing');
+
+            \App\Services\Marketplace\Facades\Sync::freemans()
+                ->update($this->product->id)
+                ->pricing()
+                ->dispatch();
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Freemans pricing update job dispatched!',
+            ]);
+            $this->product->refresh();
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Pricing update failed: '.$e->getMessage(),
+            ]);
+        }
+    }
+
+    public function linkToFreemans()
+    {
+        $this->authorize('manage-products');
+
+        try {
+            $result = \App\Services\Marketplace\Facades\Sync::freemans()
+                ->link($this->product->id)
+                ->push();
+
+            if ($result->isSuccess()) {
+                $coverage = $result->get('coverage_percent', 0);
+                $count = count($result->get('linked_offers', []));
+
+                $this->dispatch('toast', [
+                    'type' => 'success',
+                    'message' => "Linked on Freemans: {$count} items ({$coverage}% coverage)",
+                ]);
+
+                $this->product->refresh();
+            } else {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Freemans link failed: '.$result->getMessage(),
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Freemans link failed: '.$e->getMessage(),
+            ]);
+        }
+    }
+
     public function deleteFromShopify()
     {
         $this->authorize('manage-products');
@@ -903,5 +1039,42 @@ class ProductOverview extends Component
     public function render()
     {
         return view('livewire.products.product-overview');
+    }
+
+    #[On('productSyncProgress')]
+    public function onProductSyncProgress(array $payload): void
+    {
+        // Ignore events for other products
+        if (($payload['productId'] ?? null) !== $this->product->id) {
+            return;
+        }
+
+        $channel = $payload['channel'] ?? 'unknown';
+        $status = $payload['status'] ?? 'unknown';
+        $message = $payload['message'] ?? '';
+        $percentage = (int) ($payload['percentage'] ?? 0);
+
+        $this->syncProgress[$channel] = [
+            'status' => $status,
+            'message' => $message,
+            'percentage' => $percentage,
+        ];
+
+        // Surface user feedback
+        if ($status === 'success') {
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => ucfirst($channel).' sync completed. '.$message,
+            ]);
+            $this->product->refresh();
+            $this->dispatch('$refresh');
+        } elseif ($status === 'failed') {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => ucfirst($channel).' sync failed. '.$message,
+            ]);
+            $this->product->refresh();
+            $this->dispatch('$refresh');
+        }
     }
 }

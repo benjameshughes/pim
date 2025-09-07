@@ -62,5 +62,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register SyncAccount observer for auto-creating SalesChannels
         \App\Models\SyncAccount::observe(\App\Observers\SyncAccountObserver::class);
+
+        // Register User observer for auto-assigning roles (first user -> admin)
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
     }
 }

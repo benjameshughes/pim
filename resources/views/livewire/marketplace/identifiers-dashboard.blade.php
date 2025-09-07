@@ -195,9 +195,9 @@
                                     </flux:button>
                                 @else
                                     <flux:button color="green" size="sm" 
-                                                wire:click="setupIdentifiers({{ $account->id }})">
-                                        <flux:icon.sparkles class="h-4 w-4" />
-                                        Setup Identifiers
+                                                wire:click="getAccountInfo({{ $account->id }})">
+                                        <flux:icon.information-circle class="h-4 w-4" />
+                                        Get Account Info
                                     </flux:button>
                                 @endif
                             </div>
@@ -366,13 +366,13 @@
                             <flux:icon.sliders-horizontal class="mx-auto h-12 w-12 text-amber-400" />
                             <h3 class="mt-4 text-lg font-medium text-gray-900">Identifiers Not Configured</h3>
                             <p class="mt-2 text-sm text-gray-500">
-                                Setup marketplace identifiers to extract and store account details automatically.
+                                Fetch and store marketplace account details for this integration.
                             </p>
                             <div class="mt-6">
                                 <flux:button color="green" 
-                                            wire:click="setupIdentifiers({{ $account->id }})">
-                                    <flux:icon.sparkles class="h-4 w-4" />
-                                    Setup Identifiers Now
+                                            wire:click="getAccountInfo({{ $account->id }})">
+                                    <flux:icon.information-circle class="h-4 w-4" />
+                                    Get Account Info
                                 </flux:button>
                             </div>
                         </div>

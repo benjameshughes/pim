@@ -28,6 +28,10 @@ class AccountOperations
             'shopify' => $this->shopifyInfo(),
             'ebay' => $this->ebayInfo(),
             'mirakl' => $this->miraklInfo(),
+            // Treat Mirakl operator channels as Mirakl for account info
+            'freemans' => $this->miraklInfo(),
+            'debenhams' => $this->miraklInfo(),
+            'bq' => $this->miraklInfo(),
             default => [
                 'success' => false,
                 'error' => "Account info not implemented for '{$this->marketplace}'",
@@ -169,7 +173,7 @@ class AccountOperations
         }
 
         $client = \App\Services\Mirakl\API\MiraklApiClient::for($operator);
-        $info = $client->getOperatorInfo();
+        $info = $client->categories()->getOperatorInfo();
 
         // Optional statistics (best effort)
         $stats = null;

@@ -173,9 +173,9 @@
                     </div>
                 @endforeach
             </div>
-        </div>
+</div>
 
-        {{-- 📐 SIZES SHOWCASE --}}
+{{-- 📐 SIZES SHOWCASE --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Sizes</h3>
             
@@ -407,7 +407,7 @@
                 </div>
             </div>
 
-            {{-- 🛍️ MARKETPLACE SYNC STATUS --}}
+            {{-- 🛍️ MARKETPLACE SYNC STATUS (Shopify) --}}
             @php
                 $shopifyStatus = $product->getSmartAttributeValue('shopify_status');
                 $shopifyIds = $product->getSmartAttributeValue('shopify_product_ids');
@@ -469,7 +469,7 @@
                     </div>
             @endif
 
-            {{-- 🛍️ MARKETPLACE ACTIONS --}}
+            {{-- 🛍️ MARKETPLACE ACTIONS (Shopify) --}}
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Marketplace Actions</h4>
                 
@@ -543,6 +543,74 @@
                             {{ $shopifyPushResult['message'] }}
                         </div>
                     @endif
+                </div>
+            </div>
+
+            {{-- 🏬 FREEMANS SYNC STATUS --}}
+            @php
+                $freemansStatus = $product->getSmartAttributeValue('freemans_status');
+                $freemansIds = $product->getSmartAttributeValue('freemans_product_ids');
+                $freemansMeta = $product->getSmartAttributeValue('freemans_metadata');
+                $freemansShouldShowStatus = $freemansStatus || $freemansIds || $freemansMeta;
+            @endphp
+
+            @if($freemansShouldShowStatus)
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Freemans Sync</h4>
+
+                    <div class="mb-4 flex items-center gap-4">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[60px]">Status:</span>
+                        <livewire:marketplace-status :product="$product" channel="freemans" />
+                    </div>
+                </div>
+            @endif
+
+            {{-- 🏬 FREEMANS ACTIONS --}}
+            <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Freemans Actions</h4>
+
+                <div class="space-y-2">
+                    <flux:button
+                        wire:click="pushToFreemans"
+                        variant="filled"
+                        size="sm"
+                        class="w-full"
+                        icon="arrow-up-tray"
+                    >
+                        {{ $freemansStatus ? 'Update on Freemans' : 'Push to Freemans' }}
+                    </flux:button>
+
+                    @if($freemansStatus)
+                        <flux:button
+                            wire:click="updateFreemansTitle"
+                            variant="outline"
+                            size="sm"
+                            class="w-full"
+                            icon="pencil"
+                        >
+                            Update Title
+                        </flux:button>
+
+                        <flux:button
+                            wire:click="updateFreemansPricing"
+                            variant="outline"
+                            size="sm"
+                            class="w-full"
+                            icon="currency-dollar"
+                        >
+                            Update Pricing
+                        </flux:button>
+                    @endif
+
+                    <flux:button
+                        wire:click="linkToFreemans"
+                        variant="outline"
+                        size="sm"
+                        class="w-full"
+                        icon="link"
+                    >
+                        Link on Freemans
+                    </flux:button>
                 </div>
             </div>
         </div>
@@ -1153,3 +1221,32 @@
         </div>
     </flux:modal>
 </div>
+
+{{-- 🔌 Real-time marketplace sync progress --}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            if (window.Echo) {
+                const productId = @json($product->id);
+                const channel = `product-sync.${productId}`;
+
+                // Avoid duplicate listeners by tracking on window scope
+                const key = `__sync_listening_${productId}`;
+                if (!window[key]) {
+                    window[key] = true;
+                    window.Echo.channel(channel)
+                        .listen('.ProductSyncProgress', (e) => {
+                            // Forward to Livewire for state + toasts
+                            if (window.Livewire && typeof window.Livewire.dispatch === 'function') {
+                                window.Livewire.dispatch('productSyncProgress', e);
+                            }
+                        });
+                }
+            } else {
+                console.warn('Echo not available; marketplace sync updates will not be real-time.');
+            }
+        } catch (err) {
+            console.error('Failed to attach sync progress listener:', err);
+        }
+    });
+</script>

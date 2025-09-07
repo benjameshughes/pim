@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Console\Commands\SyncAccountsHealthCheck;
+use App\Console\Commands\MakeAdminUser;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -15,6 +16,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         SyncAccountsHealthCheck::class,
+        MakeAdminUser::class,
     ];
 
     /**
@@ -38,4 +40,3 @@ class Kernel extends ConsoleKernel
         // Commands are auto-discovered in app/Console/Commands and also explicitly registered above.
     }
 }
-

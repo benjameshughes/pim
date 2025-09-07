@@ -12,6 +12,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use function broadcast;
+
+use App\Events\Marketplace\ProductSyncProgress;
 
 /**
  * 🚀 SYNC PRODUCT TO MARKETPLACE JOB
@@ -68,6 +71,16 @@ class SyncProductToMarketplaceJob implements ShouldQueue
         ]);
 
         try {
+            // Broadcast: processing started
+            broadcast(new ProductSyncProgress(
+                productId: $this->product->id,
+                syncAccountId: $this->syncAccount->id,
+                channel: $this->syncAccount->channel,
+                operation: $this->operationType,
+                status: 'processing',
+                message: 'Sync job started',
+                percentage: 10,
+            ));
             // Job is starting - status should already be 'processing' from button click
 
             // Route to the appropriate Action based on marketplace
@@ -98,6 +111,17 @@ class SyncProductToMarketplaceJob implements ShouldQueue
                     'channel' => $this->syncAccount->channel,
                     'duration_ms' => $duration,
                 ]);
+
+                // Broadcast: success
+                broadcast(new ProductSyncProgress(
+                    productId: $this->product->id,
+                    syncAccountId: $this->syncAccount->id,
+                    channel: $this->syncAccount->channel,
+                    operation: $this->operationType,
+                    status: 'success',
+                    message: $result['message'] ?? 'Sync completed',
+                    percentage: 100,
+                ));
             } else {
                 $this->product->setAttributeValue($this->syncAccount->channel . '_status', 'failed');
                 
@@ -107,6 +131,17 @@ class SyncProductToMarketplaceJob implements ShouldQueue
                     'error' => $result['message'] ?? 'Unknown error',
                     'duration_ms' => $duration,
                 ]);
+
+                // Broadcast: failed
+                broadcast(new ProductSyncProgress(
+                    productId: $this->product->id,
+                    syncAccountId: $this->syncAccount->id,
+                    channel: $this->syncAccount->channel,
+                    operation: $this->operationType,
+                    status: 'failed',
+                    message: $result['message'] ?? 'Sync failed',
+                    percentage: 100,
+                ));
             }
 
         } catch (\Exception $e) {
@@ -121,6 +156,17 @@ class SyncProductToMarketplaceJob implements ShouldQueue
                 'error' => $e->getMessage(),
                 'duration_ms' => $duration,
             ]);
+
+            // Broadcast: exception
+            broadcast(new ProductSyncProgress(
+                productId: $this->product->id,
+                syncAccountId: $this->syncAccount->id,
+                channel: $this->syncAccount->channel,
+                operation: $this->operationType,
+                status: 'failed',
+                message: $e->getMessage(),
+                percentage: 100,
+            ));
 
             throw $e;
         }
