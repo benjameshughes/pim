@@ -70,6 +70,33 @@
         @endif
     </div>
 
+    <!-- Products Missing Key Attributes -->
+    @if(!empty($topMissing))
+        <div class="bg-white rounded-lg border">
+            <div class="p-4 border-b">
+                <h2 class="text-lg font-semibold">Products Missing Key Attributes</h2>
+                <p class="text-sm text-gray-600">Top gaps by coverage for this channel</p>
+            </div>
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach($topMissing as $block)
+                    <div class="border rounded-md p-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <flux:icon name="{{ $block['definition']->icon ?? 'swatch' }}" class="w-4 h-4 text-gray-500" />
+                            <div class="text-sm font-medium">{{ $block['definition']->name }}</div>
+                            <span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Missing</span>
+                        </div>
+                        @foreach($block['products'] as $product)
+                            <a href="{{ route('products.show', ['product' => $product->id]) }}" class="block text-sm text-blue-600 hover:underline truncate">{{ $product->name }}</a>
+                        @endforeach
+                        @if($block['products']->count() === 0)
+                            <div class="text-xs text-gray-500">No missing items</div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <!-- Sales Channel awareness -->
     <div class="bg-white rounded-lg border p-4">
         <div class="flex items-center justify-between">
@@ -84,5 +111,63 @@
             @endif
         </div>
     </div>
-</div>
 
+    @if($account->channel === 'shopify')
+        <!-- Shopify specific -->
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold">Shopify Status</h3>
+                    <div class="text-sm text-gray-600">Rate limit and webhook monitoring</div>
+                </div>
+                <a href="{{ $shopifyWidget['webhooks_url'] ?? '#' }}" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 text-sm">
+                    <flux:icon name="bell" class="w-4 h-4 mr-1" /> Webhooks
+                </a>
+            </div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Remaining</div>
+                    <div class="text-lg font-semibold">{{ $shopifyWidget['rate_limit']['remaining'] ?? '—' }}</div>
+                </div>
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Limit</div>
+                    <div class="text-lg font-semibold">{{ $shopifyWidget['rate_limit']['limit'] ?? '—' }}</div>
+                </div>
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Reset At</div>
+                    <div class="text-lg font-semibold truncate">{{ $shopifyWidget['rate_limit']['reset_at'] ?? '—' }}</div>
+                </div>
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Last Update</div>
+                    <div class="text-lg font-semibold truncate">{{ $shopifyWidget['rate_limit']['last_update'] ?? '—' }}</div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if($account->channel === 'mirakl')
+        <!-- Mirakl specific -->
+        <div class="bg-white rounded-lg border p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold">Mirakl Offers</h3>
+                    <div class="text-sm text-gray-600">Based on MarketplaceLinks metadata</div>
+                </div>
+            </div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Total Links</div>
+                    <div class="text-lg font-semibold">{{ $miraklWidget['total_links'] ?? 0 }}</div>
+                </div>
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Offers Synced</div>
+                    <div class="text-lg font-semibold text-green-600">{{ $miraklWidget['offers_synced'] ?? 0 }}</div>
+                </div>
+                <div class="border rounded-md p-3">
+                    <div class="text-xs text-gray-500">Offers Failed</div>
+                    <div class="text-lg font-semibold text-red-600">{{ $miraklWidget['offers_failed'] ?? 0 }}</div>
+                </div>
+            </div>
+        </div>
+    @endif
+</div>

@@ -37,9 +37,7 @@ class Dashboard extends Component
 
         // 2) Channel-aware attribute definitions (hook into attribute system)
         $defs = AttributeDefinition::active()
-            ->when($channel === 'shopify', fn ($q) => $q->where('sync_to_shopify', true))
-            ->when($channel === 'ebay', fn ($q) => $q->where('sync_to_ebay', true))
-            ->when($channel === 'mirakl', fn ($q) => $q->where('sync_to_mirakl', true))
+            ->forMarketplace($channel)
             ->orderedForDisplay()
             ->get(['id', 'key', 'name', 'group', 'icon']);
 
@@ -69,16 +67,73 @@ class Dashboard extends Component
             }
         }
 
-        // 4) SalesChannel (for pricing attribute awareness)
+        // 4) Determine missing products for worst-covered attributes
+        $topMissing = [];
+        if ($productsCount > 0 && ! empty($coverage)) {
+            $worst = collect($coverage)
+                ->sortBy('coverage_pct')
+                ->take(3)
+                ->map(fn ($row) => $row['definition'])
+                ->values();
+
+            foreach ($worst as $def) {
+                $missing = Product::query()
+                    ->whereIn('id', $productIds)
+                    ->whereDoesntHave('attributes', function ($q) use ($def) {
+                        $q->where('attribute_definition_id', $def->id)
+                          ->where('is_valid', true);
+                    })
+                    ->limit(5)
+                    ->get(['id', 'name']);
+
+                if ($missing->isNotEmpty()) {
+                    $topMissing[] = [
+                        'definition' => $def,
+                        'products' => $missing,
+                    ];
+                }
+            }
+        }
+
+        // 5) SalesChannel (for pricing attribute awareness)
         $channelCode = strtolower($this->account->channel).'_'.strtolower($this->account->name);
         $salesChannel = SalesChannel::where('code', $channelCode)->first();
 
-        // 5) Basic sync status summary
+        // 6) Basic sync status summary
         $statusSummary = [
             'synced' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'synced')->count(),
             'pending' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'pending')->count(),
             'failed' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'failed')->count(),
         ];
+
+        // 7) Shopify widget snapshot (rate limit) and link to webhooks
+        $shopifyWidget = null;
+        if ($channel === 'shopify') {
+            $rate = $this->account->rateLimit() ?? [];
+            $shopifyWidget = [
+                'rate_limit' => [
+                    'remaining' => $rate['remaining'] ?? null,
+                    'limit' => $rate['limit'] ?? null,
+                    'reset_at' => $rate['reset_at'] ?? ($rate['reset_ms'] ?? null),
+                    'last_update' => $rate['updated_at'] ?? null,
+                ],
+                'webhooks_url' => route('shopify.webhooks'),
+            ];
+        }
+
+        // 8) Mirakl offers snapshot from MarketplaceLinks
+        $miraklWidget = null;
+        if ($channel === 'mirakl') {
+            $base = DB::table('marketplace_links')->where('sync_account_id', $this->account->id);
+            $total = (clone $base)->count();
+            $offersSynced = (clone $base)->where('marketplace_data->offers_synced', true)->count();
+            $offersFailed = (clone $base)->where('marketplace_data->offers_sync_failed', true)->count();
+            $miraklWidget = [
+                'total_links' => $total,
+                'offers_synced' => $offersSynced,
+                'offers_failed' => $offersFailed,
+            ];
+        }
 
         return view('livewire.sync-accounts.dashboard', [
             'productsCount' => $productsCount,
@@ -86,7 +141,9 @@ class Dashboard extends Component
             'coverage' => $coverage,
             'salesChannel' => $salesChannel,
             'statusSummary' => $statusSummary,
+            'topMissing' => $topMissing,
+            'shopifyWidget' => $shopifyWidget,
+            'miraklWidget' => $miraklWidget,
         ]);
     }
 }
-

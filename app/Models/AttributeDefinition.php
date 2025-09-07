@@ -98,6 +98,21 @@ class AttributeDefinition extends Model
     }
 
     /**
+     * Filter attributes that should sync to a given marketplace channel
+     */
+    public function scopeForMarketplace(Builder $query, string $marketplace): Builder
+    {
+        $marketplace = strtolower($marketplace);
+
+        return match ($marketplace) {
+            'shopify' => $query->where('sync_to_shopify', true),
+            'ebay' => $query->where('sync_to_ebay', true),
+            'mirakl' => $query->where('sync_to_mirakl', true),
+            default => $query->whereRaw('1 = 0'), // no-op for unsupported channels
+        };
+    }
+
+    /**
      * 🎯 ATTRIBUTE VALUE VALIDATION
      */
 
