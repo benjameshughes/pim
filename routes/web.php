@@ -173,7 +173,8 @@ Route::middleware(['auth'])->group(function () {
 
     // 🏷️ MARKETPLACE IDENTIFIERS & INTEGRATIONS
     Route::middleware('can:manage-marketplace-connections')->group(function () {
-        Route::get('marketplace/identifiers', \App\Livewire\Marketplace\IdentifiersDashboard::class)->name('marketplace.identifiers');
+        // Legacy alias: point identifiers route to Sync Accounts Index
+        Route::get('marketplace/identifiers', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('marketplace.identifiers');
     });
 
     // 🔗 SYNC ACCOUNTS MANAGEMENT
