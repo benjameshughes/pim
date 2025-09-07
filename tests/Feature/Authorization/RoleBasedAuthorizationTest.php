@@ -142,7 +142,7 @@ describe('Admin User Authorization', function () {
         $response = $this->get(route('sync-accounts.index'));
         $response->assertStatus(200);
 
-        $response = $this->get(route('marketplace.add-integration'));
+        $response = $this->get(route('sync-accounts.create'));
         $response->assertStatus(200);
     });
 
@@ -226,7 +226,7 @@ describe('Manager User Authorization', function () {
         $response = $this->get(route('sync-accounts.index'));
         $response->assertStatus(200);
 
-        $response = $this->get(route('marketplace.add-integration'));
+        $response = $this->get(route('sync-accounts.create'));
         $response->assertStatus(200);
     });
 

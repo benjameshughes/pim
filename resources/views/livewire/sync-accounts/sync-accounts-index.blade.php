@@ -143,7 +143,7 @@
                                     <div class="flex items-center justify-end space-x-2">
                                         <!-- View/Edit -->
                                         <a href="{{ route('sync-accounts.edit', ['accountId' => $syncAccount->id]) }}" class="text-blue-600 hover:text-blue-900" title="Edit">
-                                            <flux:icon name="edit" class="w-4 h-4" />
+                                            <flux:icon name="pencil" class="w-4 h-4" />
                                         </a>
                                         
                                         <!-- Toggle Active Status -->

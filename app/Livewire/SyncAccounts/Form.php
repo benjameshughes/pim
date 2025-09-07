@@ -116,11 +116,15 @@ class Form extends Component
 
     public function render(MarketplaceRegistry $registry)
     {
+        $existing = $this->accountId ? SyncAccount::find($this->accountId) : null;
+
         return view('livewire.sync-accounts.form', [
             'marketplaces' => $registry->getAvailableMarketplaces(),
             'requiredFields' => $registry->getRequiredFields($this->channel ?: 'mirakl', $this->operator),
             'validationRules' => $registry->getValidationRules($this->channel ?: 'mirakl', $this->operator),
+            'credentialFieldMeta' => $registry->getCredentialFieldMeta($this->channel ?: 'mirakl'),
+            'lastTest' => $existing?->connection_test_result,
+            'lastTestAt' => $existing?->last_connection_test,
         ]);
     }
 }
-

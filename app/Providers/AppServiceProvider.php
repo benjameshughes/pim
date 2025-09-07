@@ -28,19 +28,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\Attributes\AttributesManager::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
-    public function boot(): void
-    {
-        // TEMPORARILY DISABLED ALL BOOTSTRAP CODE FOR PRODUCTION DEBUGGING
-        // $this->configureRateLimiting();
-        // $this->registerEventListeners();
-        // $this->configureUrlGeneration();
-
-        $this->registerRoleGates();
-        $this->registerObservers();
-    }
+    
 
     private function registerRoleGates(): void
     {

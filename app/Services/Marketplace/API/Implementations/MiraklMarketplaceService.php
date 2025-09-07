@@ -95,10 +95,18 @@ class MiraklMarketplaceService extends AbstractMarketplaceService
     {
         $config = parent::buildConfigFromAccount($account);
 
+        // Map base_url -> api_url if needed
+        $apiUrl = $config['api_url'] ?? $config['base_url'] ?? '';
+
+        // Resolve operator: prefer subtype, else channel alias, else 'mirakl'
+        $resolvedOperator = $config['operator']
+            ?? ($account->marketplace_subtype
+                ?: (in_array($account->channel, ['freemans', 'debenhams', 'bq']) ? $account->channel : 'mirakl'));
+
         $this->miraklConfig = [
-            'api_url' => $config['api_url'] ?? '',
+            'api_url' => $apiUrl,
             'api_key' => $config['api_key'] ?? '',
-            'operator' => $config['operator'] ?? 'bq',
+            'operator' => $resolvedOperator,
             'shop_id' => $config['shop_id'] ?? '',
             'currency' => $config['currency'] ?? 'GBP',
             'locale' => $config['locale'] ?? 'en_GB',

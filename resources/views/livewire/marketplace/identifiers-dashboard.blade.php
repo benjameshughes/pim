@@ -179,7 +179,7 @@
                             <div class="flex items-center space-x-3">
                                 {{-- Manage Account --}}
                                 <flux:button size="sm" href="{{ route('sync-accounts.edit', ['accountId' => $account->id]) }}">
-                                    <flux:icon.edit class="h-4 w-4" />
+                                    <flux:icon name="pencil" class="h-4 w-4" />
                                     Manage Account
                                 </flux:button>
                                 {{-- Mirakl Operator Test Button (keep for convenience) --}}

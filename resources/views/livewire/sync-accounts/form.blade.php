@@ -36,15 +36,21 @@
             <h3 class="text-md font-medium text-gray-900 mb-3">Credentials</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach($requiredFields as $field)
+                    @php
+                        $meta = $credentialFieldMeta[$field] ?? ['label' => ucwords(str_replace('_',' ',$field)), 'type' => 'text'];
+                        $type = $meta['type'] ?? 'text';
+                        $label = $meta['label'] ?? ucwords(str_replace('_',' ',$field));
+                    @endphp
                     <flux:field>
-                        <flux:label>{{ ucwords(str_replace('_',' ',$field)) }}</flux:label>
-                        <flux:input wire:model.live="credentials.{{ $field }}" />
+                        <flux:label>{{ $label }}</flux:label>
+                        <flux:input wire:model.live="credentials.{{ $field }}" type="{{ $type }}" />
                         @if(isset($errorsBag[$field]))
                             <p class="text-sm text-red-600">{{ $errorsBag[$field][0] }}</p>
                         @endif
                     </flux:field>
                 @endforeach
             </div>
+            <p class="mt-2 text-xs text-gray-500">Sensitive fields (API keys/tokens) are stored securely and masked.</p>
         </div>
 
         <div class="mt-6">
@@ -88,6 +94,25 @@
                 <a href="{{ route('sync-accounts.index') }}" class="text-sm text-gray-500 hover:text-gray-700">Back to list</a>
             </div>
         </div>
+
+        @if($lastTest)
+            <div class="mt-4 bg-gray-50 rounded-lg p-4 border">
+                <div class="flex items-center gap-2">
+                    @if(($lastTest['success'] ?? false))
+                        <flux:icon name="check-circle" class="w-4 h-4 text-green-600" />
+                        <span class="text-sm text-green-700">Last connection test succeeded</span>
+                    @else
+                        <flux:icon name="x-circle" class="w-4 h-4 text-red-600" />
+                        <span class="text-sm text-red-700">Last connection test failed</span>
+                    @endif
+                    @if($lastTestAt)
+                        <span class="text-xs text-gray-500">({{ $lastTestAt->diffForHumans() }})</span>
+                    @endif
+                </div>
+                @if(!($lastTest['success'] ?? false) && !empty($lastTest['error'] ?? null))
+                    <p class="mt-2 text-xs text-gray-600">{{ $lastTest['error'] }}</p>
+                @endif
+            </div>
+        @endif
     </div>
 </div>
-
