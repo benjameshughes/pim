@@ -8,10 +8,14 @@
             <flux:field>
                 <flux:label>Channel</flux:label>
                 <flux:select wire:model.live="channel">
+                    <flux:select.option value="" disabled>Select a marketplace</flux:select.option>
                     @foreach($marketplaces as $template)
                         <flux:select.option value="{{ $template->type }}">{{ $template->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
+                @if($errors->has('channel'))
+                    <p class="text-sm text-red-600 mt-1">{{ $errors->first('channel') }}</p>
+                @endif
             </flux:field>
 
             <flux:field>

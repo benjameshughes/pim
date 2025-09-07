@@ -77,7 +77,7 @@
                                             @php($ch = strtolower($syncAccount->platform ?: $syncAccount->channel))
                                             @if($ch === 'shopify')
                                                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                                    <flux:icon name="storefront" class="w-6 h-6 text-green-600" />
+                                                    <flux:icon name="shopping-bag" class="w-6 h-6 text-green-600" />
                                                 </div>
                                             @elseif($ch === 'ebay')
                                                 <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
@@ -85,7 +85,7 @@
                                                 </div>
                                             @elseif($ch === 'mirakl')
                                                 <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                                                    <flux:icon name="globe-alt" class="w-6 h-6 text-purple-600" />
+                                                    <flux:icon name="globe" class="w-6 h-6 text-purple-600" />
                                                 </div>
                                             @else
                                                 <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">

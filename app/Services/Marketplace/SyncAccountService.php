@@ -28,6 +28,16 @@ class SyncAccountService
         $operator = $data['operator'] ?? null; // for mirakl subtype if needed
 
         // Validate
+        if (! in_array($channel, ['shopify','ebay','amazon','mirakl'])) {
+            throw ValidationException::withMessages([
+                'channel' => ['Invalid or missing channel.'],
+            ]);
+        }
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'name' => ['Account name is required.'],
+            ]);
+        }
         $rules = $this->registry->getValidationRules($channel, $operator);
         $validator = Validator::make(array_merge($credentials, $settings), $rules);
         if ($validator->fails()) {
@@ -37,7 +47,7 @@ class SyncAccountService
         // Normalize settings with defaults
         $normalizedSettings = $this->normalizeSettings($channel, $settings);
 
-        // Prepare attributes
+        // Prepare attributes (used to find existing on create)
         $attributes = [
             'channel' => $channel,
             'name' => $name,
@@ -53,6 +63,8 @@ class SyncAccountService
         $channelCode = $operator ?: $channel;
 
         $payload = [
+            'channel' => $channel,
+            'name' => $name,
             'display_name' => $display,
             'is_active' => Arr::get($data, 'is_active', true),
             'credentials' => $this->normalizeCredentials($channel, $credentials),

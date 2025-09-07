@@ -33,7 +33,7 @@ class Form extends Component
             $account = SyncAccount::findOrFail($accountId);
             $this->authorize('update', $account);
 
-            $this->channel = $account->channel;
+            $this->channel = (string) ($account->channel ?? '');
             $this->operator = $account->marketplace_subtype;
             $this->name = $account->name;
             $this->display_name = $account->display_name;
@@ -46,6 +46,17 @@ class Form extends Component
 
     public function save(SyncAccountService $service, MarketplaceRegistry $registry)
     {
+        // Normalize inputs before validation to avoid case issues
+        $this->channel = strtolower(trim((string) $this->channel));
+        $this->operator = $this->operator !== null ? strtolower(trim((string) $this->operator)) : null;
+
+        // Basic validation for required top-level fields
+        $this->validate([
+            'channel' => 'required|string|in:shopify,ebay,amazon,mirakl',
+            'name' => 'required|string|min:1',
+            'display_name' => 'nullable|string',
+        ]);
+
         $data = [
             'channel' => $this->channel,
             'operator' => $this->operator,

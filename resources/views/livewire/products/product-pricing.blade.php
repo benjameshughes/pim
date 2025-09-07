@@ -53,10 +53,10 @@
                          } }}20">
                         <flux:icon name="{{ match($channelCode) {
                             'shopify' => 'shopping-bag',
-                            'ebay' => 'building-storefront',
+                            'ebay' => 'store',
                             'amazon' => 'shopping-cart',
                             'direct' => 'home',
-                            default => 'currency-pound'
+                            default => 'pound-sterling'
                         } }}" class="w-4 h-4" style="color: {{ match($channelCode) {
                              'shopify' => '#96bf48',
                              'ebay' => '#e53238',
@@ -105,10 +105,10 @@
                                 <div class="flex items-center justify-center gap-2">
                                     <flux:icon name="{{ match($channel->code) {
                                         'shopify' => 'shopping-bag',
-                                        'ebay' => 'building-storefront', 
+                                        'ebay' => 'store', 
                                         'amazon' => 'shopping-cart',
                                         'direct' => 'home',
-                                        default => 'currency-pound'
+                                        default => 'pound-sterling'
                                     } }}" class="w-4 h-4" />
                                     <span>{{ $channel->name }}</span>
                                 </div>
@@ -201,7 +201,7 @@
                     @empty
                         <tr>
                             <td colspan="{{ count($channels) + 3 }}" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                <flux:icon name="currency-pound" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+                                <flux:icon name="pound-sterling" class="w-8 h-8 mx-auto mb-2 opacity-40" />
                                 <p>No variants match your filters</p>
                             </td>
                         </tr>
@@ -229,10 +229,10 @@
                         <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700">
                             <flux:icon name="{{ match($selectedChannel) {
                                 'shopify' => 'shopping-bag',
-                                'ebay' => 'building-storefront',
+                                'ebay' => 'store',
                                 'amazon' => 'shopping-cart', 
                                 'direct' => 'home',
-                                default => 'currency-pound'
+                                default => 'pound-sterling'
                             } }}" class="w-4 h-4" />
                             <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $channel->name }}</span>
                         </div>

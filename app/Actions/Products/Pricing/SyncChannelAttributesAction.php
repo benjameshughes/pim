@@ -158,12 +158,12 @@ class SyncChannelAttributesAction extends BaseAction
     {
         return match ($channelCode) {
             'shopify' => 'shopping-bag',
-            'ebay' => 'building-storefront',
+            'ebay' => 'store',
             'amazon' => 'shopping-cart',
             'direct' => 'home',
             'retail' => 'store',
-            'wholesale' => 'building-office',
-            default => 'currency-pound'
+            'wholesale' => 'building-2',
+            default => 'pound-sterling'
         };
     }
 
