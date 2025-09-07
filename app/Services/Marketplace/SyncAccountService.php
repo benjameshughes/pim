@@ -43,11 +43,22 @@ class SyncAccountService
             'name' => $name,
         ];
 
+        // Determine platform and channel_code for explicit UI display
+        $platform = $channel;
+        if (in_array($channel, ['freemans', 'debenhams', 'bq'])) {
+            $platform = 'mirakl';
+        } elseif ($channel === 'mirakl' && $operator) {
+            $platform = 'mirakl';
+        }
+        $channelCode = $operator ?: $channel;
+
         $payload = [
             'display_name' => $display,
             'is_active' => Arr::get($data, 'is_active', true),
             'credentials' => $this->normalizeCredentials($channel, $credentials),
             'settings' => $normalizedSettings,
+            'platform' => $platform,
+            'channel_code' => $channelCode,
         ];
 
         if ($operator && $channel === 'mirakl') {
@@ -83,6 +94,17 @@ class SyncAccountService
 
         // Persist last test result for UI
         $account->updateConnectionTestResult($result);
+
+        // Update top-level external shop snapshot if provided
+        $shopId = $result['data']['shop']['id'] ?? $result['data']['shop_id'] ?? null;
+        $shopName = $result['data']['shop']['name'] ?? $result['data']['shop_name'] ?? null;
+        $health = ($result['success'] ?? false) ? 'healthy' : 'failing';
+
+        $account->update([
+            'external_shop_id' => $shopId ?: $account->external_shop_id,
+            'external_shop_name' => $shopName ?: $account->external_shop_name,
+            'health_status' => $health,
+        ]);
         \App\Events\SyncAccounts\SyncAccountTested::dispatch($account, $result);
 
         return $result;

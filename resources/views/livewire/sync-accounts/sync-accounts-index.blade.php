@@ -52,10 +52,7 @@
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Account
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Channel
+                                Account – Marketplace
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
@@ -77,13 +74,18 @@
                                 <td class="px-6 py-4">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 w-10 h-10">
-                                            @if($syncAccount->channel === 'shopify')
+                                            @php($ch = strtolower($syncAccount->platform ?: $syncAccount->channel))
+                                            @if($ch === 'shopify')
                                                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                                                     <flux:icon name="storefront" class="w-6 h-6 text-green-600" />
                                                 </div>
-                                            @elseif($syncAccount->channel === 'ebay')
+                                            @elseif($ch === 'ebay')
                                                 <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
                                                     <flux:icon name="tag" class="w-6 h-6 text-yellow-600" />
+                                                </div>
+                                            @elseif($ch === 'mirakl')
+                                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                    <flux:icon name="globe-alt" class="w-6 h-6 text-purple-600" />
                                                 </div>
                                             @else
                                                 <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -92,23 +94,10 @@
                                             @endif
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                {{ $syncAccount->display_name }}
-                                            </div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ $syncAccount->marketplace_subtype }}
-                                            </div>
+                                            <div class="text-sm font-medium text-gray-900">{{ $syncAccount->account_label }} – {{ $syncAccount->marketplace }}</div>
+                                            <div class="text-xs text-gray-500">{{ $syncAccount->channel_code ?: $syncAccount->channel }}</div>
                                         </div>
                                     </div>
-                                </td>
-                                
-                                <td class="px-6 py-4">
-                                    <flux:badge 
-                                        color="{{ $syncAccount->channel === 'shopify' ? 'green' : ($syncAccount->channel === 'ebay' ? 'yellow' : 'gray') }}"
-                                        size="sm"
-                                    >
-                                        {{ ucfirst($syncAccount->channel) }}
-                                    </flux:badge>
                                 </td>
                                 
                                 <td class="px-6 py-4">
