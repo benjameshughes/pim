@@ -182,6 +182,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
         Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.create');
         Route::get('sync-accounts/{accountId}/edit', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.edit');
+        Route::get('sync-accounts/{accountId}/dashboard', \App\Livewire\SyncAccounts\Dashboard::class)->name('sync-accounts.dashboard');
         // Removed legacy add-integration wizard and show route; use central form instead
     });
 

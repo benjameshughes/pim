@@ -131,6 +131,9 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end space-x-2">
                                         <!-- View/Edit -->
+                                        <a href="{{ route('sync-accounts.dashboard', ['accountId' => $syncAccount->id]) }}" class="text-indigo-600 hover:text-indigo-900" title="Dashboard">
+                                            <flux:icon name="panel-left" class="w-4 h-4" />
+                                        </a>
                                         <a href="{{ route('sync-accounts.edit', ['accountId' => $syncAccount->id]) }}" class="text-blue-600 hover:text-blue-900" title="Edit">
                                             <flux:icon name="pencil" class="w-4 h-4" />
                                         </a>
