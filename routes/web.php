@@ -174,7 +174,6 @@ Route::middleware(['auth'])->group(function () {
     // 🏷️ MARKETPLACE IDENTIFIERS & INTEGRATIONS
     Route::middleware('can:manage-marketplace-connections')->group(function () {
         Route::get('marketplace/identifiers', \App\Livewire\Marketplace\IdentifiersDashboard::class)->name('marketplace.identifiers');
-        Route::get('marketplace/add-integration', \App\Livewire\Marketplace\AddIntegrationWizard::class)->name('marketplace.add-integration');
     });
 
     // 🔗 SYNC ACCOUNTS MANAGEMENT
@@ -182,9 +181,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
         Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.create');
         Route::get('sync-accounts/{accountId}/edit', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.edit');
-        Route::get('sync-accounts/{syncAccount}', function (App\Models\SyncAccount $syncAccount) {
-            return view('sync-accounts.show', compact('syncAccount'));
-        })->name('sync-accounts.show');
+        // Removed legacy add-integration wizard and show route; use central form instead
     });
 
     // 🎛️ CHANNEL MAPPING SYSTEM

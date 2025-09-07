@@ -193,7 +193,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No sync accounts found</h3>
                 <p class="text-gray-600 mb-6">Get started by connecting your first marketplace or sales channel.</p>
                 <a 
-                    href="{{ route('marketplace.add-integration') }}"
+                    href="{{ route('sync-accounts.create') }}"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <flux:icon name="plus" class="w-5 h-5 mr-2" />
@@ -203,3 +203,43 @@
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            if (window.Echo) {
+                const channel = 'sync-accounts';
+                if (!window.__sync_accounts_listener__) {
+                    window.__sync_accounts_listener__ = true;
+                    window.Echo.channel(channel)
+                        .listen('.SyncAccountCreated', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'success', message: 'Sync account created' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountUpdated', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'info', message: 'Sync account updated' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountDeleted', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'info', message: 'Sync account deleted' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountTested', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                const msg = e.success ? 'Connection OK' : 'Connection failed';
+                                window.Livewire.dispatch('toast', { type: e.success ? 'success' : 'error', message: msg });
+                            }
+                        });
+                }
+            }
+        } catch (err) {
+            console.warn('Echo not available for sync-accounts:', err);
+        }
+    });
+</script>

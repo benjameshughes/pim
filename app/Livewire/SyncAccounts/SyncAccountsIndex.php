@@ -45,7 +45,9 @@ class SyncAccountsIndex extends Component
     {
         $this->authorize('delete', $syncAccount);
 
+        $id = $syncAccount->id;
         $syncAccount->delete();
+        \App\Events\SyncAccounts\SyncAccountDeleted::dispatch($id);
         $this->dispatch('success', 'Sync account deleted successfully.');
     }
 

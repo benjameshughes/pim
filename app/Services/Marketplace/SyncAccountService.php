@@ -56,11 +56,20 @@ class SyncAccountService
 
         if ($account) {
             $account->update($payload);
+            $account->refresh();
+            \App\Events\SyncAccounts\SyncAccountUpdated::dispatch($account);
 
-            return $account->refresh();
+            return $account;
         }
 
-        return SyncAccount::updateOrCreate($attributes, $payload);
+        $saved = SyncAccount::updateOrCreate($attributes, $payload);
+        if ($saved->wasRecentlyCreated) {
+            \App\Events\SyncAccounts\SyncAccountCreated::dispatch($saved);
+        } else {
+            \App\Events\SyncAccounts\SyncAccountUpdated::dispatch($saved);
+        }
+
+        return $saved;
     }
 
     public function testConnection(SyncAccount $account): array
@@ -74,6 +83,7 @@ class SyncAccountService
 
         // Persist last test result for UI
         $account->updateConnectionTestResult($result);
+        \App\Events\SyncAccounts\SyncAccountTested::dispatch($account, $result);
 
         return $result;
     }
@@ -93,4 +103,3 @@ class SyncAccountService
         return array_replace_recursive($defaults, $settings);
     }
 }
-
