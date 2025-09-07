@@ -66,4 +66,18 @@ class AppServiceProvider extends ServiceProvider
         // Register User observer for auto-assigning roles (first user -> admin)
         \App\Models\User::observe(\App\Observers\UserObserver::class);
     }
+
+    public function boot(): void
+    {
+        // TEMPORARILY DISABLED ALL BOOTSTRAP CODE FOR PRODUCTION DEBUGGING
+        // $this->configureRateLimiting();
+        // $this->registerEventListeners();
+        // $this->configureUrlGeneration();
+
+        $this->registerRoleGates();
+        $this->registerObservers();
+
+        // Register policies
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\SyncAccount::class, \App\Policies\SyncAccountPolicy::class);
+    }
 }

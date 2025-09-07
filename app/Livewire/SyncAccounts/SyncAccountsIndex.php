@@ -16,8 +16,7 @@ class SyncAccountsIndex extends Component
 
     public function mount()
     {
-        // Authorize managing marketplace connections
-        $this->authorize('manage-marketplace-connections');
+        $this->authorize('viewAny', SyncAccount::class);
     }
 
     public string $channelFilter = '';
@@ -34,8 +33,7 @@ class SyncAccountsIndex extends Component
 
     public function toggleActive(SyncAccount $syncAccount)
     {
-        // Authorize managing marketplace connections
-        $this->authorize('manage-marketplace-connections');
+        $this->authorize('update', $syncAccount);
 
         $syncAccount->update(['is_active' => ! $syncAccount->is_active]);
 
@@ -45,11 +43,28 @@ class SyncAccountsIndex extends Component
 
     public function delete(SyncAccount $syncAccount)
     {
-        // Authorize managing marketplace connections
-        $this->authorize('manage-marketplace-connections');
+        $this->authorize('delete', $syncAccount);
 
         $syncAccount->delete();
         $this->dispatch('success', 'Sync account deleted successfully.');
+    }
+
+    public function testConnection(int $id)
+    {
+        $account = SyncAccount::findOrFail($id);
+        $this->authorize('testConnection', $account);
+
+        $svc = app(\App\Services\Marketplace\SyncAccountService::class);
+        try {
+            $result = $svc->testConnection($account);
+            if ($result['success'] ?? false) {
+                $this->dispatch('success', 'Connection successful');
+            } else {
+                $this->dispatch('error', 'Connection failed: '.($result['error'] ?? 'Unknown error'));
+            }
+        } catch (\Throwable $e) {
+            $this->dispatch('error', 'Connection test error: '.$e->getMessage());
+        }
     }
 
     public function render()

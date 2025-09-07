@@ -7,7 +7,7 @@
                 <p class="mt-2 text-gray-600">Manage your marketplace and sales channel integrations</p>
             </div>
             
-            <a href="{{ route('marketplace.add-integration') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <a href="{{ route('sync-accounts.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <flux:icon name="plus" class="w-5 h-5 mr-2" />
                 Add Integration
             </a>
@@ -142,12 +142,8 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end space-x-2">
                                         <!-- View/Edit -->
-                                        <a 
-                                            href="{{ route('sync-accounts.show', $syncAccount) }}"
-                                            class="text-blue-600 hover:text-blue-900"
-                                            title="View Details"
-                                        >
-                                            <flux:icon name="eye" class="w-4 h-4" />
+                                        <a href="{{ route('sync-accounts.edit', ['accountId' => $syncAccount->id]) }}" class="text-blue-600 hover:text-blue-900" title="Edit">
+                                            <flux:icon name="edit" class="w-4 h-4" />
                                         </a>
                                         
                                         <!-- Toggle Active Status -->
@@ -159,6 +155,15 @@
                                             <flux:icon name="{{ $syncAccount->is_active ? 'pause' : 'play' }}" class="w-4 h-4" />
                                         </button>
                                         
+                                        <!-- Test Connection -->
+                                        <button 
+                                            wire:click="testConnection({{ $syncAccount->id }})"
+                                            class="text-indigo-600 hover:text-indigo-900"
+                                            title="Test Connection"
+                                        >
+                                            <flux:icon name="activity" class="w-4 h-4" />
+                                        </button>
+
                                         <!-- Delete -->
                                         <button 
                                             wire:click="delete({{ $syncAccount->id }})"

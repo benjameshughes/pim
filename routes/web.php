@@ -180,6 +180,8 @@ Route::middleware(['auth'])->group(function () {
     // 🔗 SYNC ACCOUNTS MANAGEMENT
     Route::middleware('can:manage-marketplace-connections')->group(function () {
         Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
+        Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.create');
+        Route::get('sync-accounts/{accountId}/edit', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.edit');
         Route::get('sync-accounts/{syncAccount}', function (App\Models\SyncAccount $syncAccount) {
             return view('sync-accounts.show', compact('syncAccount'));
         })->name('sync-accounts.show');

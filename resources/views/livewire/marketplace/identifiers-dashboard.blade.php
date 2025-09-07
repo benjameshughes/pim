@@ -9,7 +9,7 @@
         <div class="flex items-center space-x-3">
             {{-- Add New Integration Button --}}
             <flux:button 
-                href="/marketplace/add-integration" 
+                href="{{ route('sync-accounts.create') }}" 
                 variant="primary"
                 size="sm"
             >
@@ -177,9 +177,12 @@
                             </div>
                             
                             <div class="flex items-center space-x-3">
-                                {{-- Delete Button --}}
-                                <flux:button size="sm" wire:click="deleteAccount('{{$account->id}}')">Delete Account</flux:button>
-                                {{-- Mirakl Operator Test Button --}}
+                                {{-- Manage Account --}}
+                                <flux:button size="sm" href="{{ route('sync-accounts.edit', ['accountId' => $account->id]) }}">
+                                    <flux:icon.edit class="h-4 w-4" />
+                                    Manage Account
+                                </flux:button>
+                                {{-- Mirakl Operator Test Button (keep for convenience) --}}
                                 @if ($account->channel === 'mirakl' && $displayInfo['setup_complete'])
                                     <flux:button icon="cpu" color="purple" size="sm"
                                                 wire:click="testMiraklOperator({{ $account->id }})"
