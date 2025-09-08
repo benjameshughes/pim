@@ -6,6 +6,7 @@ use App\Actions\Images\ReprocessImageAction;
 use App\Actions\Images\UpdateImageAction;
 use App\Jobs\GenerateImageVariantsJob;
 use App\Models\Image;
+use App\Services\Attributes\Facades\Attributes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -48,11 +49,27 @@ class ImageEditForm extends Component
      */
     private function loadImageData(): void
     {
-        $this->title = $this->image->title ?? '';
-        $this->alt_text = $this->image->alt_text ?? '';
-        $this->description = $this->image->description ?? '';
-        $this->folder = $this->image->folder ?? 'uncategorized';
-        $this->tagsString = implode(', ', $this->image->tags ?? []);
+        // Prefill from model fields; if blank, fall back to image attributes
+        $this->title = $this->image->title ?: (string) (Attributes::for($this->image)->get('title') ?? '');
+        $this->alt_text = $this->image->alt_text ?: (string) (Attributes::for($this->image)->get('alt_text') ?? '');
+        $this->description = $this->image->description ?: (string) (Attributes::for($this->image)->get('description') ?? '');
+        $this->folder = $this->image->folder
+            ?: (string) (Attributes::for($this->image)->get('folder') ?? 'uncategorized');
+
+        // Prefer model tags; if none, pull from attributes (array or CSV)
+        $modelTags = $this->image->tags ?? [];
+        if (!empty($modelTags)) {
+            $this->tagsString = implode(', ', $modelTags);
+        } else {
+            $attrTags = Attributes::for($this->image)->get('tags');
+            if (is_array($attrTags)) {
+                $this->tagsString = implode(', ', $attrTags);
+            } elseif (is_string($attrTags)) {
+                $this->tagsString = $attrTags;
+            } else {
+                $this->tagsString = '';
+            }
+        }
     }
 
     /**
@@ -84,6 +101,18 @@ class ImageEditForm extends Component
 
             // Use the action to update the image
             $this->image = $updateImageAction->execute($this->image, $data);
+
+            // Mirror key fields to image attributes (upsert or create)
+            $this->image->bulkUpdateAttributes([
+                'title' => $this->title,
+                'alt_text' => $this->alt_text,
+                'description' => $this->description,
+                'folder' => $this->folder,
+                'tags' => $tags,
+            ], [
+                'source' => 'ui:image-edit-form',
+            ]);
+
             $this->loadImageData();
 
             $this->dispatch('notify', [
