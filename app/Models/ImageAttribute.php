@@ -21,7 +21,6 @@ class ImageAttribute extends Model
 
     protected $fillable = [
         'image_id',
-        'key',
         'attribute_definition_id',
         'value',
         'display_value',
@@ -82,10 +81,8 @@ class ImageAttribute extends Model
 
     public function scopeForAttribute(Builder $query, string $attributeKey): Builder
     {
-        return $query->where(function ($q) use ($attributeKey) {
-            $q->whereHas('attributeDefinition', function ($qq) use ($attributeKey) {
-                $qq->where('key', $attributeKey);
-            })->orWhere('key', $attributeKey);
+        return $query->whereHas('attributeDefinition', function ($q) use ($attributeKey) {
+            $q->where('key', $attributeKey);
         });
     }
 
@@ -285,12 +282,12 @@ class ImageAttribute extends Model
      */
     public function getAttributeKey(): string
     {
-        return $this->attributeDefinition?->key ?? ($this->key ?? '');
+        return $this->attributeDefinition->key;
     }
 
     public function getAttributeName(): string
     {
-        return $this->attributeDefinition->name ?? ($this->key ?? '');
+        return $this->attributeDefinition->name;
     }
 
     /**
