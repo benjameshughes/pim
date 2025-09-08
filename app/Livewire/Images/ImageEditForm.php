@@ -33,6 +33,7 @@ class ImageEditForm extends Component
     public string $tagsString = '';
     public array $tagTokens = [];
     public string $tagInput = '';
+    public string $tagValidationMessage = '';
 
     // UI state
     public bool $isSaving = false;
@@ -261,6 +262,13 @@ class ImageEditForm extends Component
         if ($value === '') {
             return;
         }
+        // Inline validation
+        $error = $this->validateTag($value);
+        if ($error) {
+            $this->addError('tagInput', $error);
+            return;
+        }
+        $this->resetErrorBag('tagInput');
         if (!in_array($value, $this->tagTokens)) {
             $this->tagTokens[] = $value;
             $this->tagsString = implode(', ', $this->tagTokens);
@@ -272,6 +280,63 @@ class ImageEditForm extends Component
     {
         $this->tagTokens = array_values(array_filter($this->tagTokens, fn ($t) => $t !== $tag));
         $this->tagsString = implode(', ', $this->tagTokens);
+    }
+
+    /**
+     * Clean tags: trim, collapse spaces, dedupe, remove empties
+     */
+    public function cleanTags(): void
+    {
+        $cleaned = [];
+        foreach ($this->tagTokens as $t) {
+            $t = trim(preg_replace('/\s+/', ' ', (string) $t));
+            if ($t === '') {
+                continue;
+            }
+            $error = $this->validateTag($t);
+            if ($error) {
+                // Skip invalid tokens, but report first error
+                $this->addError('tagInput', $error);
+                continue;
+            }
+            $cleaned[] = $t;
+        }
+        $this->tagTokens = array_values(array_unique($cleaned));
+        $this->tagsString = implode(', ', $this->tagTokens);
+        if (!$this->getErrorBag()->has('tagInput')) {
+            $this->dispatch('notify', [
+                'type' => 'success',
+                'message' => 'Tags cleaned.',
+            ]);
+        }
+    }
+
+    /**
+     * Basic tag validation: allow letters, numbers, spaces, hyphens, underscores; max 50 chars
+     */
+    protected function validateTag(string $tag): ?string
+    {
+        if (mb_strlen($tag) > 50) {
+            return 'Tags must be 50 characters or fewer.';
+        }
+        if (!preg_match('/^[A-Za-z0-9 _\-]+$/', $tag)) {
+            return 'Only letters, numbers, spaces, hyphens, and underscores allowed in tags.';
+        }
+        return null;
+    }
+
+    public function updatedTagInput(): void
+    {
+        if ($this->tagInput === '') {
+            $this->resetErrorBag('tagInput');
+            return;
+        }
+        $error = $this->validateTag($this->tagInput);
+        if ($error) {
+            $this->addError('tagInput', $error);
+        } else {
+            $this->resetErrorBag('tagInput');
+        }
     }
 
     /**

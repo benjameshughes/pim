@@ -88,7 +88,12 @@
         </flux:field>
         
         <flux:field>
-            <flux:label>Tags</flux:label>
+            <div class="flex items-center justify-between">
+                <flux:label>Tags</flux:label>
+                <div class="flex items-center gap-2">
+                    <flux:button size="xs" variant="outline" icon="sparkles" wire:click="cleanTags">Clean</flux:button>
+                </div>
+            </div>
             <div 
                 x-data="{
                     open: false,
@@ -140,6 +145,7 @@
                     </template>
                 </div>
             </div>
+            <flux:error name="tagInput" />
             <flux:description>Select existing tags or type to add new ones</flux:description>
         </flux:field>
     </div>
