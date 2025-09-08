@@ -248,8 +248,12 @@
                                     <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
                                         <span>{{ $image->width }}×{{ $image->height }}</span>
                                         <span class="font-mono">{{ $image->formatted_size }}</span>
-                                        @if($image->folder)
-                                            <flux:badge size="xs" color="gray">{{ $image->folder }}</flux:badge>
+                                        @php 
+                                            $attrFolder = \App\Services\Attributes\Facades\Attributes::for($image)->get('folder');
+                                            $displayFolder = $attrFolder ?: $image->folder;
+                                        @endphp
+                                        @if($displayFolder)
+                                            <flux:badge size="xs" color="gray">{{ $displayFolder }}</flux:badge>
                                         @endif
                                         @php 
                                             $variantCount = \App\Models\Image::where('folder', 'variants')
@@ -265,13 +269,18 @@
                                     </div>
                                     
                                     {{-- Tags --}}
-                                    @if($image->tags && count($image->tags) > 0)
+                                    @php 
+                                        $modelTags = $image->tags ?? [];
+                                        $attrTags = \App\Services\Attributes\Facades\Attributes::for($image)->get('tags');
+                                        $tagsList = !empty($modelTags) ? $modelTags : (is_array($attrTags) ? $attrTags : (is_string($attrTags) ? array_filter(array_map('trim', explode(',', $attrTags))) : []));
+                                    @endphp
+                                    @if(!empty($tagsList))
                                         <div class="flex flex-wrap gap-1 mt-2">
-                                            @foreach(array_slice($image->tags, 0, 3) as $tag)
+                                            @foreach(array_slice($tagsList, 0, 3) as $tag)
                                                 <flux:badge size="xs" color="gray">{{ $tag }}</flux:badge>
                                             @endforeach
-                                            @if(count($image->tags) > 3)
-                                                <span class="text-xs text-gray-400">+{{ count($image->tags) - 3 }}</span>
+                                            @if(count($tagsList) > 3)
+                                                <span class="text-xs text-gray-400">+{{ count($tagsList) - 3 }}</span>
                                             @endif
                                         </div>
                                     @endif

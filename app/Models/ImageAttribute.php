@@ -109,7 +109,17 @@ class ImageAttribute extends Model
             return null;
         }
 
-        return $this->attributeDefinition->castValue($this->value);
+        if ($this->attributeDefinition) {
+            return $this->attributeDefinition->castValue($this->value);
+        }
+
+        // Freeform: try basic decoding for JSON; otherwise raw string
+        $val = $this->value;
+        if (is_string($val) && $this->looksLikeJson($val)) {
+            $decoded = json_decode($val, true);
+            return json_last_error() === JSON_ERROR_NONE ? $decoded : $val;
+        }
+        return $val;
     }
 
     public function setValue($value, array $options = []): bool
@@ -117,19 +127,26 @@ class ImageAttribute extends Model
         // Track previous value
         $this->previous_value = $this->value;
 
-        // Validate
-        $validationResult = $this->attributeDefinition->validateValue($value);
-
-        if (! $validationResult['valid']) {
-            $this->is_valid = false;
-            $this->validation_errors = $validationResult['errors'];
-            $this->last_validated_at = now();
-            return false;
+        if ($this->attributeDefinition) {
+            // Validate with definition
+            $validationResult = $this->attributeDefinition->validateValue($value);
+            if (! $validationResult['valid']) {
+                $this->is_valid = false;
+                $this->validation_errors = $validationResult['errors'];
+                $this->last_validated_at = now();
+                return false;
+            }
+            $storeValue = $this->convertValueForStorage($validationResult['value']);
+            $this->display_value = $this->formatDisplayValue($validationResult['value']);
+        } else {
+            // Freeform: store as JSON if array/object, else string
+            $storeValue = is_array($value) || is_object($value) ? json_encode($value) : (string) $value;
+            $this->display_value = is_array($value) || is_object($value)
+                ? json_encode($value, JSON_PRETTY_PRINT)
+                : (string) $value;
         }
 
-        // Apply
-        $this->value = $this->convertValueForStorage($validationResult['value']);
-        $this->display_value = $this->formatDisplayValue($validationResult['value']);
+        $this->value = $storeValue;
         $this->is_valid = true;
         $this->validation_errors = null;
         $this->last_validated_at = now();
@@ -185,13 +202,18 @@ class ImageAttribute extends Model
 
     public function revalidate(): bool
     {
-        $validationResult = $this->attributeDefinition->validateValue($this->value);
-
-        $this->is_valid = $validationResult['valid'];
-        $this->validation_errors = $validationResult['valid'] ? null : $validationResult['errors'];
+        if ($this->attributeDefinition) {
+            $validationResult = $this->attributeDefinition->validateValue($this->value);
+            $this->is_valid = $validationResult['valid'];
+            $this->validation_errors = $validationResult['valid'] ? null : $validationResult['errors'];
+            $this->last_validated_at = now();
+            return $this->is_valid;
+        }
+        // Freeform: always valid
+        $this->is_valid = true;
+        $this->validation_errors = null;
         $this->last_validated_at = now();
-
-        return $this->is_valid;
+        return true;
     }
 
     /**
@@ -228,7 +250,7 @@ class ImageAttribute extends Model
 
     public function needsSyncTo(string $marketplace): bool
     {
-        if (! $this->attributeDefinition->shouldSyncToMarketplace($marketplace)) {
+        if ($this->attributeDefinition && ! $this->attributeDefinition->shouldSyncToMarketplace($marketplace)) {
             return false;
         }
 
@@ -244,7 +266,9 @@ class ImageAttribute extends Model
     public function getValueForMarketplace(string $marketplace)
     {
         $value = $this->getTypedValue();
-        return $this->attributeDefinition->transformForMarketplace($value, $marketplace);
+        return $this->attributeDefinition
+            ? $this->attributeDefinition->transformForMarketplace($value, $marketplace)
+            : $value;
     }
 
     protected function resetSyncStatus(): void
@@ -273,8 +297,19 @@ class ImageAttribute extends Model
     {
         $attributeDefinition = AttributeDefinition::findByKey($attributeKey);
 
+        // Auto-create minimal definition if missing (freeform)
         if (! $attributeDefinition) {
-            throw new \InvalidArgumentException("Attribute definition '{$attributeKey}' not found");
+            $attributeDefinition = AttributeDefinition::create([
+                'key' => $attributeKey,
+                'name' => ucwords(str_replace(['_', '-'], ' ', $attributeKey)),
+                'data_type' => is_numeric($value) ? 'number' : (is_bool($value) ? 'boolean' : (is_array($value) ? 'json' : 'string')),
+                'is_inheritable' => false,
+                'inheritance_strategy' => 'never',
+                'is_system_attribute' => false,
+                'is_active' => true,
+                'group' => 'image',
+                'input_type' => 'text',
+            ]);
         }
 
         $attribute = static::firstOrNew([
@@ -296,5 +331,11 @@ class ImageAttribute extends Model
 
         return $attribute?->getTypedValue();
     }
-}
 
+    protected function looksLikeJson(string $value): bool
+    {
+        $value = trim($value);
+        return (str_starts_with($value, '{') && str_ends_with($value, '}')) ||
+               (str_starts_with($value, '[') && str_ends_with($value, ']'));
+    }
+}

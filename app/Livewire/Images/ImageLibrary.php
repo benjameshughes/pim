@@ -386,11 +386,33 @@ class ImageLibrary extends Component
         }
 
         if ($this->selectedFolder) {
-            $query->inFolder($this->selectedFolder);
+            $folder = $this->selectedFolder;
+            $query->where(function ($q) use ($folder) {
+                $q->where('folder', $folder)
+                  ->orWhereExists(function ($sub) use ($folder) {
+                      $sub->selectRaw('1')
+                          ->from('image_attributes as ia')
+                          ->join('attribute_definitions as ad', 'ad.id', '=', 'ia.attribute_definition_id')
+                          ->whereColumn('ia.image_id', 'images.id')
+                          ->where('ad.key', 'folder')
+                          ->where('ia.value', $folder);
+                  });
+            });
         }
 
         if ($this->selectedTag) {
-            $query->withTag($this->selectedTag);
+            $tag = $this->selectedTag;
+            $query->where(function ($q) use ($tag) {
+                $q->whereJsonContains('tags', $tag)
+                  ->orWhereExists(function ($sub) use ($tag) {
+                      $sub->selectRaw('1')
+                          ->from('image_attributes as ia')
+                          ->join('attribute_definitions as ad', 'ad.id', '=', 'ia.attribute_definition_id')
+                          ->whereColumn('ia.image_id', 'images.id')
+                          ->where('ad.key', 'tags')
+                          ->where('ia.value', 'like', '%"'.addcslashes($tag, '"%_').'"%');
+                  });
+            });
         }
 
         match ($this->filterBy) {
@@ -407,22 +429,50 @@ class ImageLibrary extends Component
 
     public function getFolders()
     {
-        return Image::select('folder')
+        $modelFolders = Image::select('folder')
             ->whereNotNull('folder')
             ->where('folder', '!=', '')
             ->groupBy('folder')
-            ->pluck('folder')
+            ->pluck('folder');
+
+        $attrFolders = \App\Models\ImageAttribute::query()
+            ->whereHas('attributeDefinition', fn ($q) => $q->where('key', 'folder'))
+            ->whereNotNull('value')
+            ->pluck('value');
+
+        return $modelFolders->merge($attrFolders)
+            ->filter()
+            ->unique()
             ->sort()
             ->values();
     }
 
     public function getTags()
     {
-        return Image::select('tags')
+        $modelTags = Image::select('tags')
             ->whereNotNull('tags')
             ->get()
             ->pluck('tags')
-            ->flatten()
+            ->flatten();
+
+        $attrTagsRaw = \App\Models\ImageAttribute::query()
+            ->whereHas('attributeDefinition', fn ($q) => $q->where('key', 'tags'))
+            ->whereNotNull('value')
+            ->pluck('value');
+
+        $attrTags = collect();
+        foreach ($attrTagsRaw as $val) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $attrTags = $attrTags->merge($decoded);
+            } else {
+                // Assume comma-separated string
+                $attrTags = $attrTags->merge(array_filter(array_map('trim', explode(',', $val))));
+            }
+        }
+
+        return $modelTags->merge($attrTags)
+            ->filter()
             ->unique()
             ->sort()
             ->values();

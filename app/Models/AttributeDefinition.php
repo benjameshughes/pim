@@ -92,6 +92,7 @@ class AttributeDefinition extends Model
         return $query->where('is_system_attribute', false);
     }
 
+
     public function scopeOrderedForDisplay(Builder $query): Builder
     {
         return $query->orderBy('sort_order')->orderBy('name');

@@ -7,16 +7,7 @@
             <flux:badge size="sm" color="gray">{{ count($imageFamily) }}</flux:badge>
         </div>
         
-        @if(count($variants) === 0 && $originalImage)
-            <flux:button 
-                wire:click="generateVariants" 
-                size="sm" 
-                variant="outline"
-                icon="sparkles"
-            >
-                Generate Variants
-            </flux:button>
-        @endif
+        {{-- Generate Variants button moved to header menu in ImageShow --}}
     </div>
 
     {{-- Variant Grid --}}
@@ -106,7 +97,7 @@
         <div class="text-center py-4 text-gray-500 dark:text-gray-400 text-sm border-t border-gray-200 dark:border-gray-700 mt-4">
             <flux:icon name="photo" class="h-8 w-8 mx-auto mb-2 opacity-50" />
             <p>No variants generated yet</p>
-            <p class="text-xs mt-1">Click "Generate Variants" to create thumbnails</p>
+            <p class="text-xs mt-1">Use the menu in the header to generate variants</p>
         </div>
     @endif
 </div>

@@ -20,14 +20,30 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <flux:button wire:navigate href="{{ route('images.show.edit', $image) }}" variant="primary" icon="pencil">
-                Edit
-            </flux:button>
-            
             <flux:dropdown>
                 <flux:button variant="ghost" icon="ellipsis-horizontal" />
                 
                 <flux:menu>
+                    <flux:menu.item 
+                        @click="$dispatch('reset-image-edit-form')"
+                        icon="arrow-uturn-left"
+                    >
+                        Reset Edit Form
+                    </flux:menu.item>
+                    <flux:menu.item 
+                        @click="$dispatch('reprocess-image')"
+                        icon="sparkles"
+                    >
+                        Reprocess & Generate Variants
+                    </flux:menu.item>
+                    <flux:menu.separator />
+                    <flux:menu.item 
+                        @click="$dispatch('generate-variants', { imageId: {{ $originalImage->id ?? $image->id }} })"
+                        icon="sparkles"
+                    >
+                        Generate Variants
+                    </flux:menu.item>
+                    <flux:menu.separator />
                     <flux:menu.item wire:click="duplicateImage" icon="document-duplicate">
                         Duplicate Metadata
                     </flux:menu.item>
@@ -82,6 +98,7 @@
         $currentRoute = request()->route()->getName();
         $isEdit = str_contains($currentRoute, '.edit');
         $isAttachments = str_contains($currentRoute, '.attachments');
+        $isAttributes = str_contains($currentRoute, '.attributes');
         $isHistory = str_contains($currentRoute, '.history');
         $isOverview = str_contains($currentRoute, '.overview') || $currentRoute === 'images.show';
     @endphp
@@ -99,6 +116,11 @@
     @elseif($isHistory)
         {{-- 📜 HISTORY TAB CONTENT --}}
         <livewire:images.image-history :image="$image" />
+    @elseif($isAttributes)
+        {{-- 🏷️ ATTRIBUTES TAB CONTENT --}}
+        <div class="space-y-6">
+            <livewire:images.image-attributes-form :image="$image" />
+        </div>
     @else
         {{-- 👁️ OVERVIEW TAB CONTENT (DEFAULT) --}}
         <div class="space-y-6">

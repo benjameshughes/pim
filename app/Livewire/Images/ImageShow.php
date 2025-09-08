@@ -130,6 +130,10 @@ class ImageShow extends Component
                     ->badge($this->getAttachmentsCount())
                     ->badgeColor($this->getAttachmentsCount() > 0 ? 'blue' : 'gray'),
 
+                Tab::make('attributes')
+                    ->label('Attributes')
+                    ->icon('tag'),
+
                 Tab::make('history')
                     ->label('History')
                     ->icon('clock')
