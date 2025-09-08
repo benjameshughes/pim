@@ -13,46 +13,63 @@ class ImageAttributesForm extends Component
 {
     public Image $image;
 
-    /** @var array<string,mixed> */
-    public array $values = [];
-
-    public array $groups = [];
+    /** @var array<int,array{key:string,value:mixed}> */
+    public array $entries = [];
 
     public function mount(Image $image): void
     {
         $this->authorize('manage-images');
         $this->image = $image;
 
-        // Preload existing attribute values
-        $this->values = Attributes::for($this->image)->all();
-
-        // Load active definitions grouped for display
-        $this->groups = AttributeDefinition::getGroupedAttributes()->map(function ($defs) {
-            return $defs->map(function ($def) {
+        // Preload from existing image_attributes rows
+        $this->entries = $this->image->attributes()
+            ->with('attributeDefinition')
+            ->get()
+            ->map(function ($attr) {
                 return [
-                    'key' => $def->key,
-                    'name' => $def->name,
-                    'data_type' => $def->data_type,
-                    'input_type' => $def->input_type,
-                    'group' => $def->group,
+                    'key' => $attr->attributeDefinition?->key ?? '',
+                    'value' => $attr->getTypedValue(),
                 ];
-            })->toArray();
-        })->toArray();
+            })
+            ->values()
+            ->toArray();
+
+        if (empty($this->entries)) {
+            $this->entries[] = ['key' => '', 'value' => null];
+        }
     }
 
     public function save(): void
     {
         $this->authorize('manage-images');
 
+        // Build map of key=>value from entries
+        $map = [];
+        foreach ($this->entries as $row) {
+            $key = trim((string)($row['key'] ?? ''));
+            if ($key === '') {
+                continue;
+            }
+            $map[$key] = $row['value'] ?? null;
+        }
+
+        if (empty($map)) {
+            $this->dispatch('notify', [
+                'type' => 'info',
+                'message' => 'No attributes to save.',
+            ]);
+            return;
+        }
+
         try {
-            $result = $this->image->bulkUpdateAttributes($this->values, [
+            $result = $this->image->bulkUpdateAttributes($map, [
                 'source' => 'ui:image-attributes-form',
             ]);
 
             if (!empty($result['errors'])) {
                 $this->dispatch('notify', [
                     'type' => 'error',
-                    'message' => 'Some attributes failed to save.',
+                    'message' => 'Some attributes failed to save. Ensure keys are defined.',
                 ]);
             } else {
                 $this->dispatch('notify', [
@@ -67,9 +84,19 @@ class ImageAttributesForm extends Component
         }
     }
 
+    public function addRow(): void
+    {
+        $this->entries[] = ['key' => '', 'value' => null];
+    }
+
+    public function removeRow(int $index): void
+    {
+        unset($this->entries[$index]);
+        $this->entries = array_values($this->entries);
+    }
+
     public function render()
     {
         return view('livewire.images.image-attributes-form');
     }
 }
-
