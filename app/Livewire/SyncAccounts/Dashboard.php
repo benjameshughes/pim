@@ -101,9 +101,9 @@ class Dashboard extends Component
 
         // 6) Basic sync status summary
         $statusSummary = [
-            'synced' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'synced')->count(),
-            'pending' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'pending')->count(),
-            'failed' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('sync_status', 'failed')->count(),
+            'synced' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('status', 'synced')->count(),
+            'pending' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('status', 'pending')->count(),
+            'failed' => DB::table('sync_statuses')->where('sync_account_id', $this->account->id)->where('status', 'failed')->count(),
         ];
 
         // 7) Shopify widget snapshot (rate limit) and link to webhooks
