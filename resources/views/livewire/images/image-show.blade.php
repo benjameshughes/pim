@@ -82,6 +82,7 @@
         $currentRoute = request()->route()->getName();
         $isEdit = str_contains($currentRoute, '.edit');
         $isAttachments = str_contains($currentRoute, '.attachments');
+        $isAttributes = str_contains($currentRoute, '.attributes');
         $isHistory = str_contains($currentRoute, '.history');
         $isOverview = str_contains($currentRoute, '.overview') || $currentRoute === 'images.show';
     @endphp
@@ -99,6 +100,11 @@
     @elseif($isHistory)
         {{-- 📜 HISTORY TAB CONTENT --}}
         <livewire:images.image-history :image="$image" />
+    @elseif($isAttributes)
+        {{-- 🏷️ ATTRIBUTES TAB CONTENT --}}
+        <div class="space-y-6">
+            <livewire:images.image-attributes-form :image="$image" />
+        </div>
     @else
         {{-- 👁️ OVERVIEW TAB CONTENT (DEFAULT) --}}
         <div class="space-y-6">

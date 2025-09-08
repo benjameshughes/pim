@@ -107,6 +107,10 @@ Route::middleware(['auth'])->group(function () {
             return view('images.show', compact('image'));
         })->name('images.show.attachments');
 
+        Route::get('images/{image}/attributes', function (App\Models\Image $image) {
+            return view('images.show', compact('image'));
+        })->name('images.show.attributes');
+
         Route::get('images/{image}/history', function (App\Models\Image $image) {
             return view('images.show', compact('image'));
         })->name('images.show.history');
