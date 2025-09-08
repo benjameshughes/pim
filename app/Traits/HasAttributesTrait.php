@@ -31,9 +31,15 @@ trait HasAttributesTrait
      */
     public function setTypedAttributeValue(string $key, $value, array $options = []): bool
     {
-        $attributeModel = $this instanceof \App\Models\Product ?
-            \App\Models\ProductAttribute::class :
-            \App\Models\VariantAttribute::class;
+        // Allow models to declare their attribute model explicitly
+        if (method_exists($this, 'getAttributeModelClass')) {
+            $attributeModel = $this->getAttributeModelClass();
+        } else {
+            // Fallback for existing Product and Variant behavior
+            $attributeModel = $this instanceof \App\Models\Product ?
+                \App\Models\ProductAttribute::class :
+                \App\Models\VariantAttribute::class;
+        }
 
         try {
             $relationKey = $this instanceof \App\Models\Product ? 'product_id' : 'variant_id';

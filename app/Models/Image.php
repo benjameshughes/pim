@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Traits\HasAttributesTrait;
 
 /**
  * 🔥✨ IMAGE MODEL - SIMPLE R2 STORAGE ✨🔥
@@ -16,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class Image extends Model
 {
-    use HasFactory;
+    use HasFactory, HasAttributesTrait;
 
     protected $fillable = [
         // Core file data
@@ -111,6 +113,30 @@ class Image extends Model
             ->withTimestamps()
             ->orderBy('image_color_group.sort_order')
             ->orderBy('images.created_at');
+    }
+
+    /**
+     * 🏷️ ATTRIBUTES - Image-level flexible attributes
+     */
+    public function attributes(): HasMany
+    {
+        return $this->hasMany(ImageAttribute::class);
+    }
+
+    /**
+     * ✅ VALID ATTRIBUTES
+     */
+    public function validAttributes(): HasMany
+    {
+        return $this->attributes()->valid();
+    }
+
+    /**
+     * Tell HasAttributesTrait which attribute model to use for this entity
+     */
+    public function getAttributeModelClass(): string
+    {
+        return ImageAttribute::class;
     }
 
     /**
