@@ -20,14 +20,17 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <flux:button wire:navigate href="{{ route('images.show.edit', $image) }}" variant="primary" icon="pencil">
-                Edit
-            </flux:button>
-            
             <flux:dropdown>
                 <flux:button variant="ghost" icon="ellipsis-horizontal" />
                 
                 <flux:menu>
+                    <flux:menu.item 
+                        @click="$dispatch('generate-variants', { imageId: {{ $originalImage->id ?? $image->id }} })"
+                        icon="sparkles"
+                    >
+                        Generate Variants
+                    </flux:menu.item>
+                    <flux:menu.separator />
                     <flux:menu.item wire:click="duplicateImage" icon="document-duplicate">
                         Duplicate Metadata
                     </flux:menu.item>
