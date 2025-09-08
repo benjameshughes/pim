@@ -142,7 +142,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // 🛍️ SHOPIFY SYNC
-    Route::middleware(['can:sync-to-marketplace','role:admin|manager'])->group(function () {
+    Route::middleware('can:sync-to-marketplace')->group(function () {
         Route::get('shopify', ShopifyDashboard::class)->name('shopify.sync');
         Route::get('shopify/webhooks', WebhookDashboard::class)->name('shopify.webhooks');
     });
@@ -172,13 +172,13 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // 🏷️ MARKETPLACE IDENTIFIERS & INTEGRATIONS
-    Route::middleware(['can:manage-marketplace-connections','role:admin|manager'])->group(function () {
+    Route::middleware('can:manage-marketplace-connections')->group(function () {
         // Legacy alias: point identifiers route to Sync Accounts Index
         Route::get('marketplace/identifiers', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('marketplace.identifiers');
     });
 
     // 🔗 SYNC ACCOUNTS MANAGEMENT
-    Route::middleware(['can:manage-marketplace-connections','role:admin|manager'])->group(function () {
+    Route::middleware('can:manage-marketplace-connections')->group(function () {
         Route::get('sync-accounts', \App\Livewire\SyncAccounts\SyncAccountsIndex::class)->name('sync-accounts.index');
         Route::get('sync-accounts/create', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.create');
         Route::get('sync-accounts/{accountId}/edit', \App\Livewire\SyncAccounts\Form::class)->name('sync-accounts.edit');

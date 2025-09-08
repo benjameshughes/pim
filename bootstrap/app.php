@@ -12,13 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Essential middleware aliases (Spatie roles/permissions + webhook)
-        $middleware->alias([
-            'role' => \Spatie\Permission\Middlewares\RoleMiddleware::class,
-            'permission' => \Spatie\Permission\Middlewares\PermissionMiddleware::class,
-            'role_or_permission' => \Spatie\Permission\Middlewares\RoleOrPermissionMiddleware::class,
-            'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
-        ]);
+        // TEMPORARILY DISABLED ALL MIDDLEWARE FOR PRODUCTION DEBUGGING
+        // $middleware->alias([
+        //     'shopify.webhook' => \App\Http\Middleware\ShopifyWebhookMiddleware::class,
+        // ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
