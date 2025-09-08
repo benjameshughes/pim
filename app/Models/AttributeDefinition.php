@@ -31,7 +31,6 @@ class AttributeDefinition extends Model
         'inheritance_strategy',
         'is_required_for_products',
         'is_required_for_variants',
-        'is_applicable_for_images',
         'is_unique_per_product',
         'is_system_attribute',
         'marketplace_mappings',
@@ -56,7 +55,6 @@ class AttributeDefinition extends Model
         'is_inheritable' => 'boolean',
         'is_required_for_products' => 'boolean',
         'is_required_for_variants' => 'boolean',
-        'is_applicable_for_images' => 'boolean',
         'is_unique_per_product' => 'boolean',
         'is_system_attribute' => 'boolean',
         'sync_to_shopify' => 'boolean',
@@ -94,13 +92,6 @@ class AttributeDefinition extends Model
         return $query->where('is_system_attribute', false);
     }
 
-    /**
-     * Only attributes marked applicable to images
-     */
-    public function scopeForImages(Builder $query): Builder
-    {
-        return $query->where('is_applicable_for_images', true);
-    }
 
     public function scopeOrderedForDisplay(Builder $query): Builder
     {
