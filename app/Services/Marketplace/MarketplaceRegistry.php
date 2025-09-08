@@ -91,6 +91,44 @@ class MarketplaceRegistry
     }
 
     /**
+     * 🧩 GET CREDENTIAL FIELD META (labels/types)
+     * Returns a map of field => [label, type]
+     */
+    public function getCredentialFieldMeta(string $type): array
+    {
+        $type = strtolower($type);
+
+        $meta = [
+            'shopify' => [
+                'store_url' => ['label' => 'Store URL', 'type' => 'url'],
+                'access_token' => ['label' => 'Access Token', 'type' => 'password'],
+                'api_version' => ['label' => 'API Version', 'type' => 'text'],
+            ],
+            'ebay' => [
+                'environment' => ['label' => 'Environment', 'type' => 'text'],
+                'client_id' => ['label' => 'Client ID', 'type' => 'text'],
+                'client_secret' => ['label' => 'Client Secret', 'type' => 'password'],
+                'dev_id' => ['label' => 'Developer ID', 'type' => 'text'],
+                'redirect_uri' => ['label' => 'Redirect URI', 'type' => 'url'],
+            ],
+            'amazon' => [
+                'seller_id' => ['label' => 'Seller ID', 'type' => 'text'],
+                'marketplace_id' => ['label' => 'Marketplace ID', 'type' => 'text'],
+                'access_key' => ['label' => 'Access Key', 'type' => 'text'],
+                'secret_key' => ['label' => 'Secret Key', 'type' => 'password'],
+                'region' => ['label' => 'Region', 'type' => 'text'],
+            ],
+            'mirakl' => [
+                'base_url' => ['label' => 'Base URL', 'type' => 'url'],
+                'api_key' => ['label' => 'API Key', 'type' => 'password'],
+                'shop_id' => ['label' => 'Shop ID', 'type' => 'text'],
+            ],
+        ];
+
+        return $meta[$type] ?? [];
+    }
+
+    /**
      * 🏗️ BUILD MARKETPLACE TEMPLATES
      */
     private function buildMarketplaceTemplates(): Collection

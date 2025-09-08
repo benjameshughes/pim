@@ -59,13 +59,13 @@ class SalesChannel extends Model
      */
     public function getIconNameAttribute(): string
     {
-        return $this->icon ?: match ($this->name) {
+        return $this->icon ?: match (strtolower($this->name)) {
             'shopify' => 'shopping-bag',
-            'ebay' => 'building-storefront',
+            'ebay' => 'store',
             'amazon' => 'shopping-cart',
             'direct' => 'home',
-            'wholesale' => 'building-office',
-            default => 'globe-alt'
+            'wholesale' => 'building-2',
+            default => 'globe'
         };
     }
 

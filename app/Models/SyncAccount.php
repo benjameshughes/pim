@@ -23,6 +23,8 @@ class SyncAccount extends Model
     protected $fillable = [
         'name',
         'channel',
+        'platform',
+        'channel_code',
         'display_name',
         'is_active',
         'credentials',
@@ -32,6 +34,9 @@ class SyncAccount extends Model
         'marketplace_template',
         'last_connection_test',
         'connection_test_result',
+        'external_shop_id',
+        'external_shop_name',
+        'health_status',
     ];
 
     protected $casts = [
@@ -44,6 +49,19 @@ class SyncAccount extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * UI helpers
+     */
+    public function getMarketplaceAttribute(): string
+    {
+        return ucfirst($this->platform ?: $this->channel);
+    }
+
+    public function getAccountLabelAttribute(): string
+    {
+        return $this->display_name ?: $this->name;
+    }
 
     // ---- Lightweight helpers backed by JSON `settings` attribute ----
 

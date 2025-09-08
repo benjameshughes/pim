@@ -258,7 +258,7 @@
     @elseif (!empty($marketplaces))
         {{-- No Marketplace Selected --}}
         <div class="text-center py-8">
-            <flux:icon name="building-storefront" class="mx-auto h-8 w-8 text-gray-400 mb-2" />
+            <flux:icon name="store" class="mx-auto h-8 w-8 text-gray-400 mb-2" />
             <p class="text-sm text-gray-500 dark:text-gray-400">Select a marketplace to manage attributes</p>
         </div>
     @else

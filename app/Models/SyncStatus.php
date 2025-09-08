@@ -48,6 +48,19 @@ class SyncStatus extends Model
     ];
 
     /**
+     * Backward-compatible attribute alias for code referencing `sync_status` while DB column is `status`.
+     */
+    public function getSyncStatusAttribute(): ?string
+    {
+        return $this->attributes['status'] ?? null;
+    }
+
+    public function setSyncStatusAttribute($value): void
+    {
+        $this->attributes['status'] = $value;
+    }
+
+    /**
      * 📦 PRODUCT RELATIONSHIP
      */
     public function product(): BelongsTo
@@ -84,27 +97,27 @@ class SyncStatus extends Model
      */
     public function isSynced(): bool
     {
-        return $this->sync_status === 'synced';
+        return $this->status === 'synced';
     }
 
     public function isPending(): bool
     {
-        return $this->sync_status === 'pending';
+        return $this->status === 'pending';
     }
 
     public function hasFailed(): bool
     {
-        return $this->sync_status === 'failed';
+        return $this->status === 'failed';
     }
 
     public function isOutOfSync(): bool
     {
-        return $this->sync_status === 'out_of_sync';
+        return $this->status === 'out_of_sync';
     }
 
     public function needsSync(): bool
     {
-        return in_array($this->sync_status, ['pending', 'out_of_sync', 'failed']);
+        return in_array($this->status, ['pending', 'out_of_sync', 'failed']);
     }
 
     /**
@@ -112,17 +125,17 @@ class SyncStatus extends Model
      */
     public function scopeSynced($query)
     {
-        return $query->where('sync_status', 'synced');
+        return $query->where('status', 'synced');
     }
 
     public function scopePending($query)
     {
-        return $query->where('sync_status', 'pending');
+        return $query->where('status', 'pending');
     }
 
     public function scopeFailed($query)
     {
-        return $query->where('sync_status', 'failed');
+        return $query->where('status', 'failed');
     }
 
     public function scopeOutOfSync($query)
@@ -189,13 +202,14 @@ class SyncStatus extends Model
         ?array $metadata = null
     ): void {
         $this->update([
-            'sync_status' => 'synced',
+            'status' => 'synced',
             'last_synced_at' => now(),
-            'error_message' => null,
-            'external_product_id' => $externalProductId ?: $this->external_product_id,
-            'external_variant_id' => $externalVariantId ?: $this->external_variant_id,
-            'external_handle' => $externalHandle ?: $this->external_handle,
-            'metadata' => $metadata ? array_merge($this->metadata ?? [], $metadata) : $this->metadata,
+            'last_error' => null,
+            // Keep external IDs if your schema supports them; otherwise, skip
+            // 'external_product_id' => $externalProductId ?: $this->external_product_id,
+            // 'external_variant_id' => $externalVariantId ?: $this->external_variant_id,
+            // 'external_handle' => $externalHandle ?: $this->external_handle,
+            // 'metadata' => $metadata ? array_merge($this->metadata ?? [], $metadata) : $this->metadata,
         ]);
     }
 
@@ -205,8 +219,8 @@ class SyncStatus extends Model
     public function markAsFailed(string $errorMessage): void
     {
         $this->update([
-            'sync_status' => 'failed',
-            'error_message' => $errorMessage,
+            'status' => 'failed',
+            'last_error' => $errorMessage,
         ]);
     }
 
@@ -216,8 +230,8 @@ class SyncStatus extends Model
     public function markAsPending(): void
     {
         $this->update([
-            'sync_status' => 'pending',
-            'error_message' => null,
+            'status' => 'pending',
+            'last_error' => null,
         ]);
     }
 
@@ -227,8 +241,8 @@ class SyncStatus extends Model
     public function markAsOutOfSync(?string $reason = null): void
     {
         $this->update([
-            'sync_status' => 'out_of_sync',
-            'error_message' => $reason,
+            'status' => 'out_of_sync',
+            'last_error' => $reason,
         ]);
     }
 
@@ -273,7 +287,7 @@ class SyncStatus extends Model
      */
     public function getStatusBadgeClassAttribute(): string
     {
-        return match ($this->sync_status) {
+        return match ($this->status) {
             'synced' => 'bg-green-100 text-green-800',
             'pending' => 'bg-yellow-100 text-yellow-800',
             'failed' => 'bg-red-100 text-red-800',

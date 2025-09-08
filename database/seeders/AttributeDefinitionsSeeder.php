@@ -42,7 +42,7 @@ class AttributeDefinitionsSeeder extends Seeder
             ],
             'group' => 'basic',
             'sort_order' => 1,
-            'icon' => 'building-storefront',
+            'icon' => 'store',
         ]);
 
         AttributeDefinition::create([
@@ -278,7 +278,7 @@ class AttributeDefinitionsSeeder extends Seeder
             'input_type' => 'select',
             'group' => 'basic',
             'sort_order' => 55,
-            'icon' => 'globe-alt',
+            'icon' => 'globe',
         ]);
 
         // Variant-specific attributes

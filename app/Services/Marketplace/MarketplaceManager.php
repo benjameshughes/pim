@@ -23,7 +23,11 @@ class MarketplaceManager
     protected array $adapters = [
         'shopify' => ShopifyAdapter::class,
         'ebay' => EbayAdapter::class,
+        // Mirakl-backed operators (generic adapter)
+        'mirakl' => \App\Services\Marketplace\Adapters\MiraklAdapter::class,
         'freemans' => FreemansAdapter::class,
+        'debenhams' => \App\Services\Marketplace\Adapters\DebenhamsAdapter::class,
+        'bq' => \App\Services\Marketplace\Adapters\BqAdapter::class,
     ];
 
     /**

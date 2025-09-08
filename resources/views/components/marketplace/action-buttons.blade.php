@@ -100,4 +100,13 @@
             <flux:icon name="external-link" class="w-3 h-3" />
         </flux:button>
     @endif
+
+    {{-- Manage Account --}}
+    <flux:button 
+        size="sm" 
+        variant="ghost"
+        href="{{ route('sync-accounts.edit', ['accountId' => $item->account->id]) }}">
+        <flux:icon name="settings" class="w-3 h-3" />
+        Manage Account
+    </flux:button>
 </div>

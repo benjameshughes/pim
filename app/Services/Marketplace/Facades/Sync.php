@@ -52,6 +52,21 @@ class Sync extends Facade
         return static::marketplace('freemans', $account);
     }
 
+    public static function debenhams(?string $account = null)
+    {
+        return static::marketplace('debenhams', $account);
+    }
+
+    public static function bq(?string $account = null)
+    {
+        return static::marketplace('bq', $account);
+    }
+
+    public static function mirakl(?string $account = null)
+    {
+        return static::marketplace('mirakl', $account);
+    }
+
     /**
      * Get the registered name of the component
      */

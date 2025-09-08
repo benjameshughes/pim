@@ -57,7 +57,7 @@ class SalesChannelSeeder extends Seeder
                 'status' => 'active',
                 'config' => [
                     'display_name' => 'eBay',
-                    'icon' => 'building-storefront',
+                    'icon' => 'store',
                     'color' => '#E53E3E',
                     'default_markup_percentage' => 15.0,
                     'platform_fee_percentage' => 10.0,

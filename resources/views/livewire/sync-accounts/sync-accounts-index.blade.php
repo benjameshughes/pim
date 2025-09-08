@@ -7,7 +7,7 @@
                 <p class="mt-2 text-gray-600">Manage your marketplace and sales channel integrations</p>
             </div>
             
-            <a href="{{ route('marketplace.add-integration') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <a href="{{ route('sync-accounts.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <flux:icon name="plus" class="w-5 h-5 mr-2" />
                 Add Integration
             </a>
@@ -52,10 +52,7 @@
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Account
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Channel
+                                Account – Marketplace
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
@@ -77,13 +74,18 @@
                                 <td class="px-6 py-4">
                                     <div class="flex items-center">
                                         <div class="flex-shrink-0 w-10 h-10">
-                                            @if($syncAccount->channel === 'shopify')
+                                            @php($ch = strtolower($syncAccount->platform ?: $syncAccount->channel))
+                                            @if($ch === 'shopify')
                                                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                                    <flux:icon name="storefront" class="w-6 h-6 text-green-600" />
+                                                    <flux:icon name="shopping-bag" class="w-6 h-6 text-green-600" />
                                                 </div>
-                                            @elseif($syncAccount->channel === 'ebay')
+                                            @elseif($ch === 'ebay')
                                                 <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
                                                     <flux:icon name="tag" class="w-6 h-6 text-yellow-600" />
+                                                </div>
+                                            @elseif($ch === 'mirakl')
+                                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                    <flux:icon name="globe" class="w-6 h-6 text-purple-600" />
                                                 </div>
                                             @else
                                                 <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -92,23 +94,10 @@
                                             @endif
                                         </div>
                                         <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                {{ $syncAccount->display_name }}
-                                            </div>
-                                            <div class="text-sm text-gray-500">
-                                                {{ $syncAccount->marketplace_subtype }}
-                                            </div>
+                                            <div class="text-sm font-medium text-gray-900">{{ $syncAccount->account_label }} – {{ $syncAccount->marketplace }}</div>
+                                            <div class="text-xs text-gray-500">{{ $syncAccount->channel_code ?: $syncAccount->channel }}</div>
                                         </div>
                                     </div>
-                                </td>
-                                
-                                <td class="px-6 py-4">
-                                    <flux:badge 
-                                        color="{{ $syncAccount->channel === 'shopify' ? 'green' : ($syncAccount->channel === 'ebay' ? 'yellow' : 'gray') }}"
-                                        size="sm"
-                                    >
-                                        {{ ucfirst($syncAccount->channel) }}
-                                    </flux:badge>
                                 </td>
                                 
                                 <td class="px-6 py-4">
@@ -142,12 +131,11 @@
                                 <td class="px-6 py-4 text-right">
                                     <div class="flex items-center justify-end space-x-2">
                                         <!-- View/Edit -->
-                                        <a 
-                                            href="{{ route('sync-accounts.show', $syncAccount) }}"
-                                            class="text-blue-600 hover:text-blue-900"
-                                            title="View Details"
-                                        >
-                                            <flux:icon name="eye" class="w-4 h-4" />
+                                        <a href="{{ route('sync-accounts.dashboard', ['accountId' => $syncAccount->id]) }}" class="text-indigo-600 hover:text-indigo-900" title="Dashboard">
+                                            <flux:icon name="panel-left" class="w-4 h-4" />
+                                        </a>
+                                        <a href="{{ route('sync-accounts.edit', ['accountId' => $syncAccount->id]) }}" class="text-blue-600 hover:text-blue-900" title="Edit">
+                                            <flux:icon name="pencil" class="w-4 h-4" />
                                         </a>
                                         
                                         <!-- Toggle Active Status -->
@@ -159,6 +147,15 @@
                                             <flux:icon name="{{ $syncAccount->is_active ? 'pause' : 'play' }}" class="w-4 h-4" />
                                         </button>
                                         
+                                        <!-- Test Connection -->
+                                        <button 
+                                            wire:click="testConnection({{ $syncAccount->id }})"
+                                            class="text-indigo-600 hover:text-indigo-900"
+                                            title="Test Connection"
+                                        >
+                                            <flux:icon name="activity" class="w-4 h-4" />
+                                        </button>
+
                                         <!-- Delete -->
                                         <button 
                                             wire:click="delete({{ $syncAccount->id }})"
@@ -188,7 +185,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-2">No sync accounts found</h3>
                 <p class="text-gray-600 mb-6">Get started by connecting your first marketplace or sales channel.</p>
                 <a 
-                    href="{{ route('marketplace.add-integration') }}"
+                    href="{{ route('sync-accounts.create') }}"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <flux:icon name="plus" class="w-5 h-5 mr-2" />
@@ -198,3 +195,43 @@
         @endif
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            if (window.Echo) {
+                const channel = 'sync-accounts';
+                if (!window.__sync_accounts_listener__) {
+                    window.__sync_accounts_listener__ = true;
+                    window.Echo.channel(channel)
+                        .listen('.SyncAccountCreated', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'success', message: 'Sync account created' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountUpdated', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'info', message: 'Sync account updated' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountDeleted', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                window.Livewire.dispatch('toast', { type: 'info', message: 'Sync account deleted' });
+                                window.Livewire.dispatch('$refresh');
+                            }
+                        })
+                        .listen('.SyncAccountTested', (e) => {
+                            if (window.Livewire?.dispatch) {
+                                const msg = e.success ? 'Connection OK' : 'Connection failed';
+                                window.Livewire.dispatch('toast', { type: e.success ? 'success' : 'error', message: msg });
+                            }
+                        });
+                }
+            }
+        } catch (err) {
+            console.warn('Echo not available for sync-accounts:', err);
+        }
+    });
+</script>

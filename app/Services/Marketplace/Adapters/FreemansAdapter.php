@@ -2,66 +2,30 @@
 
 namespace App\Services\Marketplace\Adapters;
 
-use App\Services\Marketplace\ValueObjects\MarketplaceProduct;
-use App\Services\Marketplace\ValueObjects\SyncResult;
-
 /**
  * 📄 FREEMANS MARKETPLACE ADAPTER
  *
- * Handles Freemans-specific product transformations and CSV operations.
- * Freemans requires CSV generation and file upload.
+ * Thin wrapper over BaseMiraklAdapter providing operator-specific hooks.
  */
-class FreemansAdapter extends AbstractAdapter
+class FreemansAdapter extends BaseMiraklAdapter
 {
-    /**
-     * Get the marketplace name
-     */
     protected function getMarketplaceName(): string
     {
         return 'freemans';
     }
 
-    /**
-     * Create Freemans-specific CSV data
-     *
-     * Freemans' behavior: Generate CSV row for each product
-     */
-    public function create(int $productId): MarketplaceProduct
+    protected function getOperatorCode(): string
     {
-        $product = $this->loadProduct($productId);
-
-        // TODO: Implement Freemans transformation actions
-        // - GenerateFreemansCSVAction
-        // - Create CSV row with all required fields
-
-        $marketplaceProduct = new MarketplaceProduct(
-            data: [], // TODO: CSV row data
-            metadata: [
-                'original_product_id' => $product->id,
-                'transformation_type' => 'csv_row',
-            ]
-        );
-
-        $this->setMarketplaceProduct($marketplaceProduct);
-
-        return $marketplaceProduct;
+        return 'freemans';
     }
 
-    /**
-     * Upload CSV to Freemans
-     */
-    public function push(): SyncResult
+    protected function getDefaultLogisticClass(): string
     {
-        // TODO: Implement Freemans CSV upload logic
-        return SyncResult::failure('Freemans integration not yet implemented');
+        return (string) $this->fromAccount('logistic_class', 'DL');
     }
 
-    /**
-     * Test Freemans connection (if applicable)
-     */
-    public function testConnection(): SyncResult
+    protected function getDefaultLeadtime(): int
     {
-        // TODO: Implement Freemans connection test
-        return SyncResult::failure('Freemans connection test not yet implemented');
+        return (int) $this->fromAccount('leadtime_to_ship', 2);
     }
 }

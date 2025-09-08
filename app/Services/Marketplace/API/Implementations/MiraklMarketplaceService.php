@@ -95,10 +95,18 @@ class MiraklMarketplaceService extends AbstractMarketplaceService
     {
         $config = parent::buildConfigFromAccount($account);
 
+        // Map base_url -> api_url if needed
+        $apiUrl = $config['api_url'] ?? $config['base_url'] ?? '';
+
+        // Resolve operator: prefer subtype, else channel alias, else 'mirakl'
+        $resolvedOperator = $config['operator']
+            ?? ($account->marketplace_subtype
+                ?: (in_array($account->channel, ['freemans', 'debenhams', 'bq']) ? $account->channel : 'mirakl'));
+
         $this->miraklConfig = [
-            'api_url' => $config['api_url'] ?? '',
+            'api_url' => $apiUrl,
             'api_key' => $config['api_key'] ?? '',
-            'operator' => $config['operator'] ?? 'bq',
+            'operator' => $resolvedOperator,
             'shop_id' => $config['shop_id'] ?? '',
             'currency' => $config['currency'] ?? 'GBP',
             'locale' => $config['locale'] ?? 'en_GB',
@@ -868,6 +876,213 @@ class MiraklMarketplaceService extends AbstractMarketplaceService
         });
     }
 
+    // ===== InventoryOperationsInterface stubs =====
+
+    public function bulkUpdateInventory(array $inventoryUpdates): array
+    {
+        return ['success' => false, 'message' => 'bulkUpdateInventory not implemented'];
+    }
+
+    public function getInventoryByLocation(string $locationId): \Illuminate\Support\Collection
+    {
+        return collect([]);
+    }
+
+    public function getLowStockProducts(int $threshold = 5): \Illuminate\Support\Collection
+    {
+        return collect([]);
+    }
+
+    public function getInventoryHistory(string $productId, int $days = 30): array
+    {
+        return ['success' => false, 'history' => []];
+    }
+
+    public function syncInventoryToMarketplace(\Illuminate\Support\Collection $localInventory): array
+    {
+        return ['success' => false, 'message' => 'syncInventoryToMarketplace not implemented'];
+    }
+
+    public function pullInventoryFromMarketplace(): array
+    {
+        return ['success' => false, 'message' => 'pullInventoryFromMarketplace not implemented'];
+    }
+
+    public function getLocations(): array
+    {
+        return [];
+    }
+
+    public function reserveInventory(string $productId, int $quantity): array
+    {
+        return ['success' => false, 'message' => 'reserveInventory not implemented'];
+    }
+
+    public function releaseReservedInventory(string $productId, int $quantity): array
+    {
+        return ['success' => false, 'message' => 'releaseReservedInventory not implemented'];
+    }
+
+    public function validateInventoryData(array $inventoryData): array
+    {
+        return ['valid' => true, 'errors' => []];
+    }
+
+    public function getAdjustmentReasons(): array
+    {
+        return [];
+    }
+
+    // ===== ProductOperationsInterface stubs =====
+
+    public function bulkCreateProducts(array $products): array
+    {
+        return ['success' => false, 'message' => 'bulkCreateProducts not implemented'];
+    }
+
+    public function bulkUpdateProducts(array $products): array
+    {
+        return ['success' => false, 'message' => 'bulkUpdateProducts not implemented'];
+    }
+
+    public function syncProducts(\Illuminate\Support\Collection $localProducts): array
+    {
+        return ['success' => false, 'message' => 'syncProducts not implemented'];
+    }
+
+    public function getCategories(): array
+    {
+        return [];
+    }
+
+    public function uploadProductImages(string $productId, array $images): array
+    {
+        return ['success' => false, 'message' => 'uploadProductImages not implemented'];
+    }
+
+    public function updatePricing(string $productId, array $pricingData): array
+    {
+        return ['success' => false, 'message' => 'updatePricing not implemented'];
+    }
+
+    public function getProductVariants(string $productId): array
+    {
+        return [];
+    }
+
+    public function validateProductData(array $productData): array
+    {
+        return ['valid' => true, 'errors' => []];
+    }
+
+    // ===== OrderOperationsInterface stubs =====
+
+    public function getOrdersSince(\Carbon\Carbon $since): \Illuminate\Support\Collection
+    {
+        return collect([]);
+    }
+
+    public function addTrackingToOrder(string $orderId, array $trackingData): array
+    {
+        return ['success' => false, 'message' => 'addTrackingToOrder not implemented'];
+    }
+
+    public function cancelOrder(string $orderId, string $reason = ''): array
+    {
+        return ['success' => false, 'message' => 'cancelOrder not implemented'];
+    }
+
+    public function refundOrder(string $orderId, array $refundData): array
+    {
+        return ['success' => false, 'message' => 'refundOrder not implemented'];
+    }
+
+    public function getOrderStatistics(array $filters = []): array
+    {
+        return [];
+    }
+
+    public function syncOrdersToLocal(?\Carbon\Carbon $since = null): array
+    {
+        return ['success' => false, 'message' => 'syncOrdersToLocal not implemented'];
+    }
+
+    public function getOrderInvoice(string $orderId): array
+    {
+        return ['success' => false, 'message' => 'getOrderInvoice not implemented'];
+    }
+
+    public function getOrderStatuses(): array
+    {
+        return [];
+    }
+
+    public function getShippingMethods(): array
+    {
+        return [];
+    }
+
+    // =================================
+    // CSV IMPORT STUBS (SCaffolded)
+    // =================================
+
+    /**
+     * 📥 Import products via CSV (stub)
+     *
+     * TODO: Implement POST /api/products/imports with multipart upload and return import id
+     */
+    public function importProductsCsv(string $csvPath): array
+    {
+        Log::info('📝 [STUB] Import products CSV requested', [
+            'operator' => $this->miraklConfig['operator'] ?? 'unknown',
+            'csv_path' => $csvPath,
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'CSV products import not implemented yet',
+            'import_id' => null,
+        ];
+    }
+
+    /**
+     * 📥 Import offers via CSV (stub)
+     *
+     * TODO: Implement POST /api/offers/imports with multipart upload and return import id
+     */
+    public function importOffersCsv(string $csvPath): array
+    {
+        Log::info('📝 [STUB] Import offers CSV requested', [
+            'operator' => $this->miraklConfig['operator'] ?? 'unknown',
+            'csv_path' => $csvPath,
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'CSV offers import not implemented yet',
+            'import_id' => null,
+        ];
+    }
+
+    /**
+     * 🔍 Get import status (stub)
+     *
+     * TODO: Implement GET /api/products/imports/{id} and offers equivalent for polling
+     */
+    public function getImportStatus(string $importId): array
+    {
+        Log::info('📝 [STUB] Get import status requested', [
+            'operator' => $this->miraklConfig['operator'] ?? 'unknown',
+            'import_id' => $importId,
+        ]);
+
+        return [
+            'success' => false,
+            'message' => 'CSV import status not implemented yet',
+            'status' => 'unknown',
+        ];
+    }
+
     // =================================
     // HELPER METHODS
     // =================================
@@ -1016,7 +1231,8 @@ class MiraklMarketplaceService extends AbstractMarketplaceService
     {
         return [
             'product_id' => $miraklOffer['product_id'] ?? '',
-            'sku' => $miraklOffer['product_id'] ?? '',
+            // Prefer shop_sku if provided; fall back to product_id
+            'sku' => $miraklOffer['shop_sku'] ?? $miraklOffer['product_id'] ?? '',
             'quantity' => $miraklOffer['quantity'] ?? 0,
             'price' => $miraklOffer['price'] ?? '0.00',
             'currency' => $miraklOffer['currency_iso_code'] ?? $this->miraklConfig['currency'],
