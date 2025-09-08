@@ -52,62 +52,7 @@ return new class extends Migration
             try { Schema::table('sync_accounts', fn (Blueprint $t) => $t->index('channel_code')); } catch (\Throwable $e) {}
             try { Schema::table('sync_accounts', fn (Blueprint $t) => $t->index('is_active')); } catch (\Throwable $e) {}
         }
-
-        // Backfill existing rows
-        DB::table('sync_accounts')->orderBy('id')->chunkById(200, function ($rows) {
-            foreach ($rows as $row) {
-                $channel = strtolower($row->channel ?? '');
-                $platform = $row->platform;
-                $channelCode = $row->channel_code;
-
-                // Decode JSON settings/credentials if needed
-                $settings = json_decode($row->settings ?? '[]', true) ?: [];
-                $credentials = [];
-                try {
-                    if (! empty($row->credentials)) {
-                        $dec = decrypt($row->credentials);
-                        $tmp = json_decode($dec, true);
-                        if (is_array($tmp)) {
-                            $credentials = $tmp;
-                        }
-                    }
-                } catch (\Throwable $e) {
-                    // Ignore decryption errors during migration backfill
-                    $credentials = [];
-                }
-
-                // Determine platform
-                if (empty($platform)) {
-                    if (in_array($channel, ['freemans', 'debenhams', 'bq'])) {
-                        $platform = 'mirakl';
-                    } else {
-                        $platform = isset($row->marketplace_type) && $row->marketplace_type
-                            ? $row->marketplace_type
-                            : $channel;
-                    }
-                }
-
-                // Determine channel code
-                if (empty($channelCode)) {
-                    $channelCode = (isset($row->marketplace_subtype) && $row->marketplace_subtype)
-                        ? $row->marketplace_subtype
-                        : $channel;
-                }
-
-                $externalShopId = $settings['auto_fetched_data']['shop_id']
-                    ?? ($credentials['shop_id'] ?? null);
-                $externalShopName = $settings['auto_fetched_data']['shop_name'] ?? null;
-                $health = $settings['health']['current']['status'] ?? null;
-
-                DB::table('sync_accounts')->where('id', $row->id)->update([
-                    'platform' => $platform,
-                    'channel_code' => $channelCode,
-                    'external_shop_id' => $externalShopId,
-                    'external_shop_name' => $externalShopName,
-                    'health_status' => $health,
-                ]);
-            }
-        });
+        // Backfill removed as requested. Existing records will be handled via UI edits or separate commands.
     }
 
     public function down(): void
