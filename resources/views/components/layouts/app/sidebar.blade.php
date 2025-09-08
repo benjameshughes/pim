@@ -79,7 +79,8 @@
                 @endcan
 
                 {{-- 🛍️ SALES CHANNELS --}}
-                @if(auth()->user()->can('sync-to-marketplace') || auth()->user()->can('manage-marketplace-connections'))
+                @php($__user = auth()->user())
+                @if((($__user->hasRole('admin') || $__user->hasRole('manager'))))
                     <flux:navlist.group expandable heading="Sales Channels">
                         @can('sync-to-marketplace')
                             <flux:navlist.item 
@@ -98,16 +99,16 @@
                                 Marketplace
                             </flux:navlist.item>
 
-                            {{-- Dynamic Accounts: "Account Name - Marketplace" --}}
+                            {{-- Dynamic Accounts: "Account Name – Marketplace" --}}
                             @php($__accounts = \App\Models\SyncAccount::active()->orderBy('channel')->orderBy('display_name')->get())
                             @if($__accounts->count() > 0)
                                 <flux:navlist.group expandable heading="Accounts" :expanded="false">
                                     @foreach($__accounts as $__acc)
                                         <flux:navlist.item 
                                             icon="link" 
-                                            href="{{ route('sync-accounts.edit', ['accountId' => $__acc->id]) }}"
+                                            href="{{ route('sync-accounts.dashboard', ['accountId' => $__acc->id]) }}"
                                         >
-                                            {{ ($__acc->display_name ?: $__acc->name) }} - {{ ucfirst($__acc->channel) }}
+                                            {{ ($__acc->display_name ?: $__acc->name) }} – {{ ucfirst($__acc->channel) }}
                                         </flux:navlist.item>
                                     @endforeach
                                 </flux:navlist.group>
