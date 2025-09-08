@@ -46,16 +46,42 @@
         </h3>
         
         <flux:field>
-            <flux:label>Folder</flux:label>
-            @if(count($this->folders) > 0)
-                <flux:select wire:model="folder">
-                    <flux:select.option value="uncategorized">Uncategorized</flux:select.option>
-                    @foreach($this->folders as $folderOption)
-                        <flux:select.option value="{{ $folderOption }}">{{ ucfirst($folderOption) }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+            <div class="flex items-center justify-between">
+                <flux:label>Folder</flux:label>
+                @if(!$creatingNewFolder)
+                    <flux:button size="xs" variant="outline" icon="plus" wire:click="startCreateFolder">
+                        New Folder
+                    </flux:button>
+                @endif
+            </div>
+
+            @if($creatingNewFolder)
+                <div class="flex items-center gap-2 mt-2">
+                    <flux:input 
+                        wire:model.live="newFolderName" 
+                        placeholder="e.g., product, lifestyle, hero"
+                        class="flex-1"
+                    />
+                    <flux:button size="sm" variant="primary" wire:click="confirmCreateFolder" icon="check">
+                        Add
+                    </flux:button>
+                    <flux:button size="sm" variant="ghost" wire:click="cancelCreateFolder">
+                        Cancel
+                    </flux:button>
+                </div>
+                <flux:error name="newFolderName" />
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Only letters, numbers, hyphens, and underscores allowed.</p>
             @else
-                <flux:input wire:model="folder" placeholder="Enter folder name" />
+                @if(count($this->folders) > 0)
+                    <flux:select wire:model="folder" class="mt-2">
+                        <flux:select.option value="uncategorized">Uncategorized</flux:select.option>
+                        @foreach($this->folders as $folderOption)
+                            <flux:select.option value="{{ $folderOption }}">{{ ucfirst($folderOption) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @else
+                    <flux:input wire:model="folder" placeholder="Enter folder name" />
+                @endif
             @endif
             <flux:error name="folder" />
             <flux:description>Organize images into folders for easier management</flux:description>

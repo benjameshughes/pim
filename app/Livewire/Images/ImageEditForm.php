@@ -34,6 +34,8 @@ class ImageEditForm extends Component
 
     // UI state
     public bool $isSaving = false;
+    public bool $creatingNewFolder = false;
+    public string $newFolderName = '';
 
     /**
      * 🎪 MOUNT - Initialize with image data
@@ -195,11 +197,22 @@ class ImageEditForm extends Component
      */
     public function getFoldersProperty(): array
     {
-        return Image::query()
+        $modelFolders = Image::query()
             ->select('folder')
             ->distinct()
             ->whereNotNull('folder')
-            ->pluck('folder')
+            ->pluck('folder');
+
+        $attrFolders = \App\Models\ImageAttribute::query()
+            ->whereHas('attributeDefinition', fn ($q) => $q->where('key', 'folder'))
+            ->whereNotNull('value')
+            ->pluck('value');
+
+        return $modelFolders->merge($attrFolders)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
             ->toArray();
     }
 
@@ -209,5 +222,44 @@ class ImageEditForm extends Component
     public function render(): View
     {
         return view('livewire.images.image-edit-form');
+    }
+
+    /**
+     * ▶️ Start new folder entry
+     */
+    public function startCreateFolder(): void
+    {
+        $this->creatingNewFolder = true;
+        $this->newFolderName = '';
+    }
+
+    /**
+     * ❌ Cancel new folder entry
+     */
+    public function cancelCreateFolder(): void
+    {
+        $this->creatingNewFolder = false;
+        $this->newFolderName = '';
+    }
+
+    /**
+     * ✅ Confirm new folder and set on form
+     */
+    public function confirmCreateFolder(): void
+    {
+        $this->validate([
+            'newFolderName' => ['required','string','max:100','regex:/^[A-Za-z0-9_-]+$/'],
+        ], [
+            'newFolderName.regex' => 'Only letters, numbers, hyphens, and underscores allowed.',
+        ]);
+
+        $this->folder = $this->newFolderName;
+        $this->creatingNewFolder = false;
+        $this->newFolderName = '';
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'message' => 'New folder set. Save to persist.',
+        ]);
     }
 }
