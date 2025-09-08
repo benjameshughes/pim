@@ -152,26 +152,7 @@
 
     {{-- Actions --}}
     <div class="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center gap-3">
-            <flux:button 
-                type="button"
-                wire:click="resetForm" 
-                variant="ghost"
-                :disabled="$isSaving"
-            >
-                Reset Form
-            </flux:button>
-            
-            <flux:button 
-                type="button"
-                wire:click="reprocessImage" 
-                variant="outline"
-                icon="sparkles"
-                :disabled="$isSaving"
-            >
-                Reprocess & Generate Variants
-            </flux:button>
-        </div>
+        <div class="flex items-center gap-3"></div>
         
         <div class="flex items-center gap-3">
             <flux:button 

@@ -9,6 +9,7 @@ use App\Models\Image;
 use App\Services\Attributes\Facades\Attributes;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -384,5 +385,24 @@ class ImageEditForm extends Component
             'type' => 'success',
             'message' => 'New folder set. Save to persist.',
         ]);
+    }
+
+    /**
+     * Handle Reset from header menu
+     */
+    #[On('reset-image-edit-form')]
+    public function handleResetImageEditForm(): void
+    {
+        $this->resetForm();
+    }
+
+    /**
+     * Handle Reprocess & Generate Variants from header menu
+     */
+    #[On('reprocess-image')]
+    public function handleReprocessImage(): void
+    {
+        $action = app(ReprocessImageAction::class);
+        $this->reprocessImage($action, true);
     }
 }

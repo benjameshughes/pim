@@ -25,6 +25,19 @@
                 
                 <flux:menu>
                     <flux:menu.item 
+                        @click="$dispatch('reset-image-edit-form')"
+                        icon="arrow-uturn-left"
+                    >
+                        Reset Edit Form
+                    </flux:menu.item>
+                    <flux:menu.item 
+                        @click="$dispatch('reprocess-image')"
+                        icon="sparkles"
+                    >
+                        Reprocess & Generate Variants
+                    </flux:menu.item>
+                    <flux:menu.separator />
+                    <flux:menu.item 
                         @click="$dispatch('generate-variants', { imageId: {{ $originalImage->id ?? $image->id }} })"
                         icon="sparkles"
                     >
