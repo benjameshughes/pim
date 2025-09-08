@@ -28,7 +28,7 @@
             @endforeach
 
             <div>
-                <flux:button wire:click="addRow" variant="secondary" icon="plus">Add Attribute</flux:button>
+                <flux:button wire:click="addRow" variant="outline" icon="plus">Add Attribute</flux:button>
             </div>
         </div>
     </div>
