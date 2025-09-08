@@ -31,6 +31,8 @@ class ImageEditForm extends Component
     public string $folder = '';
 
     public string $tagsString = '';
+    public array $tagTokens = [];
+    public string $tagInput = '';
 
     // UI state
     public bool $isSaving = false;
@@ -61,17 +63,19 @@ class ImageEditForm extends Component
         // Prefer model tags; if none, pull from attributes (array or CSV)
         $modelTags = $this->image->tags ?? [];
         if (!empty($modelTags)) {
-            $this->tagsString = implode(', ', $modelTags);
+            $this->tagTokens = array_values(array_unique($modelTags));
         } else {
             $attrTags = Attributes::for($this->image)->get('tags');
             if (is_array($attrTags)) {
-                $this->tagsString = implode(', ', $attrTags);
+                $this->tagTokens = array_values(array_unique($attrTags));
             } elseif (is_string($attrTags)) {
-                $this->tagsString = $attrTags;
+                $this->tagTokens = array_values(array_unique(array_filter(array_map('trim', explode(',', $attrTags)))));
             } else {
-                $this->tagsString = '';
+                $this->tagTokens = [];
             }
         }
+        // Keep string in sync for any legacy bindings
+        $this->tagsString = implode(', ', $this->tagTokens);
     }
 
     /**
@@ -87,10 +91,8 @@ class ImageEditForm extends Component
                 'tagsString' => 'nullable|string|max:500',
             ]);
 
-            // Convert tags string to array
-            $tags = array_filter(
-                array_map('trim', explode(',', $this->tagsString))
-            );
+            // Use tokenized tags
+            $tags = array_values(array_unique(array_filter(array_map('trim', $this->tagTokens))));
 
             // Prepare data for the action
             $data = [
@@ -214,6 +216,62 @@ class ImageEditForm extends Component
             ->sort()
             ->values()
             ->toArray();
+    }
+
+    /**
+     * Available tags from both model column and image attributes
+     * @return array<int,string>
+     */
+    public function getAvailableTagsProperty(): array
+    {
+        $modelTags = \App\Models\Image::query()
+            ->select('tags')
+            ->whereNotNull('tags')
+            ->get()
+            ->pluck('tags')
+            ->flatten();
+
+        $attrTagsRaw = \App\Models\ImageAttribute::query()
+            ->whereHas('attributeDefinition', fn ($q) => $q->where('key', 'tags'))
+            ->whereNotNull('value')
+            ->pluck('value');
+
+        $attrTags = collect();
+        foreach ($attrTagsRaw as $val) {
+            $decoded = json_decode($val, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $attrTags = $attrTags->merge($decoded);
+            } else {
+                $attrTags = $attrTags->merge(array_filter(array_map('trim', explode(',', $val))));
+            }
+        }
+
+        return $modelTags->merge($attrTags)
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->toArray();
+    }
+
+    // Tag token actions
+    public function addTagToken(?string $tag = null): void
+    {
+        $value = $tag !== null ? trim($tag) : trim($this->tagInput);
+        if ($value === '') {
+            return;
+        }
+        if (!in_array($value, $this->tagTokens)) {
+            $this->tagTokens[] = $value;
+            $this->tagsString = implode(', ', $this->tagTokens);
+        }
+        $this->tagInput = '';
+    }
+
+    public function removeTagToken(string $tag): void
+    {
+        $this->tagTokens = array_values(array_filter($this->tagTokens, fn ($t) => $t !== $tag));
+        $this->tagsString = implode(', ', $this->tagTokens);
     }
 
     /**
